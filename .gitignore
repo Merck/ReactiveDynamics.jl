@@ -1,0 +1,11 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+docs/build/
+docs/site/
+tmp.gif
+gks.*
+Manifest.toml
+.vscode/
+LocalPreferences.toml
+_*

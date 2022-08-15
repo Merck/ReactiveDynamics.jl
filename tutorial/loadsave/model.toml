@@ -1,0 +1,89 @@
+event = []
+
+[[obs]]
+obsOpts = "DyVE.FoldedObservable(Union{Float64, Int64, AbstractString, Expr, Symbol, Tuple{Float64, Union{Float64, Int64, AbstractString, Expr, Symbol}}}[1], 2.0, Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[])"
+obsName = "RATE"
+
+[[spec]]
+specModality = "Set{Symbol}()"
+specCost = 0.0
+specValuation = 0.0
+specInitVal = 999
+specName = "S"
+specInitUncertainty = 0.0
+specReward = 0.0
+[[spec]]
+specModality = "Set{Symbol}()"
+specCost = 0.0
+specValuation = 0.0
+specInitVal = 10
+specName = "I"
+specInitUncertainty = 0.0
+specReward = 0.0
+[[spec]]
+specModality = "Set{Symbol}()"
+specCost = 0.0
+specValuation = 0.0
+specInitVal = 0
+specName = "R"
+specInitUncertainty = 0.0
+specReward = 0.0
+
+[[meta]]
+metaVal = "reaction"
+metaKeyword = "alias_T"
+[[meta]]
+metaVal = "population_group"
+metaKeyword = "alias_S"
+[[meta]]
+metaVal = 100
+metaKeyword = "tspan"
+
+[[trans]]
+transProbOfSuccess = 1
+transCapacity = +inf
+transMultiplier = 1
+trans = "S + I → @choose((1.5, 2 * @choose(1, 2) * I), (1.6, @take(:RATE) * I))"
+transCycleTime = 1
+transRate = "β * S * I * tdecay(@t())"
+transName = "SI2I"
+transPriority = 1
+transMaxLifeTime = +inf
+transPostAction = "()"
+[[trans]]
+transProbOfSuccess = 1
+transCapacity = +inf
+transMultiplier = 1
+trans = "I → R"
+transCycleTime = 1
+transRate = "ν * I"
+transName = "I2R"
+transPriority = 1
+transMaxLifeTime = +inf
+transPostAction = "()"
+[[trans]]
+transProbOfSuccess = 1
+transCapacity = +inf
+transMultiplier = 1
+trans = "R → S"
+transCycleTime = 1
+transRate = "γ"
+transName = "R2S"
+transPriority = 1
+transMaxLifeTime = +inf
+transPostAction = "()"
+
+[[prm]]
+prmVal = 5
+prmName = "γ"
+[[prm]]
+prmVal = 0.01
+prmName = "ν"
+[[prm]]
+prmVal = 0.0001
+prmName = "β"
+
+[[registered]]
+body="bool_cond(t) = (100 < t < 200) || (400 < t < 500)"
+[[registered]]
+body="tdecay(t) = exp(-t/10^3)"
