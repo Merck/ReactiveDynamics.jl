@@ -210,7 +210,7 @@ function transform(::Type{DiffEqBase.DiscreteProblem}, state::DyVEState; kwargs.
         du
     end
 
-    DiffEqBase.DiscreteProblem(f, state.u, (.0, Inf), Dict(state.p..., :__state__ => state, :__state0__ => deepcopy(state)); kwargs...)
+    DiffEqBase.DiscreteProblem(f, state.u, (.0, 2.), Dict(state.p..., :__state__ => state, :__state0__ => deepcopy(state)); kwargs...)
 end
 
 ## resolve tspan, tstep
@@ -256,7 +256,7 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0=Dict(), p=DiffEqBas
     prob
 end
 
-fetch_params(acs::ReactionNetwork) = Dict{Symbol, Float64}((acs[i, :prmName] => acs[i, :prmVal] for i in Iterators.filter(i -> isassigned(acs.attrs[:prmVal], i), 1:nparts(acs, :P))))
+fetch_params(acs::ReactionNetwork) = Dict{Symbol, Any}((acs[i, :prmName] => acs[i, :prmVal] for i in Iterators.filter(i -> isassigned(acs.attrs[:prmVal], i), 1:nparts(acs, :P))))
 
 # EnsembleProblem's prob_func: sample initial values
 function get_prob_func(prob)
@@ -268,6 +268,7 @@ function get_prob_func(prob)
             rv = randn()*vars[i]
             prob.u0[i] = (sign(rv + prob.u0[i]) == sign(prob.u0[i])) ? rv + prob.u0[i] : prob.u0[i]
         end
+        sync!(prob.p[:__state__], prob.u0, prob.p)
 
         prob
     end

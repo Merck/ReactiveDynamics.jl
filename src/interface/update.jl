@@ -267,8 +267,8 @@ function set_params!(acs, params)
             i = incident(acs, k, :prmName)
             isempty(i) && (i = add_part!(acs, :P, prmName=k))
         end
-        init_val isa Number || @warn("$init_val for prm $k isn't of numeric type")
-        foreach(ix -> acs[ix, :prmVal] = init_val, i)
+
+        foreach(ix -> acs[ix, :prmVal] = eval(init_val), i)
     end
 end
 

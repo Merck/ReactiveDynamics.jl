@@ -11,6 +11,7 @@ MIT License (or adaptations) (https://www.opensource.org/licenses/MIT)
   * BenchmarkTools.jl - https://github.com/JuliaCI/BenchmarkTools.jl
   * CSV - https://github.com/JuliaData/CSV.jl
   * Catlab - https://github.com/AlgebraicJulia/Catlab.jl
+  * ComponentArrays.jl - https://github.com/jonniedie/ComponentArrays.jl
   * Crayons - https://github.com/KristofferC/Crayons.jl
   * DataFrames.jl - https://github.com/JuliaData/DataFrames.jl
   * DiffEqBase.jl - https://github.com/SciML/DiffEqBase.jl

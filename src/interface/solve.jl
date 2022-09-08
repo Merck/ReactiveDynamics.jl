@@ -1,5 +1,5 @@
 export @problematize, @solve, @plot
-export @optimize, @fit, @fit_and_plot
+export @optimize, @fit, @fit_and_plot, @build_solver
 
 using DifferentialEquations: DiscreteProblem, EnsembleProblem, FunctionMap, EnsembleSolution
 import MacroTools
@@ -148,7 +148,7 @@ function get_names(state, hashes)
         ix = findfirst(==(hash), state[:, :transHash])
         push!(names, assigned(state.transition_recipes[:transName], ix) ? string(state[ix, :transName]) : "transition $ix")
     end
-
+ 
     names
 end
 
@@ -190,13 +190,9 @@ Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.co
 """
 macro optimize(acsex, obex, args...)
     args_all = args; args, kwargs = args_kwargs(args)
-    iconstraint = find_kwargex_delete!(kwargs, :inequality_constraint, nothing)
     min_t = find_kwargex_delete!(kwargs, :min_t, -Inf)
     max_t = find_kwargex_delete!(kwargs, :max_t, Inf)
     final_only = find_kwargex_delete!(kwargs, :final_only, false)
-    constrex = :(Dict()); !isnothing(iconstraint) && push!(constrex.args, :(inequality_constraint => eval(get_wrap_fun($(esc(acs)))($iconstraint))))
-    econstraint = find_kwargex_delete!(kwargs, :equality_constraint, nothing)
-    !isnothing(econstraint) && push!(constrex.args, :(equality_constraint => eval(get_wrap_fun($(esc(acs)))($econstraint))))
     okwargs = filter(ex -> ex.args[1] in [:loss, :trajectories], kwargs)
     
     quote
@@ -204,10 +200,16 @@ macro optimize(acsex, obex, args...)
         prob_ = DiscreteProblem($(esc(acsex)))
         prep_u0!(u0, prob_); prep_params!(p, prob_)
 
-        init = Float64[collect(wvalues(u0)); collect(wvalues(p))]
-        o = build_loss_objective($(esc(acsex)), u0, p, $(QuoteNode(obex)); min_t=$min_t, max_t=$max_t, final_only=$final_only, $(okwargs...))
+        init_p = [k => v for (k, v) in p]
+        init_vec = if length(u0) > 0
+                ComponentVector{Float64}(; species=collect(wvalues(u0)), init_p...)
+            else
+                ComponentVector{Float64}(; init_p...)
+            end
 
-        optim!(o, init; $(kwargs...))
+        o = build_loss_objective($(esc(acsex)), init_vec, u0, p, $(QuoteNode(obex)); min_t=$min_t, max_t=$max_t, final_only=$final_only, $(okwargs...))
+
+        optim!(o, init_vec; $(kwargs...))
     end
 end
 
@@ -238,10 +240,17 @@ macro fit(acsex, data, t, args...)
         vars = get_vars($(esc(acsex)), $(QuoteNode(vars)))
         prob_ = DiscreteProblem($(esc(acsex)))
         prep_u0!(u0, prob_); prep_params!(p, prob_)
-        init = Float64[collect(wvalues(u0)); collect(wvalues(p))]
-        o = build_loss_objective_datapoints($(esc(acsex)), u0, p, $(esc(t)), $(esc(data)), vars; $(okwargs...))
+        
+        init_p = [k => v for (k, v) in p]
+        init_vec = if length(u0) > 0
+            ComponentVector{Float64}(; species=collect(wvalues(u0)), init_p...)
+        else
+            ComponentVector{Float64}(; init_p...)
+        end
 
-        optim!(o, init; $(kwargs...))
+        o = build_loss_objective_datapoints($(esc(acsex)), init_vec, u0, p, $(esc(t)), $(esc(data)), vars; $(okwargs...))
+
+        optim!(o, init_vec; $(kwargs...))
     end
 end
 
@@ -263,7 +272,9 @@ data = [80 30 20]
 ```
 """
 macro fit_and_plot(acsex, data, t, args...)
-    args_all = args; args, kwargs = args_kwargs(args)
+    args_all = args
+    trajectories = get_kwarg(args, :trajectories, 1)
+    args, kwargs = args_kwargs(args)
     okwargs = filter(ex -> ex.args[1] in [:loss, :trajectories], kwargs)
     vars = (ix = findfirst(ex -> ex.args[1] == :vars, kwargs); !isnothing(ix) ? (v=kwargs[ix].args[2]; deleteat!(kwargs, ix); v) : :())
 
@@ -272,18 +283,56 @@ macro fit_and_plot(acsex, data, t, args...)
         vars = get_vars($(esc(acsex)), $(QuoteNode(vars)))
         prob_ = DiscreteProblem($(esc(acsex)); suppress_warning=true)
         prep_u0!(u0, prob_); prep_params!(p, prob_)
-        init = Float64[collect(wvalues(u0)); collect(wvalues(p))]
-        o = build_loss_objective_datapoints($(esc(acsex)), u0, p, $(esc(t)), $(esc(data)), vars; $(okwargs...))
+        
+        init_p = [k => v for (k, v) in p]
+        init_vec = if length(u0) > 0
+            ComponentVector{Float64}(; species=collect(wvalues(u0)), init_p...)
+        else
+            ComponentVector{Float64}(; init_p...)
+        end
 
-        r = optim!(o, init; $(kwargs...))
+        o = build_loss_objective_datapoints($(esc(acsex)), init_vec, u0, p, $(esc(t)), $(esc(data)), vars; $(okwargs...))
+
+        r = optim!(o, init_vec; $(kwargs...))
         if r[3] != :FORCED_STOP
-            s_ = build_parametrized_solver($(esc(acsex)), u0, p; trajectories=1)
-            sol = first(s_(init)); sol_ = first(s_(r[2]))
+            s_ = build_parametrized_solver($(esc(acsex)), init_vec, u0, p; trajectories=$trajectories)
+            sol = first(s_(init_vec)); sol_ = first(s_(r[2]))
 
-            p = Plots.plot(sol; vars, label="(initial) " .* reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))
+            p = Plots.plot(sol; idxs=vars, label="(initial) " .* reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))
             Plots.plot!(p, $(esc(t)), transpose($(esc(data))), label="(empirical) " .* reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))
-            Plots.plot!(p, sol_; vars, label="(fitted) " .* reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))       
+            Plots.plot!(p, sol_; idxs=vars, label="(fitted) " .* reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))       
             p
         else :FORCED_STOP end
+    end
+end
+
+"""
+    @build_solver acset <free_var=[init_val]>... <free_prm=[init_val]>... opts...
+
+Take an acset and export a solution as a function of free vars and free parameters.
+
+# Examples
+```julia
+solver = @build_solver acs S α β # function of variable S and parameters α, β
+solver([S, α, β])
+```
+"""
+macro build_solver(acsex, args...)
+    args_all = args#; args, kwargs = args_kwargs(args)
+    trajectories = get_kwarg(args, :trajectories, 1)
+
+    quote
+        u0, p = get_free_vars($(esc(acsex)), $(QuoteNode(args_all)))
+        prob_ = DiscreteProblem($(esc(acsex)))
+        prep_u0!(u0, prob_); prep_params!(p, prob_)
+
+        init_p = [k => v for (k, v) in p]
+        init_vec = if length(u0) > 0
+            ComponentVector{Float64}(; species=collect(wvalues(u0)), init_p...)
+        else
+            ComponentVector{Float64}(; init_p...)
+        end
+
+        build_parametrized_solver_($(esc(acsex)), init_vec, u0, p; trajectories=$trajectories)
     end
 end

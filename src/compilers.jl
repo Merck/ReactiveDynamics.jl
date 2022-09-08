@@ -43,7 +43,7 @@ function escape_ref(ex, species)
     ex isa Symbol ? ex : prewalk(ex -> isexpr(ex, :ref) && Symbol(string(ex)) ∈ species ? Symbol(string(ex)) : ex, ex)
 end
 
-function wrap(fex, species_names, prm_names, varmap)
+function wrap_expr(fex, species_names, prm_names, varmap)
     !isa(fex, Union{Expr, Symbol}) && return fex
     # escape refs in species names: A[1] -> Symbol("A[1]")
     fex = escape_ref(fex, species_names)
@@ -77,7 +77,7 @@ function get_wrap_fun(acs::ReactionNetwork)
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
     for name in prm_names push!(varmap, name => :(state.p[$(QuoteNode(name))])) end
     
-    ex -> wrap(ex, species_names, prm_names, varmap)
+    ex -> wrap_expr(ex, species_names, prm_names, varmap)
 end
 
 skip_compile(attr) = any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) || (string(attr) == "trans")
@@ -86,7 +86,7 @@ function compile_attrs(acs::ReactionNetwork)
     species_names = collect(acs[:, :specName]); prm_names = collect(acs[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
     for name in prm_names push!(varmap, name => :(state.p[$(QuoteNode(name))])) end
-    wrap_fun = ex -> wrap(ex, species_names, prm_names, varmap)
+    wrap_fun = ex -> wrap_expr(ex, species_names, prm_names, varmap)
     attrs = Dict{Symbol, Vector}(); transitions = Dict{Symbol, Vector}()
     for attr in propertynames(acs.attrs)
         attrs_ = getproperty(acs.attrs, attr)

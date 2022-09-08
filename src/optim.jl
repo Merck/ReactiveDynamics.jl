@@ -1,10 +1,10 @@
-function build_parametrized_solver(acs, u0, params; trajectories=1)
+function build_parametrized_solver(acs, init_vec, u0, params; trajectories=1)
     prob = DiscreteProblem(acs)
     vars = prob.p[:__state__][:, :specInitUncertainty]
+    init_vec = deepcopy(init_vec)
 
     function (vec)
-        vec_u0, vec_params = vec[1:length(u0)], vec[length(u0)+1:end]
-
+        vec = vec isa ComponentVector ? vec : (init_vec .= vec)
         data = []
         for _ in 1:trajectories
             prob.p[:__state__] = deepcopy(prob.p[:__state0__])
@@ -13,14 +13,40 @@ function build_parametrized_solver(acs, u0, params; trajectories=1)
                 prob.u0[i] = (sign(rv + prob.u0[i]) == sign(prob.u0[i])) ? rv + prob.u0[i] : prob.u0[i]
             end
 
-            for (i, k) in enumerate(wkeys(u0)) prob.u0[k] = vec_u0[i] end
-            for (i, k) in enumerate(wkeys(params)) prob.p[k] = vec_params[i] end
+            for (i, k) in enumerate(wkeys(u0)) prob.u0[k] = vec.species[i] end
+            for k in wkeys(params) prob.p[k] = vec[k] end
 
             sync!(prob.p[:__state__], prob.u0, prob.p)
             push!(data, solve(prob))
         end
 
         data
+    end
+end
+
+function build_parametrized_solver_(acs, init_vec, u0, params; trajectories=1)
+    prob = DiscreteProblem(acs)
+    vars = prob.p[:__state__][:, :specInitUncertainty]
+    init_vec = deepcopy(init_vec)
+
+    function (vec)
+        vec = vec isa ComponentVector ? vec : (init_vec .= vec; init_vec)
+        data = map(1:trajectories) do _
+            prob.p[:__state__] = deepcopy(prob.p[:__state0__])
+            for i in eachindex(prob.u0)
+                rv = randn()*vars[i]
+                prob.u0[i] = (sign(rv + prob.u0[i]) == sign(prob.u0[i])) ? rv + prob.u0[i] : prob.u0[i]
+            end
+
+            for (i, k) in enumerate(wkeys(u0)) prob.u0[k] = vec.species[i] end
+            for k in wkeys(params) prob.p[k] = vec[k] end
+
+            sync!(prob.p[:__state__], prob.u0, prob.p)
+            
+            solve(prob)
+        end
+
+        trajectories == 1 ? data[1] : EnsembleSolution(data, .0, true)
     end
 end
 
@@ -34,18 +60,19 @@ function optim!(obj, init; nlopt_kwargs...)
 
     opt = Opt(alg, length(init))
 
+    # match to a ComponentVector
     foreach(o -> setproperty!(opt, o...), filter(x -> x[1] in propertynames(opt), nlopt_kwargs))
     get(nlopt_kwargs, :objective, min) == min ? (opt.min_objective = obj) : (opt.max_objective = obj)
 
-    optimize(opt, copy(init))
+    optimize(opt, deepcopy(init))
 end
 
 const n_steps = 100
 
 # loss objective given an objective expression
-function build_loss_objective(acs, u0, params, obex; loss=identity, trajectories=1, min_t=-Inf, max_t=Inf, final_only=false)
+function build_loss_objective(acs, init_vec, u0, params, obex; loss=identity, trajectories=1, min_t=-Inf, max_t=Inf, final_only=false)
     ob = eval(get_wrap_fun(acs)(obex))
-    obj_ = build_parametrized_solver(acs, u0, params; trajectories)
+    obj_ = build_parametrized_solver(acs, init_vec, u0, params; trajectories)
 
     function (vec, _)
         ls = []
@@ -67,8 +94,8 @@ function build_loss_objective(acs, u0, params, obex; loss=identity, trajectories
 end
 
 # loss objective given empirical data
-function build_loss_objective_datapoints(acs, u0, params, t, data, vars; loss=abs2, trajectories=1)
-    obj_ = build_parametrized_solver(acs, u0, params; trajectories)
+function build_loss_objective_datapoints(acs, init_vec, u0, params, t, data, vars; loss=abs2, trajectories=1)
+    obj_ = build_parametrized_solver(acs, init_vec, u0, params; trajectories)
 
     function (vec, _)
         ls = []
@@ -82,16 +109,16 @@ end
 
 # set initial model parameter values in an optimization problem
 function prep_params!(params, prob)
-    for (k, v) in params isnan(v) && wset!(params, k, get(prob.p, k, NaN)) end
-    any(p -> isnan(p[2]) && @warn("Uninitialized prm: $p"), params)
+    for (k, v) in params; (v === NaN) && wset!(params, k, get(prob.p, k, NaN)) end
+    any(p -> (p[2] === NaN) && @warn("Uninitialized prm: $p"), params)
 
     params
 end
 
 # set initial model variable values in an optimization problem
 function prep_u0!(u0, prob)
-    for (k, v) in u0 isnan(v) && wset!(u0, k, get(prob.u0, k, NaN)) end
-    any(u -> isnan(u[2]) && @warn("Uninitialized prm: $(u[1])"), u0)
+    for (k, v) in u0; (v === NaN) && wset!(u0, k, get(prob.u0, k, NaN)) end
+    any(u -> (u[2] === NaN) && @warn("Uninitialized prm: $(u[1])"), u0)
 
     u0
 end

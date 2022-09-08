@@ -1,4 +1,4 @@
-# assortment of expression handling utilities
+# Assortment of expression handling utilities
 
 using MacroTools: striplines
 
@@ -51,4 +51,11 @@ function wset!(col, key, val)
     !isnothing(ix) && (col[ix] = (key => val))
 
     col
+end
+
+"Return the (expression) value stored for the given key in a collection of keyword expression, or the given default value if no mapping for the key is present."
+function get_kwarg(collection, key, default=:())
+    ix = findfirst(ex -> ex isa Expr && hasproperty(ex, :args) && (ex.args[1] == key), collection)
+    
+    !isnothing(ix) ? collection[ix].args[2] : default
 end

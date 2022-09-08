@@ -4,6 +4,7 @@ using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
 using Reexport
 using MacroTools
 using NLopt
+using ComponentArrays
 
 @reexport using GeneratedExpressions
 
@@ -24,7 +25,7 @@ end
     (S, T)::Ob # species, transitions
 
     (SymbolicAttributeT, DescriptiveAttributeT, SampleableAttributeT, 
-        ModalityAttributeT, PcsOptT)::AttrType
+        ModalityAttributeT, PcsOptT, PrmAttributeT)::AttrType
 
     specName::Attr(S, SymbolicAttributeT)
     specModality::Attr(S, ModalityAttributeT)
@@ -53,7 +54,7 @@ end
     (P, M)::Ob # model params, solver args
 
     prmName::Attr(P, SymbolicAttributeT)
-    prmVal::Attr(P, SampleableAttributeT)
+    prmVal::Attr(P, PrmAttributeT)
 
     metaKeyword::Attr(M, SymbolicAttributeT)
     metaVal::Attr(M, SampleableAttributeT)
@@ -61,7 +62,7 @@ end
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
 
-const ReactionNetwork = FoldedReactionNetworkType{Symbol, Union{String, Symbol, Missing}, SampleableValues, Set{Symbol}, FoldedObservable}
+const ReactionNetwork = FoldedReactionNetworkType{Symbol, Union{String, Symbol, Missing}, SampleableValues, Set{Symbol}, FoldedObservable, Any}
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
 Base.convert(::Type{Union{String, Symbol, Missing}}, ex::String) = try Symbol(ex) catch; string(ex) end

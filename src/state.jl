@@ -77,10 +77,10 @@ function compile_observables(acs::ReactionNetwork)
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
 
     for (name, opts) in Iterators.zip(acs[:, :obsName], acs[:, :obsOpts])
-        on = map(on -> wrap(on, species_names, prm_names, varmap), opts.on)
+        on = map(on -> wrap_expr(on, species_names, prm_names, varmap), opts.on)
         range = map(r -> begin
             r = r isa Tuple ? r : (1., r)
-            (r[1], wrap(r[2], species_names, prm_names, varmap))
+            (r[1], wrap_expr(r[2], species_names, prm_names, varmap))
         end, opts.range)
 
         push!(observables, name => Observable(-Inf, range, opts.every, on, missing))
