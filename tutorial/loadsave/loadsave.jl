@@ -1,9 +1,9 @@
-using DyVE
+using ReactionDynamics
 
 # import a model, solve the problem
 @import_model model.toml sir_acs
 @assert @isdefined sir_acs
-@assert isdefined(DyVE, :tdecay)
+@assert isdefined(ReactionDynamics, :tdecay)
 
 prob = @problematize sir_acs
 sol = @solve prob trajectories=20

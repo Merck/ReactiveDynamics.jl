@@ -1,4 +1,4 @@
-using DyVE
+using ReactionDynamics
 
 # solve for steady state
 acss = @ReactionNetwork begin

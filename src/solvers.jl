@@ -193,7 +193,7 @@ Transform an `acs` to a `DiscreteProblem` instance, compatible with standard sol
 transform(DiscreteProblem, acs, schedule=schedule_weighted!)
 ```
 """
-function transform(::Type{DiffEqBase.DiscreteProblem}, state::DyVEState; kwargs...)
+function transform(::Type{DiffEqBase.DiscreteProblem}, state::ReactionDynamicsState; kwargs...)
     f = function (du, u, p, t)
         state = p[:__state__]
         free_blocked_species!(state); du .= state.u
@@ -242,7 +242,7 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0=Dict(), p=DiffEqBas
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
     
     acs = remove_choose(acs); attrs, transitions, wrap_fun = compile_attrs(acs)
-    state = DyVEState(acs, attrs, transitions, wrap_fun, keywords[:tspan][1]; keywords...); init_u!(state); save!(state)
+    state = ReactionDynamicsState(acs, attrs, transitions, wrap_fun, keywords[:tspan][1]; keywords...); init_u!(state); save!(state)
 
     prob = transform(DiffEqBase.DiscreteProblem, state; kwargs...)
 

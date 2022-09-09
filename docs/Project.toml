@@ -1,4 +1,4 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterMarkdown = "997ab1e6-3595-5248-9280-8efb232c3433"
-DyVE = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
+ReactionDynamics = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"

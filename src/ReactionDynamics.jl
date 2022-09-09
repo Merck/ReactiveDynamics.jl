@@ -1,4 +1,4 @@
-module DyVE
+module ReactionDynamics
 
 using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
 using Reexport

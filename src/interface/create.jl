@@ -35,11 +35,11 @@ end
 forbidden_symbols = [:t, :π, :pi, :ℯ, :im, :nothing, :∅]
 
 """
-Macro that takes an expression corresponding to a reaction network and outputs an instance of `TheoryReactionNetwork` that can be converted to a `DEProblem` or solved directly.
+Macro that takes an expression corresponding to a reaction network and outputs an instance of `TheoryReactionNetwork` that can be converted to a `DiscreteProblem` or solved directly.
 
 Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ for annihilation/creation to/from nothing.
 
-Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from DyVE's source code.
+Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactionDynamics's source code.
 
 # Examples
 ```julia

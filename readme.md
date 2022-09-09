@@ -1,4 +1,4 @@
-# ValueDynamics <br> 
+# ReactionDynamics.jl <br> 
 
 <p align="center">
   <img src="docs/assets/diagram1.png" alt="wiring diagram"> <br>
@@ -30,7 +30,7 @@ In particular, a resource can be allocated to an instance either for the instanc
 
 <img src="docs/assets/diagram3.png" align="left" alt="attributes diagram"></a>
 
-The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form <code>rate, a*A + b*B + ... --> c*C + ..., prm => val, ...</code>, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>.
+The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>.
 
 A network's dynamics is specified using a compact **modeling metalanguage**. Moreover, we have integrated another expression comprehension metalanguage which makes it easy to generate arbitrarily complex dynamics from a single template transition!
 
@@ -43,7 +43,7 @@ Once a network's dynamics is specified, it can be converted to a problem and sim
 
 ## Context
 
-As the package gradually evolves, several functionalities have matured enough to become a standalone package.
+As the package evolves, several functionalities have matured enough to become a standalone package.
 
 This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. The package compact generation of the transitions.
 
@@ -64,7 +64,7 @@ Follow the SIR model's reactions:
 </p>
 
 ```julia
-using DyVE
+using ReactionDynamics
 
 # model dynamics
 sir_acs = @ReactionNetwork begin
@@ -127,18 +127,18 @@ end
 push!(rd_models, @ReactionNetwork begin
                 M[$i][$m, $n], state[$m] + {demand[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+} --> state[$n] + 
                         {production[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+}, cycle_time=>cycle_times[$i][$m, $n], probability_of_success=>$m*$n/(n[$i])^2
-        end m=1:DyVE.ns[$i] n=1:DyVE.ns[$i]
+        end m=1:ReactionDynamics.ns[$i] n=1:ReactionDynamics.ns[$i]
 )
 ```
 
 The next step is to instantiate the atomic models (submodels).
 
 ```julia
-using DyVE
+using ReactionDynamics
 ## setup the environment
-rd_models = DyVE.ReactionNetwork[] # submodels
+rd_models = ReactionDynamics.ReactionNetwork[] # submodels
 
-# needs to live within DyVE's scope
+# needs to live within ReactionDynamics's scope
 # the arrays will contain the submodel
 @register begin
     ns = Int[] # size of submodels
@@ -172,11 +172,11 @@ Next step is to add some off-diagonal interactions.
 ```julia
 # sparse off-diagonal interactions, sparse declaration
 # again, we use GeneratedExpressions.jl
-sparse_off_diagonal = zeros(sum(DyVE.ns), sum(DyVE.ns))
+sparse_off_diagonal = zeros(sum(ReactionDynamics.ns), sum(ReactionDynamics.ns))
 for i in 1:n_models
     j = rand(setdiff(1:n_models, (i, )))
-    i_ix = rand(1:DyVE.ns[i]); j_ix = rand(1:DyVE.ns[j])
-    sparse_off_diagonal[i_ix+sum(DyVE.ns[1:i-1]), j_ix+sum(DyVE.ns[1:j-1])] += 1
+    i_ix = rand(1:ReactionDynamics.ns[i]); j_ix = rand(1:ReactionDynamics.ns[j])
+    sparse_off_diagonal[i_ix+sum(ReactionDynamics.ns[1:i-1]), j_ix+sum(ReactionDynamics.ns[1:j-1])] += 1
     interaction_ex = """@push rd_model begin 1., var"rd_models[$i].state[$i_ix]" --> var"rd_models[$j]__state[$j_ix]" end"""
     eval(Meta.parseall(interaction_ex))
 end
@@ -189,7 +189,7 @@ Let's plot the interactions:
 The resulting model can then be conveniently simulated using the modeling metalanguage.
 
 ```julia
-using DyVE: nparts
+using ReactionDynamics: nparts
 u0 = rand(1:1000, nparts(rd_model, :S))
 @prob_init rd_model u0
 
@@ -206,7 +206,7 @@ sol = @solve prob trajectories=2
 
 We demonstrate how to fit unknown part of dynamics to empirical data.
 
-We use `@register` to define a simple linear function within the scope of module `DyVE`; parameters of the function will be then optimized for. Note that `function_to_learn` can be generally replaced with a neural network (Flux chain), etc.
+We use `@register` to define a simple linear function within the scope of module `ReactionDynamics`; parameters of the function will be then optimized for. Note that `function_to_learn` can be generally replaced with a neural network (Flux chain), etc.
 
 ```julia
 ## some embedded function (neural network, etc.)
@@ -254,16 +254,22 @@ data = [60 30 5]
 
 ## Interface Documentation
 
-<a id='DyVE.@ReactionNetwork' href='#DyVE.@ReactionNetwork'>#</a>
-**`DyVE.@ReactionNetwork`** &mdash; *Macro*.
+<a id='Create-a-Model'></a>
+
+<a id='Create-a-Model-1'></a>
+
+### Create a Model
+
+<a id='ReactionDynamics.@ReactionNetwork' href='#ReactionDynamics.@ReactionNetwork'>#</a>
+**`ReactionDynamics.@ReactionNetwork`** &mdash; *Macro*.
 
 
 
-Macro that takes an expression corresponding to a reaction network and outputs an instance of `TheoryReactionNetwork` that can be converted to a `DEProblem` or solved directly.
+Macro that takes an expression corresponding to a reaction network and outputs an instance of `TheoryReactionNetwork` that can be converted to a `DiscreteProblem` or solved directly.
 
 Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ for annihilation/creation to/from nothing.
 
-Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from DyVE's source code.
+Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactionDynamics's source code.
 
 **Examples**
 
@@ -280,8 +286,15 @@ end
 @solve_and_plot acs
 ```
 
-<a id='DyVE.@add_species-Tuple{Any, Vararg{Any}}' href='#DyVE.@add_species-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@add_species`** &mdash; *Macro*.
+
+<a id='Update-Model-Objects'></a>
+
+<a id='Update-Model-Objects-1'></a>
+
+### Update Model Objects
+
+<a id='ReactionDynamics.@add_species' href='#ReactionDynamics.@add_species'>#</a>
+**`ReactionDynamics.@add_species`** &mdash; *Macro*.
 
 
 
@@ -293,8 +306,8 @@ Add new species to a model.
 @add_species acs S I R
 ```
 
-<a id='DyVE.@aka-Tuple{Any, Vararg{Any}}' href='#DyVE.@aka-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@aka`** &mdash; *Macro*.
+<a id='ReactionDynamics.@aka' href='#ReactionDynamics.@aka'>#</a>
+**`ReactionDynamics.@aka`** &mdash; *Macro*.
 
 
 
@@ -317,225 +330,8 @@ Alias object name in an acs.
 @aka acs species=resource transition=reaction
 ```
 
-<a id='DyVE.@build_solver-Tuple{Any, Vararg{Any}}' href='#DyVE.@build_solver-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@build_solver`** &mdash; *Macro*.
-
-
-
-```julia
-@build_solver acset <free_var=[init_val]>... <free_prm=[init_val]>... opts...
-```
-
-Take an acset and export a solution as a function of free vars and free parameters.
-
-**Examples**
-
-```julia
-solver = @build_solver acs S α β # function of variable S and parameters α, β
-solver([S, α, β])
-```
-
-<a id='DyVE.@cost-Tuple{Any, Vararg{Any}}' href='#DyVE.@cost-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@cost`** &mdash; *Macro*.
-
-
-
-Set cost.
-
-**Examples**
-
-```julia
-@cost model experimental1=2 experimental2=3
-```
-
-<a id='DyVE.@equalize-Tuple{Any, Vararg{Any}}' href='#DyVE.@equalize-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@equalize`** &mdash; *Macro*.
-
-
-
-Identify (collapse) a set of species in a model.
-
-**Examples**
-
-```julia
-@join acs acs1.A=acs2.A B=C
-```
-
-<a id='DyVE.@export_as_table' href='#DyVE.@export_as_table'>#</a>
-**`DyVE.@export_as_table`** &mdash; *Macro*.
-
-
-
-```julia
-@export_as_table sol
-```
-
-Export a solution as a `DataFrame`.
-
-**Examples**
-
-```julia
-@export_as_table sol
-```
-
-<a id='DyVE.@export_csv' href='#DyVE.@export_csv'>#</a>
-**`DyVE.@export_csv`** &mdash; *Macro*.
-
-
-
-```julia
-@export_csv sol
-@export_csv sol "sol.csv"
-```
-
-Export a solution to a file.
-
-**Examples**
-
-```julia
-@export_csv sol "sol.csv"
-```
-
-<a id='DyVE.@export_model-Tuple{Any, Any}' href='#DyVE.@export_model-Tuple{Any, Any}'>#</a>
-**`DyVE.@export_model`** &mdash; *Macro*.
-
-
-
-Export model to a file.
-
-**Examples**
-
-```julia
-@export_model acs "acs_data.toml"
-```
-
-<a id='DyVE.@export_solution' href='#DyVE.@export_solution'>#</a>
-**`DyVE.@export_solution`** &mdash; *Macro*.
-
-
-
-```julia
-@export sol
-@export sol "sol.jld2"
-```
-
-Export a solution to a file.
-
-**Examples**
-
-```julia
-@export_solution sol "sol.jdl2"
-```
-
-<a id='DyVE.@fit-Tuple{Any, Any, Any, Vararg{Any}}' href='#DyVE.@fit-Tuple{Any, Any, Any, Vararg{Any}}'>#</a>
-**`DyVE.@fit`** &mdash; *Macro*.
-
-
-
-```julia
-@fit acset data_points time_steps empiric_variables <free_var=[init_val]>... <free_prm=[init_val]>... opts...
-```
-
-Take an acset and fit initial values and parameters to empirical data.
-
-The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model. The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
-
-Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
-
-**Examples**
-
-```julia
-t = [1, 50, 100]
-data = [80 30 20]
-@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
-```
-
-<a id='DyVE.@fit_and_plot-Tuple{Any, Any, Any, Vararg{Any}}' href='#DyVE.@fit_and_plot-Tuple{Any, Any, Any, Vararg{Any}}'>#</a>
-**`DyVE.@fit_and_plot`** &mdash; *Macro*.
-
-
-
-```julia
-@fit acset data_points time_steps empiric_variables <free_var=[init_val]>... <free_prm=[init_val]>... opts...
-```
-
-Take an acset, fit initial values and parameters to empirical data, and plot the result.
-
-The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model. The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
-
-Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
-
-**Examples**
-
-```julia
-t = [1, 50, 100]
-data = [80 30 20]
-@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
-```
-
-<a id='DyVE.@import_model' href='#DyVE.@import_model'>#</a>
-**`DyVE.@import_model`** &mdash; *Macro*.
-
-
-
-Import a model from a file.
-
-**Examples**
-
-```julia
-@import_model "model.toml"
-```
-
-<a id='DyVE.@import_solution' href='#DyVE.@import_solution'>#</a>
-**`DyVE.@import_solution`** &mdash; *Macro*.
-
-
-
-```julia
-@import "sol.jld2"
-@import "sol.jld2" sol
-```
-
-Import a solution from a file.
-
-**Examples**
-
-```julia
-@import_solution "sir_acs_sol/serialized/sol.jld2"
-```
-
-<a id='DyVE.@join-Tuple' href='#DyVE.@join-Tuple'>#</a>
-**`DyVE.@join`** &mdash; *Macro*.
-
-
-
-Performs join of models and identifies model variables, as specified.
-
-Model variables / parameter values and metadata are propagated; the last model takes precedence.
-
-**Examples**
-
-```julia
-@join acs1 acs2 @catchall(A)=acs2.Z @catchall(XY) @catchall(B)
-```
-
-<a id='DyVE.@jump-Tuple{Any, Any, Any}' href='#DyVE.@jump-Tuple{Any, Any, Any}'>#</a>
-**`DyVE.@jump`** &mdash; *Macro*.
-
-
-
-Add a jump process (with specified Poisson intensity per unit time step) to a model.
-
-Followed with ACS*name Poisson*rate (conditiuon1 && condition2 && … && (action1; action2; …)).
-
-**Examples**
-
-```julia
-@jump acs λ Z += rand(Poisson(1.))
-```
-
-<a id='DyVE.@mode-Tuple{Any, Any, Any}' href='#DyVE.@mode-Tuple{Any, Any, Any}'>#</a>
-**`DyVE.@mode`** &mdash; *Macro*.
+<a id='ReactionDynamics.@mode' href='#ReactionDynamics.@mode'>#</a>
+**`ReactionDynamics.@mode`** &mdash; *Macro*.
 
 
 
@@ -555,8 +351,8 @@ Set species modality.
 @mode acs S conserved
 ```
 
-<a id='DyVE.@name_transition-Tuple{Any, Vararg{Any}}' href='#DyVE.@name_transition-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@name_transition`** &mdash; *Macro*.
+<a id='ReactionDynamics.@name_transition' href='#ReactionDynamics.@name_transition'>#</a>
+**`ReactionDynamics.@name_transition`** &mdash; *Macro*.
 
 
 
@@ -570,8 +366,374 @@ Set name of a transition in the model.
 @name_transition acs "name"="transition_name"
 ```
 
-<a id='DyVE.@optimize-Tuple{Any, Any, Vararg{Any}}' href='#DyVE.@optimize-Tuple{Any, Any, Vararg{Any}}'>#</a>
-**`DyVE.@optimize`** &mdash; *Macro*.
+
+<a id='Resource-Costs'></a>
+
+<a id='Resource-Costs-1'></a>
+
+#### Resource Costs
+
+<a id='ReactionDynamics.@cost' href='#ReactionDynamics.@cost'>#</a>
+**`ReactionDynamics.@cost`** &mdash; *Macro*.
+
+
+
+Set cost.
+
+**Examples**
+
+```julia
+@cost model experimental1=2 experimental2=3
+```
+
+<a id='ReactionDynamics.@valuation' href='#ReactionDynamics.@valuation'>#</a>
+**`ReactionDynamics.@valuation`** &mdash; *Macro*.
+
+
+
+Set valuation.
+
+**Examples**
+
+```julia
+@valuation model experimental1=2 experimental2=3
+```
+
+<a id='ReactionDynamics.@reward' href='#ReactionDynamics.@reward'>#</a>
+**`ReactionDynamics.@reward`** &mdash; *Macro*.
+
+
+
+Set reward.
+
+**Examples**
+
+```julia
+@reward model experimental1=2 experimental2=3
+```
+
+
+<a id='Add-Reactions'></a>
+
+<a id='Add-Reactions-1'></a>
+
+### Add Reactions
+
+<a id='ReactionDynamics.@push' href='#ReactionDynamics.@push'>#</a>
+**`ReactionDynamics.@push`** &mdash; *Macro*.
+
+
+
+Add reactions to an acset.
+
+**Examples**
+
+```julia
+@push sir_acs β*S*I*tdecay(@time()) S+I --> 2I name=>SI2I
+@push sir_acs begin 
+    ν*I, I --> R, name=>I2R
+    γ, R --> S, name=>R2S
+end
+```
+
+<a id='ReactionDynamics.@jump' href='#ReactionDynamics.@jump'>#</a>
+**`ReactionDynamics.@jump`** &mdash; *Macro*.
+
+
+
+Add a jump process (with specified Poisson intensity per unit time step) to a model.
+
+**Examples**
+
+```julia
+@jump acs λ Z += rand(Poisson(1.))
+```
+
+<a id='ReactionDynamics.@periodic' href='#ReactionDynamics.@periodic'>#</a>
+**`ReactionDynamics.@periodic`** &mdash; *Macro*.
+
+
+
+Add a periodic callback to a model.
+
+**Examples**
+
+```julia
+@periodic acs 1. X += 1
+```
+
+
+<a id='Set-Initial-Values,-Uncertainty,-and-Solver-Arguments'></a>
+
+<a id='Set-Initial-Values,-Uncertainty,-and-Solver-Arguments-1'></a>
+
+### Set Initial Values, Uncertainty, and Solver Arguments
+
+<a id='ReactionDynamics.@prob_init' href='#ReactionDynamics.@prob_init'>#</a>
+**`ReactionDynamics.@prob_init`** &mdash; *Macro*.
+
+
+
+Set initial values of species in an acset.
+
+**Examples**
+
+```julia
+@prob_init acs X=1 Y=2 Z=h(α)
+@prob_init acs [1., 2., 3.]
+```
+
+<a id='ReactionDynamics.@prob_uncertainty' href='#ReactionDynamics.@prob_uncertainty'>#</a>
+**`ReactionDynamics.@prob_uncertainty`** &mdash; *Macro*.
+
+
+
+Set uncertainty in initial values of species in an acset (stderr).
+
+**Examples**
+
+```julia
+@prob_uncertainty acs X=.1 Y=.2
+@prob_uncertainty acs [.1, .2,]
+```
+
+<a id='ReactionDynamics.@prob_params' href='#ReactionDynamics.@prob_params'>#</a>
+**`ReactionDynamics.@prob_params`** &mdash; *Macro*.
+
+
+
+Set parameter values in an acset.
+
+**Examples**
+
+```julia
+@prob_params acs α=1. β=2.
+```
+
+<a id='ReactionDynamics.@prob_meta' href='#ReactionDynamics.@prob_meta'>#</a>
+**`ReactionDynamics.@prob_meta`** &mdash; *Macro*.
+
+
+
+Set model metadata (e.g. solver arguments)
+
+**Examples**
+
+```julia
+@prob_meta acs tspan=(0, 100.) schedule=schedule_weighted!
+@prob_meta sir_acs tspan=250 tstep=1
+```
+
+
+<a id='Model-Unions'></a>
+
+<a id='Model-Unions-1'></a>
+
+### Model Unions
+
+<a id='ReactionDynamics.@join' href='#ReactionDynamics.@join'>#</a>
+**`ReactionDynamics.@join`** &mdash; *Macro*.
+
+
+
+```julia
+@join models... [equalize...]
+```
+
+Performs join of models and identifies model variables, as specified.
+
+Model variables / parameter values and metadata are propagated; the last model takes precedence.
+
+**Examples**
+
+```julia
+@join acs1 acs2 @catchall(A)=acs2.Z @catchall(XY) @catchall(B)
+```
+
+<a id='ReactionDynamics.@equalize' href='#ReactionDynamics.@equalize'>#</a>
+**`ReactionDynamics.@equalize`** &mdash; *Macro*.
+
+
+
+Identify (collapse) a set of species in a model.
+
+**Examples**
+
+```julia
+@join acs acs1.A=acs2.A B=C
+```
+
+
+<a id='Model-Import-and-Export'></a>
+
+<a id='Model-Import-and-Export-1'></a>
+
+### Model Import and Export
+
+<a id='ReactionDynamics.@import_model' href='#ReactionDynamics.@import_model'>#</a>
+**`ReactionDynamics.@import_model`** &mdash; *Macro*.
+
+
+
+Import a model from a file.
+
+**Examples**
+
+```julia
+@import_model "model.toml"
+```
+
+<a id='ReactionDynamics.@export_model' href='#ReactionDynamics.@export_model'>#</a>
+**`ReactionDynamics.@export_model`** &mdash; *Macro*.
+
+
+
+Export model to a file.
+
+**Examples**
+
+```julia
+@export_model acs "acs_data.toml"
+```
+
+
+<a id='Solution-Import-and-Export'></a>
+
+<a id='Solution-Import-and-Export-1'></a>
+
+### Solution Import and Export
+
+<a id='ReactionDynamics.@import_solution' href='#ReactionDynamics.@import_solution'>#</a>
+**`ReactionDynamics.@import_solution`** &mdash; *Macro*.
+
+
+
+```julia
+@import_solution "sol.jld2"
+@import_solution "sol.jld2" sol
+```
+
+Import a solution from a file.
+
+**Examples**
+
+```julia
+@import_solution "sir_acs_sol/serialized/sol.jld2"
+```
+
+<a id='ReactionDynamics.@export_as_table' href='#ReactionDynamics.@export_as_table'>#</a>
+**`ReactionDynamics.@export_as_table`** &mdash; *Macro*.
+
+
+
+```julia
+@export_as_table sol
+```
+
+Export a solution as a `DataFrame`.
+
+**Examples**
+
+```julia
+@export_as_table sol
+```
+
+<a id='ReactionDynamics.@export_csv' href='#ReactionDynamics.@export_csv'>#</a>
+**`ReactionDynamics.@export_csv`** &mdash; *Macro*.
+
+
+
+```julia
+@export_csv sol
+@export_csv sol "sol.csv"
+```
+
+Export a solution to a file.
+
+**Examples**
+
+```julia
+@export_csv sol "sol.csv"
+```
+
+<a id='ReactionDynamics.@export_solution' href='#ReactionDynamics.@export_solution'>#</a>
+**`ReactionDynamics.@export_solution`** &mdash; *Macro*.
+
+
+
+```julia
+@export_solution sol
+@export_solution sol "sol.jld2"
+```
+
+Export a solution to a file.
+
+**Examples**
+
+```julia
+@export_solution sol "sol.jdl2"
+```
+
+
+<a id='Problematize,-Solve,-and-Plot'></a>
+
+<a id='Problematize,-Solve,-and-Plot-1'></a>
+
+### Problematize, Solve, and Plot
+
+<a id='ReactionDynamics.@problematize' href='#ReactionDynamics.@problematize'>#</a>
+**`ReactionDynamics.@problematize`** &mdash; *Macro*.
+
+
+
+Convert a model to a `DiscreteProblem`. If passed a problem instance, return the instance.
+
+**Examples**
+
+```julia
+@problematize acs tspan=1:100
+```
+
+<a id='ReactionDynamics.@solve' href='#ReactionDynamics.@solve'>#</a>
+**`ReactionDynamics.@solve`** &mdash; *Macro*.
+
+
+
+Solve the problem. Solverargs passed at the calltime take precedence.
+
+**Examples**
+
+```julia
+@solve prob
+@solve prob tspan=1:100
+@solve prob tspan=100 trajectories=20
+```
+
+<a id='ReactionDynamics.@plot' href='#ReactionDynamics.@plot'>#</a>
+**`ReactionDynamics.@plot`** &mdash; *Macro*.
+
+
+
+Plot the solution (summary).
+
+**Examples**
+
+```julia
+@plot sol plot_type=summary
+@plot sol plot_type=allocation # not supported for ensemble solutions!
+@plot sol plot_type=valuations # not supported for ensemble solutions!
+@plot sol plot_type=new_transitions # not supported for ensemble solutions!
+```
+
+
+<a id='Optimization-and-Fitting'></a>
+
+<a id='Optimization-and-Fitting-1'></a>
+
+### Optimization and Fitting
+
+<a id='ReactionDynamics.@optimize' href='#ReactionDynamics.@optimize'>#</a>
+**`ReactionDynamics.@optimize`** &mdash; *Macro*.
 
 
 
@@ -594,177 +756,66 @@ Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.co
 @optimize acss abs(A-B) A B=20. α=2. upper_bounds=[200,300,400] maxeval=200 objective=min
 ```
 
-<a id='DyVE.@periodic-Tuple{Any, Any, Any}' href='#DyVE.@periodic-Tuple{Any, Any, Any}'>#</a>
-**`DyVE.@periodic`** &mdash; *Macro*.
+<a id='ReactionDynamics.@fit' href='#ReactionDynamics.@fit'>#</a>
+**`ReactionDynamics.@fit`** &mdash; *Macro*.
 
 
-
-Add a periodic callback to a model.
-
-**Examples**
 
 ```julia
-@periodic acs 1. X += 1
+@fit acset data_points time_steps empiric_variables <free_var=[init_val]>... <free_prm=[init_val]>... opts...
 ```
 
-<a id='DyVE.@plot-Tuple{Any, Vararg{Any}}' href='#DyVE.@plot-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@plot`** &mdash; *Macro*.
+Take an acset and fit initial values and parameters to empirical data.
 
+The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model. The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
 
-
-Plot the solution (summary).
+Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
 
 **Examples**
 
 ```julia
-@plot sol plot_type=summary
-@plot sol plot_type=allocation # not supported for ensemble solutions!
-@plot sol plot_type=valuations # not supported for ensemble solutions!
-@plot sol plot_type=new_transitions # not supported for ensemble solutions!
+t = [1, 50, 100]
+data = [80 30 20]
+@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
 ```
 
-<a id='DyVE.@prob_check_verbose-Tuple{Any}' href='#DyVE.@prob_check_verbose-Tuple{Any}'>#</a>
-**`DyVE.@prob_check_verbose`** &mdash; *Macro*.
+<a id='ReactionDynamics.@fit_and_plot' href='#ReactionDynamics.@fit_and_plot'>#</a>
+**`ReactionDynamics.@fit_and_plot`** &mdash; *Macro*.
 
 
-
-Check model parameters have been set.
-
-<a id='DyVE.@prob_init-Tuple{Any, Vararg{Any}}' href='#DyVE.@prob_init-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@prob_init`** &mdash; *Macro*.
-
-
-
-Set initial values of species in an acset.
-
-**Examples**
 
 ```julia
-@prob_init acs X=1 Y=2 Z=h(α)
-@prob_init acs [1., 2., 3.]
+@fit acset data_points time_steps empiric_variables <free_var=[init_val]>... <free_prm=[init_val]>... opts...
 ```
 
-<a id='DyVE.@prob_meta-Tuple{Any, Vararg{Any}}' href='#DyVE.@prob_meta-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@prob_meta`** &mdash; *Macro*.
+Take an acset, fit initial values and parameters to empirical data, and plot the result.
 
+The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model. The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
 
-
-Set model metadata (e.g. solver arguments)
-
-**Examples**
-
-@prob*meta acs tspan=(0, 100.) schedule=schedule*weighted! @prob*meta sir*acs tspan=250 tstep=1 ```
-
-<a id='DyVE.@prob_params-Tuple{Any, Vararg{Any}}' href='#DyVE.@prob_params-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@prob_params`** &mdash; *Macro*.
-
-
-
-Set parameter values in an acset.
+Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
 
 **Examples**
 
 ```julia
-@prob_params acs α=1. β=2.
+t = [1, 50, 100]
+data = [80 30 20]
+@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
 ```
 
-<a id='DyVE.@prob_uncertainty-Tuple{Any, Vararg{Any}}' href='#DyVE.@prob_uncertainty-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@prob_uncertainty`** &mdash; *Macro*.
+<a id='ReactionDynamics.@build_solver' href='#ReactionDynamics.@build_solver'>#</a>
+**`ReactionDynamics.@build_solver`** &mdash; *Macro*.
 
 
-
-Set uncertainty in initial values of species in an acset (stderr).
-
-Followed with ACS*name standard*error.
-
-**Examples**
 
 ```julia
-@prob_uncertainty acs X=.1 Y=.2
-@prob_uncertainty acs [.1, .2,]
+@build_solver acset <free_var=[init_val]>... <free_prm=[init_val]>... opts...
 ```
 
-<a id='DyVE.@problematize-Tuple{Any, Vararg{Any}}' href='#DyVE.@problematize-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@problematize`** &mdash; *Macro*.
-
-
-
-Convert a model to a `DiscreteProblem`. If passed a problem instance, return the instance.
+Take an acset and export a solution as a function of free vars and free parameters.
 
 **Examples**
 
 ```julia
-@problematize acs tspan=1:100
-```
-
-<a id='DyVE.@push-Tuple{Any, Vararg{Any}}' href='#DyVE.@push-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@push`** &mdash; *Macro*.
-
-
-
-Add reactions to an acset.
-
-**Examples**
-
-```julia
-@push sir_acs β*S*I*tdecay(@time()) S+I --> 2I name=>SI2I
-@push sir_acs begin 
-    ν*I, I --> R, name=>I2R
-    γ, R --> S, name=>R2S
-end
-```
-
-<a id='DyVE.@register-Tuple{Any}' href='#DyVE.@register-Tuple{Any}'>#</a>
-**`DyVE.@register`** &mdash; *Macro*.
-
-
-
-Evaluate expression in DyVE scope.
-
-**Examples**
-
-```julia
-@register bool_cond(t) = (100 < t < 200) || (400 < t < 500)
-@register tdecay(t) = exp(-t/10^3)
-```
-
-<a id='DyVE.@reward-Tuple{Any, Vararg{Any}}' href='#DyVE.@reward-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@reward`** &mdash; *Macro*.
-
-
-
-Set reward.
-
-**Examples**
-
-```julia
-@reward model experimental1=2 experimental2=3
-```
-
-<a id='DyVE.@solve-Tuple{Any, Vararg{Any}}' href='#DyVE.@solve-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@solve`** &mdash; *Macro*.
-
-
-
-Solve the problem. Solverargs passed at the calltime take precedence.
-
-**Examples**
-
-```julia
-@solve prob
-@solve prob tspan=1:100
-@solve prob tspan=100 trajectories=20
-```
-
-<a id='DyVE.@valuation-Tuple{Any, Vararg{Any}}' href='#DyVE.@valuation-Tuple{Any, Vararg{Any}}'>#</a>
-**`DyVE.@valuation`** &mdash; *Macro*.
-
-
-
-Set valuation.
-
-**Examples**
-
-```julia
-@valuation model experimental1=2 experimental2=3
+solver = @build_solver acs S α β # function of variable S and parameters α, β
+solver([S, α, β])
 ```

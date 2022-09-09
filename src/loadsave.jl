@@ -1,6 +1,7 @@
-export @import_model, @export_model, @load_models
+export @import_model, @export_model
 export @import_solution, @export_solution
 export @export_as_table, @export_csv
+export @export, @import
 
 using TOML, JLD2, CSV
 using DataFrames
@@ -88,8 +89,8 @@ macro load_models(pathex)
 end
 
 """
-    @import "sol.jld2"
-    @import "sol.jld2" sol
+    @import_solution "sol.jld2"
+    @import_solution "sol.jld2" sol
 Import a solution from a file.
 
 # Examples
@@ -100,8 +101,8 @@ Import a solution from a file.
 macro import_solution(pathex, varname="sol") :(JLD2.load($(string(pathex)), $(string(varname)))) end
 
 """
-    @export sol
-    @export sol "sol.jld2"
+    @export_solution sol
+    @export_solution sol "sol.jld2"
 Export a solution to a file.
 
 # Examples

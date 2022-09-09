@@ -1,4 +1,4 @@
-using DyVE
+using ReactionDynamics
 
 # acs as a model : incomplete dynamics
 sir_acs = @ReactionNetwork

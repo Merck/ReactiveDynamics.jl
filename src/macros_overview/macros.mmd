@@ -1,5 +1,5 @@
 flowchart TD
-    o["∅"] -->|"@ReactionNetwork"| acs["DyVE.ReactionNetwork (aka ACS)"]
+    o["∅"] -->|"@ReactionNetwork"| acs["ReactionDynamics.ReactionNetwork (aka ACS)"]
     acs --> |"@add_species, @aka, @cost, @equalize, @jump, @mode,
                 @name_transition, @optimize, @periodic, @prob_check_verbose,
                 @prob_init, @prob_meta, @prob_params, @prob_uncertainty,
@@ -11,8 +11,8 @@ flowchart TD
     joinsol --> |"@fit_and_plot"| plot
     mod --> |"@import_model"| acs
     solex --> |"@import_solution"| sol["solution"]
-    acs1["ACS1\n~DyVE.ReactionNetwork"] --- join[ ]
-    acs2["ACS2\n~DyVE.ReactionNetwork"] --- join[ ]
+    acs1["ACS1\n~ReactionDynamics.ReactionNetwork"] --- join[ ]
+    acs2["ACS2\n~ReactionDynamics.ReactionNetwork"] --- join[ ]
     join --> |"@join"| acs
     sol --> |"@plot,
                 @plot_new_transitions,
@@ -26,15 +26,15 @@ flowchart TD
     joinsol --> |"@fit"| sol
     
     subgraph Legend
-        acsClass["DyVE objects"]
+        acsClass["ReactionDynamics objects"]
         csvClass["csv files"]
         DPcl["DiscreteProblem"]
         plotClass["Plots objects"]
         other["others"]
     end
 
-    classDef dyve fill:#B0F5F4,stroke:#3585CC;
-    class acs,acs1,acs2,mod,join,solex,joinsol,acsClass,sol,sol2,table dyve;
+    classDef ReactionDynamics fill:#B0F5F4,stroke:#3585CC;
+    class acs,acs1,acs2,mod,join,solex,joinsol,acsClass,sol,sol2,table ReactionDynamics;
 
     classDef DPcl fill:#F0BC93,stroke:#F0453D;
     class DP,DPcl DPcl;

@@ -1,7 +1,7 @@
 using Documenter, DocumenterMarkdown
-using DyVE
+using ReactionDynamics
 
-# makedocs(sitename="DyVE Interface Documentation") # HTML output
-makedocs(format = Markdown(), sitename="DyVE Documentation", pages = [
+# makedocs(sitename="ReactionDynamics Interface Documentation") # HTML output
+makedocs(format = Markdown(), sitename="ReactionDynamics Documentation", pages = [
     "index.md"]) # MD output
-# makedocs(format = Documenter.LaTeX(platform="none"), sitename="DyVE Documentation") # PDF output
+# makedocs(format = Documenter.LaTeX(platform="none"), sitename="ReactionDynamics Documentation") # PDF output

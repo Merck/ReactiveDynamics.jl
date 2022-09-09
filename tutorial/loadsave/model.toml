@@ -1,7 +1,7 @@
 event = []
 
 [[obs]]
-obsOpts = "DyVE.FoldedObservable(Union{Float64, Int64, AbstractString, Expr, Symbol, Tuple{Float64, Union{Float64, Int64, AbstractString, Expr, Symbol}}}[1], 2.0, Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[])"
+obsOpts = "ReactionDynamics.FoldedObservable(Union{Float64, Int64, AbstractString, Expr, Symbol, Tuple{Float64, Union{Float64, Int64, AbstractString, Expr, Symbol}}}[1], 2.0, Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[])"
 obsName = "RATE"
 
 [[spec]]

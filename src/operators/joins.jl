@@ -120,6 +120,8 @@ function merge_eqs!(eqs, eqblock)
 end
 
 """
+    @join models... [equalize...]
+
 Performs join of models and identifies model variables, as specified.
 
 Model variables / parameter values and metadata are propagated; the last model takes precedence.

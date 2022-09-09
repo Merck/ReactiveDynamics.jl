@@ -3,8 +3,8 @@
 export @push, @name_transition, @mode, @add_species
 export @periodic, @jump
 export @prob_init, @prob_uncertainty, @prob_params, @prob_meta
-export @prob_check, @prob_check_verbose
 export @prob_role, @list_by_role, @list_roles
+export @prob_check_verbose
 export @aka
 export @register
 
@@ -222,8 +222,6 @@ end
 """
 Set uncertainty in initial values of species in an acset (stderr).
 
-Followed with ACS_name standard_error.
-
 # Examples
 ```julia
 @prob_uncertainty acs X=.1 Y=.2
@@ -307,6 +305,7 @@ end
 Set model metadata (e.g. solver arguments)
 
 # Examples
+```julia
 @prob_meta acs tspan=(0, 100.) schedule=schedule_weighted!
 @prob_meta sir_acs tspan=250 tstep=1
 ```
@@ -364,8 +363,6 @@ macro periodic(acsex, pex, acex) push_to_acs!(acsex, Expr(:&&, :(@periodic($pex)
 """
 Add a jump process (with specified Poisson intensity per unit time step) to a model.
 
-Followed with ACS_name Poisson_rate (conditiuon1 && condition2 && … && (action1; action2; …)).
-
 # Examples
 ```julia
 @jump acs λ Z += rand(Poisson(1.))
@@ -374,7 +371,7 @@ Followed with ACS_name Poisson_rate (conditiuon1 && condition2 && … && (action
 macro jump(acsex, inex, acex) push_to_acs!(acsex, Expr(:&&, Expr(:call, :rand, :(Poisson(max(@solverarg(:tstep) * $inex, 0)))), acex)) end
 
 """
-Evaluate expression in DyVE scope.
+Evaluate expression in ReactionDynamics scope.
 
 # Examples
 ```julia
@@ -382,4 +379,4 @@ Evaluate expression in DyVE scope.
 @register tdecay(t) = exp(-t/10^3)
 ```
 """
-macro register(ex) :(@eval DyVE $ex) end
+macro register(ex) :(@eval ReactionDynamics $ex) end

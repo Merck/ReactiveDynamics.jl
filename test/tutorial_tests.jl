@@ -1,4 +1,4 @@
-using DyVE
+using ReactionDynamics
 
 @safeinclude "example" "../tutorial/example.jl"
 @safeinclude "joins" "../tutorial/joins/joins.jl"
