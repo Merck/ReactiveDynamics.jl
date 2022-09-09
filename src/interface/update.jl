@@ -44,9 +44,11 @@ macro push(acsex, exs...) push_to_acs!(acsex, exs...) end
 Set name of a transition in the model.
 
 # Examples
+```julia
 @name_transition acs 1="name"
 @name_transition acs name="transition_name"
 @name_transition acs "name"="transition_name"
+```
 """
 macro name_transition(acsex, exs...)
     call = :(begin end); for ex in exs
@@ -98,9 +100,11 @@ Set species modality.
  - rate
 
 # Examples
+```julia
 @mode acs (r"proj\\w+", r"experimental\\w+") conserved
 @mode acs (S, I) conserved
 @mode acs S conserved
+```
 """
 macro mode(acsex, spexs, mexs)
     mods = !isa(mexs, Expr) ? [mexs] : collect(mexs.args)
@@ -175,8 +179,6 @@ get_pattern(ex) = ex isa Expr && (macroname(ex) == :r_str) ? eval(ex) : ex
 
 """
 Set initial values of species in an acset.
-
-Two different formats can be applied. Followed with ACS_name initial_values.
 
 # Examples
 ```julia
@@ -275,8 +277,6 @@ end
 """
 Set parameter values in an acset.
 
-Followed with ACS_name parameter_values.
-
 # Examples
 ```julia
 @prob_params acs α=1. β=2.
@@ -304,12 +304,9 @@ function meta!(acs, metas)
 end
 
 """
-Set model metadata (i.e., solver arguments)
-
-Followed with arguments, e.g. ACS_name tspan tstep.
+Set model metadata (e.g. solver arguments)
 
 # Examples
-```julia
 @prob_meta acs tspan=(0, 100.) schedule=schedule_weighted!
 @prob_meta sir_acs tspan=250 tstep=1
 ```
@@ -323,8 +320,6 @@ end
 
 """
 Alias object name in an acs.
-
-Followed with an ACS_name, transition=transition_alias species=species_alias.
 
 # Default names
 | name | short name |

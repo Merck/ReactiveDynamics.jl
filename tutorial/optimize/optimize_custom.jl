@@ -2,24 +2,29 @@ using DyVE
 
 ## some embedded neural network, etc.
 @register begin
-    function learnt_function(A, B, C, params, α)
-        [A, B, C]' * params + α # params: 3-element vector
+    function function_to_learn(A, B, C, params)
+        [A, B, C]' * params # params: 3-element vector
     end
 end
+
 acs = @ReactionNetwork begin
-    learnt_function(A, B, C, params, α), A --> B+C, priority=>.6
+    function_to_learn(A, B, C, params), A --> B+C
     1., B --> C
     2., C --> B
 end
 
 # initial values, check params
 @prob_init acs A=60. B=10. C=150.
-@prob_params acs params=[1, 2, 3] α=1
+@prob_params acs params=[.01, .01, .01]
 @prob_meta acs tspan=100.
 
 prob = @problematize acs
 sol = @solve prob
-@optimize acs abs(C) params α maxeval=200 lower_bounds=0 upper_bounds=200 final_only=true
+
+time_points = [1, 50, 100]
+data = [60 30 5]
+
+@fit_and_plot acs data time_points vars=[A] params α maxeval=200 lower_bounds=0 upper_bounds=.01
 
 ## export solution as a function of params
 parametrized_solver = @build_solver acs A params α trajectories=10

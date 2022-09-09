@@ -9,7 +9,9 @@ import Plots
 Convert a model to a `DiscreteProblem`. If passed a problem instance, return the instance.
 
 # Examples
+```julia
 @problematize acs tspan=1:100
+```
 """
 macro problematize(acsex, args...)
     args, kwargs = args_kwargs(args)
@@ -23,9 +25,11 @@ end
 Solve the problem. Solverargs passed at the calltime take precedence.
 
 # Examples
+```julia
 @solve prob
 @solve prob tspan=1:100
 @solve prob tspan=100 trajectories=20
+```
 """
 macro solve(probex, args...)
     args, kwargs = args_kwargs(args)
@@ -74,10 +78,12 @@ end
 Plot the solution (summary).
 
 # Examples
+```julia
 @plot sol plot_type=summary
 @plot sol plot_type=allocation # not supported for ensemble solutions!
 @plot sol plot_type=valuations # not supported for ensemble solutions!
 @plot sol plot_type=new_transitions # not supported for ensemble solutions!
+```
 """
 macro plot(solex, args...)
     _, kwargs = args_kwargs(args)
