@@ -39,7 +39,7 @@ Macro that takes an expression corresponding to a reaction network and outputs a
 
 Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ for annihilation/creation to/from nothing.
 
-Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactionDynamics's source code.
+Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactiveDynamics's source code.
 
 # Examples
 ```julia

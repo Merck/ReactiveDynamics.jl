@@ -1,4 +1,4 @@
-using ReactionDynamics
+using ReactiveDynamics
 
 # fit unknown dynamics to empirical data
 ## some embedded neural network, etc.

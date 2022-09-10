@@ -1,4 +1,4 @@
-# ReactionDynamics.jl <br> 
+# ReactiveDynamics.jl <br> 
 
 <p align="center">
   <img src="docs/assets/diagram1.png" alt="wiring diagram"> <br>
@@ -64,7 +64,7 @@ Follow the SIR model's reactions:
 </p>
 
 ```julia
-using ReactionDynamics
+using ReactiveDynamics
 
 # model dynamics
 sir_acs = @ReactionNetwork begin
@@ -127,18 +127,18 @@ end
 push!(rd_models, @ReactionNetwork begin
                 M[$i][$m, $n], state[$m] + {demand[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+} --> state[$n] + 
                         {production[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+}, cycle_time=>cycle_times[$i][$m, $n], probability_of_success=>$m*$n/(n[$i])^2
-        end m=1:ReactionDynamics.ns[$i] n=1:ReactionDynamics.ns[$i]
+        end m=1:ReactiveDynamics.ns[$i] n=1:ReactiveDynamics.ns[$i]
 )
 ```
 
 The next step is to instantiate the atomic models (submodels).
 
 ```julia
-using ReactionDynamics
+using ReactiveDynamics
 ## setup the environment
-rd_models = ReactionDynamics.ReactionNetwork[] # submodels
+rd_models = ReactiveDynamics.ReactionNetwork[] # submodels
 
-# needs to live within ReactionDynamics's scope
+# needs to live within ReactiveDynamics's scope
 # the arrays will contain the submodel
 @register begin
     ns = Int[] # size of submodels
@@ -172,11 +172,11 @@ Next step is to add some off-diagonal interactions.
 ```julia
 # sparse off-diagonal interactions, sparse declaration
 # again, we use GeneratedExpressions.jl
-sparse_off_diagonal = zeros(sum(ReactionDynamics.ns), sum(ReactionDynamics.ns))
+sparse_off_diagonal = zeros(sum(ReactiveDynamics.ns), sum(ReactiveDynamics.ns))
 for i in 1:n_models
     j = rand(setdiff(1:n_models, (i, )))
-    i_ix = rand(1:ReactionDynamics.ns[i]); j_ix = rand(1:ReactionDynamics.ns[j])
-    sparse_off_diagonal[i_ix+sum(ReactionDynamics.ns[1:i-1]), j_ix+sum(ReactionDynamics.ns[1:j-1])] += 1
+    i_ix = rand(1:ReactiveDynamics.ns[i]); j_ix = rand(1:ReactiveDynamics.ns[j])
+    sparse_off_diagonal[i_ix+sum(ReactiveDynamics.ns[1:i-1]), j_ix+sum(ReactiveDynamics.ns[1:j-1])] += 1
     interaction_ex = """@push rd_model begin 1., var"rd_models[$i].state[$i_ix]" --> var"rd_models[$j]__state[$j_ix]" end"""
     eval(Meta.parseall(interaction_ex))
 end
@@ -189,7 +189,7 @@ Let's plot the interactions:
 The resulting model can then be conveniently simulated using the modeling metalanguage.
 
 ```julia
-using ReactionDynamics: nparts
+using ReactiveDynamics: nparts
 u0 = rand(1:1000, nparts(rd_model, :S))
 @prob_init rd_model u0
 
@@ -206,7 +206,7 @@ sol = @solve prob trajectories=2
 
 We demonstrate how to fit unknown part of dynamics to empirical data.
 
-We use `@register` to define a simple linear function within the scope of module `ReactionDynamics`; parameters of the function will be then optimized for. Note that `function_to_learn` can be generally replaced with a neural network (Flux chain), etc.
+We use `@register` to define a simple linear function within the scope of module `ReactiveDynamics`; parameters of the function will be then optimized for. Note that `function_to_learn` can be generally replaced with a neural network (Flux chain), etc.
 
 ```julia
 ## some embedded function (neural network, etc.)
@@ -260,8 +260,8 @@ data = [60 30 5]
 
 ### Create a Model
 
-<a id='ReactionDynamics.@ReactionNetwork' href='#ReactionDynamics.@ReactionNetwork'>#</a>
-**`ReactionDynamics.@ReactionNetwork`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@ReactionNetwork' href='#ReactiveDynamics.@ReactionNetwork'>#</a>
+**`ReactiveDynamics.@ReactionNetwork`** &mdash; *Macro*.
 
 
 
@@ -269,7 +269,7 @@ Macro that takes an expression corresponding to a reaction network and outputs a
 
 Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ for annihilation/creation to/from nothing.
 
-Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactionDynamics's source code.
+Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactiveDynamics's source code.
 
 **Examples**
 
@@ -293,8 +293,8 @@ end
 
 ### Update Model Objects
 
-<a id='ReactionDynamics.@add_species' href='#ReactionDynamics.@add_species'>#</a>
-**`ReactionDynamics.@add_species`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@add_species' href='#ReactiveDynamics.@add_species'>#</a>
+**`ReactiveDynamics.@add_species`** &mdash; *Macro*.
 
 
 
@@ -306,8 +306,8 @@ Add new species to a model.
 @add_species acs S I R
 ```
 
-<a id='ReactionDynamics.@aka' href='#ReactionDynamics.@aka'>#</a>
-**`ReactionDynamics.@aka`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@aka' href='#ReactiveDynamics.@aka'>#</a>
+**`ReactiveDynamics.@aka`** &mdash; *Macro*.
 
 
 
@@ -330,8 +330,8 @@ Alias object name in an acs.
 @aka acs species=resource transition=reaction
 ```
 
-<a id='ReactionDynamics.@mode' href='#ReactionDynamics.@mode'>#</a>
-**`ReactionDynamics.@mode`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@mode' href='#ReactiveDynamics.@mode'>#</a>
+**`ReactiveDynamics.@mode`** &mdash; *Macro*.
 
 
 
@@ -351,8 +351,8 @@ Set species modality.
 @mode acs S conserved
 ```
 
-<a id='ReactionDynamics.@name_transition' href='#ReactionDynamics.@name_transition'>#</a>
-**`ReactionDynamics.@name_transition`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@name_transition' href='#ReactiveDynamics.@name_transition'>#</a>
+**`ReactiveDynamics.@name_transition`** &mdash; *Macro*.
 
 
 
@@ -373,8 +373,8 @@ Set name of a transition in the model.
 
 #### Resource Costs
 
-<a id='ReactionDynamics.@cost' href='#ReactionDynamics.@cost'>#</a>
-**`ReactionDynamics.@cost`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@cost' href='#ReactiveDynamics.@cost'>#</a>
+**`ReactiveDynamics.@cost`** &mdash; *Macro*.
 
 
 
@@ -386,8 +386,8 @@ Set cost.
 @cost model experimental1=2 experimental2=3
 ```
 
-<a id='ReactionDynamics.@valuation' href='#ReactionDynamics.@valuation'>#</a>
-**`ReactionDynamics.@valuation`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@valuation' href='#ReactiveDynamics.@valuation'>#</a>
+**`ReactiveDynamics.@valuation`** &mdash; *Macro*.
 
 
 
@@ -399,8 +399,8 @@ Set valuation.
 @valuation model experimental1=2 experimental2=3
 ```
 
-<a id='ReactionDynamics.@reward' href='#ReactionDynamics.@reward'>#</a>
-**`ReactionDynamics.@reward`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@reward' href='#ReactiveDynamics.@reward'>#</a>
+**`ReactiveDynamics.@reward`** &mdash; *Macro*.
 
 
 
@@ -419,8 +419,8 @@ Set reward.
 
 ### Add Reactions
 
-<a id='ReactionDynamics.@push' href='#ReactionDynamics.@push'>#</a>
-**`ReactionDynamics.@push`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@push' href='#ReactiveDynamics.@push'>#</a>
+**`ReactiveDynamics.@push`** &mdash; *Macro*.
 
 
 
@@ -436,8 +436,8 @@ Add reactions to an acset.
 end
 ```
 
-<a id='ReactionDynamics.@jump' href='#ReactionDynamics.@jump'>#</a>
-**`ReactionDynamics.@jump`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@jump' href='#ReactiveDynamics.@jump'>#</a>
+**`ReactiveDynamics.@jump`** &mdash; *Macro*.
 
 
 
@@ -449,8 +449,8 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 @jump acs λ Z += rand(Poisson(1.))
 ```
 
-<a id='ReactionDynamics.@periodic' href='#ReactionDynamics.@periodic'>#</a>
-**`ReactionDynamics.@periodic`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@periodic' href='#ReactiveDynamics.@periodic'>#</a>
+**`ReactiveDynamics.@periodic`** &mdash; *Macro*.
 
 
 
@@ -469,8 +469,8 @@ Add a periodic callback to a model.
 
 ### Set Initial Values, Uncertainty, and Solver Arguments
 
-<a id='ReactionDynamics.@prob_init' href='#ReactionDynamics.@prob_init'>#</a>
-**`ReactionDynamics.@prob_init`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@prob_init' href='#ReactiveDynamics.@prob_init'>#</a>
+**`ReactiveDynamics.@prob_init`** &mdash; *Macro*.
 
 
 
@@ -483,8 +483,8 @@ Set initial values of species in an acset.
 @prob_init acs [1., 2., 3.]
 ```
 
-<a id='ReactionDynamics.@prob_uncertainty' href='#ReactionDynamics.@prob_uncertainty'>#</a>
-**`ReactionDynamics.@prob_uncertainty`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@prob_uncertainty' href='#ReactiveDynamics.@prob_uncertainty'>#</a>
+**`ReactiveDynamics.@prob_uncertainty`** &mdash; *Macro*.
 
 
 
@@ -497,8 +497,8 @@ Set uncertainty in initial values of species in an acset (stderr).
 @prob_uncertainty acs [.1, .2,]
 ```
 
-<a id='ReactionDynamics.@prob_params' href='#ReactionDynamics.@prob_params'>#</a>
-**`ReactionDynamics.@prob_params`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@prob_params' href='#ReactiveDynamics.@prob_params'>#</a>
+**`ReactiveDynamics.@prob_params`** &mdash; *Macro*.
 
 
 
@@ -510,8 +510,8 @@ Set parameter values in an acset.
 @prob_params acs α=1. β=2.
 ```
 
-<a id='ReactionDynamics.@prob_meta' href='#ReactionDynamics.@prob_meta'>#</a>
-**`ReactionDynamics.@prob_meta`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@prob_meta' href='#ReactiveDynamics.@prob_meta'>#</a>
+**`ReactiveDynamics.@prob_meta`** &mdash; *Macro*.
 
 
 
@@ -531,8 +531,8 @@ Set model metadata (e.g. solver arguments)
 
 ### Model Unions
 
-<a id='ReactionDynamics.@join' href='#ReactionDynamics.@join'>#</a>
-**`ReactionDynamics.@join`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@join' href='#ReactiveDynamics.@join'>#</a>
+**`ReactiveDynamics.@join`** &mdash; *Macro*.
 
 
 
@@ -550,8 +550,8 @@ Model variables / parameter values and metadata are propagated; the last model t
 @join acs1 acs2 @catchall(A)=acs2.Z @catchall(XY) @catchall(B)
 ```
 
-<a id='ReactionDynamics.@equalize' href='#ReactionDynamics.@equalize'>#</a>
-**`ReactionDynamics.@equalize`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@equalize' href='#ReactiveDynamics.@equalize'>#</a>
+**`ReactiveDynamics.@equalize`** &mdash; *Macro*.
 
 
 
@@ -570,8 +570,8 @@ Identify (collapse) a set of species in a model.
 
 ### Model Import and Export
 
-<a id='ReactionDynamics.@import_model' href='#ReactionDynamics.@import_model'>#</a>
-**`ReactionDynamics.@import_model`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@import_model' href='#ReactiveDynamics.@import_model'>#</a>
+**`ReactiveDynamics.@import_model`** &mdash; *Macro*.
 
 
 
@@ -583,8 +583,8 @@ Import a model from a file.
 @import_model "model.toml"
 ```
 
-<a id='ReactionDynamics.@export_model' href='#ReactionDynamics.@export_model'>#</a>
-**`ReactionDynamics.@export_model`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@export_model' href='#ReactiveDynamics.@export_model'>#</a>
+**`ReactiveDynamics.@export_model`** &mdash; *Macro*.
 
 
 
@@ -603,8 +603,8 @@ Export model to a file.
 
 ### Solution Import and Export
 
-<a id='ReactionDynamics.@import_solution' href='#ReactionDynamics.@import_solution'>#</a>
-**`ReactionDynamics.@import_solution`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@import_solution' href='#ReactiveDynamics.@import_solution'>#</a>
+**`ReactiveDynamics.@import_solution`** &mdash; *Macro*.
 
 
 
@@ -621,8 +621,8 @@ Import a solution from a file.
 @import_solution "sir_acs_sol/serialized/sol.jld2"
 ```
 
-<a id='ReactionDynamics.@export_as_table' href='#ReactionDynamics.@export_as_table'>#</a>
-**`ReactionDynamics.@export_as_table`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@export_as_table' href='#ReactiveDynamics.@export_as_table'>#</a>
+**`ReactiveDynamics.@export_as_table`** &mdash; *Macro*.
 
 
 
@@ -638,8 +638,8 @@ Export a solution as a `DataFrame`.
 @export_as_table sol
 ```
 
-<a id='ReactionDynamics.@export_csv' href='#ReactionDynamics.@export_csv'>#</a>
-**`ReactionDynamics.@export_csv`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@export_csv' href='#ReactiveDynamics.@export_csv'>#</a>
+**`ReactiveDynamics.@export_csv`** &mdash; *Macro*.
 
 
 
@@ -656,8 +656,8 @@ Export a solution to a file.
 @export_csv sol "sol.csv"
 ```
 
-<a id='ReactionDynamics.@export_solution' href='#ReactionDynamics.@export_solution'>#</a>
-**`ReactionDynamics.@export_solution`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@export_solution' href='#ReactiveDynamics.@export_solution'>#</a>
+**`ReactiveDynamics.@export_solution`** &mdash; *Macro*.
 
 
 
@@ -681,8 +681,8 @@ Export a solution to a file.
 
 ### Problematize, Solve, and Plot
 
-<a id='ReactionDynamics.@problematize' href='#ReactionDynamics.@problematize'>#</a>
-**`ReactionDynamics.@problematize`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@problematize' href='#ReactiveDynamics.@problematize'>#</a>
+**`ReactiveDynamics.@problematize`** &mdash; *Macro*.
 
 
 
@@ -694,8 +694,8 @@ Convert a model to a `DiscreteProblem`. If passed a problem instance, return the
 @problematize acs tspan=1:100
 ```
 
-<a id='ReactionDynamics.@solve' href='#ReactionDynamics.@solve'>#</a>
-**`ReactionDynamics.@solve`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@solve' href='#ReactiveDynamics.@solve'>#</a>
+**`ReactiveDynamics.@solve`** &mdash; *Macro*.
 
 
 
@@ -709,8 +709,8 @@ Solve the problem. Solverargs passed at the calltime take precedence.
 @solve prob tspan=100 trajectories=20
 ```
 
-<a id='ReactionDynamics.@plot' href='#ReactionDynamics.@plot'>#</a>
-**`ReactionDynamics.@plot`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@plot' href='#ReactiveDynamics.@plot'>#</a>
+**`ReactiveDynamics.@plot`** &mdash; *Macro*.
 
 
 
@@ -732,8 +732,8 @@ Plot the solution (summary).
 
 ### Optimization and Fitting
 
-<a id='ReactionDynamics.@optimize' href='#ReactionDynamics.@optimize'>#</a>
-**`ReactionDynamics.@optimize`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@optimize' href='#ReactiveDynamics.@optimize'>#</a>
+**`ReactiveDynamics.@optimize`** &mdash; *Macro*.
 
 
 
@@ -756,8 +756,8 @@ Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.co
 @optimize acss abs(A-B) A B=20. α=2. upper_bounds=[200,300,400] maxeval=200 objective=min
 ```
 
-<a id='ReactionDynamics.@fit' href='#ReactionDynamics.@fit'>#</a>
-**`ReactionDynamics.@fit`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@fit' href='#ReactiveDynamics.@fit'>#</a>
+**`ReactiveDynamics.@fit`** &mdash; *Macro*.
 
 
 
@@ -779,8 +779,8 @@ data = [80 30 20]
 @fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
 ```
 
-<a id='ReactionDynamics.@fit_and_plot' href='#ReactionDynamics.@fit_and_plot'>#</a>
-**`ReactionDynamics.@fit_and_plot`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@fit_and_plot' href='#ReactiveDynamics.@fit_and_plot'>#</a>
+**`ReactiveDynamics.@fit_and_plot`** &mdash; *Macro*.
 
 
 
@@ -802,8 +802,8 @@ data = [80 30 20]
 @fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
 ```
 
-<a id='ReactionDynamics.@build_solver' href='#ReactionDynamics.@build_solver'>#</a>
-**`ReactionDynamics.@build_solver`** &mdash; *Macro*.
+<a id='ReactiveDynamics.@build_solver' href='#ReactiveDynamics.@build_solver'>#</a>
+**`ReactiveDynamics.@build_solver`** &mdash; *Macro*.
 
 
 

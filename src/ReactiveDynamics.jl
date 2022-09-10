@@ -1,4 +1,4 @@
-module ReactionDynamics
+module ReactiveDynamics
 
 using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
 using Reexport

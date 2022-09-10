@@ -371,7 +371,7 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 macro jump(acsex, inex, acex) push_to_acs!(acsex, Expr(:&&, Expr(:call, :rand, :(Poisson(max(@solverarg(:tstep) * $inex, 0)))), acex)) end
 
 """
-Evaluate expression in ReactionDynamics scope.
+Evaluate expression in ReactiveDynamics scope.
 
 # Examples
 ```julia
@@ -379,4 +379,4 @@ Evaluate expression in ReactionDynamics scope.
 @register tdecay(t) = exp(-t/10^3)
 ```
 """
-macro register(ex) :(@eval ReactionDynamics $ex) end
+macro register(ex) :(@eval ReactiveDynamics $ex) end

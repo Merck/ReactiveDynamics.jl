@@ -67,7 +67,7 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     foreach(v -> push!(letex.args[1].args, :($v = state.p[$(QuoteNode(v))])), get_contained_params(fex, prm_names))
     push!(letex.args[2].args, fex)
 
-    # the function shall be a function of the dynamic ReactionDynamicsState structure: letex -> :(state -> $letex)
+    # the function shall be a function of the dynamic ReactiveDynamicsState structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" acset
     eval(:(state -> $letex))
 end

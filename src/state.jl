@@ -27,7 +27,7 @@ mutable struct Observable
     sampled
 end
 
-mutable struct ReactionDynamicsState
+mutable struct ReactiveDynamicsState
     acs::ReactionNetwork
 
     attrs::Dict{Symbol, Vector}
@@ -45,7 +45,7 @@ mutable struct ReactionDynamicsState
     wrap_fun
     history_u::Vector{Vector{Float64}}; history_t::Vector{Float64}
 
-    function ReactionDynamicsState(acs::ReactionNetwork, attrs, transition_recipes, wrap_fun, t0=0; kwargs...)
+    function ReactiveDynamicsState(acs::ReactionNetwork, attrs, transition_recipes, wrap_fun, t0=0; kwargs...)
         ongoing_transitions = Transition[]
         log = NamedTuple[]
         observables = compile_observables(acs)
@@ -60,16 +60,16 @@ end
 
 # get value of a numeric expression
 # evaluate compiled numeric expression in context of (u, p, t)
-function context_eval(state::ReactionDynamicsState, o)
+function context_eval(state::ReactiveDynamicsState, o)
     o = o isa Function ? Base.invokelatest(o, state) : o
     
     o isa Sampleable ? rand(o) : o
 end
 
-Base.getindex(state::ReactionDynamicsState, keys...) = context_eval(state, (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]])
+Base.getindex(state::ReactiveDynamicsState, keys...) = context_eval(state, (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]])
 
-init_u!(state::ReactionDynamicsState) = (u = fill(.0, nparts(state, :S)); foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S)); state.u = u)
-save!(state::ReactionDynamicsState) = (push!(state.history_u, state.u); push!(state.history_t, state.t))
+init_u!(state::ReactiveDynamicsState) = (u = fill(.0, nparts(state, :S)); foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S)); state.u = u)
+save!(state::ReactiveDynamicsState) = (push!(state.history_u, state.u); push!(state.history_t, state.t))
 
 function compile_observables(acs::ReactionNetwork)
     observables = Dict{Symbol, Observable}()
@@ -100,16 +100,16 @@ function sample_range(rng, state)
     r isa Sampleable ? rand(r) : r
 end
 
-function resample!(state::ReactionDynamicsState, o::Observable)
+function resample!(state::ReactiveDynamicsState, o::Observable)
     o.last = state.t
     isempty(o.range) && (return o.val = missing)
 
     o.sampled = context_eval(state, sample_range(o.range, state))
 end
 
-resample(state::ReactionDynamicsState, o::Symbol) = resample!(state, state.observables[o])
+resample(state::ReactiveDynamicsState, o::Symbol) = resample!(state, state.observables[o])
 
-update_observables(state::ReactionDynamicsState) = 
+update_observables(state::ReactiveDynamicsState) = 
     foreach(o -> (state.t - o.last) >= o.every && resample!(state, o), values(state.observables))
 
 function prune_r_line(r_line)
@@ -120,9 +120,9 @@ function prune_r_line(r_line)
     end
 end
 
-find_index(species::Symbol, state::ReactionDynamicsState) = findfirst(i -> state[i, :specName] == species, 1:nparts(state, :S))
+find_index(species::Symbol, state::ReactiveDynamicsState) = findfirst(i -> state[i, :specName] == species, 1:nparts(state, :S))
 
-function sample_transitions!(state::ReactionDynamicsState)
+function sample_transitions!(state::ReactiveDynamicsState)
     for (_, v) in state.transitions; empty!(v) end
     for i in 1:length(state.transition_recipes[:trans])
         !(state.transition_recipes[:transActivated][i]) && continue
@@ -144,37 +144,37 @@ function sample_transitions!(state::ReactionDynamicsState)
 end
 
 ## sync
-update_u!(state::ReactionDynamicsState, u) = (state.u .= u)
-update_t!(state::ReactionDynamicsState, t) = (state.t = t)
-sync_p!(p, state::ReactionDynamicsState) = merge!(p, state.p)
+update_u!(state::ReactiveDynamicsState, u) = (state.u .= u)
+update_t!(state::ReactiveDynamicsState, t) = (state.t = t)
+sync_p!(p, state::ReactiveDynamicsState) = merge!(p, state.p)
 
-function sync!(state::ReactionDynamicsState, u, p)
+function sync!(state::ReactiveDynamicsState, u, p)
     state.u .= u
     for k in keys(state.p) haskey(p, k) && (state.p[k] = p[k]) end
 end
 
-as_state(u, t, state::ReactionDynamicsState) = (state = deepcopy(state); state.u .= u; state.t = t; state)
+as_state(u, t, state::ReactiveDynamicsState) = (state = deepcopy(state); state.u .= u; state.t = t; state)
 
-Catlab.CategoricalAlgebra.nparts(state::ReactionDynamicsState, obj::Symbol) = obj == :T ? length(state.transitions[:transLHS]) : nparts(state.acs, obj)
+Catlab.CategoricalAlgebra.nparts(state::ReactiveDynamicsState, obj::Symbol) = obj == :T ? length(state.transitions[:transLHS]) : nparts(state.acs, obj)
 
 ## query the state
 
-t(state::ReactionDynamicsState) = state.t
-solverarg(state::ReactionDynamicsState, arg) = state.solverargs[arg]
-take(state::ReactionDynamicsState, pcs::Symbol) = state.observables[pcs].sampled
-log(state::ReactionDynamicsState, msg) = (println(msg); push!(state.log, (:log, msg)))
-state(state::ReactionDynamicsState) = state
+t(state::ReactiveDynamicsState) = state.t
+solverarg(state::ReactiveDynamicsState, arg) = state.solverargs[arg]
+take(state::ReactiveDynamicsState, pcs::Symbol) = state.observables[pcs].sampled
+log(state::ReactiveDynamicsState, msg) = (println(msg); push!(state.log, (:log, msg)))
+state(state::ReactiveDynamicsState) = state
 
-function periodic(state::ReactionDynamicsState, period)
+function periodic(state::ReactiveDynamicsState, period)
     period == .0 || 
         (length(state.history_t) > 1 && (fld(state.t, period)-fld(state.history_t[end-1], period) > 0))
 end
 
-function set_params(state::ReactionDynamicsState, vals...)
+function set_params(state::ReactiveDynamicsState, vals...)
     for (p, v) in vals state.p[p] = v end 
 end
 
-function add_to_spawn!(state::ReactionDynamicsState, hash, n)
+function add_to_spawn!(state::ReactiveDynamicsState, hash, n)
     ix = findfirst(ix -> state.transition_recipes[:transHash][ix] == hash)
     !isnothing(ix) && (state.transition_recipes[:transHash][ix] += n)
 end

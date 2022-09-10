@@ -1,9 +1,9 @@
-using ReactionDynamics
+using ReactiveDynamics
 
 # import a model, solve the problem
 @import_model model.toml sir_acs
 @assert @isdefined sir_acs
-@assert isdefined(ReactionDynamics, :tdecay)
+@assert isdefined(ReactiveDynamics, :tdecay)
 
 prob = @problematize sir_acs
 sol = @solve prob trajectories=20

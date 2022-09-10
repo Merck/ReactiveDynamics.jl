@@ -1,4 +1,4 @@
-using ReactionDynamics
+using ReactiveDynamics
 
 @safeinclude "example" "../tutorial/example.jl"
 @safeinclude "joins" "../tutorial/joins/joins.jl"

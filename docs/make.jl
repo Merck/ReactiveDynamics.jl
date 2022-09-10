@@ -1,7 +1,7 @@
 using Documenter, DocumenterMarkdown
-using ReactionDynamics
+using ReactiveDynamics
 
-# makedocs(sitename="ReactionDynamics Interface Documentation") # HTML output
-makedocs(format = Markdown(), sitename="ReactionDynamics Documentation", pages = [
+# makedocs(sitename="ReactiveDynamics Interface Documentation") # HTML output
+makedocs(format = Markdown(), sitename="ReactiveDynamics Documentation", pages = [
     "index.md"]) # MD output
-# makedocs(format = Documenter.LaTeX(platform="none"), sitename="ReactionDynamics Documentation") # PDF output
+# makedocs(format = Documenter.LaTeX(platform="none"), sitename="ReactiveDynamics Documentation") # PDF output

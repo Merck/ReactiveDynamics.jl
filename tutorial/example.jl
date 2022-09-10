@@ -1,4 +1,4 @@
-using ReactionDynamics
+using ReactiveDynamics
 
 # acs as a model : incomplete dynamics
 sir_acs = @ReactionNetwork

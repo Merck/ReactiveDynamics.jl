@@ -1,4 +1,4 @@
-using ReactionDynamics
+using ReactiveDynamics
 
 # solve for steady state
 acss = @ReactionNetwork begin

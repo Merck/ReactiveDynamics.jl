@@ -11,5 +11,5 @@ end
 push!(rd_models, @ReactionNetwork begin
                 M[$i][$m, $n], state[$m] + {demand[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+} --> state[$n] + 
                         {production[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+}, cycle_time=>cycle_times[$i][$m, $n], probability_of_success=>$m*$n/(n[$i])^2
-        end m=1:ReactionDynamics.ns[$i] n=1:ReactionDynamics.ns[$i]
+        end m=1:ReactiveDynamics.ns[$i] n=1:ReactiveDynamics.ns[$i]
 )

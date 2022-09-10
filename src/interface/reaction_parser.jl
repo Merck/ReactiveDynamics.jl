@@ -16,7 +16,7 @@ function recursively_choose(r_line, state)
     end
 end
 
-function extract_reactants(r_line, state::ReactionDynamicsState)
+function extract_reactants(r_line, state::ReactiveDynamicsState)
     r_line = recursively_choose(r_line, state)
 
     recursive_find_reactants!(escape_ref(r_line, state[:, :specName]), 1., Set{Symbol}(), Vector{FoldedReactant}(undef, 0))

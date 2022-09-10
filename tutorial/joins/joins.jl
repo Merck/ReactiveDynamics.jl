@@ -1,7 +1,7 @@
-using ReactionDynamics
+using ReactiveDynamics
 ## setup the environment
 n_models = 5; r = 2 # number of submodels, resources
-rd_models = ReactionDynamics.ReactionNetwork[] # submodels
+rd_models = ReactiveDynamics.ReactionNetwork[] # submodels
 
 @register begin
     ns = Int[] # size of submodels
@@ -20,19 +20,19 @@ rd_model = @generate "@join {rd_models[\$i], i=1:n_models, dlm=' '}"
 @generate {@equalize(rd_model, @alias(resource[$j])={rd_models[$i].resource[$j], i=1:n_models, dlm=:(=)}), j=1:r}
 
 # sparse off-diagonal interactions, sparse declaration
-sparse_off_diagonal = zeros(sum(ReactionDynamics.ns), sum(ReactionDynamics.ns))
+sparse_off_diagonal = zeros(sum(ReactiveDynamics.ns), sum(ReactiveDynamics.ns))
 for i in 1:n_models
     j = rand(setdiff(1:n_models, (i, )))
-    i_ix = rand(1:ReactionDynamics.ns[i]); j_ix = rand(1:ReactionDynamics.ns[j])
-    sparse_off_diagonal[i_ix+sum(ReactionDynamics.ns[1:i-1]), j_ix+sum(ReactionDynamics.ns[1:j-1])] += 1
+    i_ix = rand(1:ReactiveDynamics.ns[i]); j_ix = rand(1:ReactiveDynamics.ns[j])
+    sparse_off_diagonal[i_ix+sum(ReactiveDynamics.ns[1:i-1]), j_ix+sum(ReactiveDynamics.ns[1:j-1])] += 1
     interaction_ex = """@push rd_model begin 1., var"rd_models[$i].state[$i_ix]" --> var"rd_models[$j]__state[$j_ix]" end"""
     eval(Meta.parseall(interaction_ex))
 end
 
-sparse_off_diagonal += cat(ReactionDynamics.M...; dims=(1,2))
+sparse_off_diagonal += cat(ReactiveDynamics.M...; dims=(1,2))
 using Plots; heatmap(1 .- sparse_off_diagonal, color = :greys, legend=false)
 
-using ReactionDynamics: nparts
+using ReactiveDynamics: nparts
 u0 = rand(1:1000, nparts(rd_model, :S))
 @prob_init rd_model u0
 
