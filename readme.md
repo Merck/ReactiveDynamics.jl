@@ -3,14 +3,12 @@
 <p align="center">
   <img src="docs/assets/diagram1.png" alt="wiring diagram"> <br>
   <a href="#about">About</a> |
-  <a href="#context">Context</a> |
+  <a href="#context-dynamics-of-value-evolution-dyve">Context</a> |
   <a href="#three-sketches">Three Sketches</a> |
   <a href="#interface-documentation">Interface Documentation</a>
 </p>
 
 ## About
-
-A novel computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business. Also known as *Dynamics of Value Evolution (DyVE)*.
 
 The package provides a category of reaction (transportation) network-type problems formalized on top of the **[generalized algebraic theory](https://ncatlab.org/nlab/show/generalized+algebraic+theory)**, and is compatible with the **[SciML](https://sciml.ai/)** ecosystem.
 
@@ -40,13 +38,14 @@ Moreover, it is possible to **export and import** reaction network dynamics usin
 
 Once a network's dynamics is specified, it can be converted to a problem and simulated. The exported problem is a **`DiscreteProblem`** compatible with **[DifferentialEquations.jl](https://diffeq.sciml.ai/stable/)** ecosystem, and hence the latter package's all powerful capabilities are available. For better user experience, we have tailored and exported many of the functionalities within the modeling metalanguage, including ensemble analysis, parameter optimization, parameter inference, etc. Would you guess that **[universal differential equations](https://arxiv.org/abs/2001.04385)** are supported? If even the dynamics is unknown, you may just infer it!
 
-
-## Context
-
-As the package evolves, several functionalities have matured enough to become a standalone package.
-
-This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. The package compact generation of the transitions.
-
+## Context: Dynamics of Value Evolution (DyVE)
+ 
+The package is an integral part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business.
+ 
+As the framework evolves, multiple functionalities have matured enough to become standalone packages.
+ 
+This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. In the present context, expression comprehensions are used to generate complex dynamics from user-specified template transitions.
+ 
 Another package is **OperadicAgents.jl**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface (an operad) featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
 
 ## Three Sketches
