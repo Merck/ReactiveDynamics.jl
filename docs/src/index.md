@@ -1,11 +1,11 @@
-## Interface Documentation
+# API Documentation
 
-### Create a Model
+## Create a model
 ```@docs
 @ReactionNetwork
 ```
 
-### Update Model Objects
+## Update model objects
 ```@docs
 @add_species
 @aka
@@ -13,21 +13,21 @@
 @name_transition
 ```
 
-#### Resource Costs
+## Resource costs
 ```@docs
 @cost
 @valuation
 @reward
 ```
 
-### Add Reactions
+## Add reactions
 ```@docs
 @push
 @jump
 @periodic
 ```
 
-### Set Initial Values, Uncertainty, and Solver Arguments
+## Set initial values, uncertainty, and solver arguments
 ```@docs
 @prob_init
 @prob_uncertainty
@@ -35,19 +35,19 @@
 @prob_meta
 ```
 
-### Model Unions
+## Model unions
 ```@docs
 @join
 @equalize
 ```
 
-### Model Import and Export
+## Model import and export
 ```@docs
 @import_model
 @export_model
 ```
 
-### Solution Import and Export
+## Solution import and export
 ```@docs
 @import_solution
 @export_as_table
@@ -55,14 +55,14 @@
 @export_solution
 ```
 
-### Problematize, Solve, and Plot
+## Problematize,sSolve, and plot
 ```@docs
 @problematize
 @solve
 @plot
 ```
 
-### Optimization and Fitting
+## Optimization and fitting
 ```@docs
 @optimize
 @fit

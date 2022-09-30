@@ -1,7 +1,8 @@
 using Documenter, DocumenterMarkdown
 using ReactiveDynamics
 
-# makedocs(sitename="ReactiveDynamics Interface Documentation") # HTML output
-makedocs(format = Markdown(), sitename="ReactiveDynamics Documentation", pages = [
-    "index.md"]) # MD output
-# makedocs(format = Documenter.LaTeX(platform="none"), sitename="ReactiveDynamics Documentation") # PDF output
+makedocs(format = Documenter.HTML(prettyurls = false, edit_link=nothing), sitename="ReactiveDynamics.jl API Documentation",
+    build="build_html", pages = ["index.md"])
+
+makedocs(format = Markdown(), sitename="ReactiveDynamics.jl API Documentation",
+    build="build_md", pages = ["index.md"])

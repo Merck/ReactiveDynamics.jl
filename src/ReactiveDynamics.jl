@@ -96,14 +96,14 @@ species_modalities = [:nonblock, :conserved, :rate]
 
 function assign_defaults!(acs::ReactionNetwork)
     for (_, v_) in defargs, (k, v) in v_
-        for i in eachindex(acs.attrs[k])
-            !isassigned(acs.attrs[k], i) && (acs.attrs[k][i] = v)
+        for i in eachindex(acs.subparts[k])
+            !isassigned(acs.subparts[k], i) && (acs.subparts[k][i] = v)
         end
     end
     
-    foreach(i -> isassigned(acs.attrs.specModality, i) || (acs.attrs.specModality[i] = Set{Symbol}()), 1:nparts(acs, :S))
+    foreach(i -> isassigned(acs.subparts.specModality, i) || (acs.subparts.specModality[i] = Set{Symbol}()), 1:nparts(acs, :S))
     k = [:specCost, :specReward, :specValuation]
-    foreach(k -> foreach(i -> isassigned(getproperty(acs.attrs, k), i) || (getproperty(acs.attrs, k)[i] = .0), 1:nparts(acs, :S)), k)
+    foreach(k -> foreach(i -> isassigned(getproperty(acs.subparts, k), i) || (getproperty(acs.subparts, k)[i] = .0), 1:nparts(acs, :S)), k)
 
     acs
 end
@@ -136,8 +136,6 @@ function merge_acs!(acs::ReactionNetwork, transitions, reactants, obs, events)
 
     assign_defaults!(acs)
 end
-
-
 
 include("state.jl"); include("compilers.jl")
 include.(readdir(joinpath(@__DIR__, "interface"), join=true))

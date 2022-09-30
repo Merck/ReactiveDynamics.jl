@@ -7,7 +7,7 @@ using TOML, JLD2, CSV
 using DataFrames
 
 const objects_aliases = Dict(:S => "spec", :T => "trans", :P => "prm", :M => "meta", :E => "event", :obs => "obs")
-const RN_attrs = string.(propertynames(ReactionNetwork().attrs))
+const RN_attrs = string.(propertynames(ReactionNetwork().subparts))
 
 get_attrs(object) = (object = object isa Symbol ? objects_aliases[object] : object; filter(x -> occursin(object, x), RN_attrs))
 

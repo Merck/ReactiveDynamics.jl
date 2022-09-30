@@ -140,7 +140,7 @@ function get_free_vars(acs, args)
     u0_ = []; for (k, v) in u0;
         if k isa Number push!(u0_, Int(k) => v)
         else 
-            for i in 1:length(acs.attrs.specName)
+            for i in 1:length(acs.subparts.specName)
                 (acs[i, :specName] == k) && (push!(u0_, i => v); break)
             end
         end
@@ -158,8 +158,8 @@ function get_vars(acs, args)
         arg = recursively_expand_dots(arg)
         if arg isa Number push!(args_, Int(arg))
         else 
-            for i in 1:length(acs.attrs.specName)
-                isassigned(acs.attrs.specName, i) && (acs[i, :specName] == arg) &&
+            for i in 1:length(acs.subparts.specName)
+                isassigned(acs.subparts.specName, i) && (acs[i, :specName] == arg) &&
                     (push!(args_, i); break)
             end
         end

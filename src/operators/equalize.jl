@@ -22,7 +22,7 @@ function equalize!(acs::ReactionNetwork,  eqs=[])
         end
         isempty(species_ixs) && continue
         species_ixs = sort(unique!(species_ixs))
-        lix = first(species_ixs); for attr in propertynames(acs.attrs)
+        lix = first(species_ixs); for attr in propertynames(acs.subparts)
             !occursin("spec", string(attr)) && continue
             for i in species_ixs
                 ismissing(acs[lix, attr]) && (acs[lix, attr] = acs[i, attr])
@@ -31,9 +31,9 @@ function equalize!(acs::ReactionNetwork,  eqs=[])
         rem_parts!(acs, :S, species_ixs[2:end])
     end
 
-    for attr in propertynames(acs.attrs)
+    for attr in propertynames(acs.subparts)
         attr == :specName && continue
-        attr_ = getproperty(acs.attrs, attr)
+        attr_ = getproperty(acs.subparts, attr)
         for i in 1:length(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])

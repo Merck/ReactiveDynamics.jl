@@ -81,11 +81,11 @@ end
 function mode!(acs, dict)
     for (spex, mods) in dict
         i = if spex isa Regex
-            incident_pattern(spex, getproperty(acs.attrs, :specName))
+            incident_pattern(spex, getproperty(acs.subparts, :specName))
         else incident(acs, Symbol(spex), :specName) end
 
         for ix in i
-            !isassigned(acs.attrs.specModality, ix) && (acs.attrs.specModality[ix] = Set{Symbol}())
+            !isassigned(acs.subparts.specModality, ix) && (acs.subparts.specModality[ix] = Set{Symbol}())
             union!(acs[ix, :specModality], mods)
         end
     end
@@ -124,7 +124,7 @@ end
 function set_valuation!(acs, dict, valuation_type)
     for (spex, val) in dict
         i = if spex isa Regex
-            incident_pattern(spex, getproperty(acs.attrs, :specName))
+            incident_pattern(spex, getproperty(acs.subparts, :specName))
         else incident(acs, Symbol(spex), :specName) end
         
         foreach(ix -> acs[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] = eval(val), i)
@@ -207,10 +207,10 @@ end
 macro prob_init_from_vec(acsex, vecex) :(init!($(esc(acsex)), $(esc(vecex)))) end
 
 function init!(acs, inits)
-    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (acs.attrs.specInitVal .= inits; return)
+    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (acs.subparts.specInitVal .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
         k isa Number ? acs[k, :specInitVal] = init_val : begin
-                i = k isa Regex ? incident_pattern(k, getproperty(acs.attrs, :specName)) :
+                i = k isa Regex ? incident_pattern(k, getproperty(acs.subparts, :specName)) :
                     incident(acs, k, :specName)
                 foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
         end
@@ -246,10 +246,10 @@ macro prob_uncertainty(acsex, exs...)
 end
 
 function uncinit!(acs, inits)
-    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (acs.attrs.specInitUncertainty .= inits; return)
+    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (acs.subparts.specInitUncertainty .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
         k isa Number ? acs[k, :specInitUncertainty] = init_val : begin
-                i = k isa Regex ? incident_pattern(k, getproperty(acs.attrs, :specName)) :
+                i = k isa Regex ? incident_pattern(k, getproperty(acs.subparts, :specName)) :
                     incident(acs, k, :specName)
                 foreach(ix -> (acs[ix, :specInitUncertainty] = init_val), i)
         end
@@ -262,7 +262,7 @@ function set_params!(acs, params)
     params isa AbstractDict && for (k, init_val) in params
         k = get_pattern(k)
         if k isa Regex 
-            i = incident_pattern(k, getproperty(acs.attrs, :prmName))
+            i = incident_pattern(k, getproperty(acs.subparts, :prmName))
         else
             i = incident(acs, k, :prmName)
             isempty(i) && (i = add_part!(acs, :P, prmName=k))

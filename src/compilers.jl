@@ -88,8 +88,8 @@ function compile_attrs(acs::ReactionNetwork)
     for name in prm_names push!(varmap, name => :(state.p[$(QuoteNode(name))])) end
     wrap_fun = ex -> wrap_expr(ex, species_names, prm_names, varmap)
     attrs = Dict{Symbol, Vector}(); transitions = Dict{Symbol, Vector}()
-    for attr in propertynames(acs.attrs)
-        attrs_ = getproperty(acs.attrs, attr)
+    for attr in propertynames(acs.subparts)
+        attrs_ = getproperty(acs.subparts, attr)
         !contains(string(attr), "trans") ?
             (attrs[attr] = map(i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]), 1:length(attrs_))) :
             (transitions[attr] = map(i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]), 1:length(attrs_)))
@@ -103,8 +103,8 @@ end
 
 function remove_choose(acs::ReactionNetwork)
     acs = deepcopy(acs); pcs = []
-    for attr in propertynames(acs.attrs)
-        attrs_ = getproperty(acs.attrs, attr)
+    for attr in propertynames(acs.subparts)
+        attrs_ = getproperty(acs.subparts, attr)
         foreach(i -> isassigned(attrs_, i) && attrs_[i] isa Expr && (attrs_[i] = normalize_pcs!(pcs, attrs_[i])), 1:length(attrs_))
     end
 

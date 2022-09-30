@@ -1,7 +1,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-docs/build/
+docs/build_*
 docs/site/
 tmp.gif
 gks.*

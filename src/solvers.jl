@@ -237,7 +237,7 @@ DiscreteProblem(acs, u0, p; tspan=(.0, 100.), schedule=schedule_weighted!)
 """
 function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0=Dict(), p=DiffEqBase.NullParameters(); kwargs...)
     assign_defaults!(acs)
-    keywords = Dict{Symbol, Any}([acs[i, :metaKeyword] => acs[i, :metaVal] for i in 1:nparts(acs, :M) if isassigned(acs.attrs[:metaKeyword], i) && isassigned(acs.attrs[:metaVal], i)])
+    keywords = Dict{Symbol, Any}([acs[i, :metaKeyword] => acs[i, :metaVal] for i in 1:nparts(acs, :M) if isassigned(acs.subparts[:metaKeyword], i) && isassigned(acs.subparts[:metaVal], i)])
     merge!(keywords, Dict(collect(kwargs))); merge!(keywords,  Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))       
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
     
@@ -247,7 +247,7 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0=Dict(), p=DiffEqBas
     prob = transform(DiffEqBase.DiscreteProblem, state; kwargs...)
 
     u0 isa Dict &&
-        foreach(i -> prob.u0[i] = isassigned(acs.attrs[:specName], i) && haskey(u0, acs[i, :specName]) ? u0[acs[i, :specName]] : prob.u0[i], 1:nparts(state, :S))
+        foreach(i -> prob.u0[i] = isassigned(acs.subparts[:specName], i) && haskey(u0, acs[i, :specName]) ? u0[acs[i, :specName]] : prob.u0[i], 1:nparts(state, :S))
     p_ = p == DiffEqBase.NullParameters() ? Dict() : Dict(k => v for (k, v) in p)
     prob = remake(prob; u0=prob.u0, tspan=keywords[:tspan], dt=get(keywords, :tstep, 1),
         p=merge(prob.p, p_, Dict(:tstep => get(keywords, :tstep, 1), :strategy => get(keywords, :alloc_strategy, :weighted)))
@@ -256,7 +256,7 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0=Dict(), p=DiffEqBas
     prob
 end
 
-fetch_params(acs::ReactionNetwork) = Dict{Symbol, Any}((acs[i, :prmName] => acs[i, :prmVal] for i in Iterators.filter(i -> isassigned(acs.attrs[:prmVal], i), 1:nparts(acs, :P))))
+fetch_params(acs::ReactionNetwork) = Dict{Symbol, Any}((acs[i, :prmName] => acs[i, :prmVal] for i in Iterators.filter(i -> isassigned(acs.subparts[:prmVal], i), 1:nparts(acs, :P))))
 
 # EnsembleProblem's prob_func: sample initial values
 function get_prob_func(prob)
