@@ -46,7 +46,7 @@ As the framework evolves, multiple functionalities have matured enough to become
  
 This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. In the present context, expression comprehensions are used to generate complex dynamics from user-specified template transitions.
  
-Another package is **AlgebraicAgents.jl**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
+Another package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
 
 ## Three Sketches
 
