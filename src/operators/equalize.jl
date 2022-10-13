@@ -33,7 +33,7 @@ function equalize!(acs::ReactionNetwork,  eqs=[])
 
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
-        attr_ = getproperty(acs.subparts, attr)
+        attr_ = acs[:, attr]
         for i in 1:length(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])

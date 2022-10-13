@@ -83,7 +83,7 @@ prettynames = Dict(
 )
 
 defargs = Dict(
-    :T => Dict{Symbol, Any}(:transPriority => 1, :transProbOfSuccess => 1, :transCapacity => Inf, :transCycleTime => 1,
+    :T => Dict{Symbol, Any}(:transPriority => 1, :transProbOfSuccess => 1, :transCapacity => Inf, :transCycleTime => 0.,
         :transMaxLifeTime => Inf, :transMultiplier=>1, :transPostAction => :(), :transName => missing),
     :S => Dict{Symbol, Any}(:specInitUncertainty => .0, :specInitVal => .0, :specCost => .0, :specReward => .0, :specValuation => .0),
     :P => Dict{Symbol, Any}(:prmVal => missing),
@@ -96,14 +96,14 @@ species_modalities = [:nonblock, :conserved, :rate]
 
 function assign_defaults!(acs::ReactionNetwork)
     for (_, v_) in defargs, (k, v) in v_
-        for i in eachindex(acs.subparts[k])
-            !isassigned(acs.subparts[k], i) && (acs.subparts[k][i] = v)
+        for i in 1:length(subpart(acs, k))
+            !isassigned(subpart(acs, k), i) && (subpart(acs, k)[i] = v)
         end
     end
-    
-    foreach(i -> isassigned(acs.subparts.specModality, i) || (acs.subparts.specModality[i] = Set{Symbol}()), 1:nparts(acs, :S))
+
+    foreach(i -> isassigned(subpart(acs, :specModality), i) || (subpart(acs, :specModality)[i] = Set{Symbol}()), 1:nparts(acs, :S))
     k = [:specCost, :specReward, :specValuation]
-    foreach(k -> foreach(i -> isassigned(getproperty(acs.subparts, k), i) || (getproperty(acs.subparts, k)[i] = .0), 1:nparts(acs, :S)), k)
+    foreach(k -> foreach(i -> isassigned(subpart(acs, k), i) || (subpart(acs, k)[i] = .0), 1:nparts(acs, :S)), k)
 
     acs
 end
@@ -143,5 +143,10 @@ include.(readdir(joinpath(@__DIR__, "utils"), join=true))
 include.(readdir(joinpath(@__DIR__, "operators"), join=true))
 include("solvers.jl"); include("optim.jl")
 include("loadsave.jl")
+
+# Catlab.jl hack: bypass @isdefined check
+function Base.getindex(m::Catlab.ColumnImplementations.PartialVecMap, x::Int)
+    m.v[x]
+end
 
 end

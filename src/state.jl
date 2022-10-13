@@ -49,7 +49,7 @@ mutable struct ReactiveDynamicsState
         ongoing_transitions = Transition[]
         log = NamedTuple[]
         observables = compile_observables(acs)
-        transitions_attrs = setdiff(filter(a -> contains(string(a), "trans"), keys(acs.subparts)), (:trans,)) ∪ 
+        transitions_attrs = setdiff(filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)), (:trans,)) ∪ 
             [:transLHS, :transRHS, :transToSpawn, :transHash]
         transitions = Dict{Symbol, Vector}(a => [] for a in transitions_attrs)
 

@@ -10,6 +10,8 @@ function union_acs!(acs1, acs2, name=gensym("acs_"), eqs=[])
     for i in 1:nparts(acs2, :S)
         inc = incident(acs1, acs2[i, :specName], :specName)
         isempty(inc) && (inc = add_part!(acs1, :S; specName=acs2[i, :specName]); assign_defaults!(acs1))
+        return (acs1, acs2)
+        println(first(inc)); println(acs1[first(inc), :specModality]); println(); println(acs2[:, :specModality]);
         union!(acs1[first(inc), :specModality], acs2[i, :specModality])
 
         for attr in propertynames(acs1.subparts)
@@ -51,7 +53,7 @@ function prepend!(acs::ReactionNetwork, name=gensym("acs"), eqs=[])
 
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
-        attr_ = getproperty(acs.subparts, attr)
+        attr_ = acs[:, attr]
         for i in 1:length(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
