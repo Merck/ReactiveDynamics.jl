@@ -4,7 +4,7 @@
   <img src="docs/assets/diagram1.png" alt="wiring diagram"> <br>
   <a href="#about">About</a> |
   <a href="#context-dynamics-of-value-evolution-dyve">Context</a> |
-  <a href="#three-sketches">Three Sketches</a> |
+  <a href="#four-sketches">Four Sketches</a> |
   <a href="https://merck.github.io/ReactiveDynamics.jl">Documentation</a>
 </p>
 
@@ -28,7 +28,9 @@ In particular, a resource can be allocated to an instance either for the instanc
 
 <img src="docs/assets/diagram3.png" align="left" alt="attributes diagram"></a>
 
-The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>.
+The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>. 
+
+For an overview of accepted attributes for both transitions and species classes, read the [docs](https://merck.github.io/ReactiveDynamics.jl/#Update-model-objects)
 
 A network's dynamics is specified using a compact **modeling metalanguage**. Moreover, we have integrated another expression comprehension metalanguage which makes it easy to generate arbitrarily complex dynamics from a single template transition!
 
@@ -48,7 +50,7 @@ This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpr
  
 Another package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
 
-## Three Sketches
+## Four Sketches
 
 For other examples, see the **[tutorials](tutorial)**.
 
@@ -104,6 +106,77 @@ sol = @solve prob trajectories=20
 ```
 
 ![sir plots](docs/assets/sir_plot.png)
+
+### A Primer on Attributed Transitions
+
+Before we move on to more intricate examples demonstrating generative capabilities of the package, let's sketch a toy pharma model with as little as three transitions.
+
+```julia
+toy_pharma_model = @ReactionNetwork
+```
+
+First, a **"discovery" transition** will take a team of scientist and a portion of a company's budget at the input (say, for experimental resources), and it will **output candidate compounds**.
+
+```julia
+@push toy_pharma_model α(candidate_compound, marketed_drug, κ) 3*@conserved(scientist) + @rate(budget) --> candidate_compound name=>discovery probability=>.3 cycletime=>6 priority=>.5
+```
+
+Note that per a time unit, `α(candidate_compound, marketed_drug, κ)` "discovery" projects will be started. We provide a name of the class of transitions (`name=>discovery`), set up a probability of the transition terminating successfully (`probability=>.3`), a cycle time (`cycletime=>6`), and we provide a weight of the transitions' class for use in resource allocation (`priority=>.5`).
+
+Moreover, we annotate "scientists" as a conserved resource (no matter how the project terminates, the workforce isn't consumed), i.e., `@conserved(scientist)`, and we state that a unit "budget" is consumed per a time unit, i.e., `@rate(budget)`.
+
+Next, **candidate compounds will undergo clinical trials**. If successful, a compound transforms into a marketed drug, and the company receives a premium. 
+
+```julia
+@push toy_pharma_model β(candidate_compound, marketed_drug) candidate_compound + 5*@conserved(scientist) + 2*@rate(budget) --> marketed_drug + 5*budget name=>dx2market probability=>.5+.001*@t() cycletime=>4
+```
+
+Note that as time evolves, the probability of technical success increases, i.e., `probability=>.5+.001*@t()`.
+
+In addition, **marketed drugs bring profit to the company** - which will fuel invention of new drugs. 
+
+We model the situation as a periodic callback.
+
+```julia
+@periodic toy_pharma_model 1. budget += 11*marketed_drug
+```
+
+A **marketed drug may eventually be withdrawn** from the market. To account for such scenario, we add the following transition:
+
+```julia
+@push toy_pharma_model  γ*marketed_drug marketed_drug --> ∅ name=>drug_withdrawn
+```
+
+Next we provide the functions `α` and `β`.
+
+```julia
+@register α(number_candidate_compounds, number_marketed_drugs, κ) = κ + exp(-number_candidate_compounds) + exp(-number_marketed_drugs)
+@register β(number_candidate_compounds, number_marketed_drugs) = numbercandidate_compounds + exp(-number_marketed_drugs)
+```
+
+Likewise, we set the remaining parameters, initial values, and model metadata:
+
+```julia
+
+# simulation parameters
+## initial values
+@prob_init toy_pharma_model candidate_compound=5 marketed_drug=6 scientist=20 budget=100
+## parameters
+@prob_params toy_pharma_model κ=4 γ=.1
+## other arguments passed to the solver
+@prob_meta toy_pharma_model tspan=250 dt=.1
+```
+
+And we problematize the model, solve the problem, and plot the solution:
+
+```julia
+prob = @problematize toy_pharma_model
+sol = @solve prob trajectories=20
+@plot sol plot_type=summary show=[:candidate_compound, :marketed_drug]
+```
+
+![plot](docs/assets/toy_pharma.png)
+
 
 ### Sparse Interactions
 

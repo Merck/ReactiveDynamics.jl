@@ -5,7 +5,27 @@
 @ReactionNetwork
 ```
 
-## Update model objects
+## Modify a model
+
+We list common transition attributes:
+
+| attribute | interpretation |
+| :----- | :----- |
+| `transPriority` | priority of a transition (influences resource allocation) |
+| `transProbOfSuccess` | probability that a transition terminates successfully |
+| `transCapacity` | maximum number of concurrent instances of the transition |
+| `transCycleTime` | duration of a transition's instance (adjusted by resource allocation) |
+| `transMaxLifeTime` | maximal duration of a transition's instance |
+| `transPostAction` | action to be executed once a transition's instance terminates |
+| `transName` | name of a transition |
+
+We list common species attributes:
+
+| attribute | interpretation |
+| :----- | :----- |
+| `specInitUncertainty` | uncertainty about variable's initial state (modelled as Gaussian standard deviation) |
+| `specInitVal` | initial value of a variable |
+
 ```@docs
 @add_species
 @aka
