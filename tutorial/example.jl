@@ -21,13 +21,13 @@ end
 @valuation sir_acs I=.1 # for testing purpose only
 
 # atomic data: initial values, parameter values
-@prob_init sir_acs S=999 I=10 R=0
+@prob_init sir_acs S=999 I=100 R=100
 u0 = [999, 10, 0] # alternative specification
 @prob_init sir_acs u0
 @prob_params sir_acs β=0.0001 ν=0.01 γ=5
 @prob_meta sir_acs tspan=100
 
-prob = @problematize sir_acs
+#prob = @problematize sir_acs
 prob = @problematize sir_acs tspan=200
 
 sol = @solve prob trajectories=20

@@ -99,8 +99,9 @@ function evolve!(u, state)
     reqs = zeros(nparts(state, :S), nparts(state, :T)); qs = zeros(nparts(state, :T))
 
     foreach(i -> qs[i] = state[i, :transRate] * state[i, :transMultiplier], 1:nparts(state, :T))
+    qs .= ceil.(Ref(Int), qs)
     for i in 1:nparts(state, :T)
-        new_instances = rand(Poisson(max(state.solverargs[:tstep] * qs[i], 0))) + state[i, :transToSpawn]
+        new_instances = state.solverargs[:tstep]*qs[i] + state[i, :transToSpawn]
         capacity = state[i, :transCapacity] - count(t -> t[:transHash] == state[i, :transHash], state.ongoing_transitions)
         (capacity < new_instances) && add_to_spawn!(state, state[i, :transHash], new_instances - capacity)
         qs[i] = min(capacity, new_instances)

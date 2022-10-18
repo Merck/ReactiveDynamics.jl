@@ -26,6 +26,10 @@ We list common species attributes:
 | `specInitUncertainty` | uncertainty about variable's initial state (modelled as Gaussian standard deviation) |
 | `specInitVal` | initial value of a variable |
 
+Moreover, it is possible to specify the semantics of the "rate" term. By default, at each time step `n ~ Poisson(rate * dt)` instances of a given transition will be spawned. If you want to specify the rate in terms of a cycle time, you may want to use `@ct(cycle_time)`, e.g., `@ct(ex), A --> B, ...`. This is a shorthand for `1/ex, A --> B, ...`.
+
+For deterministic "rates", use `@per_step(ex)`. Here, `ex` evaluates to a deterministic number (ceiled to the nearest integer) of a transition's instances to spawn per a single integrator's step. However, note that in this case, the number doesn't scale with the step length! Moreover
+
 ```@docs
 @add_species
 @aka

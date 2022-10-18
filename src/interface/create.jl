@@ -115,16 +115,22 @@ function recursively_expand_actions!(evs, condex, event)
     else push!(evs, Event(condex, event)) end
 end
 
-function prune_rate(rate)
-    if (isexpr(rate, :macrocall) && (macroname(rate) ∈ prettynames[:transCycleTime]))
-        :(1/$(rate.args[3]))
-    else rate end
+function expand_rate(rate)
+    rate = if !(isexpr(rate, :macrocall) && (macroname(rate) == :per_step))
+        :(rand(Poisson(max($rate, 0))))
+    else rate.args[3] end
+
+    postwalk(rate) do ex
+        if (isexpr(ex, :macrocall) && (macroname(ex) ∈ prettynames[:transCycleTime]))
+            :(1/$(ex.args[3]))
+        else ex end
+    end
 end
 
 function get_transitions!(trans, reactants, pcs, exs)
     args = empty(defargs[:T])
     (rate, r_line) = exs[1:2]
-    rxs = prune_reaction_line!(pcs, reactants, r_line); rate = prune_rate(rate)
+    rxs = prune_reaction_line!(pcs, reactants, r_line); rate = expand_rate(rate)
     rxs = rxs isa Tuple ? tuple.(rate.args, rxs) : ((rate, rxs),)
 
     exs = exs[3:end]; empty!(args)
