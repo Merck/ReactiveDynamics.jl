@@ -25,7 +25,7 @@ prob = @problematize toy_pharma_model
 
 sol = @solve prob trajectories=20
 
-using Plots; plotly()
+using Plots
 
 @plot sol plot_type=summary
 
@@ -58,7 +58,7 @@ prob = @problematize toy_pharma_model
 
 sol = @solve prob trajectories=20
 
-using Plots; plotly()
+using Plots
 
 @plot sol plot_type=summary
 
