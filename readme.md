@@ -34,7 +34,7 @@ For an overview of accepted attributes for both transitions and species classes,
 
 A network's dynamics is specified using a compact **modeling metalanguage**. Moreover, we have integrated another expression comprehension metalanguage which makes it easy to generate arbitrarily complex dynamics from a single template transition!
 
-Taking **unions** of reaction networks is fully supported, and it is possible to identify the resource classes as apropriate.
+Taking **unions** of reaction networks is fully supported, and it is possible to identify the resource classes as appropriate.
 
 Moreover, it is possible to **export and import** reaction network dynamics using the [TOML](https://toml.io/) format.
 
