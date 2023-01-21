@@ -4,48 +4,59 @@ mutable struct DyVEState
     attrs::Dict{Symbol, Vector}
     transition_recipes::Dict{Symbol, Vector}
 
-    u::Vector{Float64}; p; t::Float64
+    u::Vector{Float64}
+    p::Any
+    t::Float64
 
     transitions::Dict{Symbol, Vector}
     ongoing_transitions::Vector{Transition}
     log::Vector{Tuple}
 
     sampleables::Dict{Symbol, Sampleable}
-    solverargs
+    solverargs::Any
 
-    wrap_fun
-    history_u::Vector{Vector{Float64}}; history_t::Vector{Float64}
+    wrap_fun::Any
+    history_u::Vector{Vector{Float64}}
+    history_t::Vector{Float64}
 
-    function DyVEState(acs::ReactionNetwork, attrs, transition_recipes, wrap_fun, t0=0; kwargs...)
+    function DyVEState(acs::ReactionNetwork, attrs, transition_recipes, wrap_fun, t0 = 0;
+                       kwargs...)
         ongoing_transitions = Transition[]
         log = NamedTuple[]
         sampleables = compile_observables(acs)
-        transitions_attrs = setdiff(filter(a -> contains(string(a), "trans"), keys(acs.attrs)), (:trans,)) ∪ 
-            [:transLHS, :transRHS, :transToSpawn, :transHash]
+        transitions_attrs = setdiff(filter(a -> contains(string(a), "trans"),
+                                           keys(acs.attrs)), (:trans,)) ∪
+                            [:transLHS, :transRHS, :transToSpawn, :transHash]
         transitions = Dict{Symbol, Vector}(a => [] for a in transitions_attrs)
 
         new(acs, attrs, transition_recipes, zeros(nparts(acs, :S)), fetch_params(acs), t0,
-            transitions, ongoing_transitions, log, sampleables, kwargs, wrap_fun, Vector{Float64}[], Float64[])
+            transitions, ongoing_transitions, log, sampleables, kwargs, wrap_fun,
+            Vector{Float64}[], Float64[])
     end
 end
 
-get_modalities(path::AbstractString, network) = get(getpath(network, path).p, :resModality, Set{Symbol}())
+function get_modalities(path::AbstractString, network)
+    get(getpath(network, path).p, :resModality, Set{Symbol}())
+end
 
 macro register_demand(demand, agent, uuid, q, priority)
     quote
-        $(esc(demand))[($(esc(agent)), $(esc(uuid)))] = 
-            get($(esc(demand)), ($(esc(agent)), $(esc(uuid))), 0.) + esc($q)
+        $(esc(demand))[($(esc(agent)), $(esc(uuid)))] = get($(esc(demand)),
+                                                            ($(esc(agent)), $(esc(uuid))),
+                                                            0.0) + esc($q)
     end
 end
 
 function get_requirements(t::ReactionNetworkTransition, network, dt, time)
     # requirements
-    demand = Dict{String, Any}(); empty!(t.allocs)
+    demand = Dict{String, Any}()
+    empty!(t.allocs)
     ## new transitions
     transRate = t.params_interpreted(network, t)
     i = (t[:rate] * dt) |> Poisson |> rand
     if i > 0 ## should spawn new transitions? resample parameters and calculate requirements
-        resample!(t, network); t[:rate] = transRate
+        resample!(t, network)
+        t[:rate] = transRate
         uuid = "new-initial"
         for r in t[:LHS]
             !isa(r.agent, AbstractString) && continue
@@ -53,10 +64,12 @@ function get_requirements(t::ReactionNetworkTransition, network, dt, time)
 
             @register_demand demand r.agent uuid i*r_stoich t[:priority]
         end
-        push!(t.ongoing_transitions, Transition("new-nominal", copy(t.params_sampled), time, 1., 0.))
+        push!(t.ongoing_transitions,
+              Transition("new-nominal", copy(t.params_sampled), time, 1.0, 0.0))
     else
-        t[:LHS] = [] 
-        push!(t.ongoing_transitions, Transition("new-nominal", copy(t.params_sampled), time, 0., 0.))
+        t[:LHS] = []
+        push!(t.ongoing_transitions,
+              Transition("new-nominal", copy(t.params_sampled), time, 0.0, 0.0))
     end
 
     ## ongoing transitions
@@ -72,12 +85,11 @@ function get_requirements(t::ReactionNetworkTransition, network, dt, time)
     end
 
     for (k, v) in demand
-        register_demand!(getpath(network, k[1]), (k[2], t) => v) 
+        register_demand!(getpath(network, k[1]), (k[2], t) => v)
     end
 end
 
 function evolve!(t::ReactionNetworkTransition, dt, tstep)
-
 end
 
 "Resample transition's parameters (incl. LHS). RHS remains not evaluated."
@@ -95,7 +107,8 @@ function resample!(t::ReactionNetworkTransition, network)
         r.stoich = interpret_eval(r.stoich)(t, network)
         r.modalities = r.modalities ∪ get_modalities(r.agent, network)
     end
-    t[:LHS] = reactants; t[:RHS] = rhs
+    t[:LHS] = reactants
+    t[:RHS] = rhs
 end
 
 function resample!(state::DyVEState, o::Sampleable)
@@ -107,5 +120,7 @@ end
 
 resample(state::DyVEState, o::Symbol) = resample!(state, state.sampleables[o])
 
-update_observables(state::DyVEState) = 
-    foreach(o -> (state.t - o.last) >= o.every && resample!(state, o), values(state.sampleables))
+function update_observables(state::DyVEState)
+    foreach(o -> (state.t - o.last) >= o.every && resample!(state, o),
+            values(state.sampleables))
+end

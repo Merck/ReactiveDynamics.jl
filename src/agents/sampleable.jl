@@ -1,13 +1,15 @@
 # default parameters
-const sampleable_defaults = Dict{Symbol, Any}(:every => 1., :on => false)
+const sampleable_defaults = Dict{Symbol, Any}(:every => 1.0, :on => false)
 
-@rnagent ReactionNetworkSampleable ReactionNetworkAgent begin
-    range_expression; range_interpreted
+@aagent FreeAgent ReactionNetworkAgent struct ReactionNetworkSampleable
+    range_expression::Any
+    range_interpreted::Any
 
-    params_expression; params_interpreted
+    params_expression::Any
+    params_interpreted::Any
 
     last_sampled::Float64 # last sampling time
-    sampled # last sampled value
+    sampled::Any # last sampled value
 end
 
 @doc "Sampleable (dynamically resampled process)." ReactionNetworkSampleable
@@ -25,9 +27,10 @@ whenever parameter `on` evaluates to true, or after `every` time steps.
 Optionally, provide a list of names of variables in the system;
 this will resolve corresponding references in `expression`.
 """
-function ReactionNetworkSampleable(name, range, params, all_species=[])
-    o = ReactionNetworkSampleable(); o.name = name
-   
+function ReactionNetworkSampleable(name, range, params, all_species = [])
+    o = ReactionNetworkSampleable()
+    o.name = name
+
     o.range_expression = range
     o.range_interpreted = interpret_eval(range, all_species)
 
@@ -35,7 +38,8 @@ function ReactionNetworkSampleable(name, range, params, all_species=[])
     o.params_interpreted = Dict{Symbol, Any}()
     interpret_params!(o, all_species)
 
-    o.last_sampled = -Inf; o.sampled = missing
+    o.last_sampled = -Inf
+    o.sampled = missing
 
     o
 end
@@ -50,8 +54,8 @@ function resample!(o::ReactionNetworkSampleable, t)
 end
 
 "Take sample of sampleable agent's stochastic process."
-function take_sample(o::ReactionNetworkSampleable, rn=getnetwork(o))
-    r = o.range_interpreted(rn, o) 
+function take_sample(o::ReactionNetworkSampleable, rn = getnetwork(o))
+    r = o.range_interpreted(rn, o)
     r isa Sampleable ? rand(r) : r
 end
 
@@ -68,17 +72,22 @@ AlgebraicAgents._projected_to(::ReactionNetworkSampleable) = o.last_sampled
 AlgebraicAgents.getobservable(o::ReactionNetworkSampleable) = o.sampled
 
 ## pretty printing
-function AlgebraicAgents.print_custom(io::IO, mime::MIME"text/plain", o::ReactionNetworkSampleable)
+function AlgebraicAgents.print_custom(io::IO, mime::MIME"text/plain",
+                                      o::ReactionNetworkSampleable)
     indent = get(io, :indent, 0)
-    print(io, "\n", " "^(indent+3), "custom properties:\n")
-    print(io, " "^(indent+3), crayon"italics", "sampleable", ": ", crayon"reset", "\n")
-    show(IOContext(io, :indent=>get(io, :indent, 0)+4), mime, o.range_expression)
+    print(io, "\n", " "^(indent + 3), "custom properties:\n")
+    print(io, " "^(indent + 3), crayon"italics", "sampleable", ": ", crayon"reset", "\n")
+    show(IOContext(io, :indent => get(io, :indent, 0) + 4), mime, o.range_expression)
 
-    print(io, "\n" * " "^(indent+3), crayon"italics", "resampled every", ": ", crayon"reset", "\n")
-    show(IOContext(io, :indent=>get(io, :indent, 0)+4), mime, o.params_expression[:every])
+    print(io, "\n" * " "^(indent + 3), crayon"italics", "resampled every", ": ",
+          crayon"reset", "\n")
+    show(IOContext(io, :indent => get(io, :indent, 0) + 4), mime,
+         o.params_expression[:every])
 
     if (o.params_expression[:on] !== false)
-        print(io, "\n" * " "^(indent+3), crayon"italics", "resampled on", ": ", crayon"reset", "\n")
-        show(IOContext(io, :indent=>get(io, :indent, 0)+4), mime, o.params_expression[:on])
-    end    
+        print(io, "\n" * " "^(indent + 3), crayon"italics", "resampled on", ": ",
+              crayon"reset", "\n")
+        show(IOContext(io, :indent => get(io, :indent, 0) + 4), mime,
+             o.params_expression[:on])
+    end
 end

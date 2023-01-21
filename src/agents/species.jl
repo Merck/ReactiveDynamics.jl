@@ -1,13 +1,16 @@
 # default parameters
-const species_defaults = Dict{Symbol, Any}(
-    :speciesInitUncertainty => .0, :speciesInitVal => .0,
-    :speciesCost => .0, :speciesReward => .0,
-    :speciesValuation => .0, :speciesModality => Set{Symbol}()
-    )
+const species_defaults = Dict{Symbol, Any}(:speciesInitUncertainty => 0.0,
+                                           :speciesInitVal => 0.0,
+                                           :speciesCost => 0.0, :speciesReward => 0.0,
+                                           :speciesValuation => 0.0,
+                                           :speciesModality => Set{Symbol}())
 
-@rnagent ReactionNetworkSpecies ReactionNetworkAgent begin
-    u; u0 # current quantity of species, initial quantity
-    params_expression; params_interpreted; params_sampled # parameters
+@aagent FreeAgent ReactionNetworkAgent struct ReactionNetworkSpecies
+    u::Any
+    u0::Any # current quantity of species, initial quantity
+    params_expression::Any
+    params_interpreted::Any
+    params_sampled::Any # parameters
 end
 
 @doc "(Parametric) species in a reaction network which is associated with quantity."
@@ -16,12 +19,13 @@ end
     ReactionNetworkSpecies(name, u0, p)
 Initialize a parametric species in a reaction network.
 """
-function ReactionNetworkSpecies(name::AbstractString, u0=missing,
-    params=deepcopy(species_defaults), all_species=String[])
-    
-    o = ReactionNetworkSpecies(); o.name = name
-    
-    o.u0 = u0; o.u = deepcopy(o.u0)
+function ReactionNetworkSpecies(name::AbstractString, u0 = missing,
+                                params = deepcopy(species_defaults), all_species = String[])
+    o = ReactionNetworkSpecies()
+    o.name = name
+
+    o.u0 = u0
+    o.u = deepcopy(o.u0)
     o.params_expression = merge(params, species_defaults)
     o.params_interpreted = Dict{Symbol, Any}()
     o.params_sampled = Dict{Symbol, Any}()
@@ -33,26 +37,33 @@ end
 
 # implement AlgebraicAgents.jl interface
 ## pretty printing
-function AlgebraicAgents.print_custom(io::IO, mime::MIME"text/plain", o::ReactionNetworkSpecies)
+function AlgebraicAgents.print_custom(io::IO, mime::MIME"text/plain",
+                                      o::ReactionNetworkSpecies)
     indent = get(io, :indent, 0)
-    print(io, "\n", " "^(indent+3), "custom properties:\n")
-    print(io, " "^(indent+3), crayon"italics", "u", ": ", crayon"reset", "\n")
-    show(IOContext(io, :indent=>get(io, :indent, 0)+4), mime, o.u)
+    print(io, "\n", " "^(indent + 3), "custom properties:\n")
+    print(io, " "^(indent + 3), crayon"italics", "u", ": ", crayon"reset", "\n")
+    show(IOContext(io, :indent => get(io, :indent, 0) + 4), mime, o.u)
 
-    print(io, "\n" * " "^(indent+3), crayon"italics", "parameters", ": ", crayon"reset", "\n")
-    show(IOContext(io, :indent=>get(io, :indent, 0)+4), mime, o.params_expression)
+    print(io, "\n" * " "^(indent + 3), crayon"italics", "parameters", ": ", crayon"reset",
+          "\n")
+    show(IOContext(io, :indent => get(io, :indent, 0) + 4), mime, o.params_expression)
 end
 
 ## (de)reference
 function Base.getindex(obj::ReactionNetworkSpecies, keys...)
     if length(obj.u) > 1
         isempty(keys) ? obj.u : obj.u[keys...]
-    else first(obj.u) end
+    else
+        first(obj.u)
+    end
 end
 
 function Base.setindex!(obj::ReactionNetworkSpecies, val, keys...)
-    if isempty(keys) obj.u .= val
-    else obj.u[keys...] .= val end
+    if isempty(keys)
+        obj.u .= val
+    else
+        obj.u[keys...] .= val
+    end
 end
 
 AlgebraicAgents._step!(::ReactionNetworkSpecies, _) = nothing

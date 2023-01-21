@@ -10,7 +10,7 @@ macro params_interface(T)
         Interpret agent's `a` parameters (in expression form) stored under key `params_expression`,
         and store the resulting objects under `params_interpreted`.
         """
-        function interpret_params!(a::$T, all_species=String[])
+        function interpret_params!(a::$T, all_species = String[])
             for (k, ex) in a.params_expression
                 push!(a.params_interpreted, k => interpret_eval(ex, all_species))
             end
@@ -33,9 +33,8 @@ macro params_interface(T)
 
         function AlgebraicAgents._setparameters!(o::$T, parameters)
             merge!(o.params_expression, parameters)
-            
+
             interpret_params!(o, all_species(getnetwork(o)))
         end
     end |> esc
 end
-    

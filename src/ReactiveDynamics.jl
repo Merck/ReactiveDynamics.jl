@@ -17,11 +17,8 @@ using Distributions
 include("utils.jl")
 
 # agent types
-## @rnagent macro
-include("agents/rnagent_macro.jl")
 ## convenience macro to set up interface
 include("interface/params_interface.jl")
-export @rnagent
 ## reaction network (umbrella)
 include("agents/network.jl")
 ### actions (stateful transitions, instantious events)

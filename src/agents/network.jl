@@ -4,7 +4,7 @@ abstract type ReactionNetworkAgent <: AbstractAlgebraicAgent end
 abstract type ReactionNetworkAction <: ReactionNetworkAgent end
 
 # a transition complex consisting of reactants, transitions, and events
-@rnagent ReactionNetwork begin
+@aagent struct ReactionNetwork
     log::Vector{Tuple}
 end
 
@@ -16,7 +16,8 @@ Initialize an (empty, by default) transition network.
 If `expression` is provided, parse the transition dynamics and populate the transition network.
 """
 function ReactionNetwork(name::AbstractString, expression::Expr; _...)
-    o = ReactionNetwork(); o.name = name
+    o = ReactionNetwork()
+    o.name = name
     o.log = Tuple[]
 
     transitions, species = parse_transitions(expression)
@@ -26,7 +27,8 @@ function ReactionNetwork(name::AbstractString, expression::Expr; _...)
 end
 
 "Append objects to a reation network."
-function network_append!(rn::ReactionNetwork; species=[], transitions=[], events=[], sampleables=[])
+function network_append!(rn::ReactionNetwork; species = [], transitions = [], events = [],
+                         sampleables = [])
     # add species
     for r in unique!(species)
         parent = mkpath!(rn, dirname(r)) # create intermediate hierachy
@@ -47,7 +49,8 @@ function network_append!(rn::ReactionNetwork; species=[], transitions=[], events
             entangle!(rn, ReactionNetworkTransition(name, params, all_species))
         else
             t = inners(rn)[name]
-            merge!(t.expression, params); interpret_params!(t, all_species)
+            merge!(t.expression, params)
+            interpret_params!(t, all_species)
         end
     end
 
@@ -63,7 +66,8 @@ function network_append!(rn::ReactionNetwork; species=[], transitions=[], events
         name = o.params[:name] = string(get(o.params, :name, gensym(:event)))
         parent = mkpath!(rn, dirname(name)) # create intermediate hierachy
 
-        entangle!(parent, ReactionNetworkSampleable(basename(name), o.range, o.params, all_species))
+        entangle!(parent,
+                  ReactionNetworkSampleable(basename(name), o.range, o.params, all_species))
     end
 
     rn
@@ -73,7 +77,9 @@ end
 getnetwork(a::ReactionNetworkAgent) = a isa ReactionNetwork ? a : getnetwork(parent(a))
 
 "Translate `a` into `(a, getnetwork(a))`."
-macro args(a) :(($(esc(a)), getnetwork($(esc(a))))) end
+macro args(a)
+    :(($(esc(a)), getnetwork($(esc(a)))))
+end
 
 "Retrieve species names as symbols (ignores nested hierarchies)."
 function get_all_species(rn::ReactionNetwork)
