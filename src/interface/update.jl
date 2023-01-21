@@ -16,7 +16,8 @@ function push_to_acs!(acsex, exs...)
         ex = striplines(exs[1])
     else
         args = Any[]
-        map(el -> isexpr(el, :(=)) ? push!(args, :($(el.args[1]) => $(el.args[2]))) : push!(args, el), exs)
+        map(el -> isexpr(el, :(=)) ? push!(args, :($(el.args[1]) => $(el.args[2]))) :
+                  push!(args, el), exs)
         ex = Expr(:tuple, args...)
     end
 
@@ -38,7 +39,9 @@ Add reactions to an acset.
 end
 ```
 """
-macro push(acsex, exs...) push_to_acs!(acsex, exs...) end
+macro push(acsex, exs...)
+    push_to_acs!(acsex, exs...)
+end
 
 """
 Set name of a transition in the model.
@@ -51,18 +54,19 @@ Set name of a transition in the model.
 ```
 """
 macro name_transition(acsex, exs...)
-    call = :(begin end); for ex in exs
+    call = :(begin end)
+    for ex in exs
         call_ = if ex.args[1] isa Number
             :($(esc(acsex))[$(ex.args[1]), :transName] = $(QuoteNode(ex.args[2])))
         else
-
             quote
                 acs = $(esc(acsex))
-                ixs = findall(i -> string(acs[i, :transName]) == $(string(ex.args[1])), 1:nparts(acs, :T))
+                ixs = findall(i -> string(acs[i, :transName]) == $(string(ex.args[1])),
+                              1:nparts(acs, :T))
                 foreach(i -> acs[i, :transName] = $(string(ex.args[2])), ixs)
             end
         end
-        
+
         push!(call.args, call_)
     end
 
@@ -72,7 +76,10 @@ end
 function incident_pattern(pattern, attr)
     ix = []
     for i in 1:length(attr)
-        isassigned(attr, i) && (m = match(pattern, string(attr[i])); !isnothing(m) && (string(attr[i]) == m.match)) && push!(ix, i)
+        isassigned(attr, i) &&
+            (m = match(pattern, string(attr[i]));
+             !isnothing(m) &&
+                 (string(attr[i]) == m.match)) && push!(ix, i)
     end
 
     ix
@@ -82,10 +89,13 @@ function mode!(acs, dict)
     for (spex, mods) in dict
         i = if spex isa Regex
             incident_pattern(spex, acs[:, :specName])
-        else incident(acs, Symbol(spex), :specName) end
+        else
+            incident(acs, Symbol(spex), :specName)
+        end
 
         for ix in i
-            !isassigned(subpart(acs, specModality), ix) && (acs[ix, specModality] = Set{Symbol}())
+            !isassigned(subpart(acs, specModality), ix) &&
+                (acs[ix, specModality] = Set{Symbol}())
             union!(acs[ix, :specModality], mods)
         end
     end
@@ -113,9 +123,12 @@ macro mode(acsex, spexs, mexs)
 
     quote
         dictcall = Dict()
-        exs_ = []; foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
-        exs__ = []; foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
-        foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex)) => $mods), exs__)
+        exs_ = []
+        foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
+        exs__ = []
+        foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
+        foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex)) => $mods),
+                exs__)
 
         mode!($(esc(acsex)), dictcall)
     end
@@ -125,34 +138,40 @@ function set_valuation!(acs, dict, valuation_type)
     for (spex, val) in dict
         i = if spex isa Regex
             incident_pattern(spex, subpart(acs, :specName))
-        else incident(acs, Symbol(spex), :specName) end
-        
-        foreach(ix -> acs[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] = eval(val), i)
+        else
+            incident(acs, Symbol(spex), :specName)
+        end
+
+        foreach(ix -> acs[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] = eval(val),
+                i)
     end
 end
 
 export @cost, @reward, @valuation
 for valuation_type in (:cost, :reward, :valuation)
-    eval(
-        quote
-            export $(Symbol(Symbol("@"), valuation_type))
-            @doc """
-            Set $($(string(valuation_type))).
+    eval(quote
+             export $(Symbol(Symbol("@"), valuation_type))
+             @doc """
+             Set $($(string(valuation_type))).
 
-            # Examples
-            ```julia
-            @$($(string(valuation_type))) model experimental1=2 experimental2=3
-            ```
-            """
-            macro $valuation_type(acsex, exs...)
-                dictcall = Dict()
-                exs_ = []; foreach(s -> push!(exs_, striplines(blockize(s))), exs)
-                exs__ = []; foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
-                foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]), exs__)
-                :(set_valuation!($(esc(acsex)), $dictcall, $(QuoteNode($(QuoteNode(valuation_type))))))
-            end
-        end
-    )
+             # Examples
+             ```julia
+             @$($(string(valuation_type))) model experimental1=2 experimental2=3
+             ```
+             """
+             macro $valuation_type(acsex, exs...)
+                 dictcall = Dict()
+                 exs_ = []
+                 foreach(s -> push!(exs_, striplines(blockize(s))), exs)
+                 exs__ = []
+                 foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
+                 foreach(ex -> push!(dictcall,
+                                     get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]),
+                         exs__)
+                 :(set_valuation!($(esc(acsex)), $dictcall,
+                                  $(QuoteNode($(QuoteNode(valuation_type))))))
+             end
+         end)
 end
 
 """
@@ -165,10 +184,11 @@ Add new species to a model.
 """
 macro add_species(acsex, exs...)
     call = :(begin end)
-    spexs_ = []; foreach(s -> push!(spexs_, s), exs)
-    
+    spexs_ = []
+    foreach(s -> push!(spexs_, s), exs)
+
     for ex in recursively_expand_dots.(spexs_)
-        push!(call.args, :(add_part!($(esc(acsex)), :S; specName=$(QuoteNode(ex)))))
+        push!(call.args, :(add_part!($(esc(acsex)), :S; specName = $(QuoteNode(ex)))))
     end
 
     push!(call.args, :(assign_defaults!($(esc(acsex)))))
@@ -190,13 +210,17 @@ macro prob_init(acsex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
     return if length(exs) == 1 && (isexpr(exs[1], :vect) || (exs[1] isa Symbol))
-        :(init!($(esc(acsex)), $(esc(exs[1])))) 
+        :(init!($(esc(acsex)), $(esc(exs[1]))))
     else
         quote
             dictcall = Dict()
-            exs_ = []; foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
-            exs__ = []; foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
-            foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]), exs__)
+            exs_ = []
+            foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
+            exs__ = []
+            foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
+            foreach(ex -> push!(dictcall,
+                                get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]),
+                    exs__)
 
             init!($(esc(acsex)), dictcall)
         end
@@ -204,15 +228,19 @@ macro prob_init(acsex, exs...)
 end
 
 # deprecate
-macro prob_init_from_vec(acsex, vecex) :(init!($(esc(acsex)), $(esc(vecex)))) end
+macro prob_init_from_vec(acsex, vecex)
+    :(init!($(esc(acsex)), $(esc(vecex))))
+end
 
 function init!(acs, inits)
-    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (subpart(acs, :specInitVal) .= inits; return)
+    inits isa AbstractVector && length(inits) == nparts(acs, :S) &&
+        (subpart(acs, :specInitVal) .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
-        k isa Number ? acs[k, :specInitVal] = init_val : begin
-                i = k isa Regex ? incident_pattern(k, subpart(acs, :specName)) :
-                    incident(acs, k, :specName)
-                foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
+        k isa Number ? acs[k, :specInitVal] = init_val :
+        begin
+            i = k isa Regex ? incident_pattern(k, subpart(acs, :specName)) :
+                incident(acs, k, :specName)
+            foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
         end
     end
 
@@ -232,13 +260,17 @@ macro prob_uncertainty(acsex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
     return if length(exs) == 1 && (isexpr(exs[1], :vect) || (exs[1] isa Symbol))
-        :(uncinit!($(esc(acsex)), $(esc(exs[1])))) 
+        :(uncinit!($(esc(acsex)), $(esc(exs[1]))))
     else
         quote
             dictcall = Dict()
-            exs_ = []; foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
-            exs__ = []; foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
-            foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]), exs__)
+            exs_ = []
+            foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
+            exs__ = []
+            foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
+            foreach(ex -> push!(dictcall,
+                                get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]),
+                    exs__)
 
             uncinit!($(esc(acsex)), dictcall)
         end
@@ -246,12 +278,14 @@ macro prob_uncertainty(acsex, exs...)
 end
 
 function uncinit!(acs, inits)
-    inits isa AbstractVector && length(inits) == nparts(acs, :S) && (subpart(acs, :specInitUncertainty) .= inits; return)
+    inits isa AbstractVector && length(inits) == nparts(acs, :S) &&
+        (subpart(acs, :specInitUncertainty) .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
-        k isa Number ? acs[k, :specInitUncertainty] = init_val : begin
-                i = k isa Regex ? incident_pattern(k, subpart(acs, :specName)) :
-                    incident(acs, k, :specName)
-                foreach(ix -> (acs[ix, :specInitUncertainty] = init_val), i)
+        k isa Number ? acs[k, :specInitUncertainty] = init_val :
+        begin
+            i = k isa Regex ? incident_pattern(k, subpart(acs, :specName)) :
+                incident(acs, k, :specName)
+            foreach(ix -> (acs[ix, :specInitUncertainty] = init_val), i)
         end
     end
 
@@ -261,11 +295,11 @@ end
 function set_params!(acs, params)
     params isa AbstractDict && for (k, init_val) in params
         k = get_pattern(k)
-        if k isa Regex 
+        if k isa Regex
             i = incident_pattern(k, subpart(acs, :prmName))
         else
             i = incident(acs, k, :prmName)
-            isempty(i) && (i = add_part!(acs, :P, prmName=k))
+            isempty(i) && (i = add_part!(acs, :P, prmName = k))
         end
 
         foreach(ix -> acs[ix, :prmVal] = eval(init_val), i)
@@ -285,9 +319,13 @@ macro prob_params(acsex, exs...)
 
     quote
         dictcall = Dict()
-        exs_ = []; foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
-        exs__ = []; foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
-        foreach(ex -> push!(dictcall, get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]), exs__)
+        exs_ = []
+        foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
+        exs__ = []
+        foreach(s -> foreach(s -> push!(exs__, s), s.args), exs_)
+        foreach(ex -> push!(dictcall,
+                            get_pattern(recursively_expand_dots(ex.args[1])) => ex.args[2]),
+                exs__)
 
         set_params!($(esc(acsex)), dictcall)
     end
@@ -296,7 +334,7 @@ end
 function meta!(acs, metas)
     for (k, metaval) in metas
         i = incident(acs, k, :metaKeyword)
-        isempty(i) && (i = add_part!(acs, :M, metaKeyword=k))
+        isempty(i) && (i = add_part!(acs, :M, metaKeyword = k))
         set_subpart!(acs, first(i), :metaVal, metaval)
     end
 end
@@ -313,7 +351,7 @@ Set model metadata (e.g. solver arguments)
 macro prob_meta(acsex, exs...)
     dictcall = :(Dict([]))
     foreach(ex -> push!(dictcall.args[2].args, (ex.args[1] => eval(ex.args[2]))), exs)
-    
+
     :(meta!($(esc(acsex)), $dictcall))
 end
 
@@ -337,17 +375,27 @@ Alias object name in an acs.
 """
 macro aka(acsex, exs...)
     dictcall = :(Dict([]))
-    foreach(ex -> push!(dictcall.args[2].args, Symbol("alias_", findfirst(==(ex.args[1]), alias_default)) => ex.args[2]), exs)
+    foreach(ex -> push!(dictcall.args[2].args,
+                        Symbol("alias_", findfirst(==(ex.args[1]), alias_default)) => ex.args[2]),
+            exs)
     :(meta!($(esc(acsex)), $dictcall))
 end
 
-alias_default = Dict(:S => :species, :T => :transition, :A => :action, :E => :event, :P => :param, :M => :meta)
+alias_default = Dict(:S => :species, :T => :transition, :A => :action, :E => :event,
+                     :P => :param, :M => :meta)
 
-get_alias(acs, ob) = (i = incident(acs, Symbol(:alias_, ob), :metaKeyword); !isempty(i) ? acs[first(i), :metaVal] : alias_default[ob])
+function get_alias(acs, ob)
+    (i = incident(acs, Symbol(:alias_, ob), :metaKeyword);
+     !isempty(i) ?
+     acs[first(i), :metaVal] :
+     alias_default[ob])
+end
 
 "Check model parameters have been set."
 macro prob_check_verbose(acsex) # msg as return value
-    :(missing_params = check_params($(esc(acsex))); isempty(missing_params) ? "Params OK." : "Missing params: $missing_params")
+    :(missing_params = check_params($(esc(acsex)));
+      isempty(missing_params) ? "Params OK." :
+      "Missing params: $missing_params")
 end
 
 """
@@ -358,7 +406,9 @@ Add a periodic callback to a model.
 @periodic acs 1. X += 1
 ```
 """
-macro periodic(acsex, pex, acex) push_to_acs!(acsex, Expr(:&&, :(@periodic($pex)), acex)) end
+macro periodic(acsex, pex, acex)
+    push_to_acs!(acsex, Expr(:&&, :(@periodic($pex)), acex))
+end
 
 """
 Add a jump process (with specified Poisson intensity per unit time step) to a model.
@@ -368,7 +418,12 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 @jump acs λ Z += rand(Poisson(1.))
 ```
 """
-macro jump(acsex, inex, acex) push_to_acs!(acsex, Expr(:&&, Expr(:call, :rand, :(Poisson(max(@solverarg(:tstep) * $inex, 0)))), acex)) end
+macro jump(acsex, inex, acex)
+    push_to_acs!(acsex,
+                 Expr(:&&,
+                      Expr(:call, :rand, :(Poisson(max(@solverarg(:tstep) * $inex, 0)))),
+                      acex))
+end
 
 """
 Evaluate expression in ReactiveDynamics scope.
@@ -379,4 +434,6 @@ Evaluate expression in ReactiveDynamics scope.
 @register tdecay(t) = exp(-t/10^3)
 ```
 """
-macro register(ex) :(@eval ReactiveDynamics $ex) end
+macro register(ex)
+    :(@eval ReactiveDynamics $ex)
+end

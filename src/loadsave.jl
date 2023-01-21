@@ -6,15 +6,21 @@ export @export, @import
 using TOML, JLD2, CSV
 using DataFrames
 
-const objects_aliases = Dict(:S => "spec", :T => "trans", :P => "prm", :M => "meta", :E => "event", :obs => "obs")
+const objects_aliases = Dict(:S => "spec", :T => "trans", :P => "prm", :M => "meta",
+                             :E => "event", :obs => "obs")
 const RN_attrs = string.(propertynames(ReactionNetwork().subparts))
 
-get_attrs(object) = (object = object isa Symbol ? objects_aliases[object] : object; filter(x -> occursin(object, x), RN_attrs))
+function get_attrs(object)
+    (object = object isa Symbol ? objects_aliases[object] : object;
+     filter(x -> occursin(object,
+                          x),
+            RN_attrs))
+end
 
-function serialize_to_toml(acs::ReactionNetwork, io::IO=stdout)
+function serialize_to_toml(acs::ReactionNetwork, io::IO = stdout)
     data = Dict()
     for (key, val) in objects_aliases
-        push!(data, val => []);
+        push!(data, val => [])
         for i in 1:nparts(acs, key)
             data_ = Dict()
             for attr in get_attrs(val)
@@ -41,19 +47,25 @@ function deserialize_from_dict(data::Dict)
         end
     end
 
-    for row in get(data, "registered", []) eval(Meta.parseall(row["body"])) end
+    for row in get(data, "registered", [])
+        eval(Meta.parseall(row["body"]))
+    end
 
     assign_defaults!(acs)
 end
 
-export_model(acs::ReactionNetwork, path::AbstractString) = open(path, "w") do io; serialize_to_toml(acs, io) end
-import_model(path::AbstractString) = (dict = TOML.parsefile(path); deserialize_from_dict(dict))
+export_model(acs::ReactionNetwork, path::AbstractString) =
+    open(path, "w") do io
+        serialize_to_toml(acs, io)
+    end
+function import_model(path::AbstractString)
+    (dict = TOML.parsefile(path); deserialize_from_dict(dict))
+end
 
 function load_models(io::IO)
     for line in eachline(io)
         name, path = split(line, ';')
         name = isempty(name) ? gensym() : name
-        
     end
 end
 
@@ -65,7 +77,9 @@ Export model to a file.
 @export_model acs "acs_data.toml"
 ```
 """
-macro export_model(acsex, pathex) :(export_model($(esc(acsex)), $(string(pathex)))) end
+macro export_model(acsex, pathex)
+    :(export_model($(esc(acsex)), $(string(pathex))))
+end
 
 """
 Import a model from a file.
@@ -75,7 +89,9 @@ Import a model from a file.
 @import_model "model.toml"
 ```
 """
-macro import_model(pathex, name=gensym()) :($(esc(name)) = import_model($(string(pathex)))) end
+macro import_model(pathex, name = gensym())
+    :($(esc(name)) = import_model($(string(pathex))))
+end
 
 macro load_models(pathex)
     callex = :(begin end)
@@ -98,7 +114,9 @@ Import a solution from a file.
 @import_solution "sir_acs_sol/serialized/sol.jld2"
 ```
 """
-macro import_solution(pathex, varname="sol") :(JLD2.load($(string(pathex)), $(string(varname)))) end
+macro import_solution(pathex, varname = "sol")
+    :(JLD2.load($(string(pathex)), $(string(varname))))
+end
 
 """
     @export_solution sol
@@ -110,7 +128,9 @@ Export a solution to a file.
 @export_solution sol "sol.jdl2"
 ```
 """
-macro export_solution(solex, pathex="sol.jld2") :(JLD2.save($(string(pathex)), $(string(solex)), $(esc(solex)))) end
+macro export_solution(solex, pathex = "sol.jld2")
+    :(JLD2.save($(string(pathex)), $(string(solex)), $(esc(solex))))
+end
 
 """
     @export_as_table sol
@@ -121,7 +141,9 @@ Export a solution as a `DataFrame`.
 @export_as_table sol
 ```
 """
-macro export_as_table(solex, pathex="sol.jld2") :(DataFrame($(esc(solex)))) end
+macro export_as_table(solex, pathex = "sol.jld2")
+    :(DataFrame($(esc(solex))))
+end
 
 get_DataFrame(sol) = sol isa EnsembleSolution ? DataFrame(sol)[!, [:u, :t]] : DataFrame(sol)
 
@@ -135,4 +157,6 @@ Export a solution to a file.
 @export_csv sol "sol.csv"
 ```
 """
-macro export_csv(solex, pathex="sol.csv") :(CSV.write($(string(pathex)), get_DataFrame($(esc(solex))))) end
+macro export_csv(solex, pathex = "sol.csv")
+    :(CSV.write($(string(pathex)), get_DataFrame($(esc(solex)))))
+end
