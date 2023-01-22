@@ -1,11 +1,11 @@
 # ReactiveDynamics.jl <br> 
 
 <p align="center">
-  <img src="docs/assets/diagram1.png" alt="wiring diagram"> <br>
+  <img src="docs/src/assets/diagram1.png" alt="wiring diagram"> <br>
   <a href="#about">About</a> |
   <a href="#context-dynamics-of-value-evolution-dyve">Context</a> |
   <a href="#four-sketches">Four Sketches</a> |
-  <a href="https://merck.github.io/ReactiveDynamics.jl">Documentation</a>
+  <a href="https://merck.github.io/ReactiveDynamics.jl/stable">Documentation</a>
 </p>
 
 ## About
@@ -14,7 +14,7 @@ The package provides a category of reaction (transportation) network-type proble
 
 Our motivation stems from the area of **[system dynamics](https://www.youtube.com/watch?v=o-Yp8A7BPE8)**, which is a mathematical modeling approach to frame, analyze, and optimize complex (nonlinear) dynamical systems, to augment the strategy and policy design.
 
-<img src="docs/assets/diagram2.png" align="right" alt="wiring diagram"></a>
+<img src="docs/src/assets/diagram2.png" align="right" alt="wiring diagram"></a>
 <p>The central concept is of a <b>transition</b> (transport, flow, rule, reaction - a subcategory of general algebraic action). Generally, a transition prescribes a stochastic rule which repeatedly transforms the modeled system's <b>resources</b>. An elementary instance of such an ontology is provided by chemical reaction networks.
 
 A <b>reaction network</b> (system modeled) is then a tuple $(T, R)$, where $T$ is a set of the transitions and $R$ is a set of the network's resource classes (aka species). The simultaneous action of transitions on the resources evolves the dynamical system.
@@ -26,7 +26,7 @@ An instance of a stateful transition evolves gradually from its genesis up to th
 
 In particular, a resource can be allocated to an instance either for the instance's lifetime or a single time step of the model's evolution (after each time step, the resource may be reallocated based on the global demand). Moreover, the coefficient of a resource on the left hand-side can either be interpreted as a total amount of the resource required or as an amount required per time unit. Similarly, it is possible to declare a resource **conserved**, in which case it is returned into the scope once the instance terminates.
 
-<img src="docs/assets/diagram3.png" align="left" alt="attributes diagram"></a>
+<img src="docs/src/assets/diagram3.png" align="left" alt="attributes diagram"></a>
 
 The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>. 
 
@@ -61,7 +61,7 @@ The acronym SIR stands for susceptible, infected, and recovered, and as such the
 Follow the SIR model's reactions:
 
 <p align="center">
-  <img src="docs/assets/sir_reactions.png" alt="SIR reactions"> <br>
+  <img src="docs/src/assets/sir_reactions.png" alt="SIR reactions"> <br>
 </p>
 
 ```julia
@@ -86,7 +86,7 @@ end
 
 The resulting reaction network is represented as an attributed C-set:
 
-![sir acs](docs/assets/sir_acs.png)
+![sir acs](docs/src/assets/sir_acs.png)
 
 Next we solve the problem.
 
@@ -105,7 +105,7 @@ sol = @solve prob trajectories=20
 @plot sol plot_type=summary c=:green xlimits=(.0, 100.)
 ```
 
-![sir plots](docs/assets/sir_plot.png)
+![sir plots](docs/src/assets/sir_plot.png)
 
 ### A Primer on Attributed Transitions
 
@@ -175,7 +175,7 @@ sol = @solve prob trajectories=20
 @plot sol plot_type=summary show=[:candidate_compound, :marketed_drug]
 ```
 
-![plot](docs/assets/toy_pharma.png)
+![plot](docs/src/assets/toy_pharma.png)
 
 
 ### Sparse Interactions
@@ -256,7 +256,7 @@ end
 
 Let's plot the interactions:
 
-![interactions](docs/assets/interactions.png)
+![interactions](docs/src/assets/interactions.png)
 
 The resulting model can then be conveniently simulated using the modeling metalanguage.
 
@@ -311,7 +311,7 @@ sol = @solve acs
 @plot sol
 ```
 
-![plot](docs/assets/optim1.png)
+![plot](docs/src/assets/optim1.png)
 
 Next we supply empirical data and fit `params`.
 
@@ -322,4 +322,4 @@ data = [60 30 5]
 @fit_and_plot acs data time_points vars=[A] params α maxeval=200 lower_bounds=0 upper_bounds=.01
 ```
 
-![plot](docs/assets/optim2.png)
+![plot](docs/src/assets/optim2.png)
