@@ -67,15 +67,15 @@ For deterministic "rates", use `@per_step(ex)`. Here, `ex` evaluates to a determ
 
 ## Model import and export
 ```@docs
-@import_model
-@export_model
+@import_network
+@export_network
 ```
 
 ## Solution import and export
 ```@docs
 @import_solution
-@export_as_table
-@export_csv
+@export_solution_as_table
+@export_solution_as_csv
 @export_solution
 ```
 

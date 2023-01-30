@@ -1,0 +1,4 @@
+trans;;transCapacity;;transCycleTime;;transMaxLifeTime;;transMultiplier;;transName;;transPostAction;;transPriority;;transProbOfSuccess;;transRate
+S + I → @choose((1.5, 2 * @choose(1, 2) * I), (1.6, @take(:RATE) * I));;Inf;;1;;Inf;;1;;SI2I;;();;1;;1;;β * S * I * tdecay(@t())
+I → R;;Inf;;1;;Inf;;1;;I2R;;();;1;;1;;ν * I
+R → S;;Inf;;1;;Inf;;1;;R2S;;();;1;;1;;γ

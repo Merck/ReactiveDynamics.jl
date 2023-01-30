@@ -145,7 +145,7 @@ function remove_choose(acs::ReactionNetwork)
     pcs = []
     for attr in propertynames(acs.subparts)
         attrs_ = subpart(acs, attr)
-        foreach(i -> isassigned(attrs_, i) && attrs_[i] isa Expr &&
+        foreach(i -> !isnothing(attrs_[i]) && attrs_[i] isa Expr &&
                          (attrs_[i] = normalize_pcs!(pcs, attrs_[i])), 1:length(attrs_))
     end
 

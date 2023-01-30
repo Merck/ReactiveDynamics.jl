@@ -1,0 +1,2 @@
+obsName;;obsOpts
+RATE;;ReactiveDynamics.FoldedObservable(Union{Float64, Int64, AbstractString, Expr, Symbol, Tuple{Float64, Union{Float64, Int64, AbstractString, Expr, Symbol}}}[1], 2.0, Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[])

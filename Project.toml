@@ -34,7 +34,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 CSV = "0.10"
-Catlab = "0.14"
+Catlab = "0.14.13"
 ComponentArrays = "0.13"
 Crayons = "4.1"
 DataFrames = "1.4"

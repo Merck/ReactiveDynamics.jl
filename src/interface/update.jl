@@ -76,7 +76,7 @@ end
 function incident_pattern(pattern, attr)
     ix = []
     for i in 1:length(attr)
-        isassigned(attr, i) &&
+        !isnothing(attr[i]) &&
             (m = match(pattern, string(attr[i]));
              !isnothing(m) &&
                  (string(attr[i]) == m.match)) && push!(ix, i)
@@ -94,7 +94,7 @@ function mode!(acs, dict)
         end
 
         for ix in i
-            !isassigned(subpart(acs, specModality), ix) &&
+            isnothing(acs[ix, specModality]) &&
                 (acs[ix, specModality] = Set{Symbol}())
             union!(acs[ix, :specModality], mods)
         end

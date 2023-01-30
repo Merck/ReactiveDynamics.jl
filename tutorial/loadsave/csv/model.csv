@@ -1,0 +1,8 @@
+type;;path
+obs;;export-obs.csv
+spec;;export-spec.csv
+meta;;export-meta.csv
+trans;;export-trans.csv
+event;;export-event.csv
+prm;;export-prm.csv
+registered;;export-registered.csv

@@ -1,0 +1,4 @@
+body
+"bool_cond(t) = (100 < t < 200) || (400 < t < 500)"
+"tdecay(t) = exp(-t/10^3)"
+"foo(x) = x"

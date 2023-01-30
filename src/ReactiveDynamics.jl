@@ -69,12 +69,15 @@ const ReactionNetwork = FoldedReactionNetworkType{Symbol, Union{String, Symbol, 
                                                   FoldedObservable, Any}
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
-Base.convert(::Type{Union{String, Symbol, Missing}}, ex::String) =
+
+function Base.convert(::Type{Union{String, Symbol, Missing}}, ex::String)
     try
         Symbol(ex)
     catch
         string(ex)
     end
+end
+
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
 Base.convert(::Type{Set{Symbol}}, ex::String) = eval(Meta.parse(ex))
 Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
@@ -107,14 +110,14 @@ species_modalities = [:nonblock, :conserved, :rate]
 function assign_defaults!(acs::ReactionNetwork)
     for (_, v_) in defargs, (k, v) in v_
         for i in 1:length(subpart(acs, k))
-            !isassigned(subpart(acs, k), i) && (subpart(acs, k)[i] = v)
+            isnothing(acs[i, k]) && (subpart(acs, k)[i] = v)
         end
     end
 
-    foreach(i -> isassigned(subpart(acs, :specModality), i) ||
+    foreach(i -> !isnothing(acs[i, :specModality]) ||
                 (subpart(acs, :specModality)[i] = Set{Symbol}()), 1:nparts(acs, :S))
     k = [:specCost, :specReward, :specValuation]
-    foreach(k -> foreach(i -> isassigned(subpart(acs, k), i) || (subpart(acs, k)[i] = 0.0),
+    foreach(k -> foreach(i -> !isnothing(acs[i, k]) || (subpart(acs, k)[i] = 0.0),
                          1:nparts(acs, :S)), k)
 
     acs
@@ -123,6 +126,7 @@ end
 function ReactionNetwork(transitions, reactants, obs, events)
     merge_acs!(ReactionNetwork(), transitions, reactants, obs, events)
 end
+
 function ReactionNetwork(transitions, reactants, obs)
     merge_acs!(ReactionNetwork(), transitions, reactants, obs, [])
 end
@@ -169,10 +173,5 @@ include.(readdir(joinpath(@__DIR__, "operators"), join = true))
 include("solvers.jl")
 include("optim.jl")
 include("loadsave.jl")
-
-# Catlab.jl hack: bypass @isdefined check
-function Base.getindex(m::Catlab.ColumnImplementations.PartialVecMap, x::Int)
-    m.v[x]
-end
 
 end

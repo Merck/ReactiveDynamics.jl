@@ -175,8 +175,8 @@ end
 # execute callbacks
 function event_action!(state)
     for i in 1:nparts(state, :E)
-        isassigned(state.attrs[:eventTrigger], i) &&
-            isassigned(state.attrs[:eventAction], i) || continue
+        !isnothing(state[i, :eventTrigger]) &&
+            !isnothing(state[i, :eventAction]) || continue
         v = state[i, :eventTrigger]
         q = v isa Bool ? (v ? 1 : 0) : (v isa Number ? rand(Poisson(v)) : 0)
         for _ in 1:q
@@ -308,8 +308,8 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0 = Dict(),
     assign_defaults!(acs)
     keywords = Dict{Symbol, Any}([acs[i, :metaKeyword] => acs[i, :metaVal]
                                   for i in 1:nparts(acs, :M)
-                                  if isassigned(subpart(acs, :metaKeyword), i) &&
-                                     isassigned(subpart(acs, :metaVal), i)])
+                                  if !isnothing(acs[i, :metaKeyword]) &&
+                                     !isnothing(acs[i, :metaVal])])
     merge!(keywords, Dict(collect(kwargs)))
     merge!(keywords, Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
@@ -324,7 +324,7 @@ function DiffEqBase.DiscreteProblem(acs::ReactionNetwork, u0 = Dict(),
     prob = transform(DiffEqBase.DiscreteProblem, state; kwargs...)
 
     u0 isa Dict &&
-        foreach(i -> prob.u0[i] = isassigned(subpart(acs, :specName), i) &&
+        foreach(i -> prob.u0[i] = !isnothing(acs[i, :specName]) &&
                                   haskey(u0, acs[i, :specName]) ? u0[acs[i, :specName]] :
                                   prob.u0[i], 1:nparts(state, :S))
     p_ = p == DiffEqBase.NullParameters() ? Dict() : Dict(k => v for (k, v) in p)
@@ -339,7 +339,7 @@ end
 
 function fetch_params(acs::ReactionNetwork)
     Dict{Symbol, Any}((acs[i, :prmName] => acs[i, :prmVal]
-                       for i in Iterators.filter(i -> isassigned(subpart(acs, :prmVal), i),
+                       for i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]),
                                                  1:nparts(acs, :P))))
 end
 

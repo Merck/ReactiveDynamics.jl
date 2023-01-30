@@ -194,7 +194,7 @@ function get_vars(acs, args)
             push!(args_, Int(arg))
         else
             for i in 1:length(subpart(acs, :specName))
-                isassigned(subpart(acs, :specName), i) && (acs[i, :specName] == arg) &&
+                !isnothing(acs[i, :specName]) && (acs[i, :specName] == arg) &&
                     (push!(args_, i); break)
             end
         end

@@ -4,12 +4,12 @@ flowchart TD
                 @name_transition, @optimize, @periodic, @prob_check_verbose,
                 @prob_init, @prob_meta, @prob_params, @prob_uncertainty,
                 @push, @reward, @valuation"| acs
-    sol --> |"@export_as_table"| table["table"]
-    sol --> |"@export_csv"| csvsol["sol.csv"]
-    acs --> |"@export_model"| mod["model.toml"]
+    sol --> |"@export_solution_as_table"| table["table"]
+    sol --> |"@export_solution_as_csv"| csvsol["sol.csv"]
+    acs --> |"@import_network"| mod["model.toml"]
     sol--> |"@export_solution"| solex["sol.jld2"]
     joinsol --> |"@fit_and_plot"| plot
-    mod --> |"@import_model"| acs
+    mod --> |"@export_network"| acs
     solex --> |"@import_solution"| sol["solution"]
     acs1["ACS1\n~ReactiveDynamics.ReactionNetwork"] --- join[ ]
     acs2["ACS2\n~ReactiveDynamics.ReactionNetwork"] --- join[ ]
