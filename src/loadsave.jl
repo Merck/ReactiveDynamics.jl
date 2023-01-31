@@ -14,7 +14,7 @@ const RN_attrs = string.(propertynames(ReactionNetwork().subparts))
 
 function get_attrs(object)
     object = object isa Symbol ? objects_aliases[object] : object
-    
+
     filter(x -> occursin(object, x), RN_attrs)
 end
 
@@ -67,12 +67,15 @@ function load_network(dict::Dict)
 end
 
 function import_network_csv(pathmap)
-    dict = Dict(); for (key, paths) in pathmap
+    dict = Dict()
+    for (key, paths) in pathmap
         push!(dict, key => [])
         for path in paths
-            data = DataFrame(CSV.File(path; delim=";;", types=String, stripwhitespace=true, comment="#"))
+            data = DataFrame(CSV.File(path; delim = ";;", types = String,
+                                      stripwhitespace = true, comment = "#"))
             for row in eachrow(data)
-                object = Dict(); for (attr, val) in Iterators.zip(keys(row), values(row))
+                object = Dict()
+                for (attr, val) in Iterators.zip(keys(row), values(row))
                     !ismissing(val) && push!(object, string(attr) => val)
                 end
                 push!(dict[key], object)
@@ -85,8 +88,9 @@ end
 
 function import_network(path::AbstractString)
     if splitext(path)[2] == ".csv"
-        pathmap = Dict(val => [] for val in [collect(values(objects_aliases)); "registered"])
-        for row in CSV.File(path; delim=";;", stripwhitespace=true, comment="#")
+        pathmap = Dict(val => []
+                       for val in [collect(values(objects_aliases)); "registered"])
+        for row in CSV.File(path; delim = ";;", stripwhitespace = true, comment = "#")
             push!(pathmap[row.type], joinpath(dirname(path), row.path))
         end
 
@@ -96,7 +100,6 @@ function import_network(path::AbstractString)
     end
 end
 
-
 function export_network(acs::ReactionNetwork, path::AbstractString)
     if splitext(path)[2] == ".csv"
         exported_network = export_network(acs)
@@ -105,17 +108,18 @@ function export_network(acs::ReactionNetwork, path::AbstractString)
             push!(paths, (key, "export-$key.csv"))
             objs_exported = DataFrame(Dict(attr => [] for attr in get_attrs(key)))
             for obj in objs
-                push!(objs_exported, [get(obj, key, missing) for key in names(objs_exported)])
+                push!(objs_exported,
+                      [get(obj, key, missing) for key in names(objs_exported)])
             end
 
-            CSV.write(joinpath(dirname(path), "export-$key.csv"), objs_exported, delim=";;")
+            CSV.write(joinpath(dirname(path), "export-$key.csv"), objs_exported,
+                      delim = ";;")
         end
-        CSV.write(path, paths, delim=";;")
+        CSV.write(path, paths, delim = ";;")
     else
         open(io -> TOML.print(io, export_network(acs)), path, "w+")
     end
 end
-
 
 """
 Export model to a file: this can be either a single TOML file encoding the entire model,

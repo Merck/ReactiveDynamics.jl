@@ -21,7 +21,8 @@ sol_ = @solve prob_ trajectories=20
 
 # export the same model (w/o registered functions)
 @export_network sir_acs modell.toml
-mkpath("csv_"); @export_network sir_acs "csv_/model.csv"
+mkpath("csv_");
+@export_network sir_acs "csv_/model.csv";
 
 # load multiple models
 @load_models models.txt
