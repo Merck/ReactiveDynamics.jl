@@ -4,9 +4,7 @@ using ReactiveDynamics
 #     1.0, X ⟺ Y
 # end
 
-acs = @ReactionNetwork begin
-    1.0, X ⟺ Y, name=>"transition1"
-end
+acs = @ReactionNetwork begin 1.0, X ⟺ Y, name => "transition1" end
 
 @prob_init acs X=10 Y=20
 @prob_params acs
