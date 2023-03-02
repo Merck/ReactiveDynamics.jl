@@ -1,8 +1,8 @@
 using ReactiveDynamics
 
-acs = @ReactionNetwork begin
-    1.0, X ⟺ Y
-end
+# acs = @ReactionNetwork begin
+#     1.0, X ⟺ Y
+# end
 
 acs = @ReactionNetwork begin
     1.0, X ⟺ Y, name=>"transition1"
@@ -14,6 +14,10 @@ end
 
 prob = @problematize acs
 
-# sol = @solve prob trajectories=50
+# sol = ReactiveDynamics.solve(prob)
 
-ReactiveDynamics.solve(prob)
+sol = @solve prob trajectories=20
+
+using Plots
+
+@plot sol plot_type=summary

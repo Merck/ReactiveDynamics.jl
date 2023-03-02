@@ -173,7 +173,8 @@ function get_transitions!(trans, reactants, pcs, exs)
     (rate, r_line) = exs[1:2]
     rxs = prune_reaction_line!(pcs, reactants, r_line)
     rate = expand_rate(rate)
-    rxs = rxs isa Tuple ? tuple.(rate.args, rxs) : ((rate, rxs),)
+    # rxs = rxs isa Tuple ? tuple.(rate.args, rxs) : ((rate, rxs),)
+    rxs = rxs isa Tuple ? tuple.(fill(rate, length(rxs)), rxs) : ((rate, rxs),)
 
     exs = exs[3:end]
     empty!(args)
