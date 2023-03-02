@@ -7,24 +7,24 @@
 
 ## Modify a model
 
-We list common transition attributes:
+We list common transition attributes. When being specified using the `@ReactionNetwork` macro they can be conveniently referred to using their shorthand description.
 
-| attribute | interpretation |
-| :----- | :----- |
-| `transPriority` | priority of a transition (influences resource allocation) |
-| `transProbOfSuccess` | probability that a transition terminates successfully |
-| `transCapacity` | maximum number of concurrent instances of the transition |
-| `transCycleTime` | duration of a transition's instance (adjusted by resource allocation) |
-| `transMaxLifeTime` | maximal duration of a transition's instance |
-| `transPostAction` | action to be executed once a transition's instance terminates |
-| `transName` | name of a transition |
+| attribute | shorthand | interpretation |
+| :----- | :----- | :----- |
+| `transPriority` | `priority` | priority of a transition (influences resource allocation) |
+| `transProbOfSuccess` | `probability` `prob` `pos` | probability that a transition terminates successfully |
+| `transCapacity` | `cap` `capacity` | maximum number of concurrent instances of the transition |
+| `transCycleTime` | `ct` `cycletime` | duration of a transition's instance (adjusted by resource allocation) |
+| `transMaxLifeTime` | `lifetime` `maxlifetime` `maxtime` `timetolive` | maximal duration of a transition's instance |
+| `transPostAction` | `postAction` `post` | action to be executed once a transition's instance terminates |
+| `transName` | `name` `interpretation` | name of a transition, either a string or unquoted text |
 
 We list common species attributes:
 
-| attribute | interpretation |
-| :----- | :----- |
-| `specInitUncertainty` | uncertainty about variable's initial state (modelled as Gaussian standard deviation) |
-| `specInitVal` | initial value of a variable |
+| attribute | shorthand | interpretation |
+| :----- | :----- | :----- |
+| `specInitUncertainty` | `uncertainty` `stoch` `stochasticity` | uncertainty about variable's initial state (modelled as Gaussian standard deviation) |
+| `specInitVal` | | initial value of a variable |
 
 Moreover, it is possible to specify the semantics of the "rate" term. By default, at each time step `n ~ Poisson(rate * dt)` instances of a given transition will be spawned. If you want to specify the rate in terms of a cycle time, you may want to use `@ct(cycle_time)`, e.g., `@ct(ex), A --> B, ...`. This is a shorthand for `1/ex, A --> B, ...`.
 
