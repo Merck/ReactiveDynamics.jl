@@ -1,6 +1,6 @@
 name = "ReactiveDynamics"
 uuid = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
-version = "0.2.5"
+version = "0.2.6"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
