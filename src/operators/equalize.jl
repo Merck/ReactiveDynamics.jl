@@ -1,15 +1,21 @@
 export @equalize
 
-function expand_name_ff(ex)
-    ex isa Expr && isexpr(ex, :macrocall) ? (macroname(ex), underscorize(ex.args[end])) :
-    (nothing, underscorize(ex))
-end
+expand_name_ff(ex) =
+    if ex isa Expr && isexpr(ex, :macrocall)
+        (macroname(ex), underscorize(ex.args[end]))
+    else
+        (nothing, underscorize(ex))
+    end
 
-"Parse species equation blocks."
+"""
+Parse species equation blocks.
+"""
 function get_eqs_ff(eq)
     if eq isa Expr && isexpr(eq, :(=))
-        [expand_name_ff(eq.args[1]);
-         isexpr(eq.args[2], :(=)) ? get_eqs_ff(eq.args[2]) : expand_name_ff(eq.args[2])]
+        [
+            expand_name_ff(eq.args[1])
+            isexpr(eq.args[2], :(=)) ? get_eqs_ff(eq.args[2]) : expand_name_ff(eq.args[2])
+        ]
     else
         [expand_name_ff(eq)]
     end
@@ -21,14 +27,16 @@ function equalize!(acs::ReactionNetwork, eqs = [])
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
         species_ixs = Int64[]
-        for e in block, i in 1:nparts(acs, :S)
-            ((i == e[2]) ||
-             (e[1] == :catchall &&
-              occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(acs[i, :specName]))) ||
-             (e[2] == acs[i, :specName])) &&
-                (push!(species_ixs, i);
-                 push!(specmap,
-                       acs[i, :specName] => (acs[i, :specName] = block_alias)))
+        for e in block, i = 1:nparts(acs, :S)
+            (
+                (i == e[2]) ||
+                (
+                    e[1] == :catchall &&
+                    occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(acs[i, :specName]))
+                ) ||
+                (e[2] == acs[i, :specName])
+            ) && (push!(species_ixs, i);
+            push!(specmap, acs[i, :specName] => (acs[i, :specName] = block_alias)))
         end
         isempty(species_ixs) && continue
         species_ixs = sort(unique!(species_ixs))
@@ -45,21 +53,22 @@ function equalize!(acs::ReactionNetwork, eqs = [])
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
         attr_ = acs[:, attr]
-        for i in 1:length(attr_)
+        for i = 1:length(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
         end
     end
 
-    acs
+    return acs
 end
 
 """
 Identify (collapse) a set of species in a model.
 
 # Examples
+
 ```julia
-@join acs acs1.A=acs2.A B=C
+@join acs acs1.A = acs2.A B = C
 ```
 """
 macro equalize(acsex, exs...)
@@ -68,5 +77,5 @@ macro equalize(acsex, exs...)
     eqs = []
     foreach(ex -> ex isa Expr && merge_eqs!(eqs, get_eqs_ff(ex)), exs)
 
-    :(equalize!($(esc(acsex)), $eqs))
+    return :(equalize!($(esc(acsex)), $eqs))
 end

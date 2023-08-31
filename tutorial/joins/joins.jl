@@ -13,40 +13,46 @@ rd_models = ReactiveDynamics.ReactionNetwork[] # submodels
 end
 
 # submodels: dense interactions
-@generate {@fileval(submodel.jl, i=$i, r=r), i = 1:n_models}
+@generate {@fileval(submodel.jl, i = $i, r = r), i = 1:n_models}
 
 # batch join over the submodels
 rd_model = @generate "@join {rd_models[\$i], i=1:n_models, dlm=' '}"
 
 # identify resources
 @generate {
-           @equalize(rd_model,
-                     @alias(resource[$j])={rd_models[$i].resource[$j], i = 1:n_models,
-                                           dlm = :(=)}), j = 1:r}
+    @equalize(
+        rd_model,
+        @alias(resource[$j]) = {rd_models[$i].resource[$j], i = 1:n_models, dlm = :(=)}
+    ),
+    j = 1:r,
+}
 
 # sparse off-diagonal interactions, sparse declaration
 sparse_off_diagonal = zeros(sum(ReactiveDynamics.ns), sum(ReactiveDynamics.ns))
-for i in 1:n_models
+for i = 1:n_models
     j = rand(setdiff(1:n_models, (i,)))
     i_ix = rand(1:ReactiveDynamics.ns[i])
     j_ix = rand(1:ReactiveDynamics.ns[j])
-    sparse_off_diagonal[i_ix + sum(ReactiveDynamics.ns[1:(i - 1)]), j_ix + sum(ReactiveDynamics.ns[1:(j - 1)])] += 1
+    sparse_off_diagonal[
+        i_ix+sum(ReactiveDynamics.ns[1:(i-1)]),
+        j_ix+sum(ReactiveDynamics.ns[1:(j-1)]),
+    ] += 1
     interaction_ex = """@push rd_model begin 1., var"rd_models[$i].state[$i_ix]" --> var"rd_models[$j]__state[$j_ix]" end"""
     eval(Meta.parseall(interaction_ex))
 end
 
 sparse_off_diagonal += cat(ReactiveDynamics.M...; dims = (1, 2))
 using Plots;
-heatmap(1 .- sparse_off_diagonal, color = :greys, legend = false);
+heatmap(1 .- sparse_off_diagonal; color = :greys, legend = false);
 
 using ReactiveDynamics: nparts
 u0 = rand(1:1000, nparts(rd_model, :S))
 @prob_init rd_model u0
 
-@prob_meta rd_model tspan=10
+@prob_meta rd_model tspan = 10
 
 prob = @problematize rd_model
-sol = @solve prob trajectories=2
+sol = @solve prob trajectories = 2
 
 # plot "state" species only
-@plot sol plot_type=summary show=r"state"
+@plot sol plot_type = summary show = r"state"

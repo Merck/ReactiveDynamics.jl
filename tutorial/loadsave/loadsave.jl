@@ -6,14 +6,14 @@ using ReactiveDynamics
 @assert isdefined(ReactiveDynamics, :tdecay)
 
 prob = @problematize sir_acs
-sol = @solve prob trajectories=20
+sol = @solve prob trajectories = 20
 
 @import_network "csv/model.csv" sir_acs_
 @assert @isdefined sir_acs_
 @assert isdefined(ReactiveDynamics, :foo)
 
 prob_ = @problematize sir_acs_
-sol_ = @solve prob_ trajectories=20
+sol_ = @solve prob_ trajectories = 20
 
 # export, import the solution
 @export_solution sol

@@ -9,15 +9,19 @@ import Plots
 Convert a model to a `DiscreteProblem`. If passed a problem instance, return the instance.
 
 # Examples
+
 ```julia
-@problematize acs tspan=1:100
+@problematize acs tspan = 1:100
 ```
 """
 macro problematize(acsex, args...)
     args, kwargs = args_kwargs(args)
     quote
-        $(esc(acsex)) isa DiscreteProblem ? $(esc(acsex)) :
-        DiscreteProblem($(esc(acsex)), $(args...); $(kwargs...))
+        if $(esc(acsex)) isa DiscreteProblem
+            $(esc(acsex))
+        else
+            DiscreteProblem($(esc(acsex)), $(args...); $(kwargs...))
+        end
     end
 end
 
@@ -25,10 +29,11 @@ end
 Solve the problem. Solverargs passed at the calltime take precedence.
 
 # Examples
+
 ```julia
 @solve prob
-@solve prob tspan=1:100
-@solve prob tspan=100 trajectories=20
+@solve prob tspan = 1:100
+@solve prob tspan = 100 trajectories = 20
 ```
 """
 macro solve(probex, args...)
@@ -37,11 +42,17 @@ macro solve(probex, args...)
     !isnothing(findfirst(el -> el.args[1] == :trajectories, kwargs)) && (mode = :ensemble)
 
     quote
-        prob = $(esc(probex)) isa DiscreteProblem ? $(esc(probex)) :
-               DiscreteProblem($(esc(probex)), $(args...); $(kwargs...))
+        prob = if $(esc(probex)) isa DiscreteProblem
+            $(esc(probex))
+        else
+            DiscreteProblem($(esc(probex)), $(args...); $(kwargs...))
+        end
         if $(preserve_sym(mode)) == :ensemble
-            solve(EnsembleProblem(prob; prob_func = get_prob_func(prob)), FunctionMap(),
-                  $(kwargs...))
+            solve(
+                EnsembleProblem(prob; prob_func = get_prob_func(prob)),
+                FunctionMap(),
+                $(kwargs...),
+            )
         else
             solve(prob)
         end
@@ -53,23 +64,38 @@ function plot_summary(s, labels, ixs; kwargs...)
     isempty(ixs) && return @warn "Set of species to plot must be non-empty!"
     s = EnsembleSummary(s)
     f_ix = first(ixs)
-    p = Plots.plot(s.t, s.u[f_ix, :],
-                   ribbon = (-s.qlow[f_ix, :] + s.u[f_ix, :],
-                             s.qhigh[f_ix, :] - s.u[f_ix, :]), label = labels[f_ix],
-                   fillalpha = 0.2, w = 2.0; kwargs...)
-    foreach(i -> Plots.plot!(p, s.t, s.u[i, :],
-                             ribbon = (-s.qlow[i, :] + s.u[i, :],
-                                       s.qhigh[i, :] - s.u[i, :]), label = labels[i],
-                             fillalpha = 0.2, w = 2.0; kwargs...),
-            ixs[2:end])
+    p = Plots.plot(
+        s.t,
+        s.u[f_ix, :];
+        ribbon = (-s.qlow[f_ix, :] + s.u[f_ix, :], s.qhigh[f_ix, :] - s.u[f_ix, :]),
+        label = labels[f_ix],
+        fillalpha = 0.2,
+        w = 2.0,
+        kwargs...,
+    )
+    foreach(
+        i -> Plots.plot!(
+            p,
+            s.t,
+            s.u[i, :];
+            ribbon = (-s.qlow[i, :] + s.u[i, :], s.qhigh[i, :] - s.u[i, :]),
+            label = labels[i],
+            fillalpha = 0.2,
+            w = 2.0,
+            kwargs...,
+        ),
+        ixs[2:end],
+    )
 
-    p
+    return p
 end
 
 function plot_ensemble_sol(sol, label, ixs; kwargs...)
-    !(sol isa EnsembleSolution) ?
-    Plots.plot(sol, idxs = ixs, label = reshape(label[ixs], 1, :); kwargs...) :
-    Plots.plot(sol, idxs = ixs, alpha = 0.7; kwargs...)
+    return if !(sol isa EnsembleSolution)
+        Plots.plot(sol; idxs = ixs, label = reshape(label[ixs], 1, :), kwargs...)
+    else
+        Plots.plot(sol; idxs = ixs, alpha = 0.7, kwargs...)
+    end
 end
 
 first_sol(sol) = sol isa EnsembleSolution ? first(sol) : sol
@@ -78,13 +104,17 @@ function match_names(selector, names)
     if isnothing(selector)
         1:length(names)
     else
-        selector = selector isa Union{AbstractString, Regex, Symbol} ? [selector] : selector
+        selector = selector isa Union{AbstractString,Regex,Symbol} ? [selector] : selector
         ixs = Int[]
         for s in selector
             s isa Symbol && (s = string(s))
-            append!(ixs,
-                    findall(name -> s isa Regex ? occursin(s, name) :
-                                    (string(s) == string(name)), names))
+            append!(
+                ixs,
+                findall(
+                    name -> s isa Regex ? occursin(s, name) : (string(s) == string(name)),
+                    names,
+                ),
+            )
         end
         unique!(ixs)
     end
@@ -94,11 +124,12 @@ end
 Plot the solution (summary).
 
 # Examples
+
 ```julia
-@plot sol plot_type=summary
-@plot sol plot_type=allocation # not supported for ensemble solutions!
-@plot sol plot_type=valuations # not supported for ensemble solutions!
-@plot sol plot_type=new_transitions # not supported for ensemble solutions!
+@plot sol plot_type = summary
+@plot sol plot_type = allocation # not supported for ensemble solutions!
+@plot sol plot_type = valuations # not supported for ensemble solutions!
+@plot sol plot_type = new_transitions # not supported for ensemble solutions!
 ```
 """
 macro plot(solex, args...)
@@ -117,8 +148,12 @@ macro plot(solex, args...)
             plot_summary(sol, names, match_names($selector, names); $(kwargs...))
         else
             names = string.(sol.prob.p[:__state__][:, :specName])
-            plot_from_log(sol.prob.p[:__state__], plot_type, match_names($selector, names);
-                          $(kwargs...))
+            plot_from_log(
+                sol.prob.p[:__state__],
+                plot_type,
+                match_names($selector, names);
+                $(kwargs...),
+            )
         end
     end
 end
@@ -130,7 +165,7 @@ function get_transitions(log)
             union!(transitions, map(r -> r[1], r[3:end]))
     end
 
-    transitions
+    return transitions
 end
 
 function complete_log_transitions(log, hashes, record_type)
@@ -147,7 +182,7 @@ function complete_log_transitions(log, hashes, record_type)
         end
     end
 
-    vals, steps
+    return vals, steps
 end
 
 function complete_log_species(log, n_species, record_type)
@@ -161,7 +196,7 @@ function complete_log_species(log, n_species, record_type)
         end
     end
 
-    vals, steps
+    return vals, steps
 end
 
 function complete_log_valuations(log)
@@ -180,19 +215,21 @@ function complete_log_valuations(log)
         end
     end
 
-    vals, steps
+    return vals, steps
 end
 
 function get_names(state, hashes)
     names = String[]
     for hash in hashes
         ix = findfirst(==(hash), state[:, :transHash])
-        push!(names,
-              assigned(state.transition_recipes[:transName], ix) ?
-              string(state[ix, :transName]) : "transition $ix")
+        push!(names, if assigned(state.transition_recipes[:transName], ix)
+            string(state[ix, :transName])
+        else
+            "transition $ix"
+        end)
     end
 
-    names
+    return names
 end
 
 function plot_from_log(state, record_type, ixs; kwargs...)
@@ -210,8 +247,13 @@ function plot_from_log(state, record_type, ixs; kwargs...)
         vals, steps = complete_log_valuations(state.log)
     end
 
-    Plots.plot(steps, vals, title = string(record_type), label = reshape(label, 1, :);
-               kwargs...)
+    return Plots.plot(
+        steps,
+        vals;
+        title = string(record_type),
+        label = reshape(label, 1, :),
+        kwargs...,
+    )
 end
 
 """
@@ -221,16 +263,18 @@ Take an acset and optimize given functional.
 
 Objective is an expression which may reference the model's variables and parameters, i.e., `A+β`.
 The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model.
-The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
+The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved.
 
-By default, the functional is minimized. Specify `objective=max` to perform maximization. 
+By default, the functional is minimized. Specify `objective=max` to perform maximization.
 
 Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
 
 # Examples
+
 ```julia
-@optimize acs abs(A-B) A B=20. α=2. lower_bounds=0 upper_bounds=100
-@optimize acss abs(A-B) A B=20. α=2. upper_bounds=[200,300,400] maxeval=200 objective=min
+@optimize acs abs(A - B) A B = 20.0 α = 2.0 lower_bounds = 0 upper_bounds = 100
+@optimize acss abs(A - B) A B = 20.0 α = 2.0 upper_bounds = [200, 300, 400] maxeval = 200 objective =
+    min
 ```
 """
 macro optimize(acsex, obex, args...)
@@ -254,9 +298,17 @@ macro optimize(acsex, obex, args...)
             ComponentVector{Float64}(; init_p...)
         end
 
-        o = build_loss_objective($(esc(acsex)), init_vec, u0, p, $(QuoteNode(obex));
-                                 min_t = $min_t, max_t = $max_t, final_only = $final_only,
-                                 $(okwargs...))
+        o = build_loss_objective(
+            $(esc(acsex)),
+            init_vec,
+            u0,
+            p,
+            $(QuoteNode(obex));
+            min_t = $min_t,
+            max_t = $max_t,
+            final_only = $final_only,
+            $(okwargs...),
+        )
 
         optim!(o, init_vec; $(kwargs...))
     end
@@ -268,15 +320,16 @@ end
 Take an acset and fit initial values and parameters to empirical data.
 
 The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model.
-The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
+The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved.
 
 Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
 
 # Examples
+
 ```julia
 t = [1, 50, 100]
 data = [80 30 20]
-@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
+@fit acs data t vars = A B = 20 A α # fit B, A, α; empirical data is for variable A
 ```
 """
 macro fit(acsex, data, t, args...)
@@ -284,12 +337,9 @@ macro fit(acsex, data, t, args...)
     args, kwargs = args_kwargs(args)
     okwargs = filter(ex -> ex.args[1] in [:loss, :trajectories], kwargs)
     vars = (ix = findfirst(ex -> ex.args[1] == :vars, kwargs);
-            !isnothing(ix) ?
-            (v = kwargs[ix].args[2];
-             deleteat!(kwargs,
-                       ix);
-             v) :
-            :())
+    !isnothing(ix) ? (v = kwargs[ix].args[2];
+    deleteat!(kwargs, ix);
+    v) : :())
 
     quote
         u0, p = get_free_vars($(esc(acsex)), $(QuoteNode(args_all)))
@@ -305,8 +355,16 @@ macro fit(acsex, data, t, args...)
             ComponentVector{Float64}(; init_p...)
         end
 
-        o = build_loss_objective_datapoints($(esc(acsex)), init_vec, u0, p, $(esc(t)),
-                                            $(esc(data)), vars; $(okwargs...))
+        o = build_loss_objective_datapoints(
+            $(esc(acsex)),
+            init_vec,
+            u0,
+            p,
+            $(esc(t)),
+            $(esc(data)),
+            vars;
+            $(okwargs...),
+        )
 
         optim!(o, init_vec; $(kwargs...))
     end
@@ -318,15 +376,16 @@ end
 Take an acset, fit initial values and parameters to empirical data, and plot the result.
 
 The values to optimized are listed using their symbolic names; unless specified, the initial value is inferred from the model.
-The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved. 
+The vector of free variables passed to the `NLopt` solver has the form `[free_vars; free_params]`; order of vars and params, respectively, is preserved.
 
 Propagates `NLopt` solver arguments; see [NLopt documentation](https://github.com/JuliaOpt/NLopt.jl).
 
 # Examples
+
 ```julia
 t = [1, 50, 100]
 data = [80 30 20]
-@fit acs data t vars=A B=20 A α # fit B, A, α; empirical data is for variable A
+@fit acs data t vars = A B = 20 A α # fit B, A, α; empirical data is for variable A
 ```
 """
 macro fit_and_plot(acsex, data, t, args...)
@@ -335,12 +394,9 @@ macro fit_and_plot(acsex, data, t, args...)
     args, kwargs = args_kwargs(args)
     okwargs = filter(ex -> ex.args[1] in [:loss, :trajectories], kwargs)
     vars = (ix = findfirst(ex -> ex.args[1] == :vars, kwargs);
-            !isnothing(ix) ?
-            (v = kwargs[ix].args[2];
-             deleteat!(kwargs,
-                       ix);
-             v) :
-            :())
+    !isnothing(ix) ? (v = kwargs[ix].args[2];
+    deleteat!(kwargs, ix);
+    v) : :())
 
     quote
         u0, p = get_free_vars($(esc(acsex)), $(QuoteNode(args_all)))
@@ -356,26 +412,49 @@ macro fit_and_plot(acsex, data, t, args...)
             ComponentVector{Float64}(; init_p...)
         end
 
-        o = build_loss_objective_datapoints($(esc(acsex)), init_vec, u0, p, $(esc(t)),
-                                            $(esc(data)), vars; $(okwargs...))
+        o = build_loss_objective_datapoints(
+            $(esc(acsex)),
+            init_vec,
+            u0,
+            p,
+            $(esc(t)),
+            $(esc(data)),
+            vars;
+            $(okwargs...),
+        )
 
         r = optim!(o, init_vec; $(kwargs...))
         if r[3] != :FORCED_STOP
-            s_ = build_parametrized_solver($(esc(acsex)), init_vec, u0, p;
-                                           trajectories = $trajectories)
+            s_ = build_parametrized_solver(
+                $(esc(acsex)),
+                init_vec,
+                u0,
+                p;
+                trajectories = $trajectories,
+            )
             sol = first(s_(init_vec))
             sol_ = first(s_(r[2]))
 
-            p = Plots.plot(sol; idxs = vars,
-                           label = "(initial) " .*
-                                   reshape(String.($(esc(acsex))[:, :specName])[vars], 1,
-                                           :))
-            Plots.plot!(p, $(esc(t)), transpose($(esc(data))),
-                        label = "(empirical) " .*
-                                reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))
-            Plots.plot!(p, sol_; idxs = vars,
-                        label = "(fitted) " .*
-                                reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :))
+            p = Plots.plot(
+                sol;
+                idxs = vars,
+                label = "(initial) " .*
+                        reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :),
+            )
+            Plots.plot!(
+                p,
+                $(esc(t)),
+                transpose($(esc(data)));
+                label = "(empirical) " .*
+                        reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :),
+            )
+            Plots.plot!(
+                p,
+                sol_;
+                idxs = vars,
+                label = "(fitted) " .*
+                        reshape(String.($(esc(acsex))[:, :specName])[vars], 1, :),
+            )
             p
         else
             :FORCED_STOP
@@ -389,6 +468,7 @@ end
 Take an acset and export a solution as a function of free vars and free parameters.
 
 # Examples
+
 ```julia
 solver = @build_solver acs S α β # function of variable S and parameters α, β
 solver([S, α, β])
@@ -411,7 +491,12 @@ macro build_solver(acsex, args...)
             ComponentVector{Float64}(; init_p...)
         end
 
-        build_parametrized_solver_($(esc(acsex)), init_vec, u0, p;
-                                   trajectories = $trajectories)
+        build_parametrized_solver_(
+            $(esc(acsex)),
+            init_vec,
+            u0,
+            p;
+            trajectories = $trajectories,
+        )
     end
 end

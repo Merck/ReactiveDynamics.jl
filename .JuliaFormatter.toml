@@ -1,1 +1,10 @@
-style = "sciml"
+remove_extra_newlines=true
+long_to_short_function_def=true
+format_docstrings=true
+normalize_line_endings="unix"
+separate_kwargs_with_semicolon=true
+trailing_comma=true
+conditional_to_if=true
+yas_style_nesting=true
+short_to_long_function_def=true
+always_use_return=true

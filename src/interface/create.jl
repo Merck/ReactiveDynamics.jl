@@ -7,22 +7,8 @@ using Symbolics: build_function, get_variables
 
 empty_set = Set{Symbol}([:∅])
 fwd_arrows = Set{Symbol}([:>, :→, :↣, :↦, :⇾, :⟶, :⟼, :⥟, :⥟, :⇀, :⇁, :⇒, :⟾])
-bwd_arrows = Set{Symbol}([
-                             :<,
-                             :←,
-                             :↢,
-                             :↤,
-                             :⇽,
-                             :⟵,
-                             :⟻,
-                             :⥚,
-                             :⥞,
-                             :↼,
-                             :↽,
-                             :⇐,
-                             :⟽,
-                             Symbol("<--"),
-                         ])
+bwd_arrows =
+    Set{Symbol}([:<, :←, :↢, :↤, :⇽, :⟵, :⟻, :⥚, :⥞, :↼, :↽, :⇐, :⟽, Symbol("<--")])
 double_arrows = Set{Symbol}([:↔, :⟷, :⇄, :⇆, :⇌, :⇋, :⇔, :⟺, Symbol("<-->")])
 
 arrows = fwd_arrows ∪ bwd_arrows ∪ double_arrows ∪ [:-->]
@@ -57,39 +43,42 @@ Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ 
 Custom functions and sampleable objects can be used as numeric parameters. Note that these have to be accessible from ReactiveDynamics's source code.
 
 # Examples
+
 ```julia
 acs = @ReactionNetwork begin
     1.0, X ⟶ Y
-    1.0, X ⟶ Y, priority=>6., prob=>.7, capacity=>3.
-    1.0, ∅ --> (Poisson(.3γ)X, Poisson(.5)Y)
+    1.0, X ⟶ Y, priority => 6.0, prob => 0.7, capacity => 3.0
+    1.0, ∅ --> (Poisson(0.3γ)X, Poisson(0.5)Y)
     (XY > 100) && (XY -= 1)
 end
-@push acs 1.0 X ⟶ Y 
-@prob_init acs X=1 Y=2 XY=α
-@prob_params acs γ=1 α=4
+@push acs 1.0 X ⟶ Y
+@prob_init acs X = 1 Y = 2 XY = α
+@prob_params acs γ = 1 α = 4
 @solve_and_plot acs
 ```
 """
 macro ReactionNetwork end
 
 macro ReactionNetwork()
-    make_ReactionNetwork(:())
+    return make_ReactionNetwork(:())
 end
 
 macro ReactionNetwork(ex)
-    make_ReactionNetwork(ex; eval_module = __module__)
+    return make_ReactionNetwork(ex; eval_module = __module__)
 end
 
 macro ReactionNetwork(ex, args...)
-    make_ReactionNetwork(generate(Expr(:braces, ex, args...); eval_module = __module__);
-                         eval_module = __module__)
+    return make_ReactionNetwork(
+        generate(Expr(:braces, ex, args...); eval_module = __module__);
+        eval_module = __module__,
+    )
 end
 
 function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
     blockex = generate(ex; eval_module)
     blockex = unblock_shallow!(blockex)
 
-    :(ReactionNetwork(get_data($(QuoteNode(blockex)))...))
+    return :(ReactionNetwork(get_data($(QuoteNode(blockex)))...))
 end
 
 ### Functions that process the input and rephrase it as a reaction system ###
@@ -98,12 +87,12 @@ function esc_dollars!(ex)
         if ex.head == :$
             return esc(:($(ex.args[1])))
         else
-            for i in 1:length(ex.args)
+            for i = 1:length(ex.args)
                 ex.args[i] = esc_dollars!(ex.args[i])
             end
         end
     end
-    ex
+    return ex
 end
 
 symbolize(pairex) = pairex isa Number ? pairex : (pairex.args[2] => pairex.args[3])
@@ -116,29 +105,33 @@ function get_data(ex)
     if isexpr(ex, :block)
         ex = striplines(ex)
         esc_dollars!(ex)
-        foreach(l -> get_data!(trans, reactants, pcs, evs, isexpr(l, :tuple) ? l.args : [l]),
-                ex.args)
+        foreach(
+            l -> get_data!(trans, reactants, pcs, evs, isexpr(l, :tuple) ? l.args : [l]),
+            ex.args,
+        )
     elseif ex != :()
         get_data!(trans, reactants, pcs, evs, ex)
     end
 
-    trans, reactants, pcs, evs
+    return trans, reactants, pcs, evs
 end
 
 function get_data!(trans, reactants, pcs, evs, exs)
-    (length(exs) == 0 && return;
-     exs[1] isa Expr && (exs[1].head ∈ ifs) ?
-     get_events!(evs, normalize_pcs!(pcs, exs[1])) :
-     get_transitions!(trans, reactants, pcs, exs))
+    length(exs) == 0 && return
+
+    if exs[1] isa Expr && (exs[1].head ∈ ifs)
+        get_events!(evs, normalize_pcs!(pcs, exs[1]))
+    else
+        get_transitions!(trans, reactants, pcs, exs)
+    end
 end
 
-function get_events!(evs, ex)
+get_events!(evs, ex) =
     if ex.head == :&&
         push!(evs, Event(ex.args...))
     else
         recursively_expand_actions!(evs, Expr(:call, :&), ex)
     end
-end
 
 function recursively_expand_actions!(evs, condex, event)
     if isexpr(event, :if)
@@ -181,49 +174,56 @@ function get_transitions!(trans, reactants, pcs, exs)
     while ix <= length(exs)
         (!isa(exs[ix], Expr) || (exs[ix].head != :call)) && (ix += 1; continue)
         karg = (xi = findfirst(k -> exs[ix].args[2] ∈ k, prettynames);
-                isnothing(xi) &&
-                    (ix += 1; continue);
-                xi)
+        isnothing(xi) && (ix += 1; continue);
+        xi)
         push!(args, karg => normalize_pcs!(pcs, exs[ix].args[3]))
         deleteat!(exs, ix)
     end
     args = merge(defargs[:T], args)
 
     append!(trans, tuple.(rxs, Ref(args)))
-    trans
+    return trans
 end
 
 function replace_in_expr(expr, pairs...)
     dict = Dict(pairs...)
 
-    prewalk(ex -> haskey(dict, ex) ? dict[ex] : ex, expr)
+    return prewalk(ex -> haskey(dict, ex) ? dict[ex] : ex, expr)
 end
 
 function normalize_pcs!(pcs, expr)
     postwalk(expr) do ex
-        isexpr(ex, :macrocall) && macroname(ex) == :register &&
-            (push!(pcs, deepcopy(ex)); ex.args[1] = Symbol("@", :take); ex.args = ex.args[1:3])
+        isexpr(ex, :macrocall) &&
+            macroname(ex) == :register &&
+            (push!(pcs, deepcopy(ex));
+            ex.args[1] = Symbol("@", :take);
+            ex.args = ex.args[1:3])
         if isexpr(ex, :macrocall) && macroname(ex) == :register
             r_sym = gensym()
             (push!(pcs, (ex_ = deepcopy(ex); insert!(ex_.args, 3, r_sym); ex_));
-             ex.args[1] = Symbol("@",
-                                 :take);
-             ex.args = [r_sym;
-                        ex.args[1:2]])
+            ex.args[1] = Symbol("@", :take);
+            ex.args = [
+                r_sym
+                ex.args[1:2]
+            ])
         end
-        ex
+        return ex
     end
 end
 
 function get_reaction_line(expr)
     biarrow = nothing
     prewalk(ex --> (ex ∈ double_arrows && (biarrow = ex); ex), expr)
-    !isnothing(biarrow) ? [expr] :
-    [replace_in_expr(expr, biarrow => :⟶), replace_in_expr(expr, biarrow => :⟵)]
+    return if !isnothing(biarrow)
+        [expr]
+    else
+        [replace_in_expr(expr, biarrow => :⟶), replace_in_expr(expr, biarrow => :⟵)]
+    end
 end
 
 function prune_reaction_line!(pcs, reactants, line)
-    line isa Expr && (line.head == :-->) &&
+    line isa Expr &&
+        (line.head == :-->) &&
         (line = Expr(:call, :→, line.args[1], line.args[2]))
     if isexpr(line, :macrocall)
         lines = copy(line.args[3:end])
@@ -231,28 +231,44 @@ function prune_reaction_line!(pcs, reactants, line)
         for l in lines
             biarrow = nothing
             prewalk(ex -> (ex ∈ double_arrows && (biarrow = ex); ex), l)
-            append!(line.args,
-                    isnothing(biarrow) ? [l] :
-                    [replace_in_expr(l, biarrow => :⟶), replace_in_expr(l, biarrow => :⟵)])
+            append!(
+                line.args,
+                if isnothing(biarrow)
+                    [l]
+                else
+                    [replace_in_expr(l, biarrow => :⟶), replace_in_expr(l, biarrow => :⟵)]
+                end,
+            )
         end
-        for i in 3:length(line.args)
-            line.args[i] = isexpr(line.args[i], :tuple) ?
-                           Expr(:tuple, line.args[i].args[1],
-                                prune_reaction_line!(pcs, reactants, line.args[i].args[2])) :
-                           prune_reaction_line!(pcs, reactants, line.args[i])
+        for i = 3:length(line.args)
+            line.args[i] = if isexpr(line.args[i], :tuple)
+                Expr(
+                    :tuple,
+                    line.args[i].args[1],
+                    prune_reaction_line!(pcs, reactants, line.args[i].args[2]),
+                )
+            else
+                prune_reaction_line!(pcs, reactants, line.args[i])
+            end
         end
     elseif line isa Expr && line.args[1] ∈ union(fwd_arrows, bwd_arrows)
-        line.args[2:3] = recursively_find_reactants!.(Ref(reactants), Ref(pcs),
-                                                      line.args[2:3])
+        line.args[2:3] =
+            recursively_find_reactants!.(Ref(reactants), Ref(pcs), line.args[2:3])
     elseif line isa Expr && line.args[1] ∈ double_arrows
         biarrow = nothing
         prewalk(ex -> (ex ∈ double_arrows && (biarrow = ex); ex), line)
-        line = prune_reaction_line!.(Ref(pcs), Ref(reactants),
-                                     (replace_in_expr(line, biarrow => :⟶),
-                                      replace_in_expr(line, biarrow => :⟵)))
+        line =
+            prune_reaction_line!.(
+                Ref(pcs),
+                Ref(reactants),
+                (
+                    replace_in_expr(line, biarrow => :⟶),
+                    replace_in_expr(line, biarrow => :⟵),
+                ),
+            )
     end
 
-    line
+    return line
 end
 
 function recursively_find_reactants!(reactants, pcs, ex::SampleableValues)
@@ -264,16 +280,18 @@ function recursively_find_reactants!(reactants, pcs, ex::SampleableValues)
         end
     elseif ex.args[1] == :*
         recursively_find_reactants!(reactants, pcs, ex.args[end])
-        foreach(i -> ex.args[i] = normalize_pcs!(pcs, ex.args[i]), 2:(length(ex.args) - 1))
+        foreach(i -> ex.args[i] = normalize_pcs!(pcs, ex.args[i]), 2:(length(ex.args)-1))
     elseif ex.args[1] == :+
-        for i in 2:length(ex.args)
+        for i = 2:length(ex.args)
             recursively_find_reactants!(reactants, pcs, ex.args[i])
         end
     elseif isexpr(ex, :macrocall) && macroname(ex) == :choose
-        for i in 3:length(ex.args)
-            recursively_find_reactants!(reactants, pcs,
-                                        isexpr(ex.args[i], :tuple) ? ex.args[i].args[2] :
-                                        ex.args[i])
+        for i = 3:length(ex.args)
+            recursively_find_reactants!(
+                reactants,
+                pcs,
+                isexpr(ex.args[i], :tuple) ? ex.args[i].args[2] : ex.args[i],
+            )
         end
     elseif isexpr(ex, :macrocall)
         recursively_find_reactants!(reactants, pcs, ex.args[3])
@@ -281,5 +299,5 @@ function recursively_find_reactants!(reactants, pcs, ex::SampleableValues)
         push!(reactants, underscorize(ex))
     end
 
-    ex
+    return ex
 end

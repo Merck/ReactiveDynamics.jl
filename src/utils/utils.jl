@@ -2,34 +2,49 @@
 
 using MacroTools: striplines
 
-"Return array of keyword expressions in `args`."
+"""
+Return array of keyword expressions in `args`.
+"""
 function kwargize(args)
     kwargs = Any[]
     map(el -> isexpr(el, :(=)) && push!(kwargs, Expr(:kw, el.args[1], el.args[2])), args)
 
-    kwargs
+    return kwargs
 end
 
-"""Split an array of expressions into arrays of "argument" expressions and keyword expressions."""
+"""
+Split an array of expressions into arrays of "argument" expressions and keyword expressions.
+"""
 function args_kwargs(args)
     args_ = Any[]
     kwargs = Any[]
-    map(el -> isexpr(el, :(=)) ? push!(kwargs, Expr(:kw, el.args[1], el.args[2])) :
-              push!(args_, esc(el)), args)
+    map(el -> if isexpr(el, :(=))
+        push!(kwargs, Expr(:kw, el.args[1], el.args[2]))
+    else
+        push!(args_, esc(el))
+    end, args)
 
-    args_, kwargs
+    return args_, kwargs
 end
 
-"Return the (expression) value stored for the given key in a collection of keyword expression, or the given default value if no mapping for the key is present."
+"""
+Return the (expression) value stored for the given key in a collection of keyword expression, or the given default value if no mapping for the key is present.
+"""
 function find_kwargex_delete!(collection, key, default = :())
     ix = findfirst(ex -> ex.args[1] == key, collection)
-    !isnothing(ix) ? (v = collection[ix].args[2]; deleteat!(collection, ix); v) : default
+    return if !isnothing(ix)
+        (v = collection[ix].args[2]; deleteat!(collection, ix); v)
+    else
+        default
+    end
 end
 
-function macroname(ex)
-    isexpr(ex, :macrocall) ? (str = string(ex.args[1]); Symbol(strip(str, '@'))) :
-    error("expr $ex is not a macrocall")
-end
+macroname(ex) =
+    if isexpr(ex, :macrocall)
+        (str = string(ex.args[1]); Symbol(strip(str, '@')))
+    else
+        error("expr $ex is not a macrocall")
+    end
 strip_sym(sym) = (str = string(sym); Symbol(strip(str, '@')))
 
 blockize(ex) = striplines(isexpr(ex, :block) ? ex : Expr(:block, ex))
@@ -45,12 +60,15 @@ function unblock_shallow!(ex)
         isexpr(ex, :block) ? append!(args, ex.args) : push!(args, ex)
     end
     ex.args = args
-    ex
+    return ex
 end
 
 function underscorize(ex)
-    ex isa Number ? ex :
-    (str = string(ex); replace(str, '.' => "__", '(' => "", ')' => "") |> Symbol)
+    return if ex isa Number
+        ex
+    else
+        (str = string(ex); replace(str, '.' => "__", '(' => "", ')' => "") |> Symbol)
+    end
 end
 
 wkeys(itr) = map(x -> x isa Pair ? x[1] : x, itr)
@@ -60,13 +78,17 @@ function wset!(col, key, val)
     ix = findfirst(==(key), wkeys(col))
     !isnothing(ix) && (col[ix] = (key => val))
 
-    col
+    return col
 end
 
-"Return the (expression) value stored for the given key in a collection of keyword expression, or the given default value if no mapping for the key is present."
+"""
+Return the (expression) value stored for the given key in a collection of keyword expression, or the given default value if no mapping for the key is present.
+"""
 function get_kwarg(collection, key, default = :())
-    ix = findfirst(ex -> ex isa Expr && hasproperty(ex, :args) && (ex.args[1] == key),
-                   collection)
+    ix = findfirst(
+        ex -> ex isa Expr && hasproperty(ex, :args) && (ex.args[1] == key),
+        collection,
+    )
 
-    !isnothing(ix) ? collection[ix].args[2] : default
+    return !isnothing(ix) ? collection[ix].args[2] : default
 end

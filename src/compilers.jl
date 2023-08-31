@@ -1,33 +1,50 @@
 using MacroTools: prewalk
 
-"Recursively find model variables in expressions."
+"""
+Recursively find model variables in expressions.
+"""
 function recursively_find_vars!(r, exs...)
     for ex in exs
-        ex isa Symbol ? push!(r, ex) :
-        (ex isa Expr &&
-         recursively_find_vars!(r, ex.args[(!isexpr(ex, :call) ? 1 : 2):end]...))
+        if ex isa Symbol
+            push!(r, ex)
+        else
+            (
+                ex isa Expr &&
+                recursively_find_vars!(r, ex.args[(!isexpr(ex, :call) ? 1 : 2):end]...)
+            )
+        end
     end
-    r
+    return r
 end
 
 function get_contained_params(ex, prms)
     r = []
-    recursively_find_vars!(r, ex) ∩ prms
+    return recursively_find_vars!(r, ex) ∩ prms
 end
 
-"Recursively substitute model variables. Subsitution pairs are specified in `varmap`."
+"""
+Recursively substitute model variables. Subsitution pairs are specified in `varmap`.
+"""
 function recursively_substitute_vars!(varmap, ex)
     ex isa Symbol && return (haskey(varmap, ex) ? varmap[ex] : ex)
-    ex isa Expr && for i in 1:length(ex.args)
-        ex.args[i] isa Expr ? recursively_substitute_vars!(varmap, ex.args[i]) :
-        (ex.args[i] isa Symbol && haskey(varmap, ex.args[i]) &&
-         (ex.args[i] = varmap[ex.args[i]]))
+    ex isa Expr && for i = 1:length(ex.args)
+        if ex.args[i] isa Expr
+            recursively_substitute_vars!(varmap, ex.args[i])
+        else
+            (
+                ex.args[i] isa Symbol &&
+                haskey(varmap, ex.args[i]) &&
+                (ex.args[i] = varmap[ex.args[i]])
+            )
+        end
     end
 
-    ex
+    return ex
 end
 
-"Recursively normalize dotted notation in `ex` to species names whenever a name is contained in `vars`, else left unchanged."
+"""
+Recursively normalize dotted notation in `ex` to species names whenever a name is contained in `vars`, else left unchanged.
+"""
 function recursively_expand_dots_in_ex!(ex, vars)
     if isexpr(ex, :.)
         expanded = recursively_expand_dots(ex)
@@ -38,35 +55,32 @@ function recursively_expand_dots_in_ex!(ex, vars)
             ex
         end
     end
-    ex isa Expr && for i in 1:length(ex.args)
-        ex.args[i] isa Union{Expr, Symbol} &&
+    ex isa Expr && for i = 1:length(ex.args)
+        ex.args[i] isa Union{Expr,Symbol} &&
             (ex.args[i] = recursively_expand_dots_in_ex!(ex.args[i], vars))
     end
 
-    ex
+    return ex
 end
 
-reserved_names = [
-    :t,
-    :state,
-    :obs,
-    :resample,
-    :solverarg,
-    :take,
-    :log,
-    :periodic,
-    :set_params,
-]
+reserved_names =
+    [:t, :state, :obs, :resample, :solverarg, :take, :log, :periodic, :set_params]
 push!(reserved_names, :state)
 
 function escape_ref(ex, species)
-    ex isa Symbol ? ex :
-    prewalk(ex -> isexpr(ex, :ref) && Symbol(string(ex)) ∈ species ? Symbol(string(ex)) : ex,
-            ex)
+    return if ex isa Symbol
+        ex
+    else
+        prewalk(
+            ex ->
+                isexpr(ex, :ref) && Symbol(string(ex)) ∈ species ? Symbol(string(ex)) : ex,
+            ex,
+        )
+    end
 end
 
 function wrap_expr(fex, species_names, prm_names, varmap)
-    !isa(fex, Union{Expr, Symbol}) && return fex
+    !isa(fex, Union{Expr,Symbol}) && return fex
     # escape refs in species names: A[1] -> Symbol("A[1]")
     fex = escape_ref(fex, species_names)
     # escape dots in species' names: A.B -> Symbol("A.B")
@@ -74,8 +88,10 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     fex = recursively_expand_dots_in_ex!(fex, species_names)
 
     # prepare the function's body
-    letex = :(let
-              end)
+    letex = :(
+        let
+        end
+    )
     # expression walking (MacroTools): visit each expression, subsitute with the body's return value
     fex = prewalk(fex) do x
         # here we convert the query metalanguage: @t() -> time(state) etc. 
@@ -90,13 +106,15 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     fex = recursively_substitute_vars!(varmap, fex)
     # substitute the params names with "pointers" into the parameter space: β -> state.p[:β]
     # params can't be mutated!
-    foreach(v -> push!(letex.args[1].args, :($v = state.p[$(QuoteNode(v))])),
-            get_contained_params(fex, prm_names))
+    foreach(
+        v -> push!(letex.args[1].args, :($v = state.p[$(QuoteNode(v))])),
+        get_contained_params(fex, prm_names),
+    )
     push!(letex.args[2].args, fex)
 
     # the function shall be a function of the dynamic ReactiveDynamicsState structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" acset
-    eval(:(state -> $letex))
+    return eval(:(state -> $letex))
 end
 
 function get_wrap_fun(acs::ReactionNetwork)
@@ -107,11 +125,12 @@ function get_wrap_fun(acs::ReactionNetwork)
         push!(varmap, name => :(state.p[$(QuoteNode(name))]))
     end
 
-    ex -> wrap_expr(ex, species_names, prm_names, varmap)
+    return ex -> wrap_expr(ex, species_names, prm_names, varmap)
 end
 
 function skip_compile(attr)
-    any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) || (string(attr) == "trans")
+    return any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) ||
+           (string(attr) == "trans")
 end
 
 function compile_attrs(acs::ReactionNetwork)
@@ -122,22 +141,32 @@ function compile_attrs(acs::ReactionNetwork)
         push!(varmap, name => :(state.p[$(QuoteNode(name))]))
     end
     wrap_fun = ex -> wrap_expr(ex, species_names, prm_names, varmap)
-    attrs = Dict{Symbol, Vector}()
-    transitions = Dict{Symbol, Vector}()
+    attrs = Dict{Symbol,Vector}()
+    transitions = Dict{Symbol,Vector}()
     for attr in propertynames(acs.subparts)
         attrs_ = subpart(acs, attr)
-        !contains(string(attr), "trans") ?
-        (attrs[attr] = map(i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]),
-                           1:length(attrs_))) :
-        (transitions[attr] = map(i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]),
-                                 1:length(attrs_)))
+        if !contains(string(attr), "trans")
+            (
+                attrs[attr] = map(
+                    i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]),
+                    1:length(attrs_),
+                )
+            )
+        else
+            (
+                transitions[attr] = map(
+                    i -> skip_compile(attr) ? attrs_[i] : wrap_fun(attrs_[i]),
+                    1:length(attrs_),
+                )
+            )
+        end
     end
     transitions[:transActivated] = fill(true, nparts(acs, :T))
     transitions[:transToSpawn] = zeros(nparts(acs, :T))
-    transitions[:transHash] = [coalesce(acs[i, :transName], gensym())
-                               for i in 1:nparts(acs, :T)]
+    transitions[:transHash] =
+        [coalesce(acs[i, :transName], gensym()) for i = 1:nparts(acs, :T)]
 
-    attrs, transitions, wrap_fun
+    return attrs, transitions, wrap_fun
 end
 
 function remove_choose(acs::ReactionNetwork)
@@ -145,10 +174,15 @@ function remove_choose(acs::ReactionNetwork)
     pcs = []
     for attr in propertynames(acs.subparts)
         attrs_ = subpart(acs, attr)
-        foreach(i -> !isnothing(attrs_[i]) && attrs_[i] isa Expr &&
-                         (attrs_[i] = normalize_pcs!(pcs, attrs_[i])), 1:length(attrs_))
+        foreach(
+            i ->
+                !isnothing(attrs_[i]) &&
+                    attrs_[i] isa Expr &&
+                    (attrs_[i] = normalize_pcs!(pcs, attrs_[i])),
+            1:length(attrs_),
+        )
     end
 
     add_obs!(acs, pcs)
-    acs
+    return acs
 end

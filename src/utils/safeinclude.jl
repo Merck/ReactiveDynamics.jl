@@ -10,7 +10,9 @@ macro safeinclude(args...)
         td = mktempdir()
         cp(dirname($ex), td; force = true)
         cd(td)
-        @testset $name begin include(joinpath(td, basename($ex))) end
+        @testset $name begin
+            include(joinpath(td, basename($ex)))
+        end
         cd(path)
     end
 end
