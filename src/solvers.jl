@@ -298,53 +298,6 @@ function free_blocked_species!(state)
     end
 end
 
-"""
-Transform an `acs` to a `DiscreteProblem` instance, compatible with standard solvers.
-
-# Examples
-
-```julia
-transform(DiscreteProblem, acs; schedule = schedule_weighted!)
-```
-"""
-function transform(
-    ::Type{DiffEqBase.DiscreteProblem},
-    state::ReactiveNetwork;
-    kwargs...,
-)
-    f = function (du, u, p, t)
-        state = p[:__state__]
-        free_blocked_species!(state)
-        du .= state.u
-        update_observables(state)
-        sample_transitions!(state)
-        evolve!(du, state)
-        finish!(du, state)
-        update_u!(state, du)
-        event_action!(state)
-
-        du .= state.u
-        push!(
-            state.log,
-            (:valuation, t, du' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
-        )
-
-        t = (state.t += state.solverargs[:tstep])
-        update_u!(state, du)
-        save!(state)
-        sync_p!(p, state)
-
-        return du
-    end
-
-    return DiffEqBase.DiscreteProblem(
-        f,
-        state.u,
-        (0.0, 2.0),
-        Dict(state.p..., :__state__ => state, :__state0__ => deepcopy(state));
-        kwargs...,
-    )
-end
 
 ## resolve tspan, tstep
 
@@ -358,21 +311,11 @@ function get_tcontrol(tspan, args)
     return ((0.0, tspan), tstep)
 end
 
-"""
-Transform an `acs` to a `DiscreteProblem` instance, compatible with standard solvers.
-
-Optionally accepts initial values and parameters, which take precedence over specifications in `acs`.
-
-# Examples
-
-```julia
-DiscreteProblem(acs, u0, p; tspan = (0.0, 100.0), schedule = schedule_weighted!)
-```
-"""
-function DiffEqBase.DiscreteProblem(
+function ReactiveNetwork(
     acs::ReactionNetwork,
     u0 = Dict(),
     p = DiffEqBase.NullParameters();
+    name = "reactive_network",
     kwargs...,
 )
     assign_defaults!(acs)
@@ -386,30 +329,20 @@ function DiffEqBase.DiscreteProblem(
 
     acs = remove_choose(acs)
     attrs, transitions, wrap_fun = compile_attrs(acs)
-    state = ReactiveNetwork(
-        acs,
-        attrs,
-        transitions,
-        wrap_fun,
-        keywords[:tspan][1];
-        name = "rn_state",
-        keywords...,
-    )
+    
     init_u!(state)
     save!(state)
 
-    prob = transform(DiffEqBase.DiscreteProblem, state; kwargs...)
+    u0_init = zeros(nparts(state, :S))
 
     u0 isa Dict && foreach(
         i ->
-            prob.u0[i] =
-                if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
-                    u0[acs[i, :specName]]
-                else
-                    prob.u0[i]
-                end,
+            if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
+                u0_init[i] = u0[acs[i, :specName]]
+            end,
         1:nparts(state, :S),
     )
+
     p_ = p == DiffEqBase.NullParameters() ? Dict() : Dict(k => v for (k, v) in p)
     prob = remake(
         prob;
@@ -426,7 +359,77 @@ function DiffEqBase.DiscreteProblem(
         ),
     )
 
-    return prob
+    ongoing_transitions = Transition[]
+    log = NamedTuple[]
+    observables = compile_observables(acs)
+    transitions_attrs =
+        setdiff(
+            filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)),
+            (:trans,),
+        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
+    transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
+
+    return ReactiveNetwork(
+        name,
+        acs,
+        attrs,
+        transition_recipes,
+        u0_init, 
+        merge(
+            prob.p,
+            p_,
+            Dict(
+                :tstep => get(keywords, :tstep, 1),
+                :strategy => get(keywords, :alloc_strategy, :weighted),
+            ),
+        ),
+        t, 
+        keywords[:tspan][1],
+        keywords[:tspan],
+        get(keywords, :tstep, 1),
+        transitions,
+        ongoing_transitions,
+        log,
+        observables,
+        kwargs,
+        wrap_fun,
+        Vector{Float64}[],
+        Float64[],
+    )
+end
+
+function AlgebraicAgents.step!(state::ReactiveNetwork)
+    du = copy(state.u)
+    free_blocked_species!(state)
+    du .= state.u
+    update_observables(state)
+    sample_transitions!(state)
+    evolve!(du, state)
+    finish!(du, state)
+    update_u!(state, du)
+    event_action!(state)
+
+    du .= state.u
+    push!(
+        state.log,
+        (:valuation, t, du' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
+    )
+
+    t = (state.t += state.solverargs[:tstep])
+    update_u!(state, du)
+    save!(state)
+    sync_p!(p, state)
+
+    state.u .= du
+    state.t += state.dt
+end
+
+function AlgebraicAgents._projected_to(state::ReactiveNetwork)
+    if state.t >= state.tspan[2]
+        true
+    else
+        state.t
+    end
 end
 
 function fetch_params(acs::ReactionNetwork)

@@ -41,6 +41,9 @@ end
     p::Any
     t::Float64
 
+    tspan::Tuple{Float64,Float64}
+    dt::Float64
+
     transitions::Dict{Symbol,Vector}
     ongoing_transitions::Vector{Transition}
     log::Vector{Tuple}
@@ -51,44 +54,6 @@ end
     wrap_fun::Any
     history_u::Vector{Vector{Float64}}
     history_t::Vector{Float64}
-end
-
-function ReactiveNetwork(
-    acs::ReactionNetwork,
-    attrs,
-    transition_recipes,
-    wrap_fun,
-    t0 = 0;
-    name = "rn_state",
-    kwargs...,
-)
-    ongoing_transitions = Transition[]
-    log = NamedTuple[]
-    observables = compile_observables(acs)
-    transitions_attrs =
-        setdiff(
-            filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)),
-            (:trans,),
-        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
-    transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
-
-    return ReactiveNetwork(
-        name,
-        acs,
-        attrs,
-        transition_recipes,
-        zeros(nparts(acs, :S)),
-        fetch_params(acs),
-        t0,
-        transitions,
-        ongoing_transitions,
-        log,
-        observables,
-        kwargs,
-        wrap_fun,
-        Vector{Float64}[],
-        Float64[],
-    )
 end
 
 # get value of a numeric expression
