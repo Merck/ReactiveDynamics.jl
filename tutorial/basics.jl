@@ -16,7 +16,7 @@ prob = @problematize acs
 
 # sol = ReactiveDynamics.solve(prob)
 
-sol = @solve prob trajectories = 20
+sol = @solve prob
 
 using Plots
 

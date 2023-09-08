@@ -4,6 +4,7 @@ export DiscreteProblem
 
 using DiffEqBase, DifferentialEquations
 using Distributions
+using Random
 
 function get_sampled_transition(state, i)
     transition = Dict{Symbol,Any}()
@@ -166,7 +167,7 @@ function evolve!(u, state)
     for i = 1:nparts(state, :T)
         qs[i] != 0 && push!(
             state.ongoing_transitions,
-            Transition(get_sampled_transition(state, i), state.t, qs[i], 0.0),
+            Transition(state[i, :transName] * "_@$(state.t)", get_sampled_transition(state, i), state.t, qs[i], 0.0),
         )
     end
 
@@ -308,7 +309,7 @@ transform(DiscreteProblem, acs; schedule = schedule_weighted!)
 """
 function transform(
     ::Type{DiffEqBase.DiscreteProblem},
-    state::ReactiveDynamicsState;
+    state::ReactiveNetwork;
     kwargs...,
 )
     f = function (du, u, p, t)
@@ -385,12 +386,13 @@ function DiffEqBase.DiscreteProblem(
 
     acs = remove_choose(acs)
     attrs, transitions, wrap_fun = compile_attrs(acs)
-    state = ReactiveDynamicsState(
+    state = ReactiveNetwork(
         acs,
         attrs,
         transitions,
         wrap_fun,
         keywords[:tspan][1];
+        name = "rn_state",
         keywords...,
     )
     init_u!(state)
@@ -432,26 +434,4 @@ function fetch_params(acs::ReactionNetwork)
         acs[i, :prmName] => acs[i, :prmVal] for
         i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
     ))
-end
-
-# EnsembleProblem's prob_func: sample initial values
-function get_prob_func(prob)
-    vars = prob.p[:__state__][:, :specInitUncertainty]
-
-    prob_func = function (prob, _, _)
-        prob.p[:__state__] = deepcopy(prob.p[:__state0__])
-        for i in eachindex(prob.u0)
-            rv = randn() * vars[i]
-            prob.u0[i] = if (sign(rv + prob.u0[i]) == sign(prob.u0[i]))
-                rv + prob.u0[i]
-            else
-                prob.u0[i]
-            end
-        end
-        sync!(prob.p[:__state__], prob.u0, prob.p)
-
-        return prob
-    end
-
-    return prob_func
 end

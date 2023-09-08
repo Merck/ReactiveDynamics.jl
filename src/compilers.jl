@@ -112,7 +112,7 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     )
     push!(letex.args[2].args, fex)
 
-    # the function shall be a function of the dynamic ReactiveDynamicsState structure: letex -> :(state -> $letex)
+    # the function shall be a function of the dynamic ReactiveNetwork structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" acset
     return eval(:(state -> $letex))
 end
