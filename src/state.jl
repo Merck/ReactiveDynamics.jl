@@ -1,5 +1,3 @@
-using DiffEqBase: NullParameters
-
 using AlgebraicAgents
 
 struct UnfoldedReactant
@@ -77,7 +75,7 @@ function init_u!(state::ReactiveNetwork)
     state.u = u)
 end
 function save!(state::ReactiveNetwork)
-    return (push!(state.history_u, state.u); push!(state.history_t, state.t))
+    return (push!(state.history_u, copy(state.u)); push!(state.history_t, state.t))
 end
 
 function compile_observables(acs::ReactionNetwork)

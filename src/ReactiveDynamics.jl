@@ -3,7 +3,6 @@ module ReactiveDynamics
 using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
 using Reexport
 using MacroTools
-using NLopt
 using ComponentArrays
 
 @reexport using GeneratedExpressions

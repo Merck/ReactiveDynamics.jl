@@ -1,8 +1,3 @@
-# assortment of SciML-compatible problem solvers
-
-export DiscreteProblem
-
-using DiffEqBase, DifferentialEquations
 using Distributions
 using Random
 
@@ -37,7 +32,7 @@ function get_reqs_ongoing!(reqs, qs, state)
         for tok in state.ongoing_transitions[i][:transLHS]
             in(:rate, tok.modality) &&
                 (state.ongoing_transitions[i][:transCycleTime] > 0) &&
-                (reqs[tok.index, i] += qs[i] * tok.stoich * state.solverargs[:tstep])
+                (reqs[tok.index, i] += qs[i] * tok.stoich * state.dt)
             in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
         end
     end
@@ -124,9 +119,8 @@ end
 """
 Evolve transitions, spawn new transitions.
 """
-function evolve!(u, state)
-    update_u!(state, u)
-    actual_allocs = zero(u)
+function evolve!(state)
+    actual_allocs = zero(state.u)
 
     ## schedule new transitions
     reqs = zeros(nparts(state, :S), nparts(state, :T))
@@ -137,8 +131,9 @@ function evolve!(u, state)
         1:nparts(state, :T),
     )
     qs .= ceil.(Ref(Int), qs)
+    @show qs
     for i = 1:nparts(state, :T)
-        new_instances = state.solverargs[:tstep] * qs[i] + state[i, :transToSpawn]
+        new_instances = state.dt * qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
             count(t -> t[:transHash] == state[i, :transHash], state.ongoing_transitions)
@@ -148,10 +143,13 @@ function evolve!(u, state)
     end
 
     reqs = get_reqs_init!(reqs, qs, state)
+    @show reqs
     allocs =
-        get_allocs!(reqs, u, state, state[:, :transPriority], state.solverargs[:strategy])
+        get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
+    @show allocs
     qs .= get_init_satisfied(allocs, qs, state)
-
+    @show qs
+    println("====")
     push!(
         state.log,
         (
@@ -160,7 +158,7 @@ function evolve!(u, state)
             [(hash, q) for (hash, q) in zip(state[:, :transHash], qs)]...,
         ),
     )
-    u .-= sum(allocs; dims = 2)
+    state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
     # add spawned transitions to the heap
@@ -171,7 +169,6 @@ function evolve!(u, state)
         )
     end
 
-    update_u!(state, u)
     ## evolve ongoing transitions 
     reqs = zeros(nparts(state, :S), length(state.ongoing_transitions))
     qs = map(t -> t.q, state.ongoing_transitions)
@@ -179,10 +176,10 @@ function evolve!(u, state)
     get_reqs_ongoing!(reqs, qs, state)
     allocs = get_allocs!(
         reqs,
-        u,
+        state.u,
         state,
         map(t -> t[:transPriority], state.ongoing_transitions),
-        state.solverargs[:strategy],
+        state.p[:strategy],
     )
     qs .= get_frac_satisfied(allocs, reqs, state)
     push!(
@@ -196,11 +193,11 @@ function evolve!(u, state)
             ]...,
         ),
     )
-    u .-= sum(allocs; dims = 2)
+    state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
     foreach(
-        i -> state.ongoing_transitions[i].state += qs[i] * state.solverargs[:tstep],
+        i -> state.ongoing_transitions[i].state += qs[i] * state.dt,
         eachindex(state.ongoing_transitions),
     )
 
@@ -229,8 +226,7 @@ function event_action!(state)
 end
 
 # collect terminated transitions
-function finish!(u, state)
-    update_u!(state, u)
+function finish!(state)
     val_reward = 0
     terminated_all = Dict{Symbol,Float64}()
     terminated_success = Dict{Symbol,Float64}()
@@ -256,7 +252,7 @@ function finish!(u, state)
         end
         for tok in trans_[:transLHS]
             in(:conserved, tok.modality) && (
-                u[tok.index] +=
+                state.u[tok.index] +=
                     trans_.q *
                     tok.stoich *
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
@@ -268,12 +264,11 @@ function finish!(u, state)
             0
         end
         foreach(
-            tok -> (u[tok.index] += q * tok.stoich;
+            tok -> (state.u[tok.index] += q * tok.stoich;
             val_reward += state[tok.index, :specReward] * q * tok.stoich),
             toks_rhs,
         )
 
-        update_u!(state, u)
         context_eval(state, trans_.trans[:transPostAction])
         terminated_all[trans_[:transHash]] =
             get(terminated_all, trans_[:transHash], 0) + trans_.q
@@ -289,7 +284,7 @@ function finish!(u, state)
     push!(state.log, (:terminated_success, state.t, terminated_success...))
     push!(state.log, (:valuation_reward, state.t, val_reward))
 
-    return u
+    return state.u
 end
 
 function free_blocked_species!(state)
@@ -306,15 +301,15 @@ function get_tcontrol(tspan, args)
     tunit = get(args, :tunit, oneunit(tspan))
     tspan = tspan / tunit
 
-    tstep = get(args, :tstep, haskey(args, :tstops) ? tspan / args[:tstops] : tunit) / tunit
+    dt = get(args, :dt, haskey(args, :tstops) ? tspan / args[:tstops] : tunit) / tunit
 
-    return ((0.0, tspan), tstep)
+    return ((0.0, tspan), dt)
 end
 
 function ReactiveNetwork(
     acs::ReactionNetwork,
     u0 = Dict(),
-    p = DiffEqBase.NullParameters();
+    p = Dict();
     name = "reactive_network",
     kwargs...,
 )
@@ -325,39 +320,21 @@ function ReactiveNetwork(
     ])
     merge!(keywords, Dict(collect(kwargs)))
     merge!(keywords, Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))
+
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
 
     acs = remove_choose(acs)
     attrs, transitions, wrap_fun = compile_attrs(acs)
-    
-    init_u!(state)
-    save!(state)
+    transition_recipes = transitions
+    u0_init = zeros(nparts(acs, :S))
 
-    u0_init = zeros(nparts(state, :S))
-
-    u0 isa Dict && foreach(
-        i ->
-            if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
-                u0_init[i] = u0[acs[i, :specName]]
-            end,
-        1:nparts(state, :S),
-    )
-
-    p_ = p == DiffEqBase.NullParameters() ? Dict() : Dict(k => v for (k, v) in p)
-    prob = remake(
-        prob;
-        u0 = prob.u0,
-        tspan = keywords[:tspan],
-        dt = get(keywords, :tstep, 1),
-        p = merge(
-            prob.p,
-            p_,
-            Dict(
-                :tstep => get(keywords, :tstep, 1),
-                :strategy => get(keywords, :alloc_strategy, :weighted),
-            ),
-        ),
-    )
+    for i in 1:nparts(acs, :S)
+        if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
+            u0_init[i] = u0[acs[i, :specName]]
+        else
+            u0_init[i] = acs[i, :specInitVal]
+        end
+    end
 
     ongoing_transitions = Transition[]
     log = NamedTuple[]
@@ -369,21 +346,19 @@ function ReactiveNetwork(
         ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
     transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
 
-    return ReactiveNetwork(
+    network =  ReactiveNetwork(
         name,
         acs,
         attrs,
         transition_recipes,
         u0_init, 
         merge(
-            prob.p,
-            p_,
+            p,
             Dict(
                 :tstep => get(keywords, :tstep, 1),
                 :strategy => get(keywords, :alloc_strategy, :weighted),
             ),
         ),
-        t, 
         keywords[:tspan][1],
         keywords[:tspan],
         get(keywords, :tstep, 1),
@@ -396,31 +371,32 @@ function ReactiveNetwork(
         Vector{Float64}[],
         Float64[],
     )
+
+    save!(network)
+
+    return network
 end
 
 function AlgebraicAgents.step!(state::ReactiveNetwork)
-    du = copy(state.u)
+    #du = copy(state.u)
     free_blocked_species!(state)
-    du .= state.u
+    #du .= state.u
     update_observables(state)
     sample_transitions!(state)
-    evolve!(du, state)
-    finish!(du, state)
-    update_u!(state, du)
+    evolve!(state)
+    finish!(state)
+    #update_u!(state, u)
     event_action!(state)
 
-    du .= state.u
     push!(
         state.log,
-        (:valuation, t, du' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
+        (:valuation, state.t, state.u' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
     )
 
-    t = (state.t += state.solverargs[:tstep])
-    update_u!(state, du)
+    #update_u!(state, du)
     save!(state)
-    sync_p!(p, state)
 
-    state.u .= du
+    #state.u .= du
     state.t += state.dt
 end
 
