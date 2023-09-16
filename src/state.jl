@@ -1,4 +1,5 @@
-using AlgebraicAgents
+@reexport using AlgebraicAgents
+using DataFrames
 
 struct UnfoldedReactant
     index::Int
@@ -29,8 +30,8 @@ Base.getindex(state::Transition, key) = state.trans[key]
     sampled::Any
 end
 
-@aagent struct ReactiveNetwork
-    acs::ReactionNetwork
+@aagent struct ReactionNetworkProblem
+    acs::ReactionNetworkSchema
 
     attrs::Dict{Symbol,Vector}
     transition_recipes::Dict{Symbol,Vector}
@@ -47,38 +48,36 @@ end
     log::Vector{Tuple}
 
     observables::Dict{Symbol,Observable}
-    solverargs::Any
 
     wrap_fun::Any
-    history_u::Vector{Vector{Float64}}
-    history_t::Vector{Float64}
+    sol::DataFrame
 end
 
 # get value of a numeric expression
 # evaluate compiled numeric expression in context of (u, p, t)
-function context_eval(state::ReactiveNetwork, o)
+function context_eval(state::ReactionNetworkProblem, o)
     o = o isa Function ? Base.invokelatest(o, state) : o
 
     return o isa Sampleable ? rand(o) : o
 end
 
-function Base.getindex(state::ReactiveNetwork, keys...)
+function Base.getindex(state::ReactionNetworkProblem, keys...)
     return context_eval(
         state,
         (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]],
     )
 end
 
-function init_u!(state::ReactiveNetwork)
+function init_u!(state::ReactionNetworkProblem)
     return (u = fill(0.0, nparts(state, :S));
     foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S));
     state.u = u)
 end
-function save!(state::ReactiveNetwork)
-    return (push!(state.history_u, copy(state.u)); push!(state.history_t, state.t))
+function save!(state::ReactionNetworkProblem)
+    return push!(state.sol, (state.t, state.u[:]...))
 end
 
-function compile_observables(acs::ReactionNetwork)
+function compile_observables(acs::ReactionNetworkSchema)
     observables = Dict{Symbol,Observable}()
     species_names = collect(acs[:, :specName])
     prm_names = collect(acs[:, :prmName])
@@ -116,16 +115,16 @@ function sample_range(rng, state)
     return r isa Sampleable ? rand(r) : r
 end
 
-function resample!(state::ReactiveNetwork, o::Observable)
+function resample!(state::ReactionNetworkProblem, o::Observable)
     o.last = state.t
     isempty(o.range) && (return o.val = missing)
 
     return o.sampled = context_eval(state, sample_range(o.range, state))
 end
 
-resample(state::ReactiveNetwork, o::Symbol) = resample!(state, state.observables[o])
+resample(state::ReactionNetworkProblem, o::Symbol) = resample!(state, state.observables[o])
 
-function update_observables(state::ReactiveNetwork)
+function update_observables(state::ReactionNetworkProblem)
     return foreach(
         o -> (state.t - o.last) >= o.every && resample!(state, o),
         values(state.observables),
@@ -151,11 +150,11 @@ function prune_r_line(r_line)
     end
 end
 
-function find_index(species::Symbol, state::ReactiveNetwork)
+function find_index(species::Symbol, state::ReactionNetworkProblem)
     return findfirst(i -> state[i, :specName] == species, 1:nparts(state, :S))
 end
 
-function sample_transitions!(state::ReactiveNetwork)
+function sample_transitions!(state::ReactionNetworkProblem)
     for (_, v) in state.transitions
         empty!(v)
     end
@@ -194,47 +193,35 @@ function sample_transitions!(state::ReactiveNetwork)
     end
 end
 
-## sync
-update_u!(state::ReactiveNetwork, u) = (state.u .= u)
-update_t!(state::ReactiveNetwork, t) = (state.t = t)
-sync_p!(p, state::ReactiveNetwork) = merge!(p, state.p)
-
-function sync!(state::ReactiveNetwork, u, p)
-    state.u .= u
-    for k in keys(state.p)
-        haskey(p, k) && (state.p[k] = p[k])
-    end
-end
-
-function as_state(u, t, state::ReactiveNetwork)
+function as_state(u, t, state::ReactionNetworkProblem)
     return (state = deepcopy(state); state.u .= u; state.t = t; state)
 end
 
-function Catlab.CategoricalAlgebra.nparts(state::ReactiveNetwork, obj::Symbol)
+function Catlab.CategoricalAlgebra.nparts(state::ReactionNetworkProblem, obj::Symbol)
     return obj == :T ? length(state.transitions[:transLHS]) : nparts(state.acs, obj)
 end
 
 ## query the state
 
-t(state::ReactiveNetwork) = state.t
-solverarg(state::ReactiveNetwork, arg) = state.p[arg]
-take(state::ReactiveNetwork, pcs::Symbol) = state.observables[pcs].sampled
-log(state::ReactiveNetwork, msg) = (println(msg); push!(state.log, (:log, msg)))
-state(state::ReactiveNetwork) = state
+t(state::ReactionNetworkProblem) = state.t
+solverarg(state::ReactionNetworkProblem, arg) = state.p[arg]
+take(state::ReactionNetworkProblem, pcs::Symbol) = state.observables[pcs].sampled
+log(state::ReactionNetworkProblem, msg) = (println(msg); push!(state.log, (:log, msg)))
+state(state::ReactionNetworkProblem) = state
 
-function periodic(state::ReactiveNetwork, period)
+function periodic(state::ReactionNetworkProblem, period)
     return period == 0.0 || (
         length(state.history_t) > 1 &&
         (fld(state.t, period) - fld(state.history_t[end-1], period) > 0)
     )
 end
 
-set_params(state::ReactiveNetwork, vals...) =
+set_params(state::ReactionNetworkProblem, vals...) =
     for (p, v) in vals
         state.p[p] = v
     end
 
-function add_to_spawn!(state::ReactiveNetwork, hash, n)
+function add_to_spawn!(state::ReactionNetworkProblem, hash, n)
     ix = findfirst(ix -> state.transition_recipes[:transHash][ix] == hash)
     return !isnothing(ix) && (state.transition_recipes[:transHash][ix] += n)
 end

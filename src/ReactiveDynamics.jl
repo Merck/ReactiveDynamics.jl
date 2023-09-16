@@ -74,7 +74,7 @@ end
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
 
-const ReactionNetwork = FoldedReactionNetworkType{
+const ReactionNetworkSchema = FoldedReactionNetworkType{
     Symbol,
     Union{String,Symbol,Missing},
     SampleableValues,
@@ -131,11 +131,11 @@ defargs = Dict(
 )
 
 compilable_attrs =
-    filter(attr -> eltype(attr) == SampleableValues, propertynames(ReactionNetwork()))
+    filter(attr -> eltype(attr) == SampleableValues, propertynames(ReactionNetworkSchema()))
 
 species_modalities = [:nonblock, :conserved, :rate]
 
-function assign_defaults!(acs::ReactionNetwork)
+function assign_defaults!(acs::ReactionNetworkSchema)
     for (_, v_) in defargs, (k, v) in v_
         for i = 1:length(subpart(acs, k))
             isnothing(acs[i, k]) && (subpart(acs, k)[i] = v)
@@ -160,12 +160,12 @@ function assign_defaults!(acs::ReactionNetwork)
     return acs
 end
 
-function ReactionNetwork(transitions, reactants, obs, events)
-    return merge_acs!(ReactionNetwork(), transitions, reactants, obs, events)
+function ReactionNetworkSchema(transitions, reactants, obs, events)
+    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, events)
 end
 
-function ReactionNetwork(transitions, reactants, obs)
-    return merge_acs!(ReactionNetwork(), transitions, reactants, obs, [])
+function ReactionNetworkSchema(transitions, reactants, obs)
+    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, [])
 end
 
 function add_obs!(acs, obs)
@@ -194,7 +194,7 @@ function add_obs!(acs, obs)
     return acs
 end
 
-function merge_acs!(acs::ReactionNetwork, transitions, reactants, obs, events)
+function merge_acs!(acs::ReactionNetworkSchema, transitions, reactants, obs, events)
     foreach(
         t -> add_part!(acs, :T; trans = t[1][2], transRate = t[1][1], t[2]...),
         transitions,

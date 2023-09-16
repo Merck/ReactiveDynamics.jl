@@ -29,7 +29,7 @@ function recursively_choose(r_line, state)
     end
 end
 
-function extract_reactants(r_line, state::ReactiveNetwork)
+function extract_reactants(r_line, state::ReactionNetworkProblem)
     r_line = recursively_choose(r_line, state)
 
     return recursive_find_reactants!(

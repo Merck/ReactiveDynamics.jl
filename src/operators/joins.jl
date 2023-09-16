@@ -59,7 +59,7 @@ end
 """
 Prepend species names with a model identifier (unless a global species name).
 """
-function prepend!(acs::ReactionNetwork, name = gensym("acs"), eqs = [])
+function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
     specmap = Dict()
     for i = 1:nparts(acs, :S)
         new_name = normalize_name(name, i, acs[i, :specName], eqs)
@@ -199,7 +199,7 @@ Model variables / parameter values and metadata are propagated; the last model t
 macro join(exs...)
     callex = :(
         begin
-            acs_new = ReactionNetwork()
+            acs_new = ReactionNetworkSchema()
         end
     )
     exs = collect(exs)

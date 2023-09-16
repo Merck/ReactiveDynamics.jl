@@ -112,12 +112,12 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     )
     push!(letex.args[2].args, fex)
 
-    # the function shall be a function of the dynamic ReactiveNetwork structure: letex -> :(state -> $letex)
+    # the function shall be a function of the dynamic ReactionNetworkSchema structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" acset
     return eval(:(state -> $letex))
 end
 
-function get_wrap_fun(acs::ReactionNetwork)
+function get_wrap_fun(acs::ReactionNetworkSchema)
     species_names = collect(acs[:, :specName])
     prm_names = collect(acs[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
@@ -133,7 +133,7 @@ function skip_compile(attr)
            (string(attr) == "trans")
 end
 
-function compile_attrs(acs::ReactionNetwork)
+function compile_attrs(acs::ReactionNetworkSchema)
     species_names = collect(acs[:, :specName])
     prm_names = collect(acs[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
@@ -169,7 +169,7 @@ function compile_attrs(acs::ReactionNetwork)
     return attrs, transitions, wrap_fun
 end
 
-function remove_choose(acs::ReactionNetwork)
+function remove_choose(acs::ReactionNetworkSchema)
     acs = deepcopy(acs)
     pcs = []
     for attr in propertynames(acs.subparts)

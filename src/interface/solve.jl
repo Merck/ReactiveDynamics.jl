@@ -1,55 +1,7 @@
-export @agentize, @solve, @plot
-export @optimize, @fit, @fit_and_plot, @build_solver
+export @agentize
 
 import MacroTools
 import Plots
-
-"""
-Convert a model to a `ReactiveNetwork`. If passed a problem instance, return the instance.
-
-# Examples
-
-```julia
-@agentize acs tspan = 1:100
-```
-"""
-macro agentize(acsex, args...)
-    args, kwargs = args_kwargs(args)
-    quote
-        if $(esc(acsex)) isa ReactiveNetwork
-            $(esc(acsex))
-        else
-            ReactiveNetwork($(esc(acsex)), $(args...); $(kwargs...))
-        end
-    end
-end
-
-"""
-Solve the problem. Solverargs passed at the calltime take precedence.
-
-# Examples
-
-```julia
-@solve prob
-@solve prob tspan = 1:100
-@solve prob tspan = 100
-```
-"""
-macro solve(probex, args...)
-    args, kwargs = args_kwargs(args)
-    mode = find_kwargex_delete!(kwargs, :mode, nothing)
-    !isnothing(findfirst(el -> el.args[1] == :trajectories, kwargs)) && (mode = :ensemble)
-
-    quote
-        prob = if $(esc(probex)) isa ReactiveNetwork
-            $(esc(probex))
-        else
-            ReactiveNetwork($(esc(probex)), $(args...); $(kwargs...))
-        end
-        
-        simulate(prob)
-    end
-end
 
 # auxiliary plotting functions
 function plot_summary(s, labels, ixs; kwargs...)

@@ -1,6 +1,6 @@
 # reaction network DSL: CREATE part; reaction line and event parsing 
 
-export @ReactionNetwork
+export @ReactionNetworkSchema
 
 using MacroTools: prewalk, postwalk, striplines, isexpr
 using Symbolics: build_function, get_variables
@@ -45,7 +45,7 @@ Custom functions and sampleable objects can be used as numeric parameters. Note 
 # Examples
 
 ```julia
-acs = @ReactionNetwork begin
+acs = @ReactionNetworkSchema begin
     1.0, X ⟶ Y
     1.0, X ⟶ Y, priority => 6.0, prob => 0.7, capacity => 3.0
     1.0, ∅ --> (Poisson(0.3γ)X, Poisson(0.5)Y)
@@ -57,17 +57,17 @@ end
 @solve_and_plot acs
 ```
 """
-macro ReactionNetwork end
+macro ReactionNetworkSchema end
 
-macro ReactionNetwork()
+macro ReactionNetworkSchema()
     return make_ReactionNetwork(:())
 end
 
-macro ReactionNetwork(ex)
+macro ReactionNetworkSchema(ex)
     return make_ReactionNetwork(ex; eval_module = __module__)
 end
 
-macro ReactionNetwork(ex, args...)
+macro ReactionNetworkSchema(ex, args...)
     return make_ReactionNetwork(
         generate(Expr(:braces, ex, args...); eval_module = __module__);
         eval_module = __module__,
@@ -78,7 +78,7 @@ function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
     blockex = generate(ex; eval_module)
     blockex = unblock_shallow!(blockex)
 
-    return :(ReactionNetwork(get_data($(QuoteNode(blockex)))...))
+    return :(ReactionNetworkSchema(get_data($(QuoteNode(blockex)))...))
 end
 
 ### Functions that process the input and rephrase it as a reaction system ###

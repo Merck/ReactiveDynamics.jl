@@ -16,7 +16,7 @@ const objects_aliases = Dict(
     :obs => "obs",
 )
 
-const RN_attrs = string.(propertynames(ReactionNetwork().subparts))
+const RN_attrs = string.(propertynames(ReactionNetworkSchema().subparts))
 
 function get_attrs(object)
     object = object isa Symbol ? objects_aliases[object] : object
@@ -24,7 +24,7 @@ function get_attrs(object)
     return filter(x -> occursin(object, x), RN_attrs)
 end
 
-function export_network(acs::ReactionNetwork)
+function export_network(acs::ReactionNetworkSchema)
     dict = Dict()
     for (key, val) in objects_aliases
         push!(dict, val => [])
@@ -113,7 +113,7 @@ function import_network(path::AbstractString)
     end
 end
 
-function export_network(acs::ReactionNetwork, path::AbstractString)
+function export_network(acs::ReactionNetworkSchema, path::AbstractString)
     if splitext(path)[2] == ".csv"
         exported_network = export_network(acs)
         paths = DataFrame(; type = [], path = [])

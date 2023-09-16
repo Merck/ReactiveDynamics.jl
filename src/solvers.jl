@@ -1,6 +1,8 @@
 using Distributions
 using Random
 
+export ReactionNetworkProblem
+
 function get_sampled_transition(state, i)
     transition = Dict{Symbol,Any}()
     foreach(k -> push!(transition, k => state[i, k]), keys(state.transitions))
@@ -107,11 +109,11 @@ function get_init_satisfied(allocs, qs, state)
                 (reqs[tok.index, i] += tok.stoich)
         end
     end
-    @show 2 reqs
+
     for i in eachindex(allocs)
         allocs[i] = reqs[i] == 0.0 ? Inf : floor(allocs[i] / reqs[i])
     end
-    @show allocs
+
     foreach(i -> qs[i] = min(qs[i], minimum(allocs[:, i])), 1:size(reqs, 2))
     foreach(i -> allocs[:, i] .= reqs[:, i] * qs[i], 1:size(reqs, 2))
 
@@ -133,7 +135,7 @@ function evolve!(state)
         1:nparts(state, :T),
     )
     qs .= ceil.(Ref(Int), qs)
-    @show qs
+
     for i = 1:nparts(state, :T)
         new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
@@ -145,13 +147,12 @@ function evolve!(state)
     end
 
     reqs = get_reqs_init!(reqs, qs, state)
-    @show reqs
+
     allocs =
         get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
-    @show allocs
+
     qs .= get_init_satisfied(allocs, qs, state)
-    @show qs
-    println("====")
+
     push!(
         state.log,
         (
@@ -260,7 +261,7 @@ function finish!(state)
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
             )
         end
-        
+
         q = if trans_.state >= trans_[:transCycleTime]
             rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
@@ -297,7 +298,6 @@ function free_blocked_species!(state)
     end
 end
 
-
 ## resolve tspan, tstep
 
 function get_tcontrol(tspan, args)
@@ -310,8 +310,8 @@ function get_tcontrol(tspan, args)
     return ((0.0, tspan), dt)
 end
 
-function ReactiveNetwork(
-    acs::ReactionNetwork,
+function ReactionNetworkProblem(
+    acs::ReactionNetworkSchema,
     u0 = Dict(),
     p = Dict();
     name = "reactive_network",
@@ -350,7 +350,8 @@ function ReactiveNetwork(
         ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
     transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
 
-    network =  ReactiveNetwork(
+    sol = DataFrame("t" => Float64[], (string(name) => Float64[] for name in acs[:, :specName])...)
+    network = ReactionNetworkProblem(
         name,
         acs,
         attrs,
@@ -359,7 +360,6 @@ function ReactiveNetwork(
         merge(
             p,
             Dict(
-                :tstep => get(keywords, :tstep, 1),
                 :strategy => get(keywords, :alloc_strategy, :weighted),
             ),
         ),
@@ -370,10 +370,8 @@ function ReactiveNetwork(
         ongoing_transitions,
         log,
         observables,
-        kwargs,
         wrap_fun,
-        Vector{Float64}[],
-        Float64[],
+        sol
     )
 
     save!(network)
@@ -381,7 +379,18 @@ function ReactiveNetwork(
     return network
 end
 
-function AlgebraicAgents.step!(state::ReactiveNetwork)
+function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
+    state.u .= isempty(state.sol) ? state.u : Vector(state.sol[1, 2:end])
+    state.t = state.tspan[1]
+    empty!(state.ongoing_transitions)
+    empty!(state.log)
+    state.observables = compile_observables(state.acs)
+    empty!(state.sol)
+
+    state
+end
+
+function AlgebraicAgents._step!(state::ReactionNetworkProblem)
     free_blocked_species!(state)
     update_observables(state)
     sample_transitions!(state)
@@ -398,15 +407,11 @@ function AlgebraicAgents.step!(state::ReactiveNetwork)
     return state.t += state.dt
 end
 
-function AlgebraicAgents._projected_to(state::ReactiveNetwork)
-    if state.t >= state.tspan[2]
-        true
-    else
-        state.t
-    end
+function AlgebraicAgents._projected_to(state::ReactionNetworkProblem)
+    state.t > state.tspan[2] ? true : state.t
 end
 
-function fetch_params(acs::ReactionNetwork)
+function fetch_params(acs::ReactionNetworkSchema)
     return Dict{Symbol,Any}((
         acs[i, :prmName] => acs[i, :prmVal] for
         i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))

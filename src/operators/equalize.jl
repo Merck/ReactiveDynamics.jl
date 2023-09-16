@@ -21,7 +21,7 @@ function get_eqs_ff(eq)
     end
 end
 
-function equalize!(acs::ReactionNetwork, eqs = [])
+function equalize!(acs::ReactionNetworkSchema, eqs = [])
     specmap = Dict()
     for block in eqs
         block_alias = findfirst(e -> e[1] == :alias, block)
