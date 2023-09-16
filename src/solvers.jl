@@ -107,9 +107,11 @@ function get_init_satisfied(allocs, qs, state)
                 (reqs[tok.index, i] += tok.stoich)
         end
     end
+    @show 2 reqs
     for i in eachindex(allocs)
         allocs[i] = reqs[i] == 0.0 ? Inf : floor(allocs[i] / reqs[i])
     end
+    @show allocs
     foreach(i -> qs[i] = min(qs[i], minimum(allocs[:, i])), 1:size(reqs, 2))
     foreach(i -> allocs[:, i] .= reqs[:, i] * qs[i], 1:size(reqs, 2))
 
@@ -133,7 +135,7 @@ function evolve!(state)
     qs .= ceil.(Ref(Int), qs)
     @show qs
     for i = 1:nparts(state, :T)
-        new_instances = state.dt * qs[i] + state[i, :transToSpawn]
+        new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
             count(t -> t[:transHash] == state[i, :transHash], state.ongoing_transitions)
@@ -165,7 +167,7 @@ function evolve!(state)
     for i = 1:nparts(state, :T)
         qs[i] != 0 && push!(
             state.ongoing_transitions,
-            Transition(state[i, :transName] * "_@$(state.t)", get_sampled_transition(state, i), state.t, qs[i], 0.0),
+            Transition(string(state[i, :transName]) * "_@$(state.t)", get_sampled_transition(state, i), state.t, qs[i], 0.0),
         )
     end
 
@@ -258,11 +260,13 @@ function finish!(state)
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
             )
         end
+        
         q = if trans_.state >= trans_[:transCycleTime]
             rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
             0
         end
+
         foreach(
             tok -> (state.u[tok.index] += q * tok.stoich;
             val_reward += state[tok.index, :specReward] * q * tok.stoich),
@@ -378,14 +382,11 @@ function ReactiveNetwork(
 end
 
 function AlgebraicAgents.step!(state::ReactiveNetwork)
-    #du = copy(state.u)
     free_blocked_species!(state)
-    #du .= state.u
     update_observables(state)
     sample_transitions!(state)
     evolve!(state)
     finish!(state)
-    #update_u!(state, u)
     event_action!(state)
 
     push!(
@@ -393,11 +394,8 @@ function AlgebraicAgents.step!(state::ReactiveNetwork)
         (:valuation, state.t, state.u' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
     )
 
-    #update_u!(state, du)
     save!(state)
-
-    #state.u .= du
-    state.t += state.dt
+    return state.t += state.dt
 end
 
 function AlgebraicAgents._projected_to(state::ReactiveNetwork)

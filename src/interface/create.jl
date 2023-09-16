@@ -147,7 +147,7 @@ end
 
 function expand_rate(rate)
     rate = if !(isexpr(rate, :macrocall) && (macroname(rate) == :per_step))
-        :(rand(Poisson(max($rate, 0))))
+        :(rand(Poisson(max(state.dt * $rate, 0))))
     else
         rate.args[3]
     end

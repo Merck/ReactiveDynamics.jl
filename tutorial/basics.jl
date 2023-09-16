@@ -10,7 +10,7 @@ end
 
 @prob_init acs X = 10 Y = 20
 @prob_params acs
-@prob_meta acs tspan = 250 dt = 0.1
+@prob_meta acs tspan = 250 dt = 0.11
 
 
 # sol = ReactiveDynamics.solve(prob)
@@ -23,6 +23,9 @@ for i in 1:30
     AlgebraicAgents.step!(prob)
 end
 prob.history_u
+
+
+
 using Plots
 
 @plot sol plot_type = summary

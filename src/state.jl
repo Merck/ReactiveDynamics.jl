@@ -217,7 +217,7 @@ end
 ## query the state
 
 t(state::ReactiveNetwork) = state.t
-solverarg(state::ReactiveNetwork, arg) = state.solverargs[arg]
+solverarg(state::ReactiveNetwork, arg) = state.p[arg]
 take(state::ReactiveNetwork, pcs::Symbol) = state.observables[pcs].sampled
 log(state::ReactiveNetwork, msg) = (println(msg); push!(state.log, (:log, msg)))
 state(state::ReactiveNetwork) = state

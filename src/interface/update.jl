@@ -489,7 +489,7 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 macro jump(acsex, inex, acex)
     return push_to_acs!(
         acsex,
-        Expr(:&&, Expr(:call, :rand, :(Poisson(max(@solverarg(:tstep) * $inex, 0)))), acex),
+        Expr(:&&, Expr(:call, :rand, :(Poisson(max(state.dt * $inex, 0)))), acex),
     )
 end
 
