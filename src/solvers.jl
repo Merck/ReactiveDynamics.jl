@@ -148,8 +148,7 @@ function evolve!(state)
 
     reqs = get_reqs_init!(reqs, qs, state)
 
-    allocs =
-        get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
+    allocs = get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
 
     qs .= get_init_satisfied(allocs, qs, state)
 
@@ -168,7 +167,13 @@ function evolve!(state)
     for i = 1:nparts(state, :T)
         qs[i] != 0 && push!(
             state.ongoing_transitions,
-            Transition(string(state[i, :transName]) * "_@$(state.t)", get_sampled_transition(state, i), state.t, qs[i], 0.0),
+            Transition(
+                string(state[i, :transName]) * "_@$(state.t)",
+                get_sampled_transition(state, i),
+                state.t,
+                qs[i],
+                0.0,
+            ),
         )
     end
 
@@ -332,7 +337,7 @@ function ReactionNetworkProblem(
     transition_recipes = transitions
     u0_init = zeros(nparts(acs, :S))
 
-    for i in 1:nparts(acs, :S)
+    for i = 1:nparts(acs, :S)
         if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
             u0_init[i] = u0[acs[i, :specName]]
         else
@@ -350,19 +355,17 @@ function ReactionNetworkProblem(
         ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
     transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
 
-    sol = DataFrame("t" => Float64[], (string(name) => Float64[] for name in acs[:, :specName])...)
+    sol = DataFrame(
+        "t" => Float64[],
+        (string(name) => Float64[] for name in acs[:, :specName])...,
+    )
     network = ReactionNetworkProblem(
         name,
         acs,
         attrs,
         transition_recipes,
-        u0_init, 
-        merge(
-            p,
-            Dict(
-                :strategy => get(keywords, :alloc_strategy, :weighted),
-            ),
-        ),
+        u0_init,
+        merge(p, Dict(:strategy => get(keywords, :alloc_strategy, :weighted))),
         keywords[:tspan][1],
         keywords[:tspan],
         get(keywords, :tstep, 1),
@@ -371,7 +374,7 @@ function ReactionNetworkProblem(
         log,
         observables,
         wrap_fun,
-        sol
+        sol,
     )
 
     save!(network)
@@ -387,7 +390,7 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     state.observables = compile_observables(state.acs)
     empty!(state.sol)
 
-    state
+    return state
 end
 
 function AlgebraicAgents._step!(state::ReactionNetworkProblem)
@@ -400,7 +403,11 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
 
     push!(
         state.log,
-        (:valuation, state.t, state.u' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
+        (
+            :valuation,
+            state.t,
+            state.u' * [state[i, :specValuation] for i = 1:nparts(state, :S)],
+        ),
     )
 
     save!(state)
@@ -408,7 +415,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
 end
 
 function AlgebraicAgents._projected_to(state::ReactionNetworkProblem)
-    state.t > state.tspan[2] ? true : state.t
+    return state.t > state.tspan[2] ? true : state.t
 end
 
 function fetch_params(acs::ReactionNetworkSchema)

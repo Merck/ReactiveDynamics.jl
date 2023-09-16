@@ -18,4 +18,5 @@ simulate(prob)
 # access solution
 prob.sol
 
+# plot solution
 draw(prob)

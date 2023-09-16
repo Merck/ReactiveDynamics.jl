@@ -73,9 +73,7 @@ function init_u!(state::ReactionNetworkProblem)
     foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S));
     state.u = u)
 end
-function save!(state::ReactionNetworkProblem)
-    return push!(state.sol, (state.t, state.u[:]...))
-end
+save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
 
 function compile_observables(acs::ReactionNetworkSchema)
     observables = Dict{Symbol,Observable}()
