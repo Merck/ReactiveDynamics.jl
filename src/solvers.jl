@@ -280,10 +280,10 @@ function finish!(state)
         )
 
         context_eval(state, trans_.trans[:transPostAction])
-        terminated_all[trans_[:transHash]] =
-            get(terminated_all, trans_[:transHash], 0) + trans_.q
-        terminated_success[trans_[:transHash]] =
-            get(terminated_success, trans_[:transHash], 0) + q
+        terminated_all[Symbol(trans_[:transHash])] =
+            get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
+        terminated_success[Symbol(trans_[:transHash])] =
+            get(terminated_success, Symbol(trans_[:transHash]), 0) + q
 
         ix += 1
     end

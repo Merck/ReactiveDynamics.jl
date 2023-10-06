@@ -1,6 +1,6 @@
 module ReactiveDynamics
 
-using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
+using Catlab
 using Reexport
 using MacroTools
 using ComponentArrays
@@ -137,22 +137,22 @@ species_modalities = [:nonblock, :conserved, :rate]
 
 function assign_defaults!(acs::ReactionNetworkSchema)
     for (_, v_) in defargs, (k, v) in v_
-        for i = 1:length(subpart(acs, k))
-            isnothing(acs[i, k]) && (subpart(acs, k)[i] = v)
+        for i in dom_parts(acs, k)
+            isnothing(acs[i, k]) && (acs[i, k] = v)
         end
     end
 
     foreach(
         i ->
             !isnothing(acs[i, :specModality]) ||
-                (subpart(acs, :specModality)[i] = Set{Symbol}()),
-        1:nparts(acs, :S),
+                (acs[i, :specModality] = Set{Symbol}()),
+        parts(acs, :S),
     )
     k = [:specCost, :specReward, :specValuation]
     foreach(
         k -> foreach(
-            i -> !isnothing(acs[i, k]) || (subpart(acs, k)[i] = 0.0),
-            1:nparts(acs, :S),
+            i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0),
+            parts(acs, :S),
         ),
         k,
     )
