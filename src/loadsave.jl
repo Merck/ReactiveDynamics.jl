@@ -28,7 +28,7 @@ function export_network(acs::ReactionNetworkSchema)
     dict = Dict()
     for (key, val) in objects_aliases
         push!(dict, val => [])
-        for i = 1:nparts(acs, key)
+        for i in parts(acs, key)
             dict_ = Dict()
             for attr in get_attrs(val)
                 attr_val = acs[i, Symbol(attr)]

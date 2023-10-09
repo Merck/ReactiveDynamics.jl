@@ -164,7 +164,7 @@ function compile_attrs(acs::ReactionNetworkSchema)
     transitions[:transActivated] = fill(true, nparts(acs, :T))
     transitions[:transToSpawn] = zeros(nparts(acs, :T))
     transitions[:transHash] =
-        [coalesce(acs[i, :transName], gensym()) for i = 1:nparts(acs, :T)]
+        [coalesce(acs[i, :transName], gensym()) for i in parts(acs, :T)]
 
     return attrs, transitions, wrap_fun
 end

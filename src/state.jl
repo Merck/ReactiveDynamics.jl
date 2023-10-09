@@ -70,7 +70,7 @@ end
 
 function init_u!(state::ReactionNetworkProblem)
     return (u = fill(0.0, nparts(state, :S));
-    foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S));
+    foreach(i -> u[i] = state[i, :specInitVal], parts(state, :S));
     state.u = u)
 end
 save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
@@ -149,7 +149,7 @@ function prune_r_line(r_line)
 end
 
 function find_index(species::Symbol, state::ReactionNetworkProblem)
-    return findfirst(i -> state[i, :specName] == species, 1:nparts(state, :S))
+    return findfirst(i -> state[i, :specName] == species, parts(state, :S))
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
@@ -195,8 +195,12 @@ function as_state(u, t, state::ReactionNetworkProblem)
     return (state = deepcopy(state); state.u .= u; state.t = t; state)
 end
 
-function Catlab.CategoricalAlgebra.nparts(state::ReactionNetworkProblem, obj::Symbol)
-    return obj == :T ? length(state.transitions[:transLHS]) : nparts(state.acs, obj)
+function ACSets.ACSetInterface.nparts(state::ReactionNetworkProblem, obj::Symbol)
+    return nparts(state.acs, obj)
+end
+
+function ACSets.ACSetInterface.parts(state::ReactionNetworkProblem, obj::Symbol)
+    return parts(state.acs, obj)
 end
 
 ## query the state

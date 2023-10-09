@@ -1,6 +1,6 @@
 module ReactiveDynamics
 
-using Catlab
+using ACSets
 using Reexport
 using MacroTools
 using ComponentArrays
@@ -27,50 +27,50 @@ Base.@kwdef mutable struct FoldedObservable
     on::Vector{SampleableValues} = SampleableValues[]
 end
 
-@present TheoryReactionNetwork(FreeSchema) begin
-    (S, T)::Ob # species, transitions
-
-    (
-        SymbolicAttributeT,
-        DescriptiveAttributeT,
-        SampleableAttributeT,
-        ModalityAttributeT,
-        PcsOptT,
-        PrmAttributeT,
-    )::AttrType
-
-    specName::Attr(S, SymbolicAttributeT)
-    specModality::Attr(S, ModalityAttributeT)
-    specInitVal::Attr(S, SampleableAttributeT)
-    specInitUncertainty::Attr(S, SampleableAttributeT)
-    (specCost, specReward, specValuation)::Attr(S, SampleableAttributeT)
-
-    trans::Attr(T, SampleableAttributeT)
-    transPriority::Attr(T, SampleableAttributeT)
-    transRate::Attr(T, SampleableAttributeT)
-    transCycleTime::Attr(T, SampleableAttributeT)
-    transProbOfSuccess::Attr(T, SampleableAttributeT)
-    transCapacity::Attr(T, SampleableAttributeT)
-    transMaxLifeTime::Attr(T, SampleableAttributeT)
-    transPostAction::Attr(T, SampleableAttributeT)
-    transMultiplier::Attr(T, SampleableAttributeT)
-    transName::Attr(T, DescriptiveAttributeT)
-
-    E::Ob # events
-    (eventTrigger, eventAction)::Attr(E, SampleableAttributeT)
-
-    obs::Ob # processes (observables)
-    obsName::Attr(obs, SymbolicAttributeT)
-    obsOpts::Attr(obs, PcsOptT)
-
-    (P, M)::Ob # model params, solver args
-
-    prmName::Attr(P, SymbolicAttributeT)
-    prmVal::Attr(P, PrmAttributeT)
-
-    metaKeyword::Attr(M, SymbolicAttributeT)
-    metaVal::Attr(M, SampleableAttributeT)
-end
+TheoryReactionNetwork = BasicSchema(
+    [:S,:T,:E,:obs,:P,:M], # species, transitions, events, processes (observables), model params, solver args
+    [], # no homs
+    [
+        :SymbolicAttributeT,
+        :DescriptiveAttributeT,
+        :SampleableAttributeT,
+        :ModalityAttributeT,
+        :PcsOptT,
+        :PrmAttributeT
+    ], # AttrTypes
+    [
+        # species
+        (:specName,:S,:SymbolicAttributeT),
+        (:specModality,:S,:ModalityAttributeT),
+        (:specInitVal,:S,:SampleableAttributeT),
+        (:specInitUncertainty,:S,:SampleableAttributeT),
+        (:specCost,:S,:SampleableAttributeT),
+        (:specReward,:S,:SampleableAttributeT),
+        (:specValuation,:S,:SampleableAttributeT),
+        # transitions
+        (:trans,:T,:SampleableAttributeT),
+        (:transPriority,:T,:SampleableAttributeT),
+        (:transRate,:T,:SampleableAttributeT),
+        (:transCycleTime,:T,:SampleableAttributeT),
+        (:transProbOfSuccess,:T,:SampleableAttributeT),
+        (:transCapacity,:T,:SampleableAttributeT),
+        (:transMaxLifeTime,:T,:SampleableAttributeT),
+        (:transPostAction,:T,:SampleableAttributeT),
+        (:transMultiplier,:T,:SampleableAttributeT),
+        (:transName,:T,:DescriptiveAttributeT),
+        # events
+        (:eventTrigger,:E,:SampleableAttributeT),
+        (:eventAction,:E,:SampleableAttributeT),
+        # observables
+        (:obsName,:obs,:SymbolicAttributeT),
+        (:obsOpts,:obs,:PcsOptT),
+        # params, args
+        (:prmName,:P,:SymbolicAttributeT),
+        (:prmVal,:P,:PrmAttributeT),
+        (:metaKeyword,:M,:SymbolicAttributeT),
+        (:metaVal,:M,:SampleableAttributeT)
+    ]
+)
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
 
