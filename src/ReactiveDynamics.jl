@@ -28,7 +28,7 @@ Base.@kwdef mutable struct FoldedObservable
 end
 
 TheoryReactionNetwork = BasicSchema(
-    [:S,:T,:E,:obs,:P,:M], # species, transitions, events, processes (observables), model params, solver args
+    [:S, :T, :E, :obs, :P, :M], # species, transitions, events, processes (observables), model params, solver args
     [], # no homs
     [
         :SymbolicAttributeT,
@@ -36,40 +36,40 @@ TheoryReactionNetwork = BasicSchema(
         :SampleableAttributeT,
         :ModalityAttributeT,
         :PcsOptT,
-        :PrmAttributeT
+        :PrmAttributeT,
     ], # AttrTypes
     [
         # species
-        (:specName,:S,:SymbolicAttributeT),
-        (:specModality,:S,:ModalityAttributeT),
-        (:specInitVal,:S,:SampleableAttributeT),
-        (:specInitUncertainty,:S,:SampleableAttributeT),
-        (:specCost,:S,:SampleableAttributeT),
-        (:specReward,:S,:SampleableAttributeT),
-        (:specValuation,:S,:SampleableAttributeT),
+        (:specName, :S, :SymbolicAttributeT),
+        (:specModality, :S, :ModalityAttributeT),
+        (:specInitVal, :S, :SampleableAttributeT),
+        (:specInitUncertainty, :S, :SampleableAttributeT),
+        (:specCost, :S, :SampleableAttributeT),
+        (:specReward, :S, :SampleableAttributeT),
+        (:specValuation, :S, :SampleableAttributeT),
         # transitions
-        (:trans,:T,:SampleableAttributeT),
-        (:transPriority,:T,:SampleableAttributeT),
-        (:transRate,:T,:SampleableAttributeT),
-        (:transCycleTime,:T,:SampleableAttributeT),
-        (:transProbOfSuccess,:T,:SampleableAttributeT),
-        (:transCapacity,:T,:SampleableAttributeT),
-        (:transMaxLifeTime,:T,:SampleableAttributeT),
-        (:transPostAction,:T,:SampleableAttributeT),
-        (:transMultiplier,:T,:SampleableAttributeT),
-        (:transName,:T,:DescriptiveAttributeT),
+        (:trans, :T, :SampleableAttributeT),
+        (:transPriority, :T, :SampleableAttributeT),
+        (:transRate, :T, :SampleableAttributeT),
+        (:transCycleTime, :T, :SampleableAttributeT),
+        (:transProbOfSuccess, :T, :SampleableAttributeT),
+        (:transCapacity, :T, :SampleableAttributeT),
+        (:transMaxLifeTime, :T, :SampleableAttributeT),
+        (:transPostAction, :T, :SampleableAttributeT),
+        (:transMultiplier, :T, :SampleableAttributeT),
+        (:transName, :T, :DescriptiveAttributeT),
         # events
-        (:eventTrigger,:E,:SampleableAttributeT),
-        (:eventAction,:E,:SampleableAttributeT),
+        (:eventTrigger, :E, :SampleableAttributeT),
+        (:eventAction, :E, :SampleableAttributeT),
         # observables
-        (:obsName,:obs,:SymbolicAttributeT),
-        (:obsOpts,:obs,:PcsOptT),
+        (:obsName, :obs, :SymbolicAttributeT),
+        (:obsOpts, :obs, :PcsOptT),
         # params, args
-        (:prmName,:P,:SymbolicAttributeT),
-        (:prmVal,:P,:PrmAttributeT),
-        (:metaKeyword,:M,:SymbolicAttributeT),
-        (:metaVal,:M,:SampleableAttributeT)
-    ]
+        (:prmName, :P, :SymbolicAttributeT),
+        (:prmVal, :P, :PrmAttributeT),
+        (:metaKeyword, :M, :SymbolicAttributeT),
+        (:metaVal, :M, :SampleableAttributeT),
+    ],
 )
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
@@ -143,17 +143,12 @@ function assign_defaults!(acs::ReactionNetworkSchema)
     end
 
     foreach(
-        i ->
-            !isnothing(acs[i, :specModality]) ||
-                (acs[i, :specModality] = Set{Symbol}()),
+        i -> !isnothing(acs[i, :specModality]) || (acs[i, :specModality] = Set{Symbol}()),
         parts(acs, :S),
     )
     k = [:specCost, :specReward, :specValuation]
     foreach(
-        k -> foreach(
-            i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0),
-            parts(acs, :S),
-        ),
+        k -> foreach(i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0), parts(acs, :S)),
         k,
     )
 
