@@ -345,6 +345,13 @@ function ReactionNetworkProblem(
         end
     end
 
+    prms = Dict{Symbol,Any}((
+        acs[i, :prmName] => acs[i, :prmVal] for
+        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
+    ))
+
+    merge!(p, prms)
+
     ongoing_transitions = Transition[]
     log = NamedTuple[]
     observables = compile_observables(acs)

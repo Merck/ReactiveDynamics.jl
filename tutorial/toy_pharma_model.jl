@@ -1,7 +1,7 @@
 using ReactiveDynamics
 
 # model dynamics
-toy_pharma_model = @ReactionNetwork begin
+toy_pharma_model = @ReactionNetworkSchema begin
     α(candidate_compound, marketed_drug, κ),
     3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
     name => discovery,
@@ -35,20 +35,16 @@ end
 ## other arguments passed to the solver
 @prob_meta toy_pharma_model tspan = 250 dt = 0.1
 
-prob = @problematize toy_pharma_model
+prob = ReactionNetworkProblem(toy_pharma_model)
 
-sol = @solve prob trajectories = 20
+sol = simulate(prob)
 
-using Plots
-
-@plot sol plot_type = summary
-
-@plot sol plot_type = summary show = :marketed_drug
+draw(sol)
 
 ## for deterministic rates 
 
 # model dynamics
-toy_pharma_model = @ReactionNetwork begin
+toy_pharma_model = @ReactionNetworkSchema begin
     @per_step(α(candidate_compound, marketed_drug, κ)),
     3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
     name => discovery,
@@ -82,12 +78,8 @@ end
 ## other arguments passed to the solver
 @prob_meta toy_pharma_model tspan = 250
 
-prob = @problematize toy_pharma_model
+prob = ReactionNetworkProblem(toy_pharma_model)
 
-sol = @solve prob trajectories = 20
+sol = simulate(prob)
 
-using Plots
-
-@plot sol plot_type = summary
-
-@plot sol plot_type = summary show = :marketed_drug
+draw(sol)

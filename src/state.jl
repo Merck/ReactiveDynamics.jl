@@ -91,7 +91,7 @@ function compile_observables(acs::ReactionNetworkSchema)
             opts.range,
         )
 
-        push!(observables, name => Observable(name, -Inf, range, opts.every, on, missing))
+        push!(observables, name => Observable(string(name), -Inf, range, opts.every, on, missing))
     end
 
     return observables
@@ -131,7 +131,7 @@ end
 
 function prune_r_line(r_line)
     return if r_line isa Expr && r_line.args[1] ∈ fwd_arrows
-        r_line.args[2:3]
+        r_line.args[[2, 3]]
     elseif r_line isa Expr && r_line.args[1] ∈ bwd_arrows
         r_line.args[[3, 2]]
     elseif isexpr(r_line, :macrocall) && (macroname(r_line) == :choose)
@@ -213,8 +213,8 @@ state(state::ReactionNetworkProblem) = state
 
 function periodic(state::ReactionNetworkProblem, period)
     return period == 0.0 || (
-        length(state.history_t) > 1 &&
-        (fld(state.t, period) - fld(state.history_t[end-1], period) > 0)
+        length(state.sol.t) > 1 &&
+        (fld(state.t, period) - fld(state.sol.t[end-1], period) > 0)
     )
 end
 

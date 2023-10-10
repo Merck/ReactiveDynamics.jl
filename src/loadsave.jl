@@ -44,13 +44,16 @@ function export_network(acs::ReactionNetworkSchema)
 end
 
 function load_network(dict::Dict)
-    acs = ReactionNetwork()
+    acs = ReactionNetworkSchema()
     for (key, val) in objects_aliases
         val == "prm" && continue
         for row in get(dict, val, [])
             i = add_part!(acs, key)
             for (attr, attrval) in row
                 set_subpart!(acs, i, Symbol(attr), attrval)
+                if (acs[i, Symbol(attr)] isa String && !(contains(attr, "name")))
+                    acs[i, Symbol(attr)] = MacroTools.striplines(Meta.parse(attrval))
+                end
             end
         end
     end
@@ -230,10 +233,10 @@ Export a solution as a `DataFrame`.
 ```
 """
 macro export_solution_as_table(solex, pathex = "sol.jld2")
-    return :(DataFrame($(esc(solex))))
+    return :(DataFrame($(esc(solex)).sol))
 end
 
-get_DataFrame(sol) = sol isa EnsembleSolution ? DataFrame(sol)[!, [:u, :t]] : DataFrame(sol)
+get_DataFrame(sol) = sol.sol
 
 """
     @export_solution_as_csv sol

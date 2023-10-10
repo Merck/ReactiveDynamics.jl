@@ -1,7 +1,7 @@
 using ReactiveDynamics
 
 # solve for steady state
-acss = @ReactionNetwork begin
+acss = @ReactionNetworkSchema begin
     3.0, A --> A, priority => 0.6, name => aa
     1.0, B + 0.2 * A --> 2 * α * B, prob => 0.7, priority => 0.6, name => bb
     3.0, A + 2 * B --> 2 * C, prob => 0.7, priority => 0.7, name => cc

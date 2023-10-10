@@ -93,6 +93,7 @@ Base.convert(::Type{Union{String,Symbol,Missing}}, ex::String) =
     end
 
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
+
 Base.convert(::Type{Set{Symbol}}, ex::String) = eval(Meta.parse(ex))
 Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
 
