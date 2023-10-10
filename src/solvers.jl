@@ -132,11 +132,11 @@ function evolve!(state)
 
     foreach(
         i -> qs[i] = state[i, :transRate] * state[i, :transMultiplier],
-        1:nparts(state, :T),
+        parts(state, :T),
     )
     qs .= ceil.(Ref(Int), qs)
 
-    for i = 1:nparts(state, :T)
+    for i in parts(state, :T)
         new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
@@ -164,7 +164,7 @@ function evolve!(state)
     actual_allocs .+= sum(allocs; dims = 2)
 
     # add spawned transitions to the heap
-    for i = 1:nparts(state, :T)
+    for i in parts(state, :T)
         qs[i] != 0 && push!(
             state.ongoing_transitions,
             Transition(
@@ -215,14 +215,14 @@ function evolve!(state)
         (
             :valuation_cost,
             state.t,
-            actual_allocs' * [state[i, :specCost] for i = 1:nparts(state, :S)],
+            actual_allocs' * [state[i, :specCost] for i in parts(state, :S)],
         ),
     )
 end
 
 # execute callbacks
 function event_action!(state)
-    for i = 1:nparts(state, :E)
+    for i in parts(state, :E)
         !isnothing(state[i, :eventTrigger]) && !isnothing(state[i, :eventAction]) ||
             continue
         v = state[i, :eventTrigger]
@@ -280,10 +280,10 @@ function finish!(state)
         )
 
         context_eval(state, trans_.trans[:transPostAction])
-        terminated_all[trans_[:transHash]] =
-            get(terminated_all, trans_[:transHash], 0) + trans_.q
-        terminated_success[trans_[:transHash]] =
-            get(terminated_success, trans_[:transHash], 0) + q
+        terminated_all[Symbol(trans_[:transHash])] =
+            get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
+        terminated_success[Symbol(trans_[:transHash])] =
+            get(terminated_success, Symbol(trans_[:transHash]), 0) + q
 
         ix += 1
     end
@@ -324,7 +324,7 @@ function ReactionNetworkProblem(
 )
     assign_defaults!(acs)
     keywords = Dict{Symbol,Any}([
-        acs[i, :metaKeyword] => acs[i, :metaVal] for i = 1:nparts(acs, :M) if
+        acs[i, :metaKeyword] => acs[i, :metaVal] for i in parts(acs, :M) if
         !isnothing(acs[i, :metaKeyword]) && !isnothing(acs[i, :metaVal])
     ])
     merge!(keywords, Dict(collect(kwargs)))
@@ -337,13 +337,20 @@ function ReactionNetworkProblem(
     transition_recipes = transitions
     u0_init = zeros(nparts(acs, :S))
 
-    for i = 1:nparts(acs, :S)
+    for i in parts(acs, :S)
         if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
             u0_init[i] = u0[acs[i, :specName]]
         else
             u0_init[i] = acs[i, :specInitVal]
         end
     end
+
+    prms = Dict{Symbol,Any}((
+        acs[i, :prmName] => acs[i, :prmVal] for
+        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
+    ))
+
+    merge!(p, prms)
 
     ongoing_transitions = Transition[]
     log = NamedTuple[]
@@ -406,7 +413,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         (
             :valuation,
             state.t,
-            state.u' * [state[i, :specValuation] for i = 1:nparts(state, :S)],
+            state.u' * [state[i, :specValuation] for i in parts(state, :S)],
         ),
     )
 
@@ -421,6 +428,6 @@ end
 function fetch_params(acs::ReactionNetworkSchema)
     return Dict{Symbol,Any}((
         acs[i, :prmName] => acs[i, :prmVal] for
-        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
+        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), parts(acs, :P))
     ))
 end

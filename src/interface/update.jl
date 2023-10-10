@@ -70,7 +70,7 @@ macro name_transition(acsex, exs...)
                 acs = $(esc(acsex))
                 ixs = findall(
                     i -> string(acs[i, :transName]) == $(string(ex.args[1])),
-                    1:nparts(acs, :T),
+                    parts(acs, :T),
                 )
                 foreach(i -> acs[i, :transName] = $(string(ex.args[2])), ixs)
             end

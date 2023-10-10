@@ -27,7 +27,7 @@ function equalize!(acs::ReactionNetworkSchema, eqs = [])
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
         species_ixs = Int64[]
-        for e in block, i = 1:nparts(acs, :S)
+        for e in block, i in parts(acs, :S)
             (
                 (i == e[2]) ||
                 (

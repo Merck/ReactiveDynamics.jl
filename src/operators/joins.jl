@@ -10,7 +10,7 @@ Merge `acs2` onto `acs1`, the attributes in `acs2` taking precedence. Identify r
 function union_acs!(acs1, acs2, name = gensym("acs_"), eqs = [])
     acs2 = deepcopy(acs2)
     prepend!(acs2, name, eqs)
-    for i = 1:nparts(acs2, :S)
+    for i in parts(acs2, :S)
         inc = incident(acs1, acs2[i, :specName], :specName)
         isempty(inc) && (inc = add_part!(acs1, :S; specName = acs2[i, :specName]);
         assign_defaults!(acs1))
@@ -41,13 +41,13 @@ function union_acs!(acs1, acs2, name = gensym("acs_"), eqs = [])
         new_trans_ix,
     )
 
-    for i = 1:nparts(acs2, :P)
+    for i in parts(acs2, :P)
         inc = incident(acs1, acs2[i, :prmName], :prmName)
         isempty(inc) && (inc = add_part!(acs1, :P; prmName = acs2[i, :prmName]))
         !ismissing(acs2[i, :prmVal]) && (acs1[first(inc), :prmVal] = acs2[i, :prmVal])
     end
 
-    for i = 1:nparts(acs2, :M)
+    for i in parts(acs2, :M)
         inc = incident(acs1, acs2[i, :metaKeyword], :metaKeyword)
         isempty(inc) && (inc = add_part!(acs1, :M; metaKeyword = acs2[i, :metaKeyword]))
         !ismissing(acs2[i, :metaVal]) && (acs1[first(inc), :metaVal] = acs2[i, :metaVal])
@@ -61,7 +61,7 @@ Prepend species names with a model identifier (unless a global species name).
 """
 function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
     specmap = Dict()
-    for i = 1:nparts(acs, :S)
+    for i in parts(acs, :S)
         new_name = normalize_name(name, i, acs[i, :specName], eqs)
         push!(specmap, acs[i, :specName] => (acs[i, :specName] = new_name))
     end

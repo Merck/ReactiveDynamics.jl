@@ -70,7 +70,7 @@ end
 
 function init_u!(state::ReactionNetworkProblem)
     return (u = fill(0.0, nparts(state, :S));
-    foreach(i -> u[i] = state[i, :specInitVal], 1:nparts(state, :S));
+    foreach(i -> u[i] = state[i, :specInitVal], parts(state, :S));
     state.u = u)
 end
 save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
@@ -91,7 +91,10 @@ function compile_observables(acs::ReactionNetworkSchema)
             opts.range,
         )
 
-        push!(observables, name => Observable(name, -Inf, range, opts.every, on, missing))
+        push!(
+            observables,
+            name => Observable(string(name), -Inf, range, opts.every, on, missing),
+        )
     end
 
     return observables
@@ -131,7 +134,7 @@ end
 
 function prune_r_line(r_line)
     return if r_line isa Expr && r_line.args[1] ∈ fwd_arrows
-        r_line.args[2:3]
+        r_line.args[[2, 3]]
     elseif r_line isa Expr && r_line.args[1] ∈ bwd_arrows
         r_line.args[[3, 2]]
     elseif isexpr(r_line, :macrocall) && (macroname(r_line) == :choose)
@@ -149,7 +152,7 @@ function prune_r_line(r_line)
 end
 
 function find_index(species::Symbol, state::ReactionNetworkProblem)
-    return findfirst(i -> state[i, :specName] == species, 1:nparts(state, :S))
+    return findfirst(i -> state[i, :specName] == species, parts(state, :S))
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
@@ -195,8 +198,12 @@ function as_state(u, t, state::ReactionNetworkProblem)
     return (state = deepcopy(state); state.u .= u; state.t = t; state)
 end
 
-function Catlab.CategoricalAlgebra.nparts(state::ReactionNetworkProblem, obj::Symbol)
-    return obj == :T ? length(state.transitions[:transLHS]) : nparts(state.acs, obj)
+function ACSets.ACSetInterface.nparts(state::ReactionNetworkProblem, obj::Symbol)
+    return nparts(state.acs, obj)
+end
+
+function ACSets.ACSetInterface.parts(state::ReactionNetworkProblem, obj::Symbol)
+    return parts(state.acs, obj)
 end
 
 ## query the state
@@ -209,8 +216,8 @@ state(state::ReactionNetworkProblem) = state
 
 function periodic(state::ReactionNetworkProblem, period)
     return period == 0.0 || (
-        length(state.history_t) > 1 &&
-        (fld(state.t, period) - fld(state.history_t[end-1], period) > 0)
+        length(state.sol.t) > 1 &&
+        (fld(state.t, period) - fld(state.sol.t[end-1], period) > 0)
     )
 end
 

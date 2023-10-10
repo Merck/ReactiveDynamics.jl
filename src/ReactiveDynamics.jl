@@ -1,6 +1,6 @@
 module ReactiveDynamics
 
-using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
+using ACSets
 using Reexport
 using MacroTools
 using ComponentArrays
@@ -27,50 +27,50 @@ Base.@kwdef mutable struct FoldedObservable
     on::Vector{SampleableValues} = SampleableValues[]
 end
 
-@present TheoryReactionNetwork(FreeSchema) begin
-    (S, T)::Ob # species, transitions
-
-    (
-        SymbolicAttributeT,
-        DescriptiveAttributeT,
-        SampleableAttributeT,
-        ModalityAttributeT,
-        PcsOptT,
-        PrmAttributeT,
-    )::AttrType
-
-    specName::Attr(S, SymbolicAttributeT)
-    specModality::Attr(S, ModalityAttributeT)
-    specInitVal::Attr(S, SampleableAttributeT)
-    specInitUncertainty::Attr(S, SampleableAttributeT)
-    (specCost, specReward, specValuation)::Attr(S, SampleableAttributeT)
-
-    trans::Attr(T, SampleableAttributeT)
-    transPriority::Attr(T, SampleableAttributeT)
-    transRate::Attr(T, SampleableAttributeT)
-    transCycleTime::Attr(T, SampleableAttributeT)
-    transProbOfSuccess::Attr(T, SampleableAttributeT)
-    transCapacity::Attr(T, SampleableAttributeT)
-    transMaxLifeTime::Attr(T, SampleableAttributeT)
-    transPostAction::Attr(T, SampleableAttributeT)
-    transMultiplier::Attr(T, SampleableAttributeT)
-    transName::Attr(T, DescriptiveAttributeT)
-
-    E::Ob # events
-    (eventTrigger, eventAction)::Attr(E, SampleableAttributeT)
-
-    obs::Ob # processes (observables)
-    obsName::Attr(obs, SymbolicAttributeT)
-    obsOpts::Attr(obs, PcsOptT)
-
-    (P, M)::Ob # model params, solver args
-
-    prmName::Attr(P, SymbolicAttributeT)
-    prmVal::Attr(P, PrmAttributeT)
-
-    metaKeyword::Attr(M, SymbolicAttributeT)
-    metaVal::Attr(M, SampleableAttributeT)
-end
+TheoryReactionNetwork = BasicSchema(
+    [:S, :T, :E, :obs, :P, :M], # species, transitions, events, processes (observables), model params, solver args
+    [], # no homs
+    [
+        :SymbolicAttributeT,
+        :DescriptiveAttributeT,
+        :SampleableAttributeT,
+        :ModalityAttributeT,
+        :PcsOptT,
+        :PrmAttributeT,
+    ], # AttrTypes
+    [
+        # species
+        (:specName, :S, :SymbolicAttributeT),
+        (:specModality, :S, :ModalityAttributeT),
+        (:specInitVal, :S, :SampleableAttributeT),
+        (:specInitUncertainty, :S, :SampleableAttributeT),
+        (:specCost, :S, :SampleableAttributeT),
+        (:specReward, :S, :SampleableAttributeT),
+        (:specValuation, :S, :SampleableAttributeT),
+        # transitions
+        (:trans, :T, :SampleableAttributeT),
+        (:transPriority, :T, :SampleableAttributeT),
+        (:transRate, :T, :SampleableAttributeT),
+        (:transCycleTime, :T, :SampleableAttributeT),
+        (:transProbOfSuccess, :T, :SampleableAttributeT),
+        (:transCapacity, :T, :SampleableAttributeT),
+        (:transMaxLifeTime, :T, :SampleableAttributeT),
+        (:transPostAction, :T, :SampleableAttributeT),
+        (:transMultiplier, :T, :SampleableAttributeT),
+        (:transName, :T, :DescriptiveAttributeT),
+        # events
+        (:eventTrigger, :E, :SampleableAttributeT),
+        (:eventAction, :E, :SampleableAttributeT),
+        # observables
+        (:obsName, :obs, :SymbolicAttributeT),
+        (:obsOpts, :obs, :PcsOptT),
+        # params, args
+        (:prmName, :P, :SymbolicAttributeT),
+        (:prmVal, :P, :PrmAttributeT),
+        (:metaKeyword, :M, :SymbolicAttributeT),
+        (:metaVal, :M, :SampleableAttributeT),
+    ],
+)
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
 
@@ -93,6 +93,7 @@ Base.convert(::Type{Union{String,Symbol,Missing}}, ex::String) =
     end
 
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
+
 Base.convert(::Type{Set{Symbol}}, ex::String) = eval(Meta.parse(ex))
 Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
 
@@ -137,23 +138,18 @@ species_modalities = [:nonblock, :conserved, :rate]
 
 function assign_defaults!(acs::ReactionNetworkSchema)
     for (_, v_) in defargs, (k, v) in v_
-        for i = 1:length(subpart(acs, k))
-            isnothing(acs[i, k]) && (subpart(acs, k)[i] = v)
+        for i in dom_parts(acs, k)
+            isnothing(acs[i, k]) && (acs[i, k] = v)
         end
     end
 
     foreach(
-        i ->
-            !isnothing(acs[i, :specModality]) ||
-                (subpart(acs, :specModality)[i] = Set{Symbol}()),
-        1:nparts(acs, :S),
+        i -> !isnothing(acs[i, :specModality]) || (acs[i, :specModality] = Set{Symbol}()),
+        parts(acs, :S),
     )
     k = [:specCost, :specReward, :specValuation]
     foreach(
-        k -> foreach(
-            i -> !isnothing(acs[i, k]) || (subpart(acs, k)[i] = 0.0),
-            1:nparts(acs, :S),
-        ),
+        k -> foreach(i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0), parts(acs, :S)),
         k,
     )
 

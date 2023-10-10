@@ -3,9 +3,9 @@ uuid = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
 version = "0.2.7"
 
 [deps]
+ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
 AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
 Crayons = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -28,8 +28,8 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [compat]
+ACSets = "0.2.6"
 CSV = "0.10"
-Catlab = "0.14"
 ComponentArrays = "0.14"
 Crayons = "4.1"
 DataFrames = "1.6"

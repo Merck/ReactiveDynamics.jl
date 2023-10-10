@@ -8,7 +8,7 @@ using ReactiveDynamics
     end
 end
 
-acs = @ReactionNetwork begin
+acs = @ReactionNetworkSchema begin
     function_to_learn(A, B, C, params), A --> B + C
     1.0, B --> C
     2.0, C --> B
@@ -35,7 +35,7 @@ data = [60 30 5]
         return [A, B, C]' * params + α # params: 3-element vector
     end
 end
-acs = @ReactionNetwork begin
+acs = @ReactionNetworkSchema begin
     learnt_function(A, B, C, params, α), A --> B + C, priority => 0.6
     1.0, B --> C
     2.0, C --> B
