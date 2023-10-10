@@ -30,7 +30,7 @@ u0 = [999, 10, 0] # alternative specification
 @prob_params sir_acs β = 0.0001 ν = 0.01 γ = 5
 @prob_meta sir_acs tspan = 100
 
-prob = ReactionNetworkProblem(sir_acs, tspan = 200)
+prob = ReactionNetworkProblem(sir_acs; tspan = 200)
 
 sol = simulate(prob)
 

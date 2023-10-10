@@ -91,7 +91,10 @@ function compile_observables(acs::ReactionNetworkSchema)
             opts.range,
         )
 
-        push!(observables, name => Observable(string(name), -Inf, range, opts.every, on, missing))
+        push!(
+            observables,
+            name => Observable(string(name), -Inf, range, opts.every, on, missing),
+        )
     end
 
     return observables
