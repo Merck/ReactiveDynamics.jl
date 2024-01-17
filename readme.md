@@ -45,10 +45,12 @@ Once a network's dynamics is specified, it can be converted to a problem and sim
 The package is an integral part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business.
  
 As the framework evolves, multiple functionalities have matured enough to become standalone packages.
- 
-This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. In the present context, expression comprehensions are used to generate complex dynamics from user-specified template transitions.
- 
-Another package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
+
+This includes **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
+
+**[CEEDesigns.jl](https://github.com/Merck/CEEDesigns.jl)** is a decision-making framework for the cost-efficient design of experiments, with direct applications in drug research, healthcare, and various other fields. Typically, a design consists of multiple experiments. Each experiment is regarded as an option to acquire additional experimental evidence and is associated with a monetary cost and an execution time. The framework, then, aims to select experiments that balance the value of acquired information and the incurred costs.
+
+Another package is **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. In the present context, expression comprehensions are used to generate complex dynamics from user-specified template transitions.
 
 ## Four Sketches
 
