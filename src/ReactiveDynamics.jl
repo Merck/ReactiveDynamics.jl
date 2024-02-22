@@ -37,6 +37,7 @@ TheoryReactionNetwork = BasicSchema(
         :ModalityAttributeT,
         :PcsOptT,
         :PrmAttributeT,
+        :BoolAttributeT,
     ], # AttrTypes
     [
         # species
@@ -47,6 +48,7 @@ TheoryReactionNetwork = BasicSchema(
         (:specCost, :S, :SampleableAttributeT),
         (:specReward, :S, :SampleableAttributeT),
         (:specValuation, :S, :SampleableAttributeT),
+        (:specStructured, :S, :BoolAttributeT),
         # transitions
         (:trans, :T, :SampleableAttributeT),
         (:transPriority, :T, :SampleableAttributeT),
@@ -55,6 +57,7 @@ TheoryReactionNetwork = BasicSchema(
         (:transProbOfSuccess, :T, :SampleableAttributeT),
         (:transCapacity, :T, :SampleableAttributeT),
         (:transMaxLifeTime, :T, :SampleableAttributeT),
+        (:transPreAction, :T, :SampleableAttributeT),
         (:transPostAction, :T, :SampleableAttributeT),
         (:transMultiplier, :T, :SampleableAttributeT),
         (:transName, :T, :DescriptiveAttributeT),
@@ -81,6 +84,7 @@ const ReactionNetworkSchema = FoldedReactionNetworkType{
     Set{Symbol},
     FoldedObservable,
     Any,
+    Bool
 }
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
@@ -100,6 +104,7 @@ Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
 prettynames = Dict(
     :transRate => [:rate],
     :specInitUncertainty => [:uncertainty, :stoch, :stochasticity],
+    :transPreAction => [:preAction, :pre],
     :transPostAction => [:postAction, :post],
     :transName => [:name, :interpretation],
     :transPriority => [:priority],
@@ -117,6 +122,7 @@ defargs = Dict(
         :transCycleTime => 0.0,
         :transMaxLifeTime => Inf,
         :transMultiplier => 1,
+        :transPreAction => :(),
         :transPostAction => :(),
         :transName => missing,
     ),
@@ -126,6 +132,7 @@ defargs = Dict(
         :specCost => 0.0,
         :specReward => 0.0,
         :specValuation => 0.0,
+        :specStructured => false,
     ),
     :P => Dict{Symbol,Any}(:prmVal => missing),
     :M => Dict{Symbol,Any}(:metaVal => missing),

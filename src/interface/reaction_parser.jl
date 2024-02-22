@@ -3,7 +3,7 @@
 using MacroTools: postwalk
 
 struct FoldedReactant
-    species::Symbol
+    species::Union{Expr, Symbol}
     stoich::SampleableValues
     modality::Set{Symbol}
 end
@@ -71,6 +71,8 @@ function recursive_find_reactants!(
             4:length(ex.args),
         )
         recursive_find_reactants!(ex.args[3], mult, mods, reactants)
+    elseif isexpr(ex, :call)
+        push!(reactants, FoldedReactant(ex, mult, mods))
     else
         @error("malformed reaction")
     end

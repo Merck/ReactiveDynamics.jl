@@ -1,24 +1,24 @@
 # model joins
-export @join
+export union_acs!, @join
 
 using MacroTools
 using MacroTools: prewalk
 
 """
-Merge `acs2` onto `acs1`, the attributes in `acs2` taking precedence. Identify respective species given `eqs`, renaming species in `acs2`.
+Merge `acs2` into `acs1`, the attributes in `acs2` taking precedence. Identify respective species given `eqs`, renaming species in `acs2`.
 """
-function union_acs!(acs1, acs2, name = gensym("acs_"), eqs = [])
+function union_acs!(acs1, acs2, name = gensym("acs"), eqs = [])
     acs2 = deepcopy(acs2)
     prepend!(acs2, name, eqs)
+
     for i in parts(acs2, :S)
         inc = incident(acs1, acs2[i, :specName], :specName)
-        isempty(inc) && (inc = add_part!(acs1, :S; specName = acs2[i, :specName]);
-        assign_defaults!(acs1))
-        return (acs1, acs2)
-        println(first(inc))
-        println(acs1[first(inc), :specModality])
-        println()
-        println(acs2[:, :specModality])
+
+        if isempty(inc)
+            inc = add_part!(acs1, :S; specName = acs2[i, :specName])
+            assign_defaults!(acs1)
+        end
+
         union!(acs1[first(inc), :specModality], acs2[i, :specModality])
 
         for attr in propertynames(acs1.subparts)
@@ -30,7 +30,9 @@ function union_acs!(acs1, acs2, name = gensym("acs_"), eqs = [])
     new_trans_ix = add_parts!(acs1, :T, nparts(acs2, :T))
     for attr in propertynames(acs2.subparts)
         !occursin("trans", string(attr)) && continue
-        acs1[new_trans_ix, attr] .= acs2[:, attr]
+        for (ix1, ix2) in enumerate(new_trans_ix)
+            acs1[ix2, attr] = acs2[ix1, attr]
+        end
     end
 
     foreach(
@@ -69,10 +71,10 @@ function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
         attr_ = acs[:, attr]
-        for i = 1:length(attr_)
+        for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
-            attr_[i] isa Expr && (attr_[i] = prepend_obs(attr_[i], name))
+            acs[i, attr] = attr_[i]
         end
     end
 

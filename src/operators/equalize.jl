@@ -1,4 +1,4 @@
-export @equalize
+export equalize!, @equalize
 
 expand_name_ff(ex) =
     if ex isa Expr && isexpr(ex, :macrocall)
@@ -53,9 +53,10 @@ function equalize!(acs::ReactionNetworkSchema, eqs = [])
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
         attr_ = acs[:, attr]
-        for i = 1:length(attr_)
+        for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
+            acs[i, attr] = attr_[i]
         end
     end
 

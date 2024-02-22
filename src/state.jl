@@ -12,7 +12,12 @@ end
 Ongoing transition auxiliary structure.
 """
 @aagent struct Transition
+    i::Int
+
     trans::Dict{Symbol,Any}
+
+    bound_structured_agents::Vector{AbstractAlgebraicAgent}
+    nonblock_structured_agents::Vector{AbstractAlgebraicAgent}
 
     t::Float64
     q::Float64
@@ -20,6 +25,7 @@ Ongoing transition auxiliary structure.
 end
 
 Base.getindex(state::Transition, key) = state.trans[key]
+Base.setindex!(state::Transition, val, key) = state.trans[key] = val
 
 @aagent struct Observable
     last::Float64 # last sampling time
@@ -40,6 +46,8 @@ end
     p::Any
     t::Float64
 
+    structured_species::Vector{Symbol}
+
     tspan::Tuple{Float64,Float64}
     dt::Float64
 
@@ -55,17 +63,21 @@ end
 
 # get value of a numeric expression
 # evaluate compiled numeric expression in context of (u, p, t)
-function context_eval(state::ReactionNetworkProblem, o)
-    o = o isa Function ? Base.invokelatest(o, state) : o
-
+function context_eval(state::ReactionNetworkProblem, transition, o)
+    o = o isa Function ? Base.invokelatest(o, state, transition) : o
+    
     return o isa Sampleable ? rand(o) : o
 end
 
 function Base.getindex(state::ReactionNetworkProblem, keys...)
-    return context_eval(
-        state,
-        (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]],
-    )
+    if any(occursin.(["transPreAction", "transPostAction"], Ref(string(keys[2]))))
+        return state.acs[keys[1], keys[2]]
+    else
+        return context_eval(
+            state, nothing,
+            (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]],
+        )
+    end
 end
 
 function init_u!(state::ReactionNetworkProblem)
@@ -120,7 +132,7 @@ function resample!(state::ReactionNetworkProblem, o::Observable)
     o.last = state.t
     isempty(o.range) && (return o.val = missing)
 
-    return o.sampled = context_eval(state, sample_range(o.range, state))
+    return o.sampled = context_eval(state, nothing, sample_range(o.range, state))
 end
 
 resample(state::ReactionNetworkProblem, o::Symbol) = resample!(state, state.observables[o])
@@ -164,10 +176,10 @@ function sample_transitions!(state::ReactionNetworkProblem)
         l_line, r_line = prune_r_line(state.transition_recipes[:trans][i])
 
         for attr in keys(state.transition_recipes)
-            attr ∈ [:trans, :transPostAction, :transActivated, :transHash] && continue
+            (attr ∈ [:trans, :transPreAction, :transPostAction, :transActivated, :transHash]) && continue
             push!(
                 state.transitions[attr],
-                context_eval(state, state.transition_recipes[attr][i]),
+                context_eval(state, nothing, state.transition_recipes[attr][i]),
             )
         end
 
@@ -179,17 +191,20 @@ function sample_transitions!(state::ReactionNetworkProblem)
                 UnfoldedReactant(
                     j,
                     r.species,
-                    context_eval(state, state.wrap_fun(r.stoich)),
+                    context_eval(state, nothing, state.wrap_fun(r.stoich)),
                     r.modality ∪ state[j, :specModality],
                 ),
             )
         end
+        
         push!(state.transitions[:transLHS], reactants)
         push!(state.transitions[:transRHS], r_line)
+        
         foreach(
             k -> push!(state.transitions[k], state.transition_recipes[k][i]),
-            [:transPostAction, :transToSpawn, :transHash],
+            [:transPreAction, :transPostAction, :transToSpawn, :transHash],
         )
+
         state.transition_recipes[:transToSpawn] .= 0
     end
 end

@@ -295,6 +295,8 @@ function recursively_find_reactants!(reactants, pcs, ex::SampleableValues)
         end
     elseif isexpr(ex, :macrocall)
         recursively_find_reactants!(reactants, pcs, ex.args[3])
+    elseif isexpr(ex, :call)
+        push!(reactants, ex.args[1])
     else
         push!(reactants, underscorize(ex))
     end

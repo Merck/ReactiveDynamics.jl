@@ -15,7 +15,7 @@ Compute resource requirements given transition quantities.
 """
 function get_reqs_init!(reqs, qs, state)
     reqs .= 0.0
-    for i = 1:size(reqs, 2)
+    for i in axes(reqs, 2)
         for tok in state[i, :transLHS]
             !any(m -> m in tok.modality, [:rate, :nonblock]) &&
                 (reqs[tok.index, i] += qs[i] * tok.stoich)
@@ -30,11 +30,14 @@ Compute resource requirements given transition quantities.
 """
 function get_reqs_ongoing!(reqs, qs, state)
     reqs .= 0.0
-    for i = 1:length(state.ongoing_transitions)
+    for i in eachindex(state.ongoing_transitions)
         for tok in state.ongoing_transitions[i][:transLHS]
             in(:rate, tok.modality) &&
                 (state.ongoing_transitions[i][:transCycleTime] > 0) &&
                 (reqs[tok.index, i] += qs[i] * tok.stoich * state.dt)
+            if in(:rate, tok.modality) && in(tok.species, state.structured_species)
+                error("Modality `:rate` is not supported for structured species in transition $(trans[:transName]).")
+            end
             in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
         end
     end
@@ -55,7 +58,7 @@ end
 
 function alloc_weighted!(reqs, u, priorities, state)
     allocs = zero(reqs)
-    for i = 1:size(reqs, 1)
+    for i in axes(reqs, 1)
         s = sum(reqs[i, :])
         u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
         foreach(j -> allocs[i, j] = reqs[i, j] * priorities[j], 1:size(reqs, 2))
@@ -69,7 +72,7 @@ end
 function alloc_greedy!(reqs, u, priorities, state)
     allocs = zero(reqs)
     sorted_trans = sort(1:size(reqs, 2); by = i -> -priorities[i])
-    for i = 1:size(reqs, 1)
+    for i in axes(reqs, 1)
         s = sum(reqs[i, :])
         u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
         a = u[i]
@@ -97,12 +100,14 @@ function get_frac_satisfied(allocs, reqs, state)
     return qs
 end
 
+isinteger(x::Number) = x == trunc(x)
+
 """
 Given available allocations and qties of transitions requested to spawn, return number of spawned transitions. Update `alloc` to match actual allocation.
 """
 function get_init_satisfied(allocs, qs, state)
     reqs = zero(allocs)
-    for i = 1:size(allocs, 2)
+    for i in axes(allocs, 2)
         all(allocs[:, i] .>= 0) || (allocs[:, i] .= 0.0; qs[i] = 0)
         for tok in state[i, :transLHS]
             !any(m -> m in tok.modality, [:rate, :nonblock]) &&
@@ -119,6 +124,7 @@ function get_init_satisfied(allocs, qs, state)
 
     return qs
 end
+
 
 """
 Evolve transitions, spawn new transitions.
@@ -165,16 +171,43 @@ function evolve!(state)
 
     # add spawned transitions to the heap
     for i in parts(state, :T)
-        qs[i] != 0 && push!(
-            state.ongoing_transitions,
-            Transition(
+        if qs[i] != 0
+            transition = Transition(
                 string(state[i, :transName]) * "_@$(state.t)",
+                i,
                 get_sampled_transition(state, i),
+                AbstractAlgebraicAgent[],
+                AbstractAlgebraicAgent[],
                 state.t,
                 qs[i],
                 0.0,
-            ),
-        )
+            )
+            push!(state.ongoing_transitions, transition)
+
+            bound = transition.bound_structured_agents
+
+            for (j, type) in enumerate(state.acs[:, :specName])
+                if type ∈ state.structured_species
+                    if !isinteger(allocs[j, i])
+                        error("For structured species, stoichiometry coefficient must be integer in transition $i.")
+                    end
+
+                    all_of_type = collect(values(inners(getagent(state, "structured/$(string(type))"))))
+                    filter!(!isblocked, all_of_type)
+                    sort!(all_of_type, by=a->priority(a, state.acs[i, :transName]), rev=true)
+
+                    ix = 1
+                    while allocs[j, i] > 0 && ix <= length(all_of_type)
+                        all_of_type[ix].bound_transition = transition
+                        push!(bound, all_of_type[ix])
+                        allocs[j, i] -= 1
+                        ix += 1
+                    end
+                end
+            end
+
+            context_eval(state, transition, state.wrap_fun(state.acs[i, :transPreAction]))
+        end
     end
 
     ## evolve ongoing transitions 
@@ -204,10 +237,33 @@ function evolve!(state)
     state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
-    foreach(
-        i -> state.ongoing_transitions[i].state += qs[i] * state.dt,
-        eachindex(state.ongoing_transitions),
-    )
+    for i in eachindex(state.ongoing_transitions)
+        transition = state.ongoing_transitions[i]
+        if qs[i] != 0
+            transition.state += qs[i] * state.dt
+            bound = transition.nonblock_structured_agents
+
+            for (j, type) in enumerate(state.acs[:, :specName])
+                if type ∈ state.structured_species
+                    if !isinteger(allocs[j, i])
+                        error("For structured species, stoichiometry coefficient must be integer in transition $i.")
+                    end
+
+                    all_of_type = collect(values(inners(getagent(state, "structured/$(string(type))"))))
+                    filter!(!isblocked, all_of_type)
+                    sort!(all_of_type, by=a -> priority(a, state.acs[i, :transName]), rev=true)
+
+                    ix = 1
+                    while allocs[j, i] > 0 && ix <= length(all_of_type)
+                        all_of_type[ix].bound_transition = transition
+                        push!(bound, all_of_type[ix])
+                        allocs[j, i] -= 1
+                        ix += 1
+                    end
+                end
+            end
+        end
+    end
 
     push!(state.log, (:allocation, state.t, actual_allocs))
     return push!(
@@ -243,45 +299,74 @@ function finish!(state)
     while ix <= length(state.ongoing_transitions)
         trans_ = state.ongoing_transitions[ix]
         ((state.t - trans_.t) < trans_.trans[:transMaxLifeTime]) &&
-            trans_.state < trans_[:transCycleTime] &&
+            (trans_.state < trans_[:transCycleTime]) &&
             (ix += 1; continue)
-        toks_rhs = []
-        for r in extract_reactants(trans_[:transRHS], state)
-            i = find_index(r.species, state)
-            push!(
-                toks_rhs,
-                UnfoldedReactant(
-                    i,
-                    r.species,
-                    context_eval(state, state.wrap_fun(r.stoich)),
-                    r.modality ∪ state[i, :specModality],
-                ),
-            )
-        end
-        for tok in trans_[:transLHS]
-            in(:conserved, tok.modality) && (
-                state.u[tok.index] +=
-                    trans_.q *
-                    tok.stoich *
-                    (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
-            )
-        end
-
+        
         q = if trans_.state >= trans_[:transCycleTime]
             rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
             0
         end
 
-        foreach(
-            tok -> (state.u[tok.index] += q * tok.stoich;
-            val_reward += state[tok.index, :specReward] * q * tok.stoich),
-            toks_rhs,
-        )
+        for r in extract_reactants(trans_[:transRHS], state)
+            if r.species isa Expr
+                if !(r.species.args[1] ∈ state.structured_species)
+                    error("Unresolved structured species species $(r.species.args[1]).")
+                end
 
-        context_eval(state, trans_.trans[:transPostAction])
+                i = find_index(r.species.args[1], state)
+                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+
+                state.u[i] += q * stoich
+                val_reward += state[i, :specReward] * q * stoich
+
+                for _ in 1:q
+                    a = context_eval(state, trans_, state.wrap_fun(r.species))
+                    entangle!(getagent(state, "structured/$(r.species.args[1])"), a)
+                end
+            else
+                i = find_index(r.species, state)
+                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+
+                state.u[i] += q * stoich
+                val_reward += state[i, :specReward] * q * stoich
+            end
+        end
+
+        for tok in trans_[:transLHS]
+            if in(:conserved, tok.modality)
+                state.u[tok.index] +=
+                    trans_.q *
+                    tok.stoich *
+                    (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
+                if tok.species ∈ state.structured_species
+                    for _ in 1:(trans_.q * tok.stoich)
+                        trans_.bound_structured_agents[begin].bound_transition = nothing
+                        deleteat!(trans_.bound_structured_agents, 1)
+                    end
+                end
+            end
+
+            if in(:nonblock, tok.modality)
+                if in(:conserved, tok.modality)
+                    error("Modalities `:conserved` and `:nonblock` cannot be specified at the same time.")
+                end
+
+                state.u[tok.index] += trans_.q * tok.stoich 
+                if tok.species ∈ state.structured_species
+                    for _ in 1:(trans_.q * tok.stoich)
+                        trans_.nonblock_structured_agents[begin].bound_transition = nothing
+                        deleteat!(trans_.nonblock_structured_agents, 1)
+                    end
+                end
+            end
+        end
+
+        context_eval(state, trans_, state.wrap_fun(state.acs[trans_.i, :transPostAction]))
+
         terminated_all[Symbol(trans_[:transHash])] =
             get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
+        
         terminated_success[Symbol(trans_[:transHash])] =
             get(terminated_success, Symbol(trans_[:transHash]), 0) + q
 
@@ -301,6 +386,14 @@ function free_blocked_species!(state)
     for trans in state.ongoing_transitions, tok in trans[:transLHS]
         in(:nonblock, tok.modality) && (state.u[tok.index] += q * tok.stoich)
     end
+
+    for trans in state.ongoing_transitions
+        for a in trans.nonblock_structured_agents
+            a.bound_transition = nothing
+        end
+
+        empty!(trans.nonblock_structured_agents)
+    end
 end
 
 ## resolve tspan, tstep
@@ -319,7 +412,7 @@ function ReactionNetworkProblem(
     acs::ReactionNetworkSchema,
     u0 = Dict(),
     p = Dict();
-    name = "reactive_network",
+    name = "reaction_network",
     kwargs...,
 )
     assign_defaults!(acs)
@@ -333,7 +426,10 @@ function ReactionNetworkProblem(
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
 
     acs = remove_choose(acs)
-    attrs, transitions, wrap_fun = compile_attrs(acs)
+
+    structured_species_names = acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
+
+    attrs, transitions, wrap_fun = compile_attrs(acs, structured_species_names)
     transition_recipes = transitions
     u0_init = zeros(nparts(acs, :S))
 
@@ -374,6 +470,7 @@ function ReactionNetworkProblem(
         u0_init,
         merge(p, Dict(:strategy => get(keywords, :alloc_strategy, :weighted))),
         keywords[:tspan][1],
+        Symbol[],
         keywords[:tspan],
         get(keywords, :tstep, 1),
         transitions,
@@ -383,6 +480,14 @@ function ReactionNetworkProblem(
         wrap_fun,
         sol,
     )
+
+    entangle!(network, FreeAgent("structured"))
+
+    structured_species = filter(i -> acs[i, :specStructured], 1:nparts(acs, :S))
+    for i in structured_species
+        push!(network.structured_species, acs[i, :specName])
+        entangle!(getagent(network, "structured"), FreeAgent(string(acs[i, :specName])))
+    end
 
     save!(network)
 
@@ -400,12 +505,20 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     return state
 end
 
+function update_u_structured!(state)
+    for (i, type) in enumerate(state.acs[:, :specName])
+        structured_agents_type = values(inners(getagent(state, "structured/$type")))
+        state.u[i] = count(!isblocked, structured_agents_type)
+    end
+end
+
 function AlgebraicAgents._step!(state::ReactionNetworkProblem)
     free_blocked_species!(state)
     update_observables(state)
     sample_transitions!(state)
     evolve!(state)
     finish!(state)
+
     event_action!(state)
 
     push!(

@@ -26,16 +26,17 @@ end
 Recursively substitute model variables. Subsitution pairs are specified in `varmap`.
 """
 function recursively_substitute_vars!(varmap, ex)
-    ex isa Symbol && return (haskey(varmap, ex) ? varmap[ex] : ex)
-    ex isa Expr && for i = 1:length(ex.args)
-        if ex.args[i] isa Expr
-            recursively_substitute_vars!(varmap, ex.args[i])
-        else
-            (
-                ex.args[i] isa Symbol &&
-                haskey(varmap, ex.args[i]) &&
-                (ex.args[i] = varmap[ex.args[i]])
-            )
+    if ex isa Symbol
+        return haskey(varmap, ex) ? varmap[ex] : ex
+    elseif ex isa Expr
+        for i = 1:length(ex.args)
+            if ex.args[i] isa Expr
+                ex.args[i] = recursively_substitute_vars!(varmap, ex.args[i])
+            else
+                if ex.args[i] isa Symbol && haskey(varmap, ex.args[i])
+                    ex.args[i] = varmap[ex.args[i]]
+                end
+            end
         end
     end
 
@@ -114,7 +115,12 @@ function wrap_expr(fex, species_names, prm_names, varmap)
 
     # the function shall be a function of the dynamic ReactionNetworkSchema structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" acset
-    return eval(:(state -> $letex))
+
+    return eval(quote
+        function (state, transition)
+            $letex
+        end
+    end)
 end
 
 function get_wrap_fun(acs::ReactionNetworkSchema)
@@ -133,8 +139,9 @@ function skip_compile(attr)
            (string(attr) == "trans")
 end
 
-function compile_attrs(acs::ReactionNetworkSchema)
-    species_names = collect(acs[:, :specName])
+function compile_attrs(acs::ReactionNetworkSchema, structured_species)
+    species_names = setdiff(collect(acs[:, :specName]), structured_species)
+
     prm_names = collect(acs[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
     for name in prm_names
