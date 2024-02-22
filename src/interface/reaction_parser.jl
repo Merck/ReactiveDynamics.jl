@@ -3,7 +3,7 @@
 using MacroTools: postwalk
 
 struct FoldedReactant
-    species::Union{Expr, Symbol}
+    species::Union{Expr,Symbol}
     stoich::SampleableValues
     modality::Set{Symbol}
 end

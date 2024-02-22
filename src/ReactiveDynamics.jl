@@ -84,7 +84,7 @@ const ReactionNetworkSchema = FoldedReactionNetworkType{
     Set{Symbol},
     FoldedObservable,
     Any,
-    Bool
+    Bool,
 }
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)

@@ -36,7 +36,9 @@ function get_reqs_ongoing!(reqs, qs, state)
                 (state.ongoing_transitions[i][:transCycleTime] > 0) &&
                 (reqs[tok.index, i] += qs[i] * tok.stoich * state.dt)
             if in(:rate, tok.modality) && in(tok.species, state.structured_species)
-                error("Modality `:rate` is not supported for structured species in transition $(trans[:transName]).")
+                error(
+                    "Modality `:rate` is not supported for structured species in transition $(trans[:transName]).",
+                )
             end
             in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
         end
@@ -125,7 +127,6 @@ function get_init_satisfied(allocs, qs, state)
     return qs
 end
 
-
 """
 Evolve transitions, spawn new transitions.
 """
@@ -189,12 +190,20 @@ function evolve!(state)
             for (j, type) in enumerate(state.acs[:, :specName])
                 if type ∈ state.structured_species
                     if !isinteger(allocs[j, i])
-                        error("For structured species, stoichiometry coefficient must be integer in transition $i.")
+                        error(
+                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                        )
                     end
 
-                    all_of_type = collect(values(inners(getagent(state, "structured/$(string(type))"))))
+                    all_of_type = collect(
+                        values(inners(getagent(state, "structured/$(string(type))"))),
+                    )
                     filter!(!isblocked, all_of_type)
-                    sort!(all_of_type, by=a->priority(a, state.acs[i, :transName]), rev=true)
+                    sort!(
+                        all_of_type;
+                        by = a -> priority(a, state.acs[i, :transName]),
+                        rev = true,
+                    )
 
                     ix = 1
                     while allocs[j, i] > 0 && ix <= length(all_of_type)
@@ -246,12 +255,20 @@ function evolve!(state)
             for (j, type) in enumerate(state.acs[:, :specName])
                 if type ∈ state.structured_species
                     if !isinteger(allocs[j, i])
-                        error("For structured species, stoichiometry coefficient must be integer in transition $i.")
+                        error(
+                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                        )
                     end
 
-                    all_of_type = collect(values(inners(getagent(state, "structured/$(string(type))"))))
+                    all_of_type = collect(
+                        values(inners(getagent(state, "structured/$(string(type))"))),
+                    )
                     filter!(!isblocked, all_of_type)
-                    sort!(all_of_type, by=a -> priority(a, state.acs[i, :transName]), rev=true)
+                    sort!(
+                        all_of_type;
+                        by = a -> priority(a, state.acs[i, :transName]),
+                        rev = true,
+                    )
 
                     ix = 1
                     while allocs[j, i] > 0 && ix <= length(all_of_type)
@@ -301,7 +318,7 @@ function finish!(state)
         ((state.t - trans_.t) < trans_.trans[:transMaxLifeTime]) &&
             (trans_.state < trans_[:transCycleTime]) &&
             (ix += 1; continue)
-        
+
         q = if trans_.state >= trans_[:transCycleTime]
             rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
@@ -320,7 +337,7 @@ function finish!(state)
                 state.u[i] += q * stoich
                 val_reward += state[i, :specReward] * q * stoich
 
-                for _ in 1:q
+                for _ = 1:q
                     a = context_eval(state, trans_, state.wrap_fun(r.species))
                     entangle!(getagent(state, "structured/$(r.species.args[1])"), a)
                 end
@@ -340,7 +357,7 @@ function finish!(state)
                     tok.stoich *
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
                 if tok.species ∈ state.structured_species
-                    for _ in 1:(trans_.q * tok.stoich)
+                    for _ = 1:(trans_.q*tok.stoich)
                         trans_.bound_structured_agents[begin].bound_transition = nothing
                         deleteat!(trans_.bound_structured_agents, 1)
                     end
@@ -349,12 +366,14 @@ function finish!(state)
 
             if in(:nonblock, tok.modality)
                 if in(:conserved, tok.modality)
-                    error("Modalities `:conserved` and `:nonblock` cannot be specified at the same time.")
+                    error(
+                        "Modalities `:conserved` and `:nonblock` cannot be specified at the same time.",
+                    )
                 end
 
-                state.u[tok.index] += trans_.q * tok.stoich 
+                state.u[tok.index] += trans_.q * tok.stoich
                 if tok.species ∈ state.structured_species
-                    for _ in 1:(trans_.q * tok.stoich)
+                    for _ = 1:(trans_.q*tok.stoich)
                         trans_.nonblock_structured_agents[begin].bound_transition = nothing
                         deleteat!(trans_.nonblock_structured_agents, 1)
                     end
@@ -366,7 +385,7 @@ function finish!(state)
 
         terminated_all[Symbol(trans_[:transHash])] =
             get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
-        
+
         terminated_success[Symbol(trans_[:transHash])] =
             get(terminated_success, Symbol(trans_[:transHash]), 0) + q
 
@@ -427,7 +446,8 @@ function ReactionNetworkProblem(
 
     acs = remove_choose(acs)
 
-    structured_species_names = acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
+    structured_species_names =
+        acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
 
     attrs, transitions, wrap_fun = compile_attrs(acs, structured_species_names)
     transition_recipes = transitions

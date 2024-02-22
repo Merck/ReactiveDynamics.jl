@@ -118,7 +118,7 @@ function wrap_expr(fex, species_names, prm_names, varmap)
 
     return eval(quote
         function (state, transition)
-            $letex
+            return $letex
         end
     end)
 end

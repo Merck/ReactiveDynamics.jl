@@ -9,7 +9,7 @@ abstract type AbstractStructuredSpecies <: AbstractAlgebraicAgent end
 # In general, we will probably assume that each "structured agent" type implements this field.
 # Otherwise, it would be possible to implement getter and setter interface and use it from within ReaDyn.
 @aagent FreeAgent struct BaseStructuredSpecies
-    bound_transition::Union{Nothing, ReactiveDynamics.Transition}
+    bound_transition::Union{Nothing,ReactiveDynamics.Transition}
 end
 
 # We use this to let the network know that the type is structured.
@@ -27,16 +27,21 @@ end
 # Convenience macro to define structured species.
 macro structured(network, type)
     name = Docs.namify(type.args[2])
-    
-    quote       
-        $(AlgebraicAgents.aagent(BaseStructuredSpecies, AbstractStructuredSpecies, type, ReactiveDynamics))
+
+    quote
+        $(AlgebraicAgents.aagent(
+            BaseStructuredSpecies,
+            AbstractStructuredSpecies,
+            type,
+            ReactiveDynamics,
+        ))
         register_structured_species!($(esc(network)), $(QuoteNode(name)))
     end
 end
 
 # Add a structured agent instance to an instance of a reaction network.
 function add_structured_species!(problem::ReactionNetworkProblem, agent)
-    entangle!(getagent(problem, "structured/$(nameof(typeof(agent)))"), agent)
+    return entangle!(getagent(problem, "structured/$(nameof(typeof(agent)))"), agent)
 end
 
 import AlgebraicAgents

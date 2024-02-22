@@ -22,17 +22,19 @@ network = @ReactionNetworkSchema
     # With specified intensities, generate experimental resources.
     ρ1, ∅ --> R1
     ρ2, ∅ --> R2
-    
+
     # Generate "Molecule 1" (where the integer corresponds to a "state" of, e.g., experimental triage).
     ρ3, ∅ --> M1(@t(), rand(4))
-    
+
     # Based on properties of particular "structured agent" assigned to the transition,
     # we can update the attributes of the instance of a transition (such as probability of success).
-    
+
     # Transition "Molecule 1" into "Molecule 2."
     # Update transition probability based on properties of "M1," 
     # which was assigned as a "resource" to the transition.
-    ρ4, R1 + M1 --> M2(@t(), rand(4)), preAction => update_prob_transition(state, transition)
+    ρ4,
+    R1 + M1 --> M2(@t(), rand(4)),
+    preAction => update_prob_transition(state, transition)
 end
 
 @prob_init network R1 = 10 R2 = 15
@@ -48,8 +50,8 @@ end
 # We use `@structured` macro, which is a convenience wrapper around `@aagent`),
 # defined in ReactiveDynamics.jl
 @structured network struct M1
-    descriptor
-    time_created
+    descriptor::Any
+    time_created::Any
 end
 
 using Random
@@ -66,7 +68,7 @@ ReactiveDynamics.M1(time, descriptor) = M1("M1" * randstring(4), nothing, descri
     update_prob_transition = function (state, transition)
         if !isnothing(transition) && !isempty(transition.bound_structured_agents)
             bound_agent = first(transition.bound_structured_agents)
-            
+
             transition[:transProbOfSuccess] = min(1.0, sum(bound_agent.descriptor))
         end
     end
@@ -77,8 +79,8 @@ end
 # of ReactiveDynamics.
 @register begin
     @aagent BaseStructuredSpecies AbstractStructuredSpecies struct M2
-        descriptor
-        time_created
+        descriptor::Any
+        time_created::Any
     end
 
     using Random
@@ -92,7 +94,7 @@ ReactiveDynamics.register_structured_species!(network, :M2)
 # Instantiate the network.
 network_instance = ReactionNetworkProblem(network)
 
-for i in 1:2
+for i = 1:2
     add_structured_species!(network_instance, ReactiveDynamics.M1(0.0, rand(4)))
 end
 
