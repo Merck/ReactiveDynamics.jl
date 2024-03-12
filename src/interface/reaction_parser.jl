@@ -3,7 +3,7 @@
 using MacroTools: postwalk
 
 struct FoldedReactant
-    species::Symbol
+    species::Union{Expr,Symbol}
     stoich::SampleableValues
     modality::Set{Symbol}
 end
@@ -29,7 +29,7 @@ function recursively_choose(r_line, state)
     end
 end
 
-function extract_reactants(r_line, state::ReactiveDynamicsState)
+function extract_reactants(r_line, state::ReactionNetworkProblem)
     r_line = recursively_choose(r_line, state)
 
     return recursive_find_reactants!(
@@ -63,6 +63,9 @@ function recursive_find_reactants!(
         for i = 2:length(ex.args)
             recursive_find_reactants!(ex.args[i], mult, mods, reactants)
         end
+    elseif isexpr(ex, :call) ||
+           (ex.head == :macrocall && macroname(ex) ∈ [:structured, :move])
+        push!(reactants, FoldedReactant(ex, mult, mods))
     elseif ex.head == :macrocall
         mods = copy(mods)
         macroname(ex) in species_modalities && push!(mods, macroname(ex))

@@ -1,9 +1,7 @@
-# assortment of SciML-compatible problem solvers
-
-export DiscreteProblem
-
-using DiffEqBase, DifferentialEquations
 using Distributions
+using Random
+
+export ReactionNetworkProblem
 
 function get_sampled_transition(state, i)
     transition = Dict{Symbol,Any}()
@@ -17,7 +15,7 @@ Compute resource requirements given transition quantities.
 """
 function get_reqs_init!(reqs, qs, state)
     reqs .= 0.0
-    for i = 1:size(reqs, 2)
+    for i in axes(reqs, 2)
         for tok in state[i, :transLHS]
             !any(m -> m in tok.modality, [:rate, :nonblock]) &&
                 (reqs[tok.index, i] += qs[i] * tok.stoich)
@@ -32,11 +30,16 @@ Compute resource requirements given transition quantities.
 """
 function get_reqs_ongoing!(reqs, qs, state)
     reqs .= 0.0
-    for i = 1:length(state.ongoing_transitions)
+    for i in eachindex(state.ongoing_transitions)
         for tok in state.ongoing_transitions[i][:transLHS]
             in(:rate, tok.modality) &&
                 (state.ongoing_transitions[i][:transCycleTime] > 0) &&
-                (reqs[tok.index, i] += qs[i] * tok.stoich * state.solverargs[:tstep])
+                (reqs[tok.index, i] += qs[i] * tok.stoich * state.dt)
+            if in(:rate, tok.modality) && in(tok.species, state.structured_token)
+                error(
+                    "Modality `:rate` is not supported for structured species in transition $(trans[:transName]).",
+                )
+            end
             in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
         end
     end
@@ -57,7 +60,7 @@ end
 
 function alloc_weighted!(reqs, u, priorities, state)
     allocs = zero(reqs)
-    for i = 1:size(reqs, 1)
+    for i in axes(reqs, 1)
         s = sum(reqs[i, :])
         u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
         foreach(j -> allocs[i, j] = reqs[i, j] * priorities[j], 1:size(reqs, 2))
@@ -71,7 +74,7 @@ end
 function alloc_greedy!(reqs, u, priorities, state)
     allocs = zero(reqs)
     sorted_trans = sort(1:size(reqs, 2); by = i -> -priorities[i])
-    for i = 1:size(reqs, 1)
+    for i in axes(reqs, 1)
         s = sum(reqs[i, :])
         u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
         a = u[i]
@@ -99,21 +102,25 @@ function get_frac_satisfied(allocs, reqs, state)
     return qs
 end
 
+isinteger(x::Number) = x == trunc(x)
+
 """
 Given available allocations and qties of transitions requested to spawn, return number of spawned transitions. Update `alloc` to match actual allocation.
 """
 function get_init_satisfied(allocs, qs, state)
     reqs = zero(allocs)
-    for i = 1:size(allocs, 2)
+    for i in axes(allocs, 2)
         all(allocs[:, i] .>= 0) || (allocs[:, i] .= 0.0; qs[i] = 0)
         for tok in state[i, :transLHS]
             !any(m -> m in tok.modality, [:rate, :nonblock]) &&
                 (reqs[tok.index, i] += tok.stoich)
         end
     end
+
     for i in eachindex(allocs)
         allocs[i] = reqs[i] == 0.0 ? Inf : floor(allocs[i] / reqs[i])
     end
+
     foreach(i -> qs[i] = min(qs[i], minimum(allocs[:, i])), 1:size(reqs, 2))
     foreach(i -> allocs[:, i] .= reqs[:, i] * qs[i], 1:size(reqs, 2))
 
@@ -123,9 +130,8 @@ end
 """
 Evolve transitions, spawn new transitions.
 """
-function evolve!(u, state)
-    update_u!(state, u)
-    actual_allocs = zero(u)
+function evolve!(state)
+    actual_allocs = zero(state.u)
 
     ## schedule new transitions
     reqs = zeros(nparts(state, :S), nparts(state, :T))
@@ -133,11 +139,12 @@ function evolve!(u, state)
 
     foreach(
         i -> qs[i] = state[i, :transRate] * state[i, :transMultiplier],
-        1:nparts(state, :T),
+        parts(state, :T),
     )
     qs .= ceil.(Ref(Int), qs)
-    for i = 1:nparts(state, :T)
-        new_instances = state.solverargs[:tstep] * qs[i] + state[i, :transToSpawn]
+
+    for i in parts(state, :T)
+        new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
             count(t -> t[:transHash] == state[i, :transHash], state.ongoing_transitions)
@@ -147,8 +154,9 @@ function evolve!(u, state)
     end
 
     reqs = get_reqs_init!(reqs, qs, state)
-    allocs =
-        get_allocs!(reqs, u, state, state[:, :transPriority], state.solverargs[:strategy])
+
+    allocs = get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
+
     qs .= get_init_satisfied(allocs, qs, state)
 
     push!(
@@ -159,18 +167,67 @@ function evolve!(u, state)
             [(hash, q) for (hash, q) in zip(state[:, :transHash], qs)]...,
         ),
     )
-    u .-= sum(allocs; dims = 2)
+    state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
+    structured_token = collect(values(inners(getagent(state, "structured"))))
+
     # add spawned transitions to the heap
-    for i = 1:nparts(state, :T)
-        qs[i] != 0 && push!(
-            state.ongoing_transitions,
-            Transition(get_sampled_transition(state, i), state.t, qs[i], 0.0),
-        )
+    for i in parts(state, :T)
+        if qs[i] != 0
+            transition = Transition(
+                string(state[i, :transName]) * "_@$(state.t)",
+                i,
+                get_sampled_transition(state, i),
+                AbstractAlgebraicAgent[],
+                AbstractAlgebraicAgent[],
+                [],
+                state.t,
+                qs[i],
+                0.0,
+            )
+            push!(state.ongoing_transitions, transition)
+
+            bound = transition.bound_structured_agents
+            structured_to_agents = transition.structured_to_agents
+
+            for (j, type) in enumerate(state.acs[:, :specName])
+                if type ∈ state.structured_token
+                    if !isinteger(allocs[j, i])
+                        error(
+                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                        )
+                    end
+
+                    available_species = filter(
+                        a -> get_species(a) == type && !isblocked(a),
+                        structured_token,
+                    )
+
+                    sort!(
+                        available_species;
+                        by = a -> priority(a, state.acs[i, :transName]),
+                        rev = true,
+                    )
+
+                    ix = 1
+                    while allocs[j, i] > 0 && ix <= length(available_species)
+                        set_bound_transition!(available_species[ix], transition)
+
+                        push!(bound, available_species[ix])
+                        push!(structured_to_agents, type => available_species[ix])
+                        add_to_log!(available_species[ix], type, state.t, transition)
+
+                        allocs[j, i] -= 1
+                        ix += 1
+                    end
+                end
+            end
+
+            context_eval(state, transition, state.wrap_fun(state.acs[i, :transPreAction]))
+        end
     end
 
-    update_u!(state, u)
     ## evolve ongoing transitions 
     reqs = zeros(nparts(state, :S), length(state.ongoing_transitions))
     qs = map(t -> t.q, state.ongoing_transitions)
@@ -178,10 +235,10 @@ function evolve!(u, state)
     get_reqs_ongoing!(reqs, qs, state)
     allocs = get_allocs!(
         reqs,
-        u,
+        state.u,
         state,
         map(t -> t[:transPriority], state.ongoing_transitions),
-        state.solverargs[:strategy],
+        state.p[:strategy],
     )
     qs .= get_frac_satisfied(allocs, reqs, state)
     push!(
@@ -195,13 +252,54 @@ function evolve!(u, state)
             ]...,
         ),
     )
-    u .-= sum(allocs; dims = 2)
+    state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
-    foreach(
-        i -> state.ongoing_transitions[i].state += qs[i] * state.solverargs[:tstep],
-        eachindex(state.ongoing_transitions),
-    )
+    for i in eachindex(state.ongoing_transitions)
+        transition = state.ongoing_transitions[i]
+        if qs[i] != 0
+            transition.state += qs[i] * state.dt
+
+            bound = transition.nonblock_structured_agents
+            structured_to_agents = transition.structured_to_agents
+
+            for (j, type) in enumerate(state.acs[:, :specName])
+                if type ∈ state.structured_token
+                    if !isinteger(allocs[j, i])
+                        error(
+                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                        )
+                    end
+
+                    available_species = filter(
+                        a -> get_species(a) == type && !isblocked(a),
+                        structured_token,
+                    )
+
+                    sort!(
+                        available_species;
+                        by = a -> priority(a, state.acs[i, :transName]),
+                        rev = true,
+                    )
+
+                    ix = 1
+                    while allocs[j, i] > 0 && ix <= length(available_species)
+                        set_bound_transition!(
+                            available_species[ix].bound_transition,
+                            transition,
+                        )
+
+                        push!(bound, available_species[ix])
+                        push!(structured_to_agents, type => available_species[ix])
+                        add_to_log!(available_species[ix], type, state.t, transition)
+
+                        allocs[j, i] -= 1
+                        ix += 1
+                    end
+                end
+            end
+        end
+    end
 
     push!(state.log, (:allocation, state.t, actual_allocs))
     return push!(
@@ -209,14 +307,14 @@ function evolve!(u, state)
         (
             :valuation_cost,
             state.t,
-            actual_allocs' * [state[i, :specCost] for i = 1:nparts(state, :S)],
+            actual_allocs' * [state[i, :specCost] for i in parts(state, :S)],
         ),
     )
 end
 
 # execute callbacks
 function event_action!(state)
-    for i = 1:nparts(state, :E)
+    for i in parts(state, :E)
         !isnothing(state[i, :eventTrigger]) && !isnothing(state[i, :eventAction]) ||
             continue
         v = state[i, :eventTrigger]
@@ -227,9 +325,66 @@ function event_action!(state)
     end
 end
 
+function allocate_for_move(t::Transition, s::Symbol)
+    return t.bound_structured_agents ∩
+           map(x -> x[2], filter(x -> x[1] == s, t.structured_to_agents))
+end
+
+function structured_rhs(expr::Expr, state, transition)
+    if isexpr(expr, :macrocall) && macroname(expr) == :structured
+        expr = quote
+            token = $(expr.args[end-1])
+            species = $(expr.args[end])
+
+            return token, species
+        end
+
+        token, species = context_eval(state, transition, state.wrap_fun(expr))
+        set_species!(token, Symbol(species))
+
+        entangle!(getagent(state, "structured"), token)
+
+        return token, get_species(token)
+    elseif isexpr(expr, :macrocall) && macroname(expr) == :move
+        expr = quote
+            species_from = $(expr.args[end-1])
+            species_to = $(expr.args[end])
+
+            return species_from, species_to
+        end
+
+        species_from, species_to =
+            Symbol.(context_eval(state, transition, state.wrap_fun(expr)))
+
+        tokens =
+            filter(x -> get_species(x) == species_from, transition.bound_structured_agents)
+        if !isempty(tokens)
+            token = first(tokens)
+            entangle!(getagent(state, "structured"), token)
+
+            set_species!(token, species_to)
+            ix = findfirst(
+                i -> transition.bound_structured_agents[i] == token,
+                eachindex(transition.bound_structured_agents),
+            )
+            deleteat!(transition.bound_structured_agents, ix)
+            set_bound_transition!(token, nothing)
+
+            return token, species_to
+        else
+            @error "Not enough tokens to allocate for a move."
+        end
+
+    else
+        token = context_eval(state, transition, state.wrap_fun(expr))
+        entangle!(getagent(state, "structured"), token)
+
+        return token, get_species(token)
+    end
+end
+
 # collect terminated transitions
-function finish!(u, state)
-    update_u!(state, u)
+function finish!(state)
     val_reward = 0
     terminated_all = Dict{Symbol,Float64}()
     terminated_success = Dict{Symbol,Float64}()
@@ -238,46 +393,79 @@ function finish!(u, state)
     while ix <= length(state.ongoing_transitions)
         trans_ = state.ongoing_transitions[ix]
         ((state.t - trans_.t) < trans_.trans[:transMaxLifeTime]) &&
-            trans_.state < trans_[:transCycleTime] &&
+            (trans_.state < trans_[:transCycleTime]) &&
             (ix += 1; continue)
-        toks_rhs = []
-        for r in extract_reactants(trans_[:transRHS], state)
-            i = find_index(r.species, state)
-            push!(
-                toks_rhs,
-                UnfoldedReactant(
-                    i,
-                    r.species,
-                    context_eval(state, state.wrap_fun(r.stoich)),
-                    r.modality ∪ state[i, :specModality],
-                ),
-            )
-        end
-        for tok in trans_[:transLHS]
-            in(:conserved, tok.modality) && (
-                u[tok.index] +=
-                    trans_.q *
-                    tok.stoich *
-                    (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
-            )
-        end
+
         q = if trans_.state >= trans_[:transCycleTime]
             rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
             0
         end
-        foreach(
-            tok -> (u[tok.index] += q * tok.stoich;
-            val_reward += state[tok.index, :specReward] * q * tok.stoich),
-            toks_rhs,
-        )
 
-        update_u!(state, u)
-        context_eval(state, trans_.trans[:transPostAction])
-        terminated_all[trans_[:transHash]] =
-            get(terminated_all, trans_[:transHash], 0) + trans_.q
-        terminated_success[trans_[:transHash]] =
-            get(terminated_success, trans_[:transHash], 0) + q
+        for r in extract_reactants(trans_[:transRHS], state)
+            if r.species isa Expr
+                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+
+                for _ = 1:(q*stoich)
+                    token, species = structured_rhs(r.species, state, trans_)
+                    i = find_index(species, state)
+                    state.u[i] += 1
+                    val_reward += state[i, :specReward]
+                end
+            else
+                i = find_index(r.species, state)
+                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+
+                state.u[i] += q * stoich
+                val_reward += state[i, :specReward] * q * stoich
+            end
+        end
+
+        for tok in trans_[:transLHS]
+            if in(:conserved, tok.modality)
+                state.u[tok.index] +=
+                    trans_.q *
+                    tok.stoich *
+                    (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
+                if tok.species ∈ state.structured_token
+                    for _ = 1:(trans_.q*tok.stoich)
+                        isempty(trans_.bound_structured_agents) && break
+                        set_bound_transition!(
+                            trans_.bound_structured_agents[begin].bound_transition,
+                            nothing,
+                        )
+                        deleteat!(trans_.bound_structured_agents, 1)
+                    end
+                end
+            end
+
+            if in(:nonblock, tok.modality)
+                if in(:conserved, tok.modality)
+                    error(
+                        "Modalities `:conserved` and `:nonblock` cannot be specified at the same time.",
+                    )
+                end
+
+                state.u[tok.index] += trans_.q * tok.stoich
+                if tok.species ∈ state.structured_token
+                    for _ = 1:(trans_.q*tok.stoich)
+                        set_bound_transition!(
+                            trans_.nonblock_structured_agents[begin].bound_transition,
+                            nothing,
+                        )
+                        deleteat!(trans_.nonblock_structured_agents, 1)
+                    end
+                end
+            end
+        end
+
+        context_eval(state, trans_, state.wrap_fun(state.acs[trans_.i, :transPostAction]))
+
+        terminated_all[Symbol(trans_[:transHash])] =
+            get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
+
+        terminated_success[Symbol(trans_[:transHash])] =
+            get(terminated_success, Symbol(trans_[:transHash]), 0) + q
 
         ix += 1
     end
@@ -288,61 +476,21 @@ function finish!(u, state)
     push!(state.log, (:terminated_success, state.t, terminated_success...))
     push!(state.log, (:valuation_reward, state.t, val_reward))
 
-    return u
+    return state.u
 end
 
 function free_blocked_species!(state)
     for trans in state.ongoing_transitions, tok in trans[:transLHS]
         in(:nonblock, tok.modality) && (state.u[tok.index] += q * tok.stoich)
     end
-end
 
-"""
-Transform an `acs` to a `DiscreteProblem` instance, compatible with standard solvers.
+    for trans in state.ongoing_transitions
+        for a in trans.nonblock_structured_agents
+            a.bound_transition = nothing
+        end
 
-# Examples
-
-```julia
-transform(DiscreteProblem, acs; schedule = schedule_weighted!)
-```
-"""
-function transform(
-    ::Type{DiffEqBase.DiscreteProblem},
-    state::ReactiveDynamicsState;
-    kwargs...,
-)
-    f = function (du, u, p, t)
-        state = p[:__state__]
-        free_blocked_species!(state)
-        du .= state.u
-        update_observables(state)
-        sample_transitions!(state)
-        evolve!(du, state)
-        finish!(du, state)
-        update_u!(state, du)
-        event_action!(state)
-
-        du .= state.u
-        push!(
-            state.log,
-            (:valuation, t, du' * [state[i, :specValuation] for i = 1:nparts(state, :S)]),
-        )
-
-        t = (state.t += state.solverargs[:tstep])
-        update_u!(state, du)
-        save!(state)
-        sync_p!(p, state)
-
-        return du
+        empty!(trans.nonblock_structured_agents)
     end
-
-    return DiffEqBase.DiscreteProblem(
-        f,
-        state.u,
-        (0.0, 2.0),
-        Dict(state.p..., :__state__ => state, :__state0__ => deepcopy(state));
-        kwargs...,
-    )
 end
 
 ## resolve tspan, tstep
@@ -352,106 +500,149 @@ function get_tcontrol(tspan, args)
     tunit = get(args, :tunit, oneunit(tspan))
     tspan = tspan / tunit
 
-    tstep = get(args, :tstep, haskey(args, :tstops) ? tspan / args[:tstops] : tunit) / tunit
+    dt = get(args, :dt, haskey(args, :tstops) ? tspan / args[:tstops] : tunit) / tunit
 
-    return ((0.0, tspan), tstep)
+    return ((0.0, tspan), dt)
 end
 
-"""
-Transform an `acs` to a `DiscreteProblem` instance, compatible with standard solvers.
-
-Optionally accepts initial values and parameters, which take precedence over specifications in `acs`.
-
-# Examples
-
-```julia
-DiscreteProblem(acs, u0, p; tspan = (0.0, 100.0), schedule = schedule_weighted!)
-```
-"""
-function DiffEqBase.DiscreteProblem(
-    acs::ReactionNetwork,
+function ReactionNetworkProblem(
+    acs::ReactionNetworkSchema,
     u0 = Dict(),
-    p = DiffEqBase.NullParameters();
+    p = Dict();
+    name = "reaction_network",
     kwargs...,
 )
     assign_defaults!(acs)
     keywords = Dict{Symbol,Any}([
-        acs[i, :metaKeyword] => acs[i, :metaVal] for i = 1:nparts(acs, :M) if
+        acs[i, :metaKeyword] => acs[i, :metaVal] for i in parts(acs, :M) if
         !isnothing(acs[i, :metaKeyword]) && !isnothing(acs[i, :metaVal])
     ])
+
     merge!(keywords, Dict(collect(kwargs)))
     merge!(keywords, Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))
+
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
 
     acs = remove_choose(acs)
-    attrs, transitions, wrap_fun = compile_attrs(acs)
-    state = ReactiveDynamicsState(
-        acs,
-        attrs,
-        transitions,
-        wrap_fun,
-        keywords[:tspan][1];
-        keywords...,
-    )
-    init_u!(state)
-    save!(state)
 
-    prob = transform(DiffEqBase.DiscreteProblem, state; kwargs...)
+    structured_token_names =
+        acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
 
-    u0 isa Dict && foreach(
-        i ->
-            prob.u0[i] =
-                if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
-                    u0[acs[i, :specName]]
-                else
-                    prob.u0[i]
-                end,
-        1:nparts(state, :S),
-    )
-    p_ = p == DiffEqBase.NullParameters() ? Dict() : Dict(k => v for (k, v) in p)
-    prob = remake(
-        prob;
-        u0 = prob.u0,
-        tspan = keywords[:tspan],
-        dt = get(keywords, :tstep, 1),
-        p = merge(
-            prob.p,
-            p_,
-            Dict(
-                :tstep => get(keywords, :tstep, 1),
-                :strategy => get(keywords, :alloc_strategy, :weighted),
-            ),
-        ),
-    )
+    attrs, transitions, wrap_fun = compile_attrs(acs, structured_token_names)
+    transition_recipes = transitions
+    u0_init = zeros(nparts(acs, :S))
 
-    return prob
-end
+    for i in parts(acs, :S)
+        if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
+            u0_init[i] = u0[acs[i, :specName]]
+        else
+            u0_init[i] = acs[i, :specInitVal]
+        end
+    end
 
-function fetch_params(acs::ReactionNetwork)
-    return Dict{Symbol,Any}((
+    prms = Dict{Symbol,Any}((
         acs[i, :prmName] => acs[i, :prmVal] for
         i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
     ))
+
+    merge!(p, prms)
+
+    ongoing_transitions = Transition[]
+    log = NamedTuple[]
+    observables = compile_observables(acs)
+    transitions_attrs =
+        setdiff(
+            filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)),
+            (:trans,),
+        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
+    transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
+
+    sol = DataFrame(
+        "t" => Float64[],
+        (string(name) => Float64[] for name in acs[:, :specName])...,
+    )
+
+    network = ReactionNetworkProblem(
+        name,
+        acs,
+        attrs,
+        transition_recipes,
+        u0_init,
+        merge(p, Dict(:strategy => get(keywords, :alloc_strategy, :weighted))),
+        keywords[:tspan][1],
+        structured_token_names,
+        keywords[:tspan],
+        get(keywords, :tstep, 1),
+        transitions,
+        ongoing_transitions,
+        log,
+        observables,
+        wrap_fun,
+        sol,
+    )
+
+    entangle!(network, FreeAgent("structured"))
+
+    save!(network)
+
+    return network
 end
 
-# EnsembleProblem's prob_func: sample initial values
-function get_prob_func(prob)
-    vars = prob.p[:__state__][:, :specInitUncertainty]
+function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
+    state.u .= isempty(state.sol) ? state.u : Vector(state.sol[1, 2:end])
+    state.t = state.tspan[1]
+    empty!(state.ongoing_transitions)
+    empty!(state.log)
+    state.observables = compile_observables(state.acs)
+    empty!(state.sol)
 
-    prob_func = function (prob, _, _)
-        prob.p[:__state__] = deepcopy(prob.p[:__state0__])
-        for i in eachindex(prob.u0)
-            rv = randn() * vars[i]
-            prob.u0[i] = if (sign(rv + prob.u0[i]) == sign(prob.u0[i]))
-                rv + prob.u0[i]
-            else
-                prob.u0[i]
-            end
+    return state
+end
+
+function update_u_structured!(state)
+    structured_tokens = collect(values(inners(getagent(state, "structured"))))
+    for (i, species) in enumerate(state.acs[:, :specName])
+        if state.acs[i, :specStructured]
+            state.u[i] =
+                count(a -> get_species(a) == species && !isblocked(a), structured_tokens)
         end
-        sync!(prob.p[:__state__], prob.u0, prob.p)
-
-        return prob
     end
 
-    return prob_func
+    return state.u
+end
+
+function AlgebraicAgents._step!(state::ReactionNetworkProblem)
+    free_blocked_species!(state)
+    update_u_structured!(state)
+    update_observables(state)
+    sample_transitions!(state)
+    evolve!(state)
+    update_u_structured!(state)
+    finish!(state)
+    update_u_structured!(state)
+
+    event_action!(state)
+
+    push!(
+        state.log,
+        (
+            :valuation,
+            state.t,
+            state.u' * [state[i, :specValuation] for i in parts(state, :S)],
+        ),
+    )
+
+    save!(state)
+    return state.t += state.dt
+end
+
+function AlgebraicAgents._projected_to(state::ReactionNetworkProblem)
+    return state.t > state.tspan[2] ? true : state.t
+end
+
+function fetch_params(acs::ReactionNetworkSchema)
+    return Dict{Symbol,Any}((
+        acs[i, :prmName] => acs[i, :prmVal] for
+        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), parts(acs, :P))
+    ))
 end

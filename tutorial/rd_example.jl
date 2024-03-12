@@ -15,7 +15,7 @@ rd_model = @ReactionNetwork
     transitions .+= 0.1 * rand(n_phase, n_phase)
 end
 
-rd_model = @ReactionNetwork begin
+rd_model = @ReactionNetworkSchema begin
     $i, phase[$i] --> phase[$j], cycle_time => $i * $j
 end i = 1:3 j = 1:($i)
 
@@ -46,7 +46,7 @@ sol = @solve prob trajectories = 20
     resource = rand(1:10, k, k, r)
 end
 
-rd_model = @ReactionNetwork begin
+rd_model = @ReactionNetworkSchema begin
     M[$i, $j],
     mod[$i] +
     {resource[$i, $j, $k] * resource[$k], k = rand(1:(ReactiveDynamics.r)), dlm = +} -->

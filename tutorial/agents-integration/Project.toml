@@ -1,0 +1,9 @@
+[deps]
+AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+PlotGraphviz = "78a92bc3-407c-4e2f-aae5-75bb47a6fe36"
+ReactiveDynamics = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
+SimpleWeightedGraphs = "47aef6b3-ad0c-573a-a1e2-d07658019622"

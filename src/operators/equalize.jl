@@ -1,4 +1,4 @@
-export @equalize
+export equalize!, @equalize
 
 expand_name_ff(ex) =
     if ex isa Expr && isexpr(ex, :macrocall)
@@ -21,13 +21,13 @@ function get_eqs_ff(eq)
     end
 end
 
-function equalize!(acs::ReactionNetwork, eqs = [])
+function equalize!(acs::ReactionNetworkSchema, eqs = [])
     specmap = Dict()
     for block in eqs
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
         species_ixs = Int64[]
-        for e in block, i = 1:nparts(acs, :S)
+        for e in block, i in parts(acs, :S)
             (
                 (i == e[2]) ||
                 (
@@ -53,9 +53,10 @@ function equalize!(acs::ReactionNetwork, eqs = [])
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
         attr_ = acs[:, attr]
-        for i = 1:length(attr_)
+        for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
+            acs[i, attr] = attr_[i]
         end
     end
 

@@ -13,7 +13,7 @@ end
 # generate submodel dynamics
 push!(
     rd_models,
-    @ReactionNetwork begin
+    @ReactionNetworkSchema begin
         M[$i][$m, $n],
         state[$m] + {demand[$i][$m, $n, $l] * resource[$l], l = 1:($r), dlm = +} -->
         state[$n] + {production[$i][$m, $n, $l] * resource[$l], l = 1:($r), dlm = +},

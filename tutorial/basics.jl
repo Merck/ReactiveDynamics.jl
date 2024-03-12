@@ -1,23 +1,22 @@
 using ReactiveDynamics
 
-# acs = @ReactionNetwork begin
-#     1.0, X ⟺ Y
-# end
-
-acs = @ReactionNetwork begin
-    1.0, X ⟺ Y, name => "transition1"
+# define the network
+acs = @ReactionNetworkSchema begin
+    1.0, X --> Y, name => "transition1"
 end
 
 @prob_init acs X = 10 Y = 20
 @prob_params acs
-@prob_meta acs tspan = 250 dt = 0.1
+@prob_meta acs tspan = 25 dt = 0.10
 
-prob = @problematize acs
+# convert network into an AlgAgents hierarchy
+prob = ReactionNetworkProblem(acs)
 
-# sol = ReactiveDynamics.solve(prob)
+# simulate
+simulate(prob)
 
-sol = @solve prob trajectories = 20
+# access solution
+prob.sol
 
-using Plots
-
-@plot sol plot_type = summary
+# plot solution
+draw(prob)

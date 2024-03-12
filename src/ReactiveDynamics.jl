@@ -1,9 +1,8 @@
 module ReactiveDynamics
 
-using Catlab, Catlab.CategoricalAlgebra, Catlab.Present
+using ACSets
 using Reexport
 using MacroTools
-using NLopt
 using ComponentArrays
 
 @reexport using GeneratedExpressions
@@ -28,60 +27,64 @@ Base.@kwdef mutable struct FoldedObservable
     on::Vector{SampleableValues} = SampleableValues[]
 end
 
-@present TheoryReactionNetwork(FreeSchema) begin
-    (S, T)::Ob # species, transitions
-
-    (
-        SymbolicAttributeT,
-        DescriptiveAttributeT,
-        SampleableAttributeT,
-        ModalityAttributeT,
-        PcsOptT,
-        PrmAttributeT,
-    )::AttrType
-
-    specName::Attr(S, SymbolicAttributeT)
-    specModality::Attr(S, ModalityAttributeT)
-    specInitVal::Attr(S, SampleableAttributeT)
-    specInitUncertainty::Attr(S, SampleableAttributeT)
-    (specCost, specReward, specValuation)::Attr(S, SampleableAttributeT)
-
-    trans::Attr(T, SampleableAttributeT)
-    transPriority::Attr(T, SampleableAttributeT)
-    transRate::Attr(T, SampleableAttributeT)
-    transCycleTime::Attr(T, SampleableAttributeT)
-    transProbOfSuccess::Attr(T, SampleableAttributeT)
-    transCapacity::Attr(T, SampleableAttributeT)
-    transMaxLifeTime::Attr(T, SampleableAttributeT)
-    transPostAction::Attr(T, SampleableAttributeT)
-    transMultiplier::Attr(T, SampleableAttributeT)
-    transName::Attr(T, DescriptiveAttributeT)
-
-    E::Ob # events
-    (eventTrigger, eventAction)::Attr(E, SampleableAttributeT)
-
-    obs::Ob # processes (observables)
-    obsName::Attr(obs, SymbolicAttributeT)
-    obsOpts::Attr(obs, PcsOptT)
-
-    (P, M)::Ob # model params, solver args
-
-    prmName::Attr(P, SymbolicAttributeT)
-    prmVal::Attr(P, PrmAttributeT)
-
-    metaKeyword::Attr(M, SymbolicAttributeT)
-    metaVal::Attr(M, SampleableAttributeT)
-end
+TheoryReactionNetwork = BasicSchema(
+    [:S, :T, :E, :obs, :P, :M], # species, transitions, events, processes (observables), model params, solver args
+    [], # no homs
+    [
+        :SymbolicAttributeT,
+        :DescriptiveAttributeT,
+        :SampleableAttributeT,
+        :ModalityAttributeT,
+        :PcsOptT,
+        :PrmAttributeT,
+        :BoolAttributeT,
+    ], # AttrTypes
+    [
+        # species
+        (:specName, :S, :SymbolicAttributeT),
+        (:specModality, :S, :ModalityAttributeT),
+        (:specInitVal, :S, :SampleableAttributeT),
+        (:specInitUncertainty, :S, :SampleableAttributeT),
+        (:specCost, :S, :SampleableAttributeT),
+        (:specReward, :S, :SampleableAttributeT),
+        (:specValuation, :S, :SampleableAttributeT),
+        (:specStructured, :S, :BoolAttributeT),
+        # transitions
+        (:trans, :T, :SampleableAttributeT),
+        (:transPriority, :T, :SampleableAttributeT),
+        (:transRate, :T, :SampleableAttributeT),
+        (:transCycleTime, :T, :SampleableAttributeT),
+        (:transProbOfSuccess, :T, :SampleableAttributeT),
+        (:transCapacity, :T, :SampleableAttributeT),
+        (:transMaxLifeTime, :T, :SampleableAttributeT),
+        (:transPreAction, :T, :SampleableAttributeT),
+        (:transPostAction, :T, :SampleableAttributeT),
+        (:transMultiplier, :T, :SampleableAttributeT),
+        (:transName, :T, :DescriptiveAttributeT),
+        # events
+        (:eventTrigger, :E, :SampleableAttributeT),
+        (:eventAction, :E, :SampleableAttributeT),
+        # observables
+        (:obsName, :obs, :SymbolicAttributeT),
+        (:obsOpts, :obs, :PcsOptT),
+        # params, args
+        (:prmName, :P, :SymbolicAttributeT),
+        (:prmVal, :P, :PrmAttributeT),
+        (:metaKeyword, :M, :SymbolicAttributeT),
+        (:metaVal, :M, :SampleableAttributeT),
+    ],
+)
 
 @acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
 
-const ReactionNetwork = FoldedReactionNetworkType{
+const ReactionNetworkSchema = FoldedReactionNetworkType{
     Symbol,
     Union{String,Symbol,Missing},
     SampleableValues,
     Set{Symbol},
     FoldedObservable,
     Any,
+    Bool,
 }
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
@@ -94,12 +97,14 @@ Base.convert(::Type{Union{String,Symbol,Missing}}, ex::String) =
     end
 
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
+
 Base.convert(::Type{Set{Symbol}}, ex::String) = eval(Meta.parse(ex))
 Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
 
 prettynames = Dict(
     :transRate => [:rate],
     :specInitUncertainty => [:uncertainty, :stoch, :stochasticity],
+    :transPreAction => [:preAction, :pre],
     :transPostAction => [:postAction, :post],
     :transName => [:name, :interpretation],
     :transPriority => [:priority],
@@ -117,6 +122,7 @@ defargs = Dict(
         :transCycleTime => 0.0,
         :transMaxLifeTime => Inf,
         :transMultiplier => 1,
+        :transPreAction => :(),
         :transPostAction => :(),
         :transName => missing,
     ),
@@ -126,47 +132,43 @@ defargs = Dict(
         :specCost => 0.0,
         :specReward => 0.0,
         :specValuation => 0.0,
+        :specStructured => false,
     ),
     :P => Dict{Symbol,Any}(:prmVal => missing),
     :M => Dict{Symbol,Any}(:metaVal => missing),
 )
 
 compilable_attrs =
-    filter(attr -> eltype(attr) == SampleableValues, propertynames(ReactionNetwork()))
+    filter(attr -> eltype(attr) == SampleableValues, propertynames(ReactionNetworkSchema()))
 
 species_modalities = [:nonblock, :conserved, :rate]
 
-function assign_defaults!(acs::ReactionNetwork)
+function assign_defaults!(acs::ReactionNetworkSchema)
     for (_, v_) in defargs, (k, v) in v_
-        for i = 1:length(subpart(acs, k))
-            isnothing(acs[i, k]) && (subpart(acs, k)[i] = v)
+        for i in dom_parts(acs, k)
+            isnothing(acs[i, k]) && (acs[i, k] = v)
         end
     end
 
     foreach(
-        i ->
-            !isnothing(acs[i, :specModality]) ||
-                (subpart(acs, :specModality)[i] = Set{Symbol}()),
-        1:nparts(acs, :S),
+        i -> !isnothing(acs[i, :specModality]) || (acs[i, :specModality] = Set{Symbol}()),
+        parts(acs, :S),
     )
     k = [:specCost, :specReward, :specValuation]
     foreach(
-        k -> foreach(
-            i -> !isnothing(acs[i, k]) || (subpart(acs, k)[i] = 0.0),
-            1:nparts(acs, :S),
-        ),
+        k -> foreach(i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0), parts(acs, :S)),
         k,
     )
 
     return acs
 end
 
-function ReactionNetwork(transitions, reactants, obs, events)
-    return merge_acs!(ReactionNetwork(), transitions, reactants, obs, events)
+function ReactionNetworkSchema(transitions, reactants, obs, events)
+    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, events)
 end
 
-function ReactionNetwork(transitions, reactants, obs)
-    return merge_acs!(ReactionNetwork(), transitions, reactants, obs, [])
+function ReactionNetworkSchema(transitions, reactants, obs)
+    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, [])
 end
 
 function add_obs!(acs, obs)
@@ -195,7 +197,7 @@ function add_obs!(acs, obs)
     return acs
 end
 
-function merge_acs!(acs::ReactionNetwork, transitions, reactants, obs, events)
+function merge_acs!(acs::ReactionNetworkSchema, transitions, reactants, obs, events)
     foreach(
         t -> add_part!(acs, :T; trans = t[1][2], transRate = t[1][1], t[2]...),
         transitions,
@@ -220,7 +222,7 @@ include.(readdir(joinpath(@__DIR__, "interface"); join = true))
 include.(readdir(joinpath(@__DIR__, "utils"); join = true))
 include.(readdir(joinpath(@__DIR__, "operators"); join = true))
 include("solvers.jl")
-include("optim.jl")
+#include("optim.jl")
 include("loadsave.jl")
 
 end

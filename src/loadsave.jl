@@ -16,7 +16,7 @@ const objects_aliases = Dict(
     :obs => "obs",
 )
 
-const RN_attrs = string.(propertynames(ReactionNetwork().subparts))
+const RN_attrs = string.(propertynames(ReactionNetworkSchema().subparts))
 
 function get_attrs(object)
     object = object isa Symbol ? objects_aliases[object] : object
@@ -24,11 +24,11 @@ function get_attrs(object)
     return filter(x -> occursin(object, x), RN_attrs)
 end
 
-function export_network(acs::ReactionNetwork)
+function export_network(acs::ReactionNetworkSchema)
     dict = Dict()
     for (key, val) in objects_aliases
         push!(dict, val => [])
-        for i = 1:nparts(acs, key)
+        for i in parts(acs, key)
             dict_ = Dict()
             for attr in get_attrs(val)
                 attr_val = acs[i, Symbol(attr)]
@@ -44,13 +44,16 @@ function export_network(acs::ReactionNetwork)
 end
 
 function load_network(dict::Dict)
-    acs = ReactionNetwork()
+    acs = ReactionNetworkSchema()
     for (key, val) in objects_aliases
         val == "prm" && continue
         for row in get(dict, val, [])
             i = add_part!(acs, key)
             for (attr, attrval) in row
                 set_subpart!(acs, i, Symbol(attr), attrval)
+                if (acs[i, Symbol(attr)] isa String && !(contains(attr, "name")))
+                    acs[i, Symbol(attr)] = MacroTools.striplines(Meta.parse(attrval))
+                end
             end
         end
     end
@@ -113,7 +116,7 @@ function import_network(path::AbstractString)
     end
 end
 
-function export_network(acs::ReactionNetwork, path::AbstractString)
+function export_network(acs::ReactionNetworkSchema, path::AbstractString)
     if splitext(path)[2] == ".csv"
         exported_network = export_network(acs)
         paths = DataFrame(; type = [], path = [])
@@ -230,10 +233,10 @@ Export a solution as a `DataFrame`.
 ```
 """
 macro export_solution_as_table(solex, pathex = "sol.jld2")
-    return :(DataFrame($(esc(solex))))
+    return :(DataFrame($(esc(solex)).sol))
 end
 
-get_DataFrame(sol) = sol isa EnsembleSolution ? DataFrame(sol)[!, [:u, :t]] : DataFrame(sol)
+get_DataFrame(sol) = sol.sol
 
 """
     @export_solution_as_csv sol

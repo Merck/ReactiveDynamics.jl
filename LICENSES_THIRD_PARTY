@@ -1,6 +1,6 @@
-ReactiveDynamics.jl depends on third-party Julia packages which may be distributed under different licenses. We have listed all of these third party packages and their licenses below. For the most up-to-date information, see `Project.toml`.
+ReactiveDynamics.jl depends on third-party Julia packages, which may be distributed under various licenses. For the most recent list of these packages, refer to `Project.toml` and consult the license terms of the individual packages.
 
-You must agree to the terms of these licenses, in addition to the ReactiveDynamics source code license, in order to use this software.
+You must agree to the terms of these licenses, in addition to the ReactiveDynamics.jl source code license, in order to use this software.
 
 --------------------------------------------------
 Third party software listed by License type
@@ -8,33 +8,3 @@ Third party software listed by License type
 
 MIT License (or adaptations) (https://www.opensource.org/licenses/MIT)
   * The Julia Language - https://github.com/JuliaLang/julia/blob/master/LICENSE.md
-  * BenchmarkTools.jl - https://github.com/JuliaCI/BenchmarkTools.jl
-  * CSV - https://github.com/JuliaData/CSV.jl
-  * Catlab - https://github.com/AlgebraicJulia/Catlab.jl
-  * ComponentArrays.jl - https://github.com/jonniedie/ComponentArrays.jl
-  * Crayons - https://github.com/KristofferC/Crayons.jl
-  * DataFrames.jl - https://github.com/JuliaData/DataFrames.jl
-  * DiffEqBase.jl - https://github.com/SciML/DiffEqBase.jl
-  * DifferentialEquations.jl - https://github.com/SciML/DifferentialEquations.jl
-  * Distributions.jl - https://github.com/JuliaStats/Distributions.jl
-  * Documenter - https://github.com/JuliaDocs/Documenter.jl
-  * DocumenterMarkdown - https://github.com/JuliaDocs/DocumenterMarkdown.jl
-  * GeneratedExpressions.jl - https://github.com/Merck/GeneratedExpressions.jl
-  * IJulia - https://github.com/JuliaLang/IJulia.jl
-  * JLD2 - https://github.com/JuliaIO/JLD2.jl
-  * JSON.jl - https://github.com/JuliaIO/JSON.jl
-  * MacroTools.jl - https://github.com/FluxML/MacroTools.jl
-  * NLopt - https://github.com/JuliaOpt/NLopt.jl
-  * OrdinaryDiffEq - https://github.com/SciML/OrdinaryDiffEq.jl
-  * Plots - https://github.com/JuliaPlots/Plots.jl
-  * Pluto.jl - https://github.com/fonsp/Pluto.jl
-  * Reexport - https://github.com/simonster/Reexport.jl
-  * SafeTestsets - https://github.com/YingboMa/SafeTestsets.jl
-  * Statistics.jl - https://github.com/JuliaStats/Statistics.jl
-  * StatsFuns.jl - https://github.com/JuliaStats/StatsFuns.jl
-  * Symbolics.jl - https://github.com/JuliaSymbolics/Symbolics.jl
-  * TOML.jl - https://github.com/JuliaLang/TOML.jl
-  * Tables.jl - https://github.com/JuliaData/Tables.jl
-
-The Unlicense (https://opensource.org/licenses/unlicense)
-  * PlutoUI.jl - https://github.com/JuliaPluto/PlutoUI.jl

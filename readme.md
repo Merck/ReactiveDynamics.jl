@@ -70,7 +70,7 @@ Follow the SIR model's reactions:
 using ReactiveDynamics
 
 # model dynamics
-sir_acs = @ReactionNetwork begin
+sir_acs = @ReactionNetworkSchema begin
         α*S*I, S+I --> 2I, name=>I2R
         β*I, I --> R, name=>R2S 
 end
@@ -198,7 +198,7 @@ To harness the capabilities of **GeneratedExpressions.jl**, let us first declare
 end
     
 # generate submodel dynamics
-push!(rd_models, @ReactionNetwork begin
+push!(rd_models, @ReactionNetworkSchema begin
                 M[$i][$m, $n], state[$m] + {demand[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+} --> state[$n] + 
                         {production[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+}, cycle_time=>cycle_times[$i][$m, $n], probability_of_success=>$m*$n/(n[$i])^2
         end m=1:ReactiveDynamics.ns[$i] n=1:ReactiveDynamics.ns[$i]
@@ -294,7 +294,7 @@ end
 Next we set up a simple dynamics and supply initial parameters.
 
 ```julia
-acs = @ReactionNetwork begin
+acs = @ReactionNetworkSchema begin
     function_to_learn(A, B, C, params), A --> B+C
     1., B --> C
     2., C --> B

@@ -2,7 +2,7 @@ using ReactiveDynamics
 ## setup the environment
 n_models = 5;
 r = 2; # number of submodels, resources
-rd_models = ReactiveDynamics.ReactionNetwork[] # submodels
+rd_models = ReactiveDynamics.ReactionNetworkSchema[] # submodels
 
 @register begin
     ns = Int[] # size of submodels
@@ -51,8 +51,6 @@ u0 = rand(1:1000, nparts(rd_model, :S))
 
 @prob_meta rd_model tspan = 10
 
-prob = @problematize rd_model
-sol = @solve prob trajectories = 2
-
-# plot "state" species only
-@plot sol plot_type = summary show = r"state"
+prob = ReactionNetworkProblem(sir_acs)
+sol = simulate(prob)
+draw(sol)

@@ -1,7 +1,7 @@
 using ReactiveDynamics
 
 # acs as a model : incomplete dynamics
-sir_acs = @ReactionNetwork
+sir_acs = @ReactionNetworkSchema
 
 # set up ontology: try ?@aka
 @aka sir_acs transition = reaction species = population_group
@@ -30,18 +30,14 @@ u0 = [999, 10, 0] # alternative specification
 @prob_params sir_acs β = 0.0001 ν = 0.01 γ = 5
 @prob_meta sir_acs tspan = 100
 
-#prob = @problematize sir_acs
-prob = @problematize sir_acs tspan = 200
+prob = ReactionNetworkProblem(sir_acs; tspan = 200)
 
-sol = @solve prob trajectories = 20
-@plot sol plot_type = summary
-sol = @solve prob
-@plot sol plot_type = allocation
-@plot sol plot_type = valuations
-@plot sol plot_type = new_transitions
+sol = simulate(prob)
+
+draw(prob)
 
 # acs as a model : incomplete dynamics
-sir_acs = @ReactionNetwork
+sir_acs = @ReactionNetworkSchema
 
 # set up ontology: try ?@aka
 @aka sir_acs transition = reaction species = population_group
@@ -65,7 +61,7 @@ u0 = [999, 10, 0] # alternative specification
 @prob_params sir_acs β = 0.0001 ν = 0.01 γ = 5
 
 # model dynamics
-sir_acs = @ReactionNetwork begin
+sir_acs = @ReactionNetworkSchema begin
     α * S * I, S + I --> 2I, cycle_time => 0, name => I2R
     β * I, I --> R, cycle_time => 0, name => R2S
 end
@@ -77,16 +73,14 @@ end
 @prob_meta sir_acs tspan = 250 dt = 0.1
 
 # batch simulation
-prob = @problematize sir_acs
-sol = @solve prob trajectories = 20
-@plot sol plot_type = summary
-@plot sol plot_type = summary show = :S
-@plot sol plot_type = summary c = :green xlimits = (0.0, 100.0)
+prob = ReactionNetworkProblem(sir_acs)
+sol = simulate(prob)
+draw(prob)
 
-acs_1 = @ReactionNetwork begin
+acs_1 = @ReactionNetworkSchema begin
     1.0, A --> B + C
 end
-acs_2 = @ReactionNetwork begin
+acs_2 = @ReactionNetworkSchema begin
     1.0, A --> B + C
 end
 
