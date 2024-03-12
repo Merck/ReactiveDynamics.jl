@@ -35,6 +35,13 @@ network = @ReactionNetworkSchema
     ρ4,
     R1 + M1 --> M2(@t(), rand(4)),
     preAction => update_prob_transition(state, transition)
+
+    # R2 + M1 --> M2(@t(), rand(4))
+    5.0, R2 + M1 --> @structured(M2(@t(), rand(4)), :A)
+    1.0, R2 + A --> @structured(M2(@t(), rand(4)), f_species(@transition))
+
+    1.0, R2 + M1 --> @move(M1, :M2)
+    1.0, R2 + M1 --> @move(M1, :C)
 end
 
 @prob_init network R1 = 10 R2 = 15
@@ -49,7 +56,7 @@ end
 
 # We use `@structured` macro, which is a convenience wrapper around `@aagent`),
 # defined in ReactiveDynamics.jl
-@structured network struct M1
+@structured_token network struct M1
     descriptor::Any
     time_created::Any
 end
@@ -60,7 +67,9 @@ using Random
 # Accordingly, we have to explicitly declare the scope.
 using ReactiveDynamics: M1
 
-ReactiveDynamics.M1(time, descriptor) = M1("M1" * randstring(4), nothing, descriptor, time)
+function ReactiveDynamics.M1(time, descriptor)
+    return M1("M1" * randstring(4), :M1, nothing, [], descriptor, time)
+end
 
 # We define the function which updates the transition probability.
 # This has to be accessible from within the name scope of ReactiveDynamics.
@@ -69,35 +78,41 @@ ReactiveDynamics.M1(time, descriptor) = M1("M1" * randstring(4), nothing, descri
         if !isnothing(transition) && !isempty(transition.bound_structured_agents)
             bound_agent = first(transition.bound_structured_agents)
 
-            transition[:transProbOfSuccess] = min(1.0, sum(bound_agent.descriptor))
+            transition[:transProbOfSuccess] = 1.0#min(1.0, sum(bound_agent.descriptor))
         end
     end
+
+    f_species(transition) = :B
 end
 
 # Alternatively, we can define a structured agent type using
 # the usual `@aagent` macro. This must be evaluated inside the scope
 # of ReactiveDynamics.
 @register begin
-    @aagent BaseStructuredSpecies AbstractStructuredSpecies struct M2
+    @aagent BaseStructuredToken AbstractStructuredToken struct M2
         descriptor::Any
         time_created::Any
     end
 
     using Random
-    M2(time, descriptor) = M2("M2" * randstring(4), nothing, descriptor, time)
+    M2(time, descriptor) = M2("M2" * randstring(4), :M2, nothing, [], descriptor, time)
 end
 
 # Let the network know that the species is structured.
-ReactiveDynamics.register_structured_species!(network, :M2)
+for species in [:M1, :M2, :A, :B, :C]
+    ReactiveDynamics.register_structured_species!(network, species)
+end
 
 # --------------------------------------------------------------------------------
 # Instantiate the network.
 network_instance = ReactionNetworkProblem(network)
 
 for i = 1:2
-    add_structured_species!(network_instance, ReactiveDynamics.M1(0.0, rand(4)))
+    add_structured_token!(network_instance, ReactiveDynamics.M1(0.0, rand(4)))
 end
 
 # --------------------------------------------------------------------------------
 # Simulate the network.
 simulate(network_instance, 10)
+
+# tokens = collect(values(inners(getagent(network_instance, "structured"))))

@@ -66,7 +66,6 @@ end
 
 reserved_names =
     [:t, :state, :obs, :resample, :solverarg, :take, :log, :periodic, :set_params]
-push!(reserved_names, :state)
 
 function escape_ref(ex, species)
     return if ex isa Symbol
@@ -98,6 +97,15 @@ function wrap_expr(fex, species_names, prm_names, varmap)
         # here we convert the query metalanguage: @t() -> time(state) etc. 
         if isexpr(x, :macrocall) && (macroname(x) ∈ reserved_names)
             Expr(:call, macroname(x), :state, x.args[3:end]...)
+        else
+            x
+        end
+    end
+
+    fex = prewalk(fex) do x
+        # here we convert the query metalanguage: @t() -> time(state) etc. 
+        if isexpr(x, :macrocall) && (macroname(x) == :transition)
+            :transition
         else
             x
         end
@@ -139,8 +147,8 @@ function skip_compile(attr)
            (string(attr) == "trans")
 end
 
-function compile_attrs(acs::ReactionNetworkSchema, structured_species)
-    species_names = setdiff(collect(acs[:, :specName]), structured_species)
+function compile_attrs(acs::ReactionNetworkSchema, structured_token)
+    species_names = setdiff(collect(acs[:, :specName]), structured_token)
 
     prm_names = collect(acs[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])

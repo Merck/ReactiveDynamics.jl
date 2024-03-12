@@ -63,6 +63,9 @@ function recursive_find_reactants!(
         for i = 2:length(ex.args)
             recursive_find_reactants!(ex.args[i], mult, mods, reactants)
         end
+    elseif isexpr(ex, :call) ||
+           (ex.head == :macrocall && macroname(ex) ∈ [:structured, :move])
+        push!(reactants, FoldedReactant(ex, mult, mods))
     elseif ex.head == :macrocall
         mods = copy(mods)
         macroname(ex) in species_modalities && push!(mods, macroname(ex))
@@ -71,8 +74,6 @@ function recursive_find_reactants!(
             4:length(ex.args),
         )
         recursive_find_reactants!(ex.args[3], mult, mods, reactants)
-    elseif isexpr(ex, :call)
-        push!(reactants, FoldedReactant(ex, mult, mods))
     else
         @error("malformed reaction")
     end

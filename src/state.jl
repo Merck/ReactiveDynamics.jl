@@ -18,6 +18,7 @@ Ongoing transition auxiliary structure.
 
     bound_structured_agents::Vector{AbstractAlgebraicAgent}
     nonblock_structured_agents::Vector{AbstractAlgebraicAgent}
+    structured_to_agents::Vector
 
     t::Float64
     q::Float64
@@ -46,7 +47,7 @@ end
     p::Any
     t::Float64
 
-    structured_species::Vector{Symbol}
+    structured_token::Vector{Symbol}
 
     tspan::Tuple{Float64,Float64}
     dt::Float64
