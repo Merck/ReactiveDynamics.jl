@@ -35,8 +35,10 @@ function equalize!(acs::ReactionNetworkSchema, eqs = [])
                     occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(acs[i, :specName]))
                 ) ||
                 (e[2] == acs[i, :specName])
-            ) && (push!(species_ixs, i);
-            push!(specmap, acs[i, :specName] => (acs[i, :specName] = block_alias)))
+            ) && (
+                push!(species_ixs, i);
+                push!(specmap, acs[i, :specName] => (acs[i, :specName] = block_alias))
+            )
         end
         isempty(species_ixs) && continue
         species_ixs = sort(unique!(species_ixs))

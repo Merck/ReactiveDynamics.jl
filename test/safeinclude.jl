@@ -5,7 +5,7 @@ export @safeinclude
 macro safeinclude(args...)
     length(args) != 2 && error("invalid arguments to `@safeinclude`")
     name, ex = args
-    quote
+    return quote
         path = pwd()
         td = mktempdir()
         cp(dirname($ex), td; force = true)

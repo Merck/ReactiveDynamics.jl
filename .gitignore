@@ -10,3 +10,5 @@ Manifest.toml
 LocalPreferences.toml
 .DS_Store
 _*
+*.db
+*.db.wal

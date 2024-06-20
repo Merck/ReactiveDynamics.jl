@@ -336,7 +336,7 @@ function structured_rhs(expr::Expr, state, transition)
             expr = quote
                 return $(expr.args[end])
             end
-            # write docs
+
             token = context_eval(state, transition, state.wrap_fun(expr))
 
             entangle!(getagent(state, "structured"), token)
@@ -349,7 +349,7 @@ function structured_rhs(expr::Expr, state, transition)
 
                 return token, species
             end
-            # write docs
+
             token, species = context_eval(state, transition, state.wrap_fun(expr))
             set_species!(token, Symbol(species))
 
@@ -370,6 +370,7 @@ function structured_rhs(expr::Expr, state, transition)
 
         tokens =
             filter(x -> get_species(x) == species_from, transition.bound_structured_agents)
+
         if !isempty(tokens)
             token = first(tokens)
             entangle!(getagent(state, "structured"), token)
@@ -442,11 +443,16 @@ function finish!(state)
                 if tok.species ∈ state.structured_token
                     for _ = 1:(trans_.q*tok.stoich)
                         isempty(trans_.bound_structured_agents) && break
+                        agent_ix = findfirst(
+                            a -> get_species(a) == tok.species,
+                            trans_.bound_structured_agents,
+                        )
+
                         set_bound_transition!(
-                            trans_.bound_structured_agents[begin].bound_transition,
+                            trans_.bound_structured_agents[agent_ix].bound_transition,
                             nothing,
                         )
-                        deleteat!(trans_.bound_structured_agents, 1)
+                        delete!(trans_.bound_structured_agents, agent_ix)
                     end
                 end
             end
@@ -461,17 +467,27 @@ function finish!(state)
                 state.u[tok.index] += trans_.q * tok.stoich
                 if tok.species ∈ state.structured_token
                     for _ = 1:(trans_.q*tok.stoich)
+                        agent_ix = findfirst(
+                            a -> get_species(a) == tok.species,
+                            trans_.nonblock_structured_agents,
+                        )
+
                         set_bound_transition!(
-                            trans_.nonblock_structured_agents[begin].bound_transition,
+                            trans_.nonblock_structured_agents[agent_ix].bound_transition,
                             nothing,
                         )
-                        deleteat!(trans_.nonblock_structured_agents, 1)
+                        deleteat!(trans_.nonblock_structured_agents, agent_ix)
                     end
                 end
             end
         end
 
         context_eval(state, trans_, state.wrap_fun(state.acs[trans_.i, :transPostAction]))
+
+        for agent in trans_.bound_structured_agents
+            set_species!(agent, :removed)
+            set_bound_transition!(agent, nothing)
+        end
 
         terminated_all[Symbol(trans_[:transHash])] =
             get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
@@ -540,8 +556,6 @@ function ReactionNetworkProblem(
     structured_token_names =
         acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
 
-    println(acs[:, :specName])
-    println(structured_token_names)
     attrs, transitions, wrap_fun = compile_attrs(acs, structured_token_names)
     transition_recipes = transitions
     u0_init = zeros(nparts(acs, :S))

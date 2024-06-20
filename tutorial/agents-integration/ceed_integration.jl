@@ -89,13 +89,16 @@ ReactiveDynamics.run_experiment =
             experiment = String(experiment)
 
             observation = sampler(
-                agent.state.evidence,
+                agent.state["preclinical_state"].evidence,
                 getindex(experiments_costs[experiment], 2),
                 rng,
             )
 
-            agent.state =
-                merge(agent.state, observation, first(experiments_costs[experiment]))
+            agent.state["preclinical_state"] = merge(
+                agent.state["preclinical_state"],
+                observation,
+                first(experiments_costs[experiment]),
+            )
         end
         return agents
     end
@@ -163,7 +166,7 @@ using Random: randstring
 # to the "experimental" places.
 for _ = 1:10
     cmpd = Compound(randstring(4), Dict())
-    cmpd.species = Symbol("e$(rand(1:4))")
+    cmpd.species = :pool
 
     add_structured_token!(problem, cmpd)
 end
@@ -191,7 +194,7 @@ ReactiveDynamics.assign_to_places =
         )
 
         for cmpd in compounds
-            e = get_next_experiment(cmpd.state.evidence, threshold)
+            e = get_next_experiment(cmpd.state["preclinical_state"].evidence, threshold)
             if !isnothing(e)
                 cmpd.species = first(e)
             end
@@ -219,7 +222,7 @@ end
 
 @push network begin
     @deterministic(2), ∅ --> @structured(Compound(randstring(4), Dict()))
-    @deterministic(1), ∅ --> ER1, preAction => assign_to_places(@state)
+    @deterministic(1), ∅ --> ∅, preAction => assign_to_places(@state)
 end
 
 problem = ReactionNetworkProblem(network)
@@ -228,7 +231,7 @@ problem = ReactionNetworkProblem(network)
 # to the "experimental" places.
 for _ = 1:10
     cmpd = Compound(randstring(4), Dict())
-    cmpd.species = Symbol("e$(rand(1:4))")
+    cmpd.species = Symbol(:pool)
 
     add_structured_token!(problem, cmpd)
 end

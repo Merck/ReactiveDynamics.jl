@@ -81,7 +81,7 @@ macro plot(solex, args...)
     plot = find_kwargex_delete!(kwargs, :plot_type, nothing)
     selector = find_kwargex_delete!(kwargs, :show, nothing)
 
-    quote
+    return quote
         plot_type = $(preserve_sym(plot))
         sol = $(esc(solex))
         if plot_type ∈ [nothing, :ensemble]

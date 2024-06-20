@@ -83,9 +83,11 @@ function Base.getindex(state::ReactionNetworkProblem, keys...)
 end
 
 function init_u!(state::ReactionNetworkProblem)
-    return (u = fill(0.0, nparts(state, :S));
-    foreach(i -> u[i] = state[i, :specInitVal], parts(state, :S));
-    state.u = u)
+    return (
+        u = fill(0.0, nparts(state, :S));
+        foreach(i -> u[i] = state[i, :specInitVal], parts(state, :S));
+        state.u = u
+    )
 end
 save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
 
@@ -247,6 +249,9 @@ set_params(state::ReactionNetworkProblem, vals...) =
     end
 
 function add_to_spawn!(state::ReactionNetworkProblem, hash, n)
-    ix = findfirst(ix -> state.transition_recipes[:transHash][ix] == hash)
+    ix = findfirst(
+        ix -> state.transition_recipes[:transHash][ix] == hash,
+        length(state.transition_recipes[:transHash]),
+    )
     return !isnothing(ix) && (state.transition_recipes[:transHash][ix] += n)
 end

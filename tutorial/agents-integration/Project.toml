@@ -1,6 +1,7 @@
 [deps]
 AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
 CEEDesigns = "e939450b-799e-4198-a5f5-3f2f7fb1c671"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Copulas = "ae264745-0b69-425e-9d9d-cf662c5eec93"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"

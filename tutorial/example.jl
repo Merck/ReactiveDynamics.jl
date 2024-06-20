@@ -48,7 +48,9 @@ sir_acs = @ReactionNetworkSchema
     ν * I * tdecay(@t()), I --> @choose(E, R, S), name => I2R
     γ, R --> S, name => R2S
 end
+
 @jump sir_acs 3 (S > 0 && bool_cond(@t()) && (I += 1; S -= 1)) # drift term, support for event conditioning
+
 @periodic sir_acs 5.0 (β += 1; println(β))
 # register custom function
 @register bool_cond(t) = (100 < t < 200) || (400 < t < 500)

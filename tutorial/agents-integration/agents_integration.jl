@@ -75,7 +75,7 @@ end
 # --------------------------------------------------------------------------------
 # Add transitions for entity class M1.
 
-for (i, state) in enumerate(M1_states[begin:end-2])
+for (i, state) in enumerate(M1_states[begin:(end-2)])
     t = Dict{String,Any}(
         "priority" => M1_priorities[i],
         "duration" => M1_durations[i],
@@ -114,7 +114,7 @@ end
 
 # Add transitions for entity class M2.
 
-for (i, state) in enumerate(M2_states[begin:end-2])
+for (i, state) in enumerate(M2_states[begin:(end-2)])
     t = Dict{String,Any}(
         "priority" => M2_priorities[i],
         "duration" => M2_durations[i],

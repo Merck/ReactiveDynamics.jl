@@ -1,6 +1,6 @@
 export AbstractStructuredToken, BaseStructuredToken
 export @structured_token
-export add_structured_token!
+export register_structured_species!, add_structured_token!
 
 # Abstract supertype of all structured species.
 abstract type AbstractStructuredToken <: AbstractAlgebraicAgent end
@@ -28,7 +28,7 @@ end
 
 # Convenience macro to define structured species.
 macro structured_token(network, type)
-    quote
+    return quote
         $(AlgebraicAgents.aagent(
             BaseStructuredToken,
             AbstractStructuredToken,

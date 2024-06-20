@@ -24,7 +24,7 @@ function push_to_acs!(acsex, exs...)
         ex = Expr(:tuple, args...)
     end
 
-    quote
+    return quote
         ex = blockize($(QuoteNode(ex)))
         merge_acs!($(esc(acsex)), get_data(ex)...)
     end
@@ -86,8 +86,10 @@ function incident_pattern(pattern, attr)
     ix = []
     for i = 1:length(attr)
         !isnothing(attr[i]) &&
-            (m = match(pattern, string(attr[i]));
-            !isnothing(m) && (string(attr[i]) == m.match)) &&
+            (
+                m = match(pattern, string(attr[i]));
+                !isnothing(m) && (string(attr[i]) == m.match)
+            ) &&
             push!(ix, i)
     end
 
@@ -131,7 +133,7 @@ macro mode(acsex, spexs, mexs)
     spexs = isexpr(spexs, :tuple) ? spexs.args : [spexs]
     exs = map(ex -> striplines(ex), spexs)
 
-    quote
+    return quote
         dictcall = Dict()
         exs_ = []
         foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
@@ -266,20 +268,21 @@ macro prob_init_from_vec(acsex, vecex)
 end
 
 function init!(acs, inits)
-    inits isa AbstractVector &&
-        length(inits) == nparts(acs, :S) &&
-        (subpart(acs, :specInitVal) .= inits; return)
-    inits isa AbstractDict && for (k, init_val) in inits
-        if k isa Number
-            acs[k, :specInitVal] = init_val
-        else
-            begin
-                i = if k isa Regex
-                    incident_pattern(k, subpart(acs, :specName))
-                else
-                    incident(acs, k, :specName)
+    if inits isa AbstractVector && length(inits) == nparts(acs, :S)
+        subpart(acs, :specInitVal) .= inits
+    elseif inits isa AbstractDict
+        for (k, init_val) in inits
+            if k isa Number
+                acs[k, :specInitVal] = init_val
+            else
+                begin
+                    i = if k isa Regex
+                        incident_pattern(k, subpart(acs, :specName))
+                    else
+                        incident(acs, k, :specName)
+                    end
+                    foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
                 end
-                foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
             end
         end
     end
@@ -370,7 +373,7 @@ Set parameter values in an acset.
 macro prob_params(acsex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
-    quote
+    return quote
         dictcall = Dict()
         exs_ = []
         foreach(s -> push!(exs_, striplines(blockize(s))), $(QuoteNode(exs)))
@@ -453,8 +456,12 @@ alias_default = Dict(
     :M => :meta,
 )
 
-get_alias(acs, ob) = (i = incident(acs, Symbol(:alias_, ob), :metaKeyword);
-!isempty(i) ? acs[first(i), :metaVal] : alias_default[ob])
+function get_alias(acs, ob)
+    return (
+        i = incident(acs, Symbol(:alias_, ob), :metaKeyword);
+        !isempty(i) ? acs[first(i), :metaVal] : alias_default[ob]
+    )
+end
 
 """
 Check model parameters have been set. # msg as return value

@@ -92,3 +92,11 @@ function get_kwarg(collection, key, default = :())
 
     return !isnothing(ix) ? collection[ix].args[2] : default
 end
+
+function get_bound_agent(transition, place)
+    if !isnothing(transition) && !isempty(transition.bound_structured_agents)
+        bound_agents = filter(x -> x.species == place, transition.bound_structured_agents)
+
+        bound_agents
+    end
+end

@@ -1,6 +1,7 @@
 # reaction network DSL: CREATE part; reaction line and event parsing 
 
 export @ReactionNetworkSchema
+export @append_transitions
 
 using MacroTools: prewalk, postwalk, striplines, isexpr
 using Symbolics: build_function, get_variables
@@ -163,6 +164,7 @@ end
 
 function get_transitions!(trans, reactants, pcs, exs)
     args = empty(defargs[:T])
+
     (rate, r_line) = exs[1:2]
     rxs = prune_reaction_line!(pcs, reactants, r_line)
     rate = expand_rate(rate)
@@ -173,9 +175,11 @@ function get_transitions!(trans, reactants, pcs, exs)
     ix = 1
     while ix <= length(exs)
         (!isa(exs[ix], Expr) || (exs[ix].head != :call)) && (ix += 1; continue)
-        karg = (xi = findfirst(k -> exs[ix].args[2] ∈ k, prettynames);
-        isnothing(xi) && (ix += 1; continue);
-        xi)
+        karg = (
+            xi = findfirst(k -> exs[ix].args[2] ∈ k, prettynames);
+            isnothing(xi) && (ix += 1; continue);
+            xi
+        )
         push!(args, karg => normalize_pcs!(pcs, exs[ix].args[3]))
         deleteat!(exs, ix)
     end
@@ -195,17 +199,21 @@ function normalize_pcs!(pcs, expr)
     postwalk(expr) do ex
         isexpr(ex, :macrocall) &&
             macroname(ex) == :register &&
-            (push!(pcs, deepcopy(ex));
-            ex.args[1] = Symbol("@", :take);
-            ex.args = ex.args[1:3])
+            (
+                push!(pcs, deepcopy(ex));
+                ex.args[1] = Symbol("@", :take);
+                ex.args = ex.args[1:3]
+            )
         if isexpr(ex, :macrocall) && macroname(ex) == :register
             r_sym = gensym()
-            (push!(pcs, (ex_ = deepcopy(ex); insert!(ex_.args, 3, r_sym); ex_));
-            ex.args[1] = Symbol("@", :take);
-            ex.args = [
-                r_sym
-                ex.args[1:2]
-            ])
+            (
+                push!(pcs, (ex_ = deepcopy(ex); insert!(ex_.args, 3, r_sym); ex_));
+                ex.args[1] = Symbol("@", :take);
+                ex.args = [
+                    r_sym
+                    ex.args[1:2]
+                ]
+            )
         end
         return ex
     end
@@ -257,15 +265,11 @@ function prune_reaction_line!(pcs, reactants, line)
     elseif line isa Expr && line.args[1] ∈ double_arrows
         biarrow = nothing
         prewalk(ex -> (ex ∈ double_arrows && (biarrow = ex); ex), line)
-        line =
-            prune_reaction_line!.(
-                Ref(pcs),
-                Ref(reactants),
-                (
-                    replace_in_expr(line, biarrow => :⟶),
-                    replace_in_expr(line, biarrow => :⟵),
-                ),
-            )
+        line = prune_reaction_line!.(
+            Ref(pcs),
+            Ref(reactants),
+            (replace_in_expr(line, biarrow => :⟶), replace_in_expr(line, biarrow => :⟵)),
+        )
     end
 
     return line
@@ -305,4 +309,19 @@ function recursively_find_reactants!(reactants, pcs, ex)
     end
 
     return ex
+end
+
+macro append_transitions(network, transitions)
+    return quote
+        transitions_expr = """
+        begin
+            $(join($(esc(transitions)), '\n'))
+        end""" |> Meta.parseall |> striplines
+
+        push_expr = quote
+            @push $($(esc(network))) $(transitions_expr.args[1])
+        end
+
+        Base.eval(@__MODULE__, push_expr)
+    end
 end
