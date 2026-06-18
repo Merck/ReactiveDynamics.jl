@@ -1,6 +1,6 @@
 # ReactiveDynamics Modeling Contract
 
-> **DRAFT — Phase-0 modeling contract (fork-independent sections). The object model, composition semantics, and serialization schema sections are pending the ADR 0003 data-store decision and will be added once confirmed.**
+> **DRAFT — Phase-0 modeling contract.** The fork-independent sections (§1–§5) are complete. The ADR 0003 data-store decision is now ACCEPTED (drop ACSets for a dependency-free typed IR; promote the reactant relation), with serialization in [ADR 0005](adr/0005-serialization-json-ir.md) (single JSON + ExprNode) and runtime mutation in [ADR 0004](adr/0004-runtime-mutation.md) (append-only). The remaining sections — object model, composition semantics, serialization schema — can now be written against that decision and are the next contract increment (see "Pending sections" at the end).
 
 ## Orientation
 
@@ -167,6 +167,31 @@ The model is a fixed-step Euler-style discretization of an underlying continuous
 - **What is stochastic is the *content* of each tick, not its timing.** Randomness enters only through draws evaluated at the fixed tick boundaries: spawn counts `rand(Poisson(dt·r))` (`create.jl:151`), success counts `rand(Binomial(q, p))` (`solvers.jl:413`), event multiplicities `rand(Poisson(v))` (`solvers.jl:321`), and any sampled attributes. Under a fixed RNG seed the entire trajectory — including all draws — is reproducible.
 - **`_reinit!` restores the clock** to `state.tspan[1]` (i.e. `0.0`) and clears ongoing transitions, log, and solution, so a re-run from the same seed reproduces the run exactly (`solvers.jl:619-628`).
 - **Consequence for the contract:** time advancement is a guaranteed invariant — implementations may change the data store, the allocation strategy, or the RNG stream, but MUST preserve (a) a single scalar clock advanced by a constant `dt`, (b) `tspan/dt` total ticks over a `[0, tspan]` axis, and (c) the property that timing is RNG-independent while per-tick draws are seed-reproducible. (The full RNG/seeding obligations are specified in §4.)
+
+### 2.8 Genesis modes — is Poisson the right primitive for business processes?
+
+This section answers the maintainer's question directly: **Poisson-per-tick is the right primitive for one regime (genuine memoryless exogenous inflow) but the wrong DEFAULT for a business/R&D pipeline.** A drug pipeline is a near-deterministic chain `Phase1 → Phase2 → Phase3 → Market` where a program advances to the next phase *because* the prior phase succeeded — a token flow, not an independent random arrival. Forcing that flow through a memoryless Poisson clock injects spurious variance into rNPV and makes the pre/post-acquisition counterfactual noisy, defeating the comparison the demo exists to make. The good news, established by reading the engine: the better mechanism ALREADY EXISTS — genesis is internally two stages, and the second stage already provides token-flow and capacity gating. No engine redesign is needed; the contract's job is to NAME the regimes and validate intent.
+
+**Genesis is already two stages (verified).** Each tick, for transition `t`: (1) a spawn-count PROPOSAL from the rate expression — `Poisson(dt·rate)` by default (`create.jl:151`) or a bare count under `@deterministic` (`create.jl:153`), times `transMultiplier`, then `ceil`'d (`solvers.jl:140-144`); then (2) an upfront-LHS RESOURCE GATE that clamps the realized count to `floor(allocation / stoich)` over the transition's upfront-consumed LHS tokens, via `get_reqs_init!`→`get_allocs!`→`get_init_satisfied` (`solvers.jl:156-160`, `:110-128`). The gate's `reqs == 0 ⇒ Inf` rule (`solvers.jl:121`) means a transition with NO upfront LHS keeps its full proposal (a pure source), whereas a transition WITH upfront LHS can only spawn as many instances as its input tokens and allocated resources permit (token-flow / capacity-limited). **So flow-triggered and capacity-limited genesis work today with zero new mechanism** — the `toy_pharma_model` already demonstrates both (phase hand-off via `candidate_compound` on discovery's RHS and `dx2market`'s LHS; capacity-limited starts via `3*@conserved(scientist) + @rate(budget) --> candidate_compound`).
+
+**Source vs routing (the latent, correct distinction).** The split between exogenous arrivals and internal routing is already implicit in the data: an EMPTY LHS (`extract_reactants` returns `[]`, `reaction_parser.jl:50-51`) = a SOURCE that bypasses the gate and spawns at the proposal intensity; a NON-EMPTY upfront LHS = ROUTING that fires only when its input tokens exist. The contract makes this explicit rather than accidental.
+
+**The closed genesis-mode tag.** Add ONE append-only transition field `genesis ∈ {poisson, scheduled, flow, capacity}` (a 4-value string tag — eval-free, JSON-Schema-enumerable per ADR 0005; append-only per ADR 0004), an intent declaration over the single shared two-stage execution path:
+
+| Mode | Business meaning | Maps to (existing mechanism) | Source/Routing | New engine surface |
+|---|---|---|---|---|
+| `poisson` | Random independent exogenous inflow (unsolicited inbound deals) | Today's `expand_rate` `Poisson(dt·rate)` (`create.jl:151`) | Source | none — current default path |
+| `scheduled` | Prescribed/calendar genesis (quarterly gate, budget cycle, planned start, the BD acquisition lever) | `@deterministic` bare-count (`create.jl:150,153`) + a documented calendar idiom `@scheduled(period,N) ⇒ @deterministic(N*periodic(period))`, since `periodic(state,period)` already exists (`state.jl:239`) and `period==0.0` returns true (one-shot at t0) | Source | none — documented idiom only |
+| `flow` | Token-triggered: a program advances because the upstream phase succeeded | The EXISTING upfront-LHS gate (`solvers.jl:110-128`); author writes a high/`Inf` nominal rate with the upstream species as an upfront-consumed LHS reactant | Routing | none |
+| `capacity` | Start as many as resources/headcount allow | Same gate path as `flow`, bounded by a renewable `@conserved`/`@rate` pool + `transCapacity` (`solvers.jl:147-153`) + the ADR-0002 allocator | Routing | none |
+
+`batch` is a PARAMETER, not a mode (`batch::Int`, default 1, applied as post-gate rounding `qs[i] = batch * fld(qs[i], batch)`), and finite-population/one-shot is EXPRESSED (a flow source consuming a finite `specInitVal` pool; one-shot = `scheduled` at t0), not a new mode. Three of the four modes map onto existing mechanisms with zero new engine surface; only the `scheduled` calendar form needs a documented idiom (and `periodic` already compiles, `compilers.jl:67`).
+
+**Validation rules (construction-time).** `flow`/`capacity` REQUIRE ≥1 upfront-consumed LHS species (else they would silently behave as an unbounded Poisson/deterministic source); `poisson`/`scheduled` with a consuming LHS should WARN (the author probably meant routing). This makes the source/routing intent checkable for agentic authoring.
+
+**Rejected (out of scope).** The heavier queueing-lens proposal — redefine routing to drop the Poisson proposal and substitute a `min(1, dt·rate)` service-fraction primitive, splitting genesis into `ArrivalProcess` subtypes + a routing primitive — is rejected: it is a semantic break adding a second intensity code path for marginal fidelity gain, and the existing `rate=Inf + upfront LHS` idiom already realizes token-bounded firing `min(proposal, tokens) = tokens`. The one real artifact it identifies (a routing token left unserved because a small Poisson draw thinned it) is eliminated by the canonical `flow` idiom (`rate=Inf` makes the proposal non-binding), so it is a template/documentation fix, not an engine fix.
+
+**Correctness blockers (independent of genesis design).** Two pre-existing bugs gate the business-process use cases: `event_action!` is a no-op (`solvers.jl:323` fetches `:eventAction` but never evaluates it — §3.4 Invariant 7), so the acquisition lever must use the `scheduled` rate-expression idiom, NOT the event channel, until repaired; and `add_to_spawn!` is doubly broken (`state.jl:251-256` — §3.4 Invariant 3), so `capacity`/`batch` genesis under-delivers under sustained over-demand. Also, because the `ceil` at `solvers.jl:144` breaks dt-invariance for non-Poisson counts (§2.3), `scheduled`/`batch` counts MUST be integer-valued (or `ceil` must be conditioned to the `poisson` path only).
 
 ---
 
@@ -342,10 +367,10 @@ Today every authored quantity has the catch-all type `SampleableValues = Union{E
 
 ---
 
-## Pending sections (ADR 0003)
+## Pending sections (next contract increment)
 
-The following sections are deferred until the ADR 0003 data-store decision is confirmed, because their content depends on the chosen object model and storage representation:
+The ADR 0003 data-store decision is now made, so these sections can be written against the dependency-free typed IR (with the promoted `ReactantSpec` incidence table) and the ADR 0005 JSON serialization:
 
-- **Object model** — the canonical typed representation of species, transitions, events, observables, params, and meta, and the structural relations among them.
-- **Composition semantics** — how two models compose (today done by manual name-matching `add_part!`/`incident` loops, not categorical pushouts); the contract for merge/equalize behavior.
-- **Serialization schema** — the typed, serializable, validatable spec an LLM can emit (Workstream F), and round-trip guarantees.
+- **Object model** — the canonical typed representation of species, transitions, the promoted `ReactantSpec` incidence relation (ADR 0003 Phase 2), events, observables, params, and meta; the append-only index invariant (ADR 0004) is part of this section's contract.
+- **Composition semantics** — how two models compose. Today this is manual name-matching `add_part!`/`incident` loops (`operators/joins.jl` `union_acs!`, `operators/equalize.jl` `equalize!`), NOT categorical pushouts; the `@join` file branch calls an undefined `include_model` (`joins.jl:226,228`). The promoted reactant table makes species-merge structurally exact (vs today's fragile `recursively_substitute_vars!` string surgery). NOTE: `equalize!`'s `rem_parts!` (`operators/equalize.jl:52`) is the one reindexer that ADR 0004 forbids on a live/stepping model.
+- **Serialization schema** — specified in [ADR 0005](adr/0005-serialization-json-ir.md): a single JSON format + typed `ExprNode` IR (eval-free, JSON-Schema-describable for LLM emission, Workstream F), with `from_json`/`to_json`/`validate` and round-trip guarantees. This section will cross-reference rather than restate ADR 0005.

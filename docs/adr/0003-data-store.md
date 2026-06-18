@@ -1,8 +1,10 @@
 # ADR 0003: Data store for the ReactiveDynamics authoring/IR layer
 
-Status: Proposed — pending maintainer confirmation
+Status: Accepted — maintainer-confirmed 2026-06-18 (drop ACSets; promote the reactant relation; no backward on-disk compatibility). Serialization is split out to ADR 0005 (single JSON IR) and runtime mutation to ADR 0004 (append-only).
 
 Date: 2026-06-18
+
+> Maintainer rulings folded in (2026-06-18): (1) NO backward ACSet/on-disk compatibility required — the migration is free to break existing serialized models. (2) Phase 2 (promote the transition↔reactant relation to a typed `ReactantSpec` incidence table) is CONFIRMED, not optional. (3) The runtime store MUST support mutation during simulation — the append-only constraint and the live mutation API are specified in [ADR 0004](0004-runtime-mutation.md). (4) Serialization collapses to a single JSON format (dropping TOML/CSV/JLD2), specified in [ADR 0005](0005-serialization-json-ir.md). (5) Phase 3 (optional `to_acset` weakdep interop view) remains OPTIONAL and low-priority since AlgebraicJulia interop is off the BD/rNPV roadmap.
 
 Supersedes/relates to: ADR 0001 (keep the native discrete-event engine ReactionNetworkProblem), ADR 0002 (priority-weighted water-filling allocation). This ADR decides only the STATIC authoring/IR layer; the runtime engine and allocator are unaffected.
 
