@@ -367,10 +367,247 @@ Today every authored quantity has the catch-all type `SampleableValues = Union{E
 
 ---
 
-## Pending sections (next contract increment)
+## 6. Object Model
 
-The ADR 0003 data-store decision is now made, so these sections can be written against the dependency-free typed IR (with the promoted `ReactantSpec` incidence table) and the ADR 0005 JSON serialization:
+This section pins the canonical typed representation of a model under the ADR 0003 dependency-free typed IR. It defines each object as a typed record with named fields, a scalar or [ADR 0005](adr/0005-serialization-json-ir.md) `ExprNode` type per field, and the [ADR 0004](adr/0004-runtime-mutation.md) append-only index discipline. It is the *static authoring/IR* layer only: the live runtime `ReactionNetworkProblem` (`state.jl:40-63`) and its in-flight `Transition`/`Observable` instances (`state.jl:14-38`) are derived from this model and are not part of it. The model is a **struct of columnar object-tables**: each object below is one table whose rows share a single integer index space, exactly mirroring the six current ACSet objects (`:S, :T, :E, :obs, :P, :M`, `ReactiveDynamics.jl:30-76`) plus the one new promoted table (`ReactantSpec`). The defining change versus the current source is structural: the transition↔reactant relation, today *not stored* and re-parsed from the `trans` `Expr` every tick by `extract_reactants` (`interface/reaction_parser.jl:32`, called at `state.jl:194` and `solvers.jl:418`), becomes a first-class typed incidence table with schema-enforced foreign keys.
 
-- **Object model** — the canonical typed representation of species, transitions, the promoted `ReactantSpec` incidence relation (ADR 0003 Phase 2), events, observables, params, and meta; the append-only index invariant (ADR 0004) is part of this section's contract.
-- **Composition semantics** — how two models compose. Today this is manual name-matching `add_part!`/`incident` loops (`operators/joins.jl` `union_acs!`, `operators/equalize.jl` `equalize!`), NOT categorical pushouts; the `@join` file branch calls an undefined `include_model` (`joins.jl:226,228`). The promoted reactant table makes species-merge structurally exact (vs today's fragile `recursively_substitute_vars!` string surgery). NOTE: `equalize!`'s `rem_parts!` (`operators/equalize.jl:52`) is the one reindexer that ADR 0004 forbids on a live/stepping model.
-- **Serialization schema** — specified in [ADR 0005](adr/0005-serialization-json-ir.md): a single JSON format + typed `ExprNode` IR (eval-free, JSON-Schema-describable for LLM emission, Workstream F), with `from_json`/`to_json`/`validate` and round-trip guarantees. This section will cross-reference rather than restate ADR 0005.
+### 6.1 Field-type vocabulary
+
+Three field categories appear in the records below:
+
+- **Scalar** — a literal stored once and frozen for the run (e.g. `init::Float64`, `structured::Bool`). Never re-read through `context_eval`.
+- **`ExprNode`** — a time-varying expression encoded as the closed, eval-free, JSON-representable sum type of [ADR 0005](adr/0005-serialization-json-ir.md) (`Const`/`Ref{species|param|obs}`/`Call{op∈OP_WHITELIST}`/`Sample{dist∈DIST_WHITELIST}`/`TimeRef`/`Choose`). A `Const` ExprNode is the canonical form of a literal that *may* be a TVE; a non-trivial tree is a genuine TVE re-evaluated each tick. This replaces today's catch-all `SampleableValues = Union{Expr,Symbol,AbstractString,Float64,Int,Function}` (`ReactiveDynamics.jl:10`) for every attribute that §5 marks "TVE? = yes."
+- **Closed tag** — a `Symbol` constrained to a fixed enumerated set, validated at construction (e.g. `genesis::GenesisKind`, the §1 `Modality` axes, `side∈{lhs,rhs}`). These are JSON-Schema-enumerable per ADR 0005.
+
+Per-field units, ranges, defaults, and TVE policy are normative in **§5** (Attribute Contract) and are not restated here; this section fixes the *record shape*, the *typing*, and the *identity/index* rules. Field names below are the contract's canonical names; the parenthetical is the current schema column they correspond to.
+
+### 6.2 The append-only index invariant (ADR 0004)
+
+Every object table is a positional column store: row `i` of an object is addressed by its integer index, and that index is the object's identity within the live runtime (compiled attribute closures hard-code `state.u[i]` against a varmap frozen at construction, `compilers.jl:149`). Therefore the model obeys [ADR 0004](adr/0004-runtime-mutation.md) INV-1/INV-2/INV-3 verbatim:
+
+- **Append-only.** A new species, transition, param, event, observable, or reactant row receives the next free index (`nparts+1`); existing indices NEVER move. Growth is monotone.
+- **No mid-run reindex.** Deletion and reordering of rows are forbidden on a live/stepping model. `rem_parts!` (the sole reindexer, `operators/equalize.jl:52`) must refuse under a runtime `live` guard.
+- **Soft-deactivate, not delete.** Logical removal of a transition is `transActivated[i]=false` (honored as a skip-gate at `state.jl:179`); the row, its index, and all higher indices stay put, and in-flight instances of a deactivated transition still run to completion (`finish!` iterates `ongoing_transitions` independently of `transActivated`, `solvers.jl:406`).
+
+The live mutation API (`add_species!`/`add_transition!`/`add_param!`/`activate!`/`deactivate!`) and the `refresh_wrap_fun!` re-derivation that keeps pre-existing indices bound to the same `state.u[i]` are specified in ADR 0004 and are not restated here.
+
+### 6.3 Identity-by-name and its risk
+
+Objects are matched and merged **by name**, not by index, at the authoring/composition boundary. The current implementation keys every lookup, merge, and substitution on the name column with no enforced uniqueness:
+
+- `merge_acs!` adds a species only if `incident(acs, r, :specName)` is empty (`ReactiveDynamics.jl:211-214`) — first-write-wins by name.
+- `union_acs!` (`operators/joins.jl:14-26`) merges two networks by looping `incident(acs1, name, :specName)` + `add_part!`.
+- `equalize!` (`operators/equalize.jl`) merges species by name, with a fragile fallback (`equalize.jl:55-63`) that rewrites species names via `recursively_substitute_vars!` over EVERY attribute `Expr`.
+
+**Contract rule (identity).** Within one model table, `name` MUST be unique; the constructor/validator MUST reject duplicate `Species.name`, `Transition.id`, `Param.name`, and `Observable.name`. **Risk this pins.** Because composition is name-keyed string surgery rather than a structural reference repoint, a species name that collides inside a stoich/rate subexpression can be silently corrupted by `recursively_substitute_vars!` (ADR 0003 Context). The promoted `ReactantSpec` table (§6.5) is the structural fix: composition repoints integer FKs instead of substituting strings, making species-merge exact. The full composition semantics are a separate (pending) contract section; this section only fixes the identity rule the merge operators must honor.
+
+### 6.4 Species
+
+A resource pool. One row per species; the row index is the position of `state.u[i]`.
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `name` | Symbol (closed identity) | `specName` (`ReactiveDynamics.jl:44`) | Unique key; the FK target for `ReactantSpec.species` (§6.5). |
+| `init` | `ExprNode` (read-once → `Const` literal expected; §5 marks "no") | `specInitVal` (`:46`) | Initial `u[i]`; integer-valued for unstructured species (§5 A4). |
+| `init_uncertainty` | `ExprNode` (read-once) | `specInitUncertainty` (`:47`) | Ensemble initial-condition spread; semantics fixed in §5.4 (declared but currently unconsumed by the solver). |
+| `cost` | `ExprNode` (TVE) | `specCost` (`:48`) | Currency per unit consumed. |
+| `reward` | `ExprNode` (TVE) | `specReward` (`:49`) | Currency per unit produced. |
+| `valuation` | `ExprNode` (TVE) | `specValuation` (`:50`) | Mark-to-market value per unit held; may be signed (§5.4). |
+| `modality` | `Modality` (the §1 orthogonal form: `allocation∈{upfront,perstep}` × `return∈{consumed,conserved}` × `blocking∈{block,nonblock}`) | `specModality` (`:45`) | Replaces the unvalidated `Set{Symbol} ⊆ {:nonblock,:conserved,:rate}` (`ReactiveDynamics.jl:144`). This species-level modality is the default unioned with each per-reactant LHS modality during sampling (`state.jl:202`); see §6.5. Legal rows and the illegal `nonblock⇒consumed` / `perstep` rules are §1.3–§1.4. |
+| `structured` | Bool (closed tag) | `specStructured` (`:51`, default `false`) | Marks the species as agent-backed (a structured token) rather than a plain `Float64` count. See §6.10. |
+
+### 6.5 ReactantSpec — the promoted incidence table (ADR 0003 Phase 2)
+
+The model's defining relation: which species each transition consumes (LHS) or produces (RHS), with stoichiometry and (LHS only) modality. **This table is the structural promotion mandated by ADR 0003 Phase 2** — it replaces the runtime re-parse of the `trans` `Expr` by `extract_reactants` (`interface/reaction_parser.jl:32`), which today reconstructs `FoldedReactant(species, stoich, modality)` rows (`interface/reaction_parser.jl:5-9`) on the fly at `state.jl:194` and `solvers.jl:418`. Promoting it to a stored typed table delivers what REVIEW.md flagged as missing — "structure is implicit, not morphic" — by making the bipartite species↔transition graph first-class, FK-checkable, and round-trippable (ADR 0005 `reactants[]`).
+
+One row per (transition, species, side) participation:
+
+| Field | Type | Notes |
+|---|---|---|
+| `transition` | FK → `Transition.id` (integer index) | Schema-enforced: validation MUST reject a row whose `transition` is not a live transition index (ADR 0005 validate rule 2, dangling FK). |
+| `species` | FK → `Species.name`/index | Likewise schema-enforced; a dangling `species` FK is invalid. |
+| `side` | closed tag `∈ {lhs, rhs}` | LHS = consumed input; RHS = produced output. Mirrors `prune_r_line`'s `(l_line, r_line)` split (`state.jl:152-155`). |
+| `stoich` | `ExprNode` (TVE) | Per-participation stoichiometry; integer-valued where it feeds a structured species (§5 A4, checked at `solvers.jl:196-200,268-272`). The `@structured`/`@move` dynamic idioms (`interface/reaction_parser.jl:67`) and the separate `@choose` idiom (`recursively_choose`, `interface/reaction_parser.jl:11-30`) become explicit `ExprNode` variants (`Choose`, structured-token nodes) so this table stays the single source of truth. |
+| `modality` | `Modality` (§1 orthogonal form) — **LHS rows only** | Present only when `side = lhs` (a modality is "the contract attached to each LHS consumed token," §1; the current `FoldedReactant.modality` is likewise LHS-only, `reaction_parser.jl:8`). RHS rows carry no modality. The effective modality of an LHS token is this per-reactant value unioned with the species-level `Species.modality` (today `r.modality ∪ state[j,:specModality]`, `state.jl:202`). |
+
+**Why this matters (the three wins ADR 0003 names).** (1) *Schema-enforced FKs* — dangling participations are caught by `validate` at construction/load rather than surfacing as a runtime `find_index` returning `nothing`. (2) *Structural validation* — the LHS/RHS bipartite structure (a real Petri-net incidence) is inspectable without parsing an `Expr`. (3) *Exact composition* — `union_acs!`/`equalize!` merge species by repointing integer `species` FKs, not by `recursively_substitute_vars!` string rewriting (§6.3 risk), so a species-name collision inside a subexpression can no longer corrupt incidence. Append-only (§6.2) applies to this table too: a mutation adds reactant rows at the next index and never reorders them.
+
+### 6.6 Transition
+
+A stateful spawning recipe (not an event). One row per transition; the row index/`id` is the FK target for `ReactantSpec.transition` and the position the per-tick sampler walks (`state.jl:178`).
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `id` | Symbol/integer (closed identity) | row index of `:T` | Stable unique key; FK target for `ReactantSpec`. For reproducible ensembles an injected transition SHOULD get an explicit stable `id`/`name` (ADR 0004: `missing` falls back to `gensym()`). |
+| `name` | Symbol/String/`missing` (descriptive scalar) | `transName` (`:63`, default `missing`) | Label only; not a quantity. |
+| `rate` | `ExprNode` (TVE) | `transRate` (`:55`) | Spawn intensity (expected instances per unit time); required at authoring (§5.3). Lowers to the genesis draw per `genesis`/`rate_mode` (§6.7). |
+| `genesis` | closed tag `GenesisKind ∈ {poisson, scheduled, flow, capacity}` | NEW append-only field (§2.8) | Intent declaration over the shared two-stage genesis path; `poisson`/`scheduled` are sources, `flow`/`capacity` are routing and REQUIRE ≥1 upfront-consumed LHS `ReactantSpec` row (§2.8 validation). Subsumes the ADR 0005 `rate_mode∈{poisson,deterministic}` discriminator. |
+| `priority` | `ExprNode` (TVE, re-read per tick per ADR 0002) | `transPriority` (`:54`, default `1`) | Per-tick fill-rate weight for weighted progressive filling; `0` = leftover-only. |
+| `cycletime` | `ExprNode` (TVE) | `transCycleTime` (`:56`, default `0.0`) | Service duration; gates `perstep` resource draw on `> 0` (§1.4, §2.4). |
+| `prob_of_success` | `ExprNode` (TVE, range `[0,1]`) | `transProbOfSuccess` (`:57`, default `1`) | PoS for the `Binomial(q, p)` success draw (`solvers.jl:413`). |
+| `capacity` | `ExprNode` (TVE, integer or `Inf`) | `transCapacity` (`:58`, default `Inf`) | Max concurrent live instances; overflow deferred (ADR 0004; deferral currently broken — §3.4 Inv 3). |
+| `max_lifetime` | `ExprNode` (TVE, `≥0` or `Inf`) | `transMaxLifeTime` (`:59`, default `Inf`) | Wall-clock age cap (§2.5). |
+| `multiplier` | `ExprNode` (TVE, `≥0`) | `transMultiplier` (`:62`, default `1`) | Scales the per-tick spawn target. |
+| `pre_action` | action-statement tree (ADR 0005 `{SetSpecies,SetParams,Log,Seq}`) | `transPreAction` (`:60`, default `:()`) | Side-effecting code run on spawn (`solvers.jl:227`); not a numeric attribute, never sampled through `context_eval`'s draw path. |
+| `post_action` | action-statement tree | `transPostAction` (`:61`, default `:()`) | Run on completion (`solvers.jl:485`). |
+
+The LHS/RHS reactant specification is NOT a field here — it lives in the `ReactantSpec` table (§6.5), which is the whole point of the Phase-2 promotion. The runtime in-flight instance (engine type `Transition`, `state.jl:14-26`, carrying `i`, frozen `trans` snapshot, birth `t`, multiplicity `q`, progress `state`) is a runtime object derived from this recipe row, not a model object.
+
+### 6.7 Genesis as a recipe property
+
+`genesis` (§6.6) is a closed tag over the single two-stage execution path (rate-proposal then upfront-LHS resource gate; §2.8), not a separate object. It is append-only (ADR 0004) and JSON-Schema-enumerable (ADR 0005). `poisson` lowers `rate` to `Poisson(dt·rate)`; `scheduled` to the `@deterministic` bare-count + calendar idiom; `flow`/`capacity` ride the existing upfront-LHS gate and require a consuming LHS (§2.8 validation, enforced against the `ReactantSpec` table). `batch` is a transition parameter, not a genesis mode.
+
+### 6.8 Event
+
+A scheduled trigger→action pair (the BD acquisition lever's home, once `event_action!` is repaired — §3.4 Inv 7). One row per event.
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `id` | Symbol (closed identity) | row index of `:E` | Unique key. |
+| `trigger` | `ExprNode` (TVE; resolves to Bool or numeric) | `eventTrigger` (`:65`) | Bool ⇒ fire once; numeric `v` ⇒ fire `Poisson(v)` times per tick (`solvers.jl:320-321`). |
+| `action` | action-statement tree (`{SetSpecies,SetParams,Log,Seq}`, ADR 0005) | `eventAction` (`:66`) | Run when the trigger holds. NOTE: the engine currently fetches but never evaluates this (`solvers.jl:323`) — events are a no-op (§3.4 Inv 7). |
+
+### 6.9 Observable, Param, Meta
+
+**Observable** — a periodically-resampled derived quantity. One row per observable.
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `name` | Symbol (closed identity) | `obsName` (`:68`) | Unique key; referenceable via `Ref{obs}` ExprNodes. |
+| `range` | `Vector` of weighted `ExprNode` alternatives | `obsOpts.range` (`FoldedObservable`, `ReactiveDynamics.jl:24-28`) | Sampled per §4 determinism. |
+| `every` | Float64 (scalar) | `obsOpts.every` (default `Inf`) | Resample period; resampled when `(t − last) ≥ every` (`state.jl:144-148`). |
+| `on` | `Vector{ExprNode}` | `obsOpts.on` | Gate expressions. |
+
+NOTE the runtime `Observable` agent (`state.jl:31-38`) carries a `sampled` field; the documented `resample!` bug writes a nonexistent `o.val` (`state.jl:137` vs field `.sampled` at `state.jl:37`) — a model-independent engine defect the test suite must pin.
+
+**Param** — a named scalar constant. One row per param.
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `name` | Symbol (closed identity) | `prmName` (`:71`) | Unique key; FK target for `Ref{param}` ExprNodes; resolved positionally to `state.p[:name]`. |
+| `value` | Float64/number (scalar) | `prmVal` (`:72`, default `missing`) | A JSON number under ADR 0005 — directly replacing the `eval(Meta.parseall(prmVal))` import-time RCE (`loadsave.jl:65`). Not an `ExprNode` tree. |
+
+**Meta** — the keyword bag. ADR 0005 collapses the `:M` keyword rows and the solver kwargs into one `meta` object (they already merge into a single `keywords` bag, `solvers.jl:544-552`).
+
+| Field | Type | Corresponds to | Notes |
+|---|---|---|---|
+| `key` | Symbol (closed identity) | `metaKeyword` (`:73`) | e.g. `name`, `tspan`, `dt`/`tstops`, `tunit`, `seed`, `alloc_strategy`. |
+| `value` | scalar (number/string) | `metaVal` (`:74`, default `missing`) | A literal; replaces the `eval`d-string `metaVal` path. The `seed` here is the §4 determinism seed; `tspan`/`dt` feed `get_tcontrol` (§2.2). |
+
+### 6.10 Structured-token refinement of Species
+
+A species with `structured = true` (§6.4) is *not* a separate object table — it is a refinement of a Species row whose pool is backed by individual token agents rather than a `Float64` count. The agent type is `AbstractStructuredToken <: AbstractAlgebraicAgent` (`agents.jl:6`), with the default concrete implementation `BaseStructuredToken` (`@aagent FreeAgent`, `agents.jl:11-15`) carrying `species::Union{Nothing,Symbol}`, `bound_transition::Union{Nothing,Transition}`, and `past_bonds`. Live agent counts are reflected into `u[i]` by `update_u_structured!`, and genesis binds granted integer token counts to an instance by descending token `priority` (`agents.jl:67`). For the object model this means: `structured` is a closed-tag flag on the Species record (not a new table); the contract requires structured species to have integer-valued `init` and integer stoichiometry on every incident `ReactantSpec` row (§5 A4); and `perstep` allocation modality is illegal for a structured species (§1.4 — you cannot reserve a fractional `dt`-scaled slice of an indivisible agent). The append-aware handling of a newly added structured species (`push!(state.structured_token, name)`) is an ADR 0004 open question, not a model-shape question.
+
+### 6.11 Summary of the object tables
+
+Seven typed columnar tables, all under the §6.2 append-only index discipline: **Species** (§6.4), **Transition** (§6.6, carrying the `genesis` tag §6.7), the promoted **ReactantSpec** incidence table (§6.5 — the structural upgrade), **Event** (§6.8), **Observable**, **Param**, **Meta** (§6.9). Identity is by name within each table with enforced uniqueness (§6.3); the cross-table relation is the FK-checked `ReactantSpec` bipartite graph. Per-field domains are §5; the orthogonal `Modality` is §1; `GenesisKind` is §2.8; the `ExprNode`/action-statement IR and JSON serialization are [ADR 0005](adr/0005-serialization-json-ir.md); the index/mutation discipline is [ADR 0004](adr/0004-runtime-mutation.md); the drop-ACSets + promote-the-relation decision is [ADR 0003](adr/0003-data-store.md).
+
+---
+
+## 7. Composition Semantics
+
+**Status.** This section specifies how two models are combined into one. It contracts BOTH the current behaviour (`operators/joins.jl` `union_acs!` / `@join`; `operators/equalize.jl` `equalize!` / `@equalize`) and the target behaviour under the ADR 0003 promoted `ReactantSpec` incidence table. Composition today is manual name-matching over `add_part!`/`incident` loops, NOT a categorical pushout; the contract keeps that operational model but fixes its gaps and makes species identification structurally exact.
+
+### 7.1 Vocabulary
+
+A **join** combines two (or more) models into one new model, taking the disjoint union of their parts and then *namespacing* one model's species so the two name-spaces do not accidentally collide. **Identification** (a.k.a. *equalize*) is the inverse pressure: it declares that two species in the (possibly already-joined) model are the *same* species and collapses them into one. **Namespacing** rewrites a species name `X` of model `m` to the qualified name `m__X` (`normalize_name`, `joins.jl:100-102`). The composed model is itself a model and is a valid input to a further join (the operation is closed over models).
+
+### 7.2 The JOIN operation (`union_acs!`, `@join`)
+
+`union_acs!(acs1, acs2, name, eqs)` (`joins.jl:10-59`) merges `acs2` into `acs1` in place and returns `acs1`. `@join m1 m2 …` (`joins.jl:201-238`) folds left over a fresh empty `ReactionNetworkSchema()`: it calls `union_acs!(acs_new, mᵢ, :mᵢ, eqs)` once per model in source order, threading the parsed equation blocks `eqs` so identification happens *during* the fold rather than as a separate pass.
+
+**J1 (Species are identified by name; everything else is namespaced).** Before merging, `union_acs!` calls `prepend!(acs2, name, eqs)` (`joins.jl:12`, `64-82`), which renames every species of `acs2` to `name__specName` UNLESS an equation block in `eqs` maps it to a shared alias. A species in `acs2` is then merged into an EXISTING species of `acs1` iff their (post-namespacing) `specName` matches (`incident(acs1, …, :specName)`, `joins.jl:15`); otherwise it is added as a new `:S` part (`joins.jl:17-20`). Modality sets are *unioned*, not overwritten (`union!(…, :specModality)`, `joins.jl:22`). Because each model gets its own `m__` prefix, two models' independent species named `A` become `m1__A` and `m2__A` and do NOT merge — sharing is opt-in via §7.4, never accidental.
+
+**J2 (Transitions are always disjoint; never deduplicated).** All of `acs2`'s `:T` parts are appended unconditionally (`add_parts!(acs1, :T, nparts(acs2, :T))`, `joins.jl:30-36`), and each transition is given a namespaced `transName` of the form `name__transName` (`joins.jl:38-44`); an UNNAMED transition (its `transName` is `missing`) is namespaced as `name__<integer-index>` via `normalize_name(Symbol(coalesce(acs1[i,:transName], i)), name)` (`joins.jl:41`). There is no name-based identification of transitions — joining a model with itself yields two copies of every transition. The contract pins this: transitions are *structural* and are NEVER merged by name. (Their reactant references to species ARE rewritten so they point at the merged species; see §7.4.)
+
+**J3 (What is merged).** `union_acs!` reflects over `propertynames(acs.subparts)` and merges parts whose attribute names contain the substrings `"spec"` (species attributes, `joins.jl:24-27`) and `"trans"` (transition attributes, `joins.jl:31-36`), plus params `:P` by `prmName` (`joins.jl:46-50`) and meta `:M` by `metaKeyword` (`joins.jl:52-56`). The merged part set is therefore exactly **{S, T, P, M}**.
+
+**J4 (What is NOT merged — a gap the rework MUST close).** Events `:E` (`eventTrigger`/`eventAction`, `ReactiveDynamics.jl:65-66`) and observables `:obs` (`obsName`/`obsOpts`, `ReactiveDynamics.jl:68-69`) are silently dropped from the joined model: neither the `"spec"`/`"trans"` reflection loops nor the `:P`/`:M` loops touch them, and there is no `:E`/`:obs` loop. `prepend_obs` (`joins.jl:87-97`) — the function that would namespace observable references inside expressions during a join — is **defined but has zero callers** (dead code). The contract flags this as a defect: a join MUST also merge `:E` and `:obs` (events appended disjointly like `:T` per J2; observables identified by namespaced `obsName` like species per J1), and observable references inside merged rate/stoich/action expressions MUST be namespaced (the live successor of `prepend_obs`). Until fixed, the documented behaviour is "events and observables are lost on join," and this is a bug, not a feature.
+
+### 7.3 Precedence
+
+**J5 (Last model wins for attribute values; structure accumulates).** For a merged species, every species attribute of `acs2` overwrites `acs1`'s value unless the incoming value is `missing` (`!ismissing(acs2[i, attr]) && (acs1[…] = acs2[i, attr])`, `joins.jl:26`); likewise `prmVal` (`joins.jl:49`) and `metaVal` (`joins.jl:55`) overwrite when present. This matches the `union_acs!` docstring "the attributes in `acs2` taking precedence" (`joins.jl:7-8`) and the `@join` docstring "the last model takes precedence" (`joins.jl:193`). The contract pins this **last-writer-wins on scalar attributes / accumulate on structure (T always; S/P/M by name)** rule. One consequence: `specModality` is the exception — it is unioned (J1), so a modality tag set on either side survives regardless of order.
+
+### 7.4 Species IDENTIFICATION / equalize
+
+Identification declares that named species are the *same* and collapses them to a single part. It arrives two ways: inline in a `@join` via equation blocks routed through `prepend!`/`normalize_name` (`joins.jl:104-128`), or post hoc via `@equalize` / `equalize!` (`equalize.jl`). The equation-block grammar (`@catchall(A)`, `@alias`, `m.X = m'.Y`, bare `X = Y`) is parsed by `get_eqs`/`expand_name` (`joins.jl:132-186`) and `get_eqs_ff` (`equalize.jl:3-22`).
+
+**J6 (Identification = collapse to one part + repoint every reference).** `equalize!` (`equalize.jl:24-66`) does this in two moves: (a) for each equation block it finds all matching species indices, copies any `missing` attribute on the surviving (lowest-index) part from the others (`equalize.jl:46-51`), then **deletes the redundant species parts** via `rem_parts!(acs, :S, species_ixs[2:end])` (`equalize.jl:52`); and (b) rewrites every *other* attribute expression in the model so references to the deleted names point at the survivor, via `recursively_substitute_vars!` over each attribute `Expr` (`equalize.jl:55-63`). `prepend!`'s inline path does the analogous rewrite during a join (`joins.jl:71-79`).
+
+**J7 (Why the promoted `ReactantSpec` table makes this exact).** The transition↔reactant relation is NOT stored as structure today — it lives inside the `:trans` attribute as an `Expr` (`ReactiveDynamics.jl:53`) and is re-parsed per tick (`extract_reactants`, `interface/reaction_parser.jl:32`). So "repoint species `m2__A` to the survivor `A`" can only be done by *string/Expr surgery* over every attribute: `recursively_substitute_vars!` (`compilers.jl:28-44`) blindly walks every `Expr` arg and replaces any `Symbol` equal to a map key (`compilers.jl:36-37`). This is **fragile by construction**: it cannot distinguish a genuine reactant occurrence of species `A` from a coincidentally-equal symbol appearing inside a stoichiometry coefficient, a rate subexpression, a parameter name, or an action body. A species name that collides with such a symbol is silently rewritten and the incidence is corrupted (this is the exact hazard recorded in ADR 0003, `0003-data-store.md:21`). Under ADR 0003 Phase 2, reactants are first-class `ReactantSpec` rows carrying integer FKs `transition→T` and `species→S` (`0005-serialization-json-ir.md:39`). Identification then becomes: **repoint the `species` FK of every `ReactantSpec` row from the deleted species index to the survivor's index, and drop the deleted `:S` row** — a structural, type-checked O(rows) operation with NO expression rewriting and NO possibility of collision-corruption. This is the single concrete structural reason the Phase-2 reactant promotion is worth doing; ADR 0003 records this insight in its LENS-C rejection (`0003-data-store.md:50`), and the maintainer confirmed the promotion in the ADR 0003 status note. Expression rewriting survives only for the genuinely Expr-valued escape hatches (`@choose`/`@move`/`@structured`/expression-valued stoich), where the species reference is legitimately inside an `ExprNode` and is repointed by `Ref{species}` node identity, not by symbol-name matching.
+
+### 7.5 The ADR 0004 live-guard
+
+**J8 (Identification is forbidden on a stepping model).** `equalize!`'s `rem_parts!` (`equalize.jl:52`) is the one reindexing deletion that ADR 0004 forbids on a live model: collapsing species shifts `:S` indices, and compiled closures hard-code `state.u[i]` against a varmap frozen at construction (`compilers.jl:149`). The contract requires `equalize!` (and any composition path that reaches `rem_parts!`) to **refuse with an error when the model is live/stepping** (i.e. after a `ReactionNetworkProblem` has been constructed / `simulate` has begun). Composition and identification are authoring-time / pre-construction operations; the runtime mutation API (ADR 0004 append-only `add_species!`/`add_transition!`/`deactivate!`) is the *only* sanctioned way to change a live model, and it never reindexes. Under the promoted table (J7) the FK-repoint variant of identification is non-reindexing and could in principle be made live-safe, but the contract does NOT require that — identification stays an authoring-time operation.
+
+### 7.6 Known composition bug to pin
+
+**J9 (`@join` file branch calls an undefined `include_model`).** When a `@join` argument is a file-include macrocall (e.g. `@filename("model.jl")` style), `@join` lowers it to `:(include_model($str_inc))` (`joins.jl:226` and `joins.jl:228`), but `include_model` is **not defined anywhere** in the package (no `function include_model`, no method). Any `@join` that takes the file branch therefore throws `UndefVarError: include_model`. The test suite MUST pin this (it is currently uncovered — only the in-memory model-argument branch is exercised), and the rework MUST either implement `include_model` (load + parse a model file into a `ReactionNetworkSchema`) or remove the file branch. The contract treats the in-memory branch (`@join m1 m2 …` with already-constructed models) as the only currently-functional join entry point.
+
+### 7.7 The composition contract (algebraic properties)
+
+**C1 (Closure).** `union_acs!`/`@join` map model(s) to a model. The result is a valid input to a further join.
+
+**C2 (Identity).** The empty model `ReactionNetworkSchema()` is a left identity for the fold (`@join` starts from it, `joins.jl:204`). Joining a model with the empty model returns a namespaced copy of that model.
+
+**C3 (Commutativity holds only up to precedence and namespacing).** Join is NOT commutative in general. (a) Scalar attributes follow last-writer-wins (J5), so for two models that share an identified species with conflicting values, `@join m1 m2` and `@join m2 m1` differ in the surviving value. (b) The model identifier (`name`) namespacing is order-independent per model, but the *order of `:T`/`:S` part indices* in the result depends on argument order. The contract states: **join is commutative on STRUCTURE up to part reindexing, but its scalar-attribute result is order-dependent (last model wins).** Two joins that differ only in argument order are *isomorphic as models* iff no identified species has conflicting non-`missing` attributes.
+
+**C4 (Associativity up to precedence).** Left-folding `union_acs!` is associative on structure: the disjoint union of parts and the by-name identification of species/params/meta do not depend on the grouping of the fold, because namespacing is per-model and identification is resolved against the global `eqs` blocks, not pairwise. Scalar precedence is the caveat — for a chain `m1, m2, m3` the surviving scalar of an identified species is `m3`'s (then `m2`'s, then `m1`'s) regardless of grouping, so associativity holds **on structure and on the last-writer-wins precedence order**, i.e. up to the same precedence qualifier as C3. (This associativity claim is contingent on J4 being fixed so that `:E`/`:obs` participate uniformly; with the current drop of events/observables, associativity is only guaranteed on {S, T, P, M}.)
+
+**C5 (Identification is idempotent and order-free within a model).** `merge_eqs!` (`joins.jl:174-186`) transitively merges overlapping equation blocks before any rename, so declaring `A = B` and `B = C` collapses `{A, B, C}` to one survivor regardless of the order the equations are written, and re-identifying an already-collapsed set is a no-op. The contract pins identification as an **equivalence-class collapse**: the result depends only on the partition of species induced by the equations, not on their order or grouping. The surviving part is deterministic: its NAME is set by declaration (the `@alias` if present, else the first equation token, `equalize.jl:28`), while the surviving PART is the lowest-index member of the class (the others are removed by `rem_parts!(acs, :S, species_ixs[2:end])`, `equalize.jl:52`); its attributes are the first non-`missing` value across the class (`equalize.jl:46-51`) — a rule the contract pins so identification is reproducible.
+
+**C6 (Meaning of "identification").** Identifying species `X` and `Y` asserts a *modeling* claim: they denote the same resource/quantity, so their token counts, costs, rewards, valuations, and modalities are one. Post-identification, every transition that referenced either now references the survivor; the two pools are summed into one `u` entry. This is a semantic commitment by the author, not an inferred equality — the engine never auto-identifies; sharing is always explicit via an equation block (J1) or `@equalize` (J6).
+
+---
+
+Grounding (all under `/Users/bima/ReactiveDynamics-review`): `src/operators/joins.jl:7-8` (precedence docstring), `:10-59` (`union_acs!`), `:64-82` (`prepend!`), `:87-97` (dead `prepend_obs`), `:100-128` (`normalize_name`), `:174-186` (`merge_eqs!`), `:201-238` (`@join`), `:226,228` (undefined `include_model`); `src/operators/equalize.jl:24-66` (`equalize!`), `:52` (forbidden `rem_parts!`), `:55-63` (Expr surgery); `src/compilers.jl:28-44` (`recursively_substitute_vars!`), `:69-79` (`escape_ref`), `:149` (frozen varmap); `src/ReactiveDynamics.jl:30-76` (schema: parts `:S,:T,:E,:obs,:P,:M`, `:trans` Expr holds reactants at `:53`); `src/interface/reaction_parser.jl:32` (`extract_reactants`); ADR refs `docs/adr/0003-data-store.md:21,39,50`, `docs/adr/0004-runtime-mutation.md`, `docs/adr/0005-serialization-json-ir.md:39`.
+
+---
+
+## 8. Serialization Schema (see ADR 0005)
+
+This section is a CROSS-REFERENCE to [ADR 0005](adr/0005-serialization-json-ir.md) (single JSON serialization + typed `ExprNode` IR) and [ADR 0004](adr/0004-runtime-mutation.md) (append-only runtime mutation). It does NOT restate the `ExprNode` sum type, the `OP_WHITELIST`/`DIST_WHITELIST`/`REF_KINDS` whitelists, the document-shape field mapping, or the concrete JSON example — those are normative in ADR 0005 (§"ExprNode IR", §"Document shape", §"Concrete JSON example"). What this section pins is the *contract obligations* that serialization places on the rest of this document: the canonical artifact, the round-trip guarantee, the eval-free `validate` pass, the no-eval (RCE-closing) guarantee, the outputs-are-separate rule, and the mutation-patch form of the acquisition lever.
+
+### 8.1 Canonical artifact — one JSON document
+
+The canonical serialized form of a model is a SINGLE JSON document, `model.rdj.json` (ADR 0005 "Decision"), serving simultaneously as the on-disk model file and as the agentic-authoring artifact (Workstream F): the unit an LLM emits under structured output and self-validates before it is loaded. There is exactly one model format — the TOML/CSV/JLD2 zoo (`loadsave.jl`) is removed (ADR 0005 "Consequences"), and there is NO backward on-disk compatibility. The document is one JSON object with a `meta` object and the top-level arrays `params[]`, `species[]`, `transitions[]`, `reactants[]`, `observables[]`, `events[]`, mirroring the ADR-0003 typed IR one-to-one; in particular the `reactants[]` array IS the promoted first-class `ReactantSpec` incidence table (ADR 0003 Phase 2, ADR 0005 "Document shape"), so the transition↔reactant relation that is today re-parsed per tick from the `trans` Expr (`extract_reactants`, `interface/reaction_parser.jl:32`) becomes structure on disk. The JSON Schema published for LLM structured output is AUTO-DERIVED from the `ModelSpec`/`ExprNode` types (the single-source-of-truth `const SCHEMA`) and round-trip-tested at build time, so schema and loader cannot drift (ADR 0005 "Julia mechanism").
+
+### 8.2 Round-trip guarantee
+
+**S1 (Semantic round-trip).** `to_json(from_json(j))` MUST be semantically equal to `j`: parsing a document and re-serializing it preserves every field's meaning (whitelisted `ExprNode` trees, reactant FKs, modality axes, `meta` keywords). Equality is *semantic*, not byte-identical — key order, integer-vs-float JSON spelling (`1` vs `1.0` for an integer attribute, ADR 0005 "Open questions: Integer vs float"), and whitespace need not be preserved, but the constructed `ReactionNetworkProblem` MUST be identical. The `ExprNode` tree lowers via `to_expr` (ADR 0005 "from_json / to_json / validate") to exactly the species-name/param-name `Expr` that today's authoring macros already produce (e.g. the rate tree lowers to the same `:(rand(Poisson(max(state.dt * (0.3 * beta), 0))) * Preclinical)` that `expand_rate` emits at `create.jl:150-155`), so the round-trip is closed at the IR boundary, never through a Julia source string.
+
+**S2 (Run determined by `(model.json, seed)`).** The model JSON is the complete reproducible INPUT: the pair `(model.rdj.json, seed)` fully determines a run, per §4 D1 (reproducibility) and D6 (seed at construction). `from_json(io; seed)::ReactionNetworkProblem` does parse → `validate` → `build_store` → construct, threading `seed` into the state RNG exactly as §4 D6 requires (`Xoshiro(seed)` when given, system-entropy + logged seed when not). Two runs from the same `(model.json, seed)` on the same platform MUST yield bit-identical trajectories (§4 D1). Nothing outside the model document and the seed may influence the trajectory; the `alloc_strategy` recorded in `meta` is deterministic and RNG-free (§4 D3, ADR 0002).
+
+### 8.3 The `validate(spec) -> Vector{Diagnostic}` pass
+
+**S3 (Eval-free validation).** `validate(spec)::Vector{Diagnostic}` is a PURE, eval-free static pass run before construction (ADR 0005 "from_json / to_json / validate"). It MUST NOT `eval`, `Meta.parse`, or execute any field. It is the LLM self-check before `from_json` and the construction-time gate for `validate` failures. It enforces, by walking the typed document:
+
+1. **ExprNode walk** — every `Ref` name resolves to a declared species/param/observable; every `Call.op ∈ OP_WHITELIST`; every `Sample.dist ∈ DIST_WHITELIST`; arities are correct. Unknown names/ops/dists are diagnostics, not exceptions (ADR 0005 validate rule 1).
+2. **Dangling reactant FKs** — for every `reactants[]` row, `r.transition` is a declared transition `id` and `r.species` is a declared species `name`; `r.transition ∉ ids || r.species ∉ names` is a diagnostic (ADR 0005 validate rule 2). This is the structural check the promoted incidence table makes possible (§8.1).
+3. **§5 ranges / sign / integrality** — `transRate ≥ 0`, `transProbOfSuccess ∈ [0,1]`, `transCycleTime ≥ 0`, `transCapacity ≥ 0`, and integer-valued `capacity`/`init`/`stoich` for unstructured species, per the typed attribute domains of §5.3–5.4 and the integrality rule §5 A4. Because JSON has one number type, `validate` MUST check/coerce integrality rather than trust the parsed subtype (ADR 0005 "Open questions: Integer vs float"); emitters (LLMs especially) write `1.0` for integers.
+4. **§1.4 illegal modality combos** — the orthogonal-axis modality (§1.1, `allocation ∈ {upfront,perstep}` × `return ∈ {consumed,conserved}` × `blocking ∈ {block,nonblock}`) is checked against the §1.4 rules: `blocking = nonblock` REQUIRES `return = consumed`; `allocation = perstep` REQUIRES a non-structured species AND `transCycleTime > 0`. This is the construction-time replacement for the legacy run-time `error` at `solvers.jl:461-465` and the unvalidated `Set{Symbol}` of `ReactiveDynamics.jl:144`.
+5. **§5 A3 TVE policy** — an attribute marked "TVE? = no" in §5.3–5.4 (`specInitVal`, `specInitUncertainty`, `specStructured`, `specModality`) MUST be a literal `Const`, not a non-trivial `ExprNode` tree; authoring a time-varying expression for a frozen attribute is a diagnostic (ADR 0005 validate rule 5, enforcing §5 A3).
+
+`validate` returns a `Vector{Diagnostic}` (a possibly-empty list of all violations), NOT a fail-fast exception, so an agentic author gets the complete diagnostic set in one pass to repair before reloading.
+
+### 8.4 No-eval (RCE-closing) guarantee
+
+**S4 (Eval-free by construction).** No field of a `model.rdj.json` document is EVER `Meta.parse`d or `eval`d on load. This closes the import-time remote-code-execution surface that exists today, deleting the eval sites at `loadsave.jl:65` (`eval(Meta.parseall(attrval))` for string-valued params) and `loadsave.jl:72` (`eval(Meta.parseall(row["body"]))` for the `registered` source block), and the eval-on-assignment `Base.convert` hooks at `ReactiveDynamics.jl:99` (`SampleableValues` ← `Meta.parse`), `ReactiveDynamics.jl:101` (`Set{Symbol}` ← `eval(Meta.parse)`), and `ReactiveDynamics.jl:102` (`FoldedObservable`). A model file becomes INERT DATA, not a Julia program: a malicious or malformed model can no longer execute code on load (ADR 0005 "Consequences"). The only place Julia source is produced is `to_expr`, which emits from a closed allow-list of interned symbols (`OP_WHITELIST`/`DIST_WHITELIST`/`REF_KINDS`) and hands the result to the unchanged `wrap_fun`/`compile_attrs` (`compilers.jl:148-180`) for a single construction-time compile; there is no `Expr`-head smuggling and no `apply`/`eval` op. This is the eval-free trade noted in §1, §4.5, and §5 A5: it intentionally REJECTS some currently expressible models (arbitrary `@register`d user bodies, raw call exprs), which the cutover must enumerate (ADR 0005 "Consequences", "Open questions: @register").
+
+### 8.5 Solutions and ledger are OUTPUTS, serialized separately
+
+**S5 (Outputs are not in the model file).** The `sol` DataFrame (`solvers.jl:588-591`) and the `log` ledger (the `:allocation` and `:valuation_cost` rows in `evolve!`, `solvers.jl:304-312`; the `:valuation_reward` row in `finish!`, `solvers.jl:505`; the per-tick `:valuation` row, `solvers.jl:659-666`) are OUTPUTS of a run and MUST NOT be stored in `model.rdj.json`. They are persisted in a columnar store — Apache Arrow (Parquet, or CSV for human inspection) — replacing the Julia-version-fragile JLD2 blob at `loadsave.jl:205,221` (ADR 0005 "Solutions are a separate concern"). The recommended layout is `runs/<model_content_hash>/<seed>/{trajectory.arrow, ledger.arrow, run.json}`, where `run.json` is a tiny self-describing header `{model_hash, seed, rd_version, tspan, dt}` that matches a run back to its model and seed (S2). The ledger Arrow table is exactly what the rNPV/BD demo reads (the discounted `:valuation`/`:valuation_reward`/`:valuation_cost` streams, §"North-star tie-in" of ADR 0004). Keeping inputs and outputs in separate artifacts is what makes S2 meaningful: the model document is reproducible input, the Arrow tables are the reproduced output.
+
+### 8.6 Mutation-patch form (the acquisition lever — see ADR 0004)
+
+**S6 (Append-only JSON patch = serialized mutation).** A runtime mutation (ADR 0004) has a serialized form: an APPEND-ONLY JSON PATCH document — a `spec_delta` that may ADD `species`/`transitions`/`reactants` (and `params`/`observables`/`events`) but MUST NEVER reorder or delete existing entries. This is the on-disk shape of the north-star acquisition lever: injecting a candidate program at a pipeline phase, perturbing operational params, or retiring a line (ADR 0004 "North-star tie-in"). The patch is applied by `apply_patch(state, delta)` at a TICK BOUNDARY (never mid-tick, ADR 0004 "Decision"), driving the live mutation API (`add_species!`/`add_param!`/`add_transition!`/`activate!`/`deactivate!`), so it inherits the operational-semantics (§3.3) and determinism (§4) guarantees and consumes no RNG (§4, ADR 0004 INV-4).
+
+The append-only constraint is LOAD-BEARING, not stylistic: compiled attribute closures hard-code each species' position as `state.u[i]` via a varmap frozen at construction (`compilers.jl:148-153`), so a new species/transition MUST take the next free index and existing indices MUST never move (ADR 0004 INV-1, INV-2). A patch that reordered or deleted entries would invalidate every position-indexed closure (the sole mid-run reindexer, `rem_parts!` at `operators/equalize.jl:52`, is forbidden while live — ADR 0004 INV-2). Logical removal in a patch is soft-deactivation (`transActivated[i] = false`, gated at `state.jl:179`), under which in-flight instances still run to completion (`solvers.jl:406`, ADR 0004 INV-3 — stop starting new programs, never vaporize running ones). When a patch introduces a transition referencing a NEW species/param, `apply_patch` must add the species first, then `refresh_wrap_fun!` re-derives the varmap append-safely (pre-existing names keep the same `state.u[i]`, so already-compiled closures stay valid and are not recompiled, ADR 0004 "wrap_fun/varmap refresh mechanism"), then the new transition's expressions are compiled on-add (ADR 0004 "Compile-on-add"). For deterministic ensembles a patched-in transition SHOULD carry an explicit stable `name`; `name = missing` falls back to `gensym()` (`compilers.jl:177`), unique per call but not reproducible across runs (ADR 0004 "North-star tie-in"). The patch's `ExprNode`/action fields use the same closed whitelist and the same eval-free `validate` pass as the full document (§8.3, §8.4), so a mutation is as safe to load as an initial model.
+
+---
+
+---
+
+## Status
+
+The Phase-0 modeling contract is now COMPLETE: §1 modality truth table, §2 time model (+§2.8 genesis modes), §3 operational semantics, §4 determinism & seeding, §5 attribute contract, §6 object model, §7 composition semantics, §8 serialization schema. It is backed by [ADR 0001](adr/0001-discrete-event-engine.md) (engine), [ADR 0002](adr/0002-priority-weighted-allocation.md) (allocation), [ADR 0003](adr/0003-data-store.md) (data store), [ADR 0004](adr/0004-runtime-mutation.md) (runtime mutation), and [ADR 0005](adr/0005-serialization-json-ir.md) (JSON serialization). Every `file:line` citation was adversarially verified against the current `ref-agents` source (several verifiers ran the engine on Julia 1.12.5). The Phase-0 semantic test suite that encodes these invariants lives under `test/semantic/`. With maintainer sign-off this closes the Phase-0 gate; implementation (Phase 1) may then begin.
