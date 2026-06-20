@@ -13,10 +13,11 @@ ReactiveDynamics is a **timed, stochastic, resource-constrained Petri net / disc
 | [0003](adr/0003-data-store.md) | **Drop ACSets** for a dependency-free typed-struct-of-columns IR; **promote** the transition↔reactant relation to a first-class typed `ReactantSpec` incidence table; no backward on-disk compatibility. | Accepted 2026-06-18 |
 | [0004](adr/0004-runtime-mutation.md) | **Runtime mutation = append-only + soft-deactivate**, so transitions/species/params can be added (and transitions retired) *during* simulation without breaking the position-indexed compiled closures. | Accepted 2026-06-18 |
 | [0005](adr/0005-serialization-json-ir.md) | **Single JSON serialization** + typed `ExprNode` IR — eval-free, JSON-Schema-describable for LLM emission/validation; closes the import-time RCE; drops the TOML/CSV/JLD2 zoo. | Accepted 2026-06-18 |
+| [0006](adr/0006-structured-tokens.md) | **Structured/agentic tokens**: live instantiation/query (BD projects as entities), append-only-safe via `entangle!`; **custom-function registry replaces `@register`** (host-Julia vs serializable-data boundary, eval-free). | Accepted 2026-06-20 |
 
 ## 2. The modeling contract (`docs/CONTRACT_DRAFT.md`)
 
-Complete, §1–§8. This is the normative specification the engine must satisfy.
+Complete, §1–§9. This is the normative specification the engine must satisfy.
 
 | § | Section | Pins |
 |---|---|---|
@@ -28,6 +29,7 @@ Complete, §1–§8. This is the normative specification the engine must satisfy
 | 6 | Object Model | Typed columnar tables under the append-only index invariant; the promoted `ReactantSpec` incidence table; identity-by-name; structured-token refinement. |
 | 7 | Composition Semantics | Join (name-merge S/P/M, disjoint T) + the obs/`:E` merge gap; equalize; FK-repoint vs string-surgery; the `rem_parts!` live-guard; the undefined `include_model` bug. |
 | 8 | Serialization Schema | Cross-references ADR 0005: round-trip + `(model, seed)`-determinism guarantees; eval-free `validate`; RCE closure; outputs→Arrow; the append-only mutation-patch form. |
+| 9 | Structured Tokens & Queries | Cross-references ADR 0006: token instance lifecycle (instantiate/bind/move/unbind/retire), append-only-safety via `entangle!`, 7 invariants incl. D4 token total-order; the deterministic query API; the `TokenAgg` ExprNode; the host-Julia-vs-data boundary and the custom-function registry replacing `@register`. |
 
 ## 3. The Phase-0 semantic test suite (`test/semantic/`)
 
@@ -63,19 +65,22 @@ These survive on `ref-agents`; the contract documents them and the tests pin the
 ## 5. Decisions needed from the maintainer
 
 ### 5a. Sign-off (the gate)
-Approve the contract (§1–§8) and ADRs 0001–0005 as the Phase-0 baseline. This unblocks Phase 1 implementation. Nothing in `src/` changes until this approval.
+Approve the contract (§1–§9) and ADRs 0001–0006 as the Phase-0 baseline. This unblocks Phase 1 implementation. Nothing in `src/` changes until this approval.
 
 ### 5b. Open questions that shape Phase 1
 These are recorded in the ADRs; a decision now avoids rework later.
 
-- **Resource retirement (ADR 0004).** "Append-only" means transitions can be **retired live** via `deactivate!` (soft, reversible; in-flight instances finish) — but **species have no equivalent**: there's a `transActivated` flag, no `specActivated`. So a resource can only be *orphaned* mid-run (deactivate every transition touching it), not truly retired. Decision: is transition-level deactivation enough, or do you want a symmetric `specActivated` (a small addition to ADR 0004 + §6)?
 - **ADR 0003 — Phase 3 interop adapter.** Ship the optional `to_acset` weakdep view for AlgebraicPetri interop, or drop it? (Interop is off the BD/rNPV roadmap.)
-- **ADR 0005 — the `@register` user-function path.** Remove outright, or keep behind a closed named-function registry? (It's the remaining eval surface after the RCE fix.)
-- **ADR 0005 — action-statement coverage.** Is `{SetSpecies, SetParams, Log, Seq}` enough for real pre/post and event actions, or do tutorials need richer statements?
+- **Structured-token determinism source (ADR 0006).** The token sort-key tie-break uses the AA `uuid`; reproducible ensembles require `uuid`/name generation to be threaded through the §4 seeded RNG (else fall back to a per-species creation counter). Pin with the D5 RNG work.
+- **Retired-token growth (ADR 0006).** Soft-`:removed` tokens accumulate in `inners` for a whole run (preserving their audit trail). Define a `disentangle!`/archival policy for long BD runs so the per-tick O(#tokens) reflect/sort cost doesn't degrade — or accept it for Milestone 1.
 - **Genesis default (CONTRACT §2.8).** Confirm `flow` (not `poisson`) is the right default for pipeline/routing transitions, with `poisson` reserved for true exogenous sources.
 
 ### 5c. Already resolved (for the record)
-ADR 0002: priority is dynamic/time-varying, per-tick fairness, `priority=0`=leftover-only. ADR 0003: no on-disk back-compat, promote the reactant, single JSON. These are baked into the contract.
+- **ADR 0002:** priority is dynamic/time-varying; per-tick fairness; `priority=0`=leftover-only.
+- **ADR 0003:** no on-disk back-compat; promote the reactant; single JSON.
+- **`@register` / custom functions (ADR 0006).** Removed as a model-authoring/eval path; replaced by a per-network **registry** of host-supplied Julia functions referenced BY NAME (closed allow-list, eval-free) — this is why `@register` had to `@eval` into RD's module (the compiled closure's bare call-head, `compilers.jl:28,122`) and why the registry dissolves the need.
+- **Action statements (ADR 0005/0006).** `{SetSpecies, SetParams, Log, Seq}` confirmed sufficient for now.
+- **Resource retirement (ADR 0004 + 0006).** Species KINDS stay defined a priori (no live species-kind retirement needed); transitions retire live via `deactivate!`; structured-token INSTANCES are created and retired live (soft `:removed` / hard `disentangle!`). No `specActivated` flag is added. (A residual: a *plain* species can still only be orphaned, not retired, mid-run — accepted, since the live-retirement need is on structured-token instances, which ADR 0006 fully supports.)
 
 ## 6. Provenance
 
@@ -83,4 +88,4 @@ Phase-0 artifacts and commits on `ref-agents`: `b69cfb9` (inventory + ADR 0001/0
 
 ## 7. What Phase 1 looks like (after sign-off)
 
-Implement the contract against the native engine: the typed IR + `const SCHEMA`; the weighted-progressive-filling allocator (`build_requirements!`/`progressive_fill!`/`spawn_integer!`); orthogonal typed modalities + construction-time validation; the promoted `ReactantSpec` table; an `AbstractRNG` + `seed=` threaded through every draw; the append-only live mutation API; and the bug fixes in §4. Acceptance = the T2 tests flip green and SIR + toy-pharma reproduce known behavior under seed.
+Implement the contract against the native engine: the typed IR + `const SCHEMA`; the weighted-progressive-filling allocator (`build_requirements!`/`progressive_fill!`/`spawn_integer!`); orthogonal typed modalities + construction-time validation; the promoted `ReactantSpec` table; an `AbstractRNG` + `seed=` threaded through every draw; the append-only live mutation API; the structured-token subsystem (the per-network function/kind registry replacing `@register`, the deterministic token query API + `token_sortkey` total order, the `Construct{kind,args}`/`TokenAgg` ExprNodes, and the token-binding bug fixes at `solvers.jl:288,452,455,476,512`); and the bug fixes in §4. Acceptance = the T2 tests flip green, SIR + toy-pharma reproduce known behavior under seed, and the BD projects-as-tokens scenario (ADR 0006 north-star) runs with the acquisition lever applied live.
