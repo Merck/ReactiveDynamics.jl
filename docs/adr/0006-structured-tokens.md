@@ -127,14 +127,16 @@ A PROJECT (acquisition target / R&D program) is a `ProjectToken <: AbstractStruc
 6. Token `inners` keys are unique: derive the key from the AA `uuid` (`getuuid`, `uuid4` at `AlgebraicAgents.jl/src/agents.jl:134`), not from `randstring(4)` names (`tutorial/agents-integration/agents.jl:69,96`) which can collide and silently evict a live token. The uuid doubles as the stable tie-break key for invariant 5.
 7. Token TYPES/CONSTRUCTORS are host Julia; the JSON references them by name only; an unregistered name is a `validate()` diagnostic, never an eval.
 
+## Resolved (maintainer, 2026-06-20)
+
+- **Determinism source for the token sort-key → a per-species creation counter** (NOT the AA uuid threaded through the RNG). The k-th token instantiated of a given species gets a monotonic creation index k; the token sort-key (Invariant 5) becomes `(species, creation_index)`, which is reproducible without hijacking AA's uuid generation (which RD does not control). The uuid remains the token's identity (and the unique `inners` key, Invariant 6); the creation counter is purely the deterministic tie-break. The counter is part of the seeded run state, so `_reinit!` resets it (CONTRACT §4 D7).
+- **Retired-token growth → accept for Milestone 1, with an escape hatch.** Soft-`:removed` retirement stays the DEFAULT (it preserves the `past_bonds` audit trail that rNPV/audit consumes), and `disentangle!` is offered as an explicit opt-out for callers who do not need retired-token history. The per-tick O(#tokens-ever-created) reflect/sort cost is accepted as-is; periodic archival to a side log is a future optimization to add ONLY if a real BD run shows it bites — no pre-optimization.
+
 ## Open questions
 
-- Determinism source for the sort key: the uuid tie-break (invariant 6) is only reproducible if uuid/name generation is threaded through the CONTRACT §4 seeded RNG stream; otherwise fall back to a deterministic per-species creation counter. Pin this with the D5 RNG work.
 - `structured_rhs` constructor resolution: the move from `context_eval` of a bare RD symbol (`src/solvers.jl:340,353,369,392`) to a `Construct{kind, args}` node looked up in the registry is the one non-trivial engine edit and is currently UNVERIFIED against a running build; it must land together with the token-binding bug fixes (`src/solvers.jl:288,452,455,476,512`) co-located in the same code.
 - Registry calling-convention tagging: confirm the per-name value-args vs `(state, transition)` tag is sufficient, or whether a richer arity descriptor is needed for multi-arg helpers.
 - `TokenAgg` observation point: pin WHICH per-tick sync point a rate's `TokenAgg` observes (it reads `state.u`-consistent counts at rate-evaluation time during `sample_transitions!`, `src/solvers.jl:651`), else D1 reproducibility of rates that read sibling counts is ill-defined.
-- Retired-token growth: soft-`:removed` tokens accumulate in `inners` for the whole run; define a `disentangle!`/archival policy for long BD runs so the per-tick O(#tokens) reflect/sort cost does not degrade.
-- Action-statement coverage (ADR 0005 open question): confirm `{SetSpecies, SetParams, Log, Seq}` covers every existing `@register` behavior body once audited; bodies that fit neither an action statement nor a protocol-method override are dropped.
 
 ## Contract delta
 

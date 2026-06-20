@@ -66,6 +66,13 @@ These are store-independent and should ride along with the store work:
 5. Commit a Manifest.toml for reproducible builds (currently absent).
 6. Add Phase-0 characterization tests over the tutorial models before any store change.
 
+## Resolved (maintainer, 2026-06-20)
+
+- **Phase 3 (`to_acset`/`from_acset` weakdep interop adapter) → DROPPED / deferred.** Not shipped in this rework. AlgebraicJulia interop is off the BD/rNPV roadmap, is impossible for the running engine anyway (stateful in-flight `Transition` instances, expression-valued rates do not map to a plain Petri ACSet — it could only ever be a static-spec view), and maintaining a second representation plus its round-trip test is not justified for an unrequested capability. The drop is reversible: the typed IR makes a `to_acset` view straightforward to add later if formal AlgebraicPetri/AlgebraicDynamics interop becomes a goal.
+- **Backward compatibility for already-serialized models → none** (maintainer-confirmed earlier; the migration is free to break the on-disk format).
+- **The `registered` source-injection feature → removed** (see [ADR 0006](0006-structured-tokens.md): custom functions move to a host-supplied per-network registry referenced by name; no file-eval).
+- **Phase 2 (promote the reactant relation) → confirmed, not optional** (status note above).
+
 ## Open questions
 
-See the accompanying review notes: scope/timing of Phase 2; whether to ship the Phase 3 weakdep adapter at all; backward compatibility for already-serialized models; whether the `registered` source-injection feature can be removed outright; stoichiometry typing; and whether to auto-derive a published JSON-Schema from `const SCHEMA` in this workstream.
+Remaining (smaller, Phase-1-internal): stoichiometry typing (keep expression-valued `stoich` as an `ExprNode` vs a narrower typed form), and whether to auto-derive the published JSON-Schema from `const SCHEMA` in this workstream or a follow-up. Neither blocks sign-off.
