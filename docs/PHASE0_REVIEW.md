@@ -1,6 +1,8 @@
 # ReactiveDynamics.jl — Phase-0 Review & Sign-off Summary
 
-> **Status: SIGNED OFF 2026-06-20.** The maintainer approved the contract (§1–§9) and ADRs 0001–0006 and resolved all remaining scoping calls (§5). Phase 1 implementation may begin. Phase 0 made no `src/` changes.
+> **Status: SIGNED OFF 2026-06-20 (§1–§9 / ADRs 0001–0006).** The maintainer approved the contract (§1–§9) and ADRs 0001–0006 and resolved all remaining scoping calls (§5). Phase 1 implementation may begin. Phase 0 made no `src/` changes.
+>
+> **Phase-0.5 modeling-language extension — PROPOSED 2026-06-21 (§8 of this summary).** Three additive ADRs (0007–0009) and contract sections (§10, §11, §9.5) answer the maintainer's business-process modeling asks: a more refined/compact/compositional metalanguage with substitutable granularity, a contracted interface with declarative + dumpable initial state, and filtration-based selection of agentic-species tokens. Read-verified against `ref-agents`; awaiting sign-off and a running-engine verification pass.
 
 This is the single-page map of everything Phase-0 produced. Phase 0 is "contract before code": no production `src/` changes landed; everything here is documentation and tests; the engine is unchanged. All artifacts were adversarially verified against the current `ref-agents` source (several verifier passes ran the engine on Julia 1.12.5), and every `file:line` citation was checked — re-verify before acting, as line numbers drift.
 
@@ -16,10 +18,13 @@ ReactiveDynamics is a **timed, stochastic, resource-constrained Petri net / disc
 | [0004](adr/0004-runtime-mutation.md) | **Runtime mutation = append-only + soft-deactivate**, so transitions/species/params can be added (and transitions retired) *during* simulation without breaking the position-indexed compiled closures. | Accepted 2026-06-18 |
 | [0005](adr/0005-serialization-json-ir.md) | **Single JSON serialization** + typed `ExprNode` IR — eval-free, JSON-Schema-describable for LLM emission/validation; closes the import-time RCE; drops the TOML/CSV/JLD2 zoo. | Accepted 2026-06-18 |
 | [0006](adr/0006-structured-tokens.md) | **Structured/agentic tokens**: live instantiation/query (BD projects as entities), append-only-safe via `entangle!`; **custom-function registry replaces `@register`** (host-Julia vs serializable-data boundary, eval-free). | Accepted 2026-06-20 |
+| [0007](adr/0007-interface-and-initial-state.md) | **Interface & initial-state contract**: three-phase lifecycle; declarative serializable initial marking `population[]` (structured analogue of `specInitVal`); state dump/restore (superset schema). | Proposed 2026-06-21 |
+| [0008](adr/0008-token-filtration.md) | **Agentic species under a filtration**: `TokenPredicate{kind,clauses}` + `@select` — select tokens by 𝓕ₜ-measurable predicate, not kind alone; unifies phase-as-species/phase-as-attribute. | Proposed 2026-06-21 |
+| [0009](adr/0009-refinement-and-composition.md) | **Refinement & open-port composition**: `refine`/`abstract` (substitutable granularity via the FK-splice), open ports, `@pipeline`/`@process`/`@compose` compact authoring. | Proposed 2026-06-21 |
 
 ## 2. The modeling contract (`docs/CONTRACT_DRAFT.md`)
 
-Complete, §1–§9. This is the normative specification the engine must satisfy.
+§1–§9 complete and signed off; §10, §11, and §9.5 are the Phase-0.5 extension increment (proposed). This is the normative specification the engine must satisfy.
 
 | § | Section | Pins |
 |---|---|---|
@@ -31,7 +36,9 @@ Complete, §1–§9. This is the normative specification the engine must satisfy
 | 6 | Object Model | Typed columnar tables under the append-only index invariant; the promoted `ReactantSpec` incidence table; identity-by-name; structured-token refinement. |
 | 7 | Composition Semantics | Join (name-merge S/P/M, disjoint T) + the obs/`:E` merge gap; equalize; FK-repoint vs string-surgery; the `rem_parts!` live-guard; the undefined `include_model` bug. |
 | 8 | Serialization Schema | Cross-references ADR 0005: round-trip + `(model, seed)`-determinism guarantees; eval-free `validate`; RCE closure; outputs→Arrow; the append-only mutation-patch form. |
-| 9 | Structured Tokens & Queries | Cross-references ADR 0006: token instance lifecycle (instantiate/bind/move/unbind/retire), append-only-safety via `entangle!`, 7 invariants incl. D4 token total-order; the deterministic query API; the `TokenAgg` ExprNode; the host-Julia-vs-data boundary and the custom-function registry replacing `@register`. |
+| 9 | Structured Tokens & Queries | Cross-references ADR 0006: token instance lifecycle (instantiate/bind/move/unbind/retire), append-only-safety via `entangle!`, 7 invariants incl. D4 token total-order; the deterministic query API; the `TokenAgg` ExprNode; the host-Julia-vs-data boundary and the custom-function registry replacing `@register`. **§9.5 (Phase-0.5):** predicate selection of agentic tokens — the `TokenPredicate{kind,clauses}` node + `@select`, 𝓕ₜ-measurability, and the phase-as-species/phase-as-attribute unification (ADR 0008). |
+| 10 *(Phase-0.5)* | Interface & Initial-State | Cross-references ADR 0007: the three-phase lifecycle (authoring → construction → live) + legal-op table; the declarative serializable initial marking `population[]` (closes the §8.2 S2 hole for structured runs); state dump/restore as a superset schema (the maintainer's "list of structures" + "dump the system state"); the completed `reinit!`. |
+| 11 *(Phase-0.5)* | Refinement & Open-Port Composition | Cross-references ADR 0009: ports as a Species `role` annotation; `refine`/`abstract` as the §7.4/J7 FK-splice (plug-compatible substitution of granularity); `@pipeline`/`@process`/`@compose` compact authoring; closes the §7/J4 (`:E`/`:obs`) and J9 (`include_model`) bugs. |
 
 ## 3. The Phase-0 semantic test suite (`test/semantic/`)
 
@@ -89,3 +96,17 @@ Phase-0 artifacts and commits on `ref-agents`: `b69cfb9` (inventory + ADR 0001/0
 ## 7. What Phase 1 looks like (after sign-off)
 
 Implement the contract against the native engine: the typed IR + `const SCHEMA`; the weighted-progressive-filling allocator (`build_requirements!`/`progressive_fill!`/`spawn_integer!`); orthogonal typed modalities + construction-time validation; the promoted `ReactantSpec` table; an `AbstractRNG` + `seed=` threaded through every draw; the append-only live mutation API; the structured-token subsystem (the per-network function/kind registry replacing `@register`, the deterministic token query API + `token_sortkey` total order, the `Construct{kind,args}`/`TokenAgg` ExprNodes, and the token-binding bug fixes at `solvers.jl:288,452,455,476,512`); and the bug fixes in §4. Acceptance = the T2 tests flip green, SIR + toy-pharma reproduce known behavior under seed, and the BD projects-as-tokens scenario (ADR 0006 north-star) runs with the acquisition lever applied live.
+
+## 8. Phase-0.5 — the modeling-language extension (proposed 2026-06-21)
+
+After §1–§9 sign-off, the maintainer asked to refine the metalanguage for business processes: compact/expressive definition, compositionality, substitutable granularity; a contract for the interface methods (definition, initial values / initial state, simulation, joins); and handling of "agentic" species selected by a filtration expression. The increment is three ADRs (0007–0009) + three contract sections (§10, §11, §9.5), all ADDITIVE — they produce a plain `ModelSpec` that constructs/serializes/simulates exactly as a flat model, disturbing none of the signed-off §1–§9 semantics. The leverage point throughout is that the heavy mechanisms already exist: refinement reuses the §7.4/J7 FK-splice, predicate selection is a `filter` in front of the existing token sort, and the state dump is the initial-marking schema plus dynamic overlays.
+
+| Ask (maintainer) | Answer | Where |
+|---|---|---|
+| Interface contract for definition / initial values / initial state / simulation / joins | Three-phase lifecycle (authoring → construction → live) + legal-op table; canonical signatures; the §7.5/J8 live-guard generalized to a phase guard. Joins were already contracted (§7); this places everything else. | ADR 0007 → §10.1–10.2, §10.4 |
+| Initial STATE (not value) of agentic tokens — "instantiate as a list of structures and add them" | Declarative serializable `population[]` (count+attribute-dists OR explicit list of structs), instantiated at construction before t=0 with per-species creation indices through the seeded RNG; the structured analogue of `specInitVal`. Closes the §8.2 S2 reproducibility hole for structured runs. | ADR 0007 → §10.3 |
+| "Serialization to dump the state of the system" | `dump_state`/`restore` checkpoint whose schema is the initial marking PLUS dynamic state (clock, RNG, creation counters, plain `u`, full token population with current field values, in-flight `ongoing`); eval-free (kinds/fields by name via the host registry). A zero-tick dump IS an initial marking. Enables halt/resume and same-seed lever A/B. | ADR 0007 → §10.5 |
+| "Agentic" species under a filtration — "take a project in a given state subject to a filtration expression" | `TokenPredicate{kind, clauses}` ExprNode + `@select` LHS form; binding generalizes to `filter(kind && !isblocked && matches(pred))` before the unchanged sort/take; 𝓕ₜ-measurable (no future, no RNG); `get_species==kind` is the degenerate clause, so phase-as-species and phase-as-attribute unify. | ADR 0008 → §9.5 |
+| Compact/expressive, compositional, multi-granularity with refined dynamics substituted | Open ports (Species `role`); `refine`/`abstract` as the boundary-matched FK-splice (plug-compatible substitution); `@pipeline` chain sugar; `@process` reusable parameterized modules; `@compose` port-connected composition (closing the §7 J4/J9 bugs). | ADR 0009 → §11 |
+
+**Dependency / sequencing.** ADR 0007 is lowest-risk and should land FIRST — it closes structured-run reproducibility and is a prerequisite for any structured Phase-1 work (the initial marking is how the token subsystem gets its t=0 population). ADR 0008 has the highest BD payoff and rides the ADR 0006 token machinery. ADR 0009 is gated on the ADR 0003 Phase-2 reactant promotion (the FK-splice it reuses). New acceptance tests (the initial-marking determinism + dump round-trip; the `@select` bind determinism + round-trip; the `refine` plug-compatibility + round-trip) are added to `test/semantic/` alongside their ADRs. Open questions are tracked per-ADR (the heaviest: serializing in-flight `ongoing` snapshots eval-free, ADR 0007; the predicate observation-point ratification, ADR 0008; refining a structured/predicated transition, ADR 0009).
