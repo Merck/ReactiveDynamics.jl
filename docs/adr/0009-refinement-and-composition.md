@@ -73,7 +73,7 @@ These are warnings the author can override (the refinement may legitimately chan
 end
 ```
 
-expands to N `flow`-genesis transitions (CONTRACT §2.8 — routing, requires the upstream phase as an upfront-consumed LHS) with the `@move`/`SetAttr(phase=…)` idiom (ADR 0008 §D — phase-as-attribute recommended), each carrying its `(ct, pos, res)`. The whole BD north-star pipeline in one block instead of five hand-wired reactions with repeated boilerplate.
+expands to N `flow`-genesis transitions (CONTRACT §2.8 — routing, requires the upstream phase as an upfront-consumed LHS) with the `@select`/`@advance(phase,…)` idiom (ADR 0008 §D — phase-as-attribute is canonical: one `Project` kind, `phase` is a field, advance writes it via `SetField`), each carrying its `(ct, pos, res)`. The whole BD north-star pipeline in one block instead of five hand-wired reactions with repeated boilerplate.
 
 **Process modules** — a named, parameterized fragment instantiated multiple times:
 
