@@ -21,10 +21,13 @@ ReactiveDynamics is a **timed, stochastic, resource-constrained Petri net / disc
 | [0007](adr/0007-interface-and-initial-state.md) | **Interface & initial-state contract**: three-phase lifecycle; declarative serializable initial marking `population[]` (structured analogue of `specInitVal`); state dump/restore (superset schema). | Proposed 2026-06-21 |
 | [0008](adr/0008-token-filtration.md) | **Agentic species under a filtration**: `TokenPredicate{kind,clauses}` + `@select` — select tokens by 𝓕ₜ-measurable predicate, not kind alone; PHASE IS AN ATTRIBUTE canonically (per-KIND is the degenerate `species` predicate), with `@advance`/`SetField` the field-write that generalizes `@move`. | Proposed 2026-06-21 |
 | [0009](adr/0009-refinement-and-composition.md) | **Refinement & open-port composition**: `refine`/`abstract` (substitutable granularity via the FK-splice), open ports, `@pipeline`/`@process`/`@compose` compact authoring. | Proposed 2026-06-21 |
+| [0010](adr/0010-rules-and-conditional-transitions.md) | **Rules/triggers & conditional transitions**: the endogenous decision channel — repairs the no-op event channel into a `Rule{guard,action,fire_mode}`; adds a stateless transition `guard`; the in-model acquisition lever. | Accepted 2026-06-21 |
+| [0011](adr/0011-action-callbacks-and-general-code.md) | **Action callbacks**: population-level token writes (`SetTokens` over a `TokenPredicate`) + the general-code escape hatch (`Invoke` via the eval-free registry). | Accepted 2026-06-21 |
+| [0012](adr/0012-algebraicagents-integration.md) | **AlgebraicAgents integration**: RD as a hierarchy node (outbound `getobservable`/`observables`/params) + inbound external coupling (`inputs[]` ports, `ExternalRef` leaf, `_prestep!` latch, one-tick Jacobi lag). | Proposed 2026-06-21 |
 
 ## 2. The modeling contract (`docs/CONTRACT_DRAFT.md`)
 
-§1–§9 complete and signed off; §10, §11, and §9.5 are the Phase-0.5 extension increment (proposed). This is the normative specification the engine must satisfy.
+§1–§9 complete and signed off; §9.5 and §10–§13 are the Phase-0.5 extension increment (§12 accepted, the rest proposed). This is the normative specification the engine must satisfy.
 
 | § | Section | Pins |
 |---|---|---|
@@ -39,6 +42,8 @@ ReactiveDynamics is a **timed, stochastic, resource-constrained Petri net / disc
 | 9 | Structured Tokens & Queries | Cross-references ADR 0006: token instance lifecycle (instantiate/bind/move/unbind/retire), append-only-safety via `entangle!`, 7 invariants incl. D4 token total-order; the deterministic query API; the `TokenAgg` ExprNode; the host-Julia-vs-data boundary and the custom-function registry replacing `@register`. **§9.5 (Phase-0.5):** predicate selection & state advance of agentic tokens — the `TokenPredicate{kind,clauses}` node + `@select`, 𝓕ₜ-measurability, phase-as-attribute as canonical (per-KIND = degenerate `species` predicate), and the `SetField`/`@advance` field-write generalizing `@move` (ADR 0008). |
 | 10 *(Phase-0.5)* | Interface & Initial-State | Cross-references ADR 0007: the three-phase lifecycle (authoring → construction → live) + legal-op table; the declarative serializable initial marking `population[]` (closes the §8.2 S2 hole for structured runs); state dump/restore as a superset schema (the maintainer's "list of structures" + "dump the system state"); the completed `reinit!`. |
 | 11 *(Phase-0.5)* | Refinement & Open-Port Composition | Cross-references ADR 0009: ports as a Species `role` annotation; `refine`/`abstract` as the §7.4/J7 FK-splice (plug-compatible substitution of granularity); `@pipeline`/`@process`/`@compose` compact authoring; closes the §7/J4 (`:E`/`:obs`) and J9 (`include_model`) bugs. |
+| 12 *(Phase-0.5)* | Rules, Triggers & Conditional Transitions | Cross-references ADR 0010/0011: the endogenous decision channel — the repaired `Rule{guard,action,fire_mode}` event channel + a stateless transition `guard`; the closed action family `{SetSpecies,SetParams,SetField,SetTokens,AddToken,Activate,Deactivate,Invoke,Log,Seq}` (declarative verbs + the eval-free `Invoke` escape hatch); fire-point/determinism placement. |
+| 13 *(Phase-0.5)* | AlgebraicAgents Integration & External Coupling | Cross-references ADR 0012: RD as an AA hierarchy node — outbound `getobservable`/`observables`/`_getparameters`/`_setparameters!`; inbound `inputs[]` ports + the `ExternalRef` ExprNode leaf fed by AA wires; the `_prestep!` latch giving deterministic one-tick-lag (Jacobi) co-simulation; AA's least-projected-time clock coordination. |
 
 ## 3. The Phase-0 semantic test suite (`test/semantic/`)
 
