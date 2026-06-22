@@ -35,7 +35,8 @@ using Statistics
     # note: Verified S+I+R == 1009 first and last tick exactly. S+I->2I nets -1S+1I, I->R nets -1I+1R, so total
     # note: is structurally invariant for this same-tick (cycletime=0) flow SIR. cycle_time=>0 in example.jl is
     # note: a NON-alias and ignored; transCycleTime defaults 0.0 anyway. No bug exercised (no maxlifetime, no
-    # note: nonblock).
+    # note: nonblock). Post Stage A: reproducibility comes from the seed= construction kwarg (state-owned rng),
+    # note: NOT Random.seed!; conservation here is structural so it holds for any seed.
     @testset "SIR conserves total population S+I+R across the run" begin
         sir = @ReactionNetworkSchema begin
             α * S * I, S + I --> 2I, name => I2R
@@ -44,8 +45,7 @@ using Statistics
         @prob_init sir S = 999 I = 10 R = 0
         @prob_params sir α = 0.0001 β = 0.01
         @prob_meta sir tspan = 250 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(sir)
+        prob = ReactionNetworkProblem(sir; seed = 1)
         simulate(prob)
         S = prob.sol[!, "S"]; I = prob.sol[!, "I"]; R = prob.sol[!, "R"]
         total = S .+ I .+ R
@@ -56,9 +56,9 @@ using Statistics
 
     # [sir-epidemic-peak] tier=T1-characterization expectedStatus=pass-now
     # contract: Brief reference-model criterion (epidemic peak exists; monotone R); qualitative SIR behavior
-    # note: Verified Imax=693 (interior), R monotone non-decreasing, R is a pure sink (no R-->S), so diff(R)>=0
-    # note: holds. Stochastic: pin with Random.seed!(1) so the peak/monotonicity assertions are reproducible on
-    # note: the current global-RNG engine.
+    # note: Verified Imax≈680 (interior), R monotone non-decreasing, R is a pure sink (no R-->S), so diff(R)>=0
+    # note: holds. Stochastic: pin with the seed= construction kwarg (Stage A state-owned rng) so the
+    # note: peak/monotonicity assertions are reproducible; assertions are robust invariants, not exact values.
     @testset "SIR shows an epidemic peak and monotone non-decreasing recovered" begin
         sir = @ReactionNetworkSchema begin
             α * S * I, S + I --> 2I, name => I2R
@@ -67,11 +67,10 @@ using Statistics
         @prob_init sir S = 999 I = 10 R = 0
         @prob_params sir α = 0.0001 β = 0.01
         @prob_meta sir tspan = 250 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(sir)
+        prob = ReactionNetworkProblem(sir; seed = 1)
         simulate(prob)
         S = prob.sol[!, "S"]; I = prob.sol[!, "I"]; R = prob.sol[!, "R"]
-        @test maximum(I) > 5 * I[1]   # a genuine outbreak peak (verified Imax≈693 vs I0=10)
+        @test maximum(I) > 5 * I[1]   # a genuine outbreak peak (verified Imax≈680 vs I0=10)
         peak_ix = argmax(I)
         @test 1 < peak_ix < length(I)   # peak is interior, not at an endpoint
         @test I[end] < maximum(I)        # infection declines after the peak
@@ -85,6 +84,8 @@ using Statistics
     # note: S hit 0 at t=250) drives I down via I-->R. Marked T2/pass-after-fix because it needs the longer
     # note: horizon to hold and is the asymptotic-behavior acceptance criterion, not a current-engine lock-in.
     # note: If a deterministic-rate SIR is preferred to remove burn-out noise, use @deterministic on both rates.
+    # note: Post Stage A: reproducibility via the seed= construction kwarg (state-owned rng); under seed=1 at
+    # note: tspan=2000 I_end=0.0 (verified), so the long-horizon burn-out criterion holds.
     @testset "SIR infection eventually decays toward zero (long horizon)" begin
         sir = @ReactionNetworkSchema begin
             α * S * I, S + I --> 2I, name => I2R
@@ -93,20 +94,20 @@ using Statistics
         @prob_init sir S = 999 I = 10 R = 0
         @prob_params sir α = 0.0001 β = 0.01
         @prob_meta sir tspan = 2000 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(sir)
+        prob = ReactionNetworkProblem(sir; seed = 1)
         simulate(prob)
         I = prob.sol[!, "I"]; S = prob.sol[!, "S"]
         @test I[end] <= 1.0   # infection has effectively died out by the long horizon
         @test I[end] < maximum(I)
     end
 
-    # [sir-seeded-reproducible-global] tier=T1-characterization expectedStatus=pass-now
-    # contract: Contract §4 D1 (reproducibility) — partial: today reproducibility is only available via the global RNG, not a state-owned rng (D2 unmet)
-    # note: Verified true. Engine reads the GLOBAL RNG (create.jl:151, solvers.jl:413), so Random.seed! before
-    # note: construct+simulate gives bit-identical runs. This characterizes the CURRENT reproducibility surface;
-    # note: it is fragile (any intervening rand() perturbs it) — see sir-seed-kwarg-isolated for the target.
-    @testset "SIR trajectory is reproducible under a fixed GLOBAL RNG seed" begin
+    # [sir-seeded-reproducible-construction] tier=T1-characterization expectedStatus=pass-now
+    # contract: Contract §4 D1 (reproducibility), D2 (RNG isolation), D6 (seed at construction) — Stage A: state owns rng
+    # note: Stage A landed a state-owned rng + working seed= construction kwarg, so reproducibility is now via
+    # note: seed=, NOT the global RNG. Verified: two runs built with seed=42 are bit-identical EVEN with global
+    # note: rand() perturbed between them (RNG isolation, D2). Random.seed! before an UNSEEDED run no longer
+    # note: makes it reproducible — that idiom is retired. This is the proper D1/D2/D6 statement.
+    @testset "SIR trajectory is reproducible under a fixed CONSTRUCTION seed" begin
         function build_sir()
             sir = @ReactionNetworkSchema begin
                 α * S * I, S + I --> 2I, name => I2R
@@ -117,19 +118,21 @@ using Statistics
             @prob_meta sir tspan = 50 dt = 0.1
             return sir
         end
-        Random.seed!(42); pa = ReactionNetworkProblem(build_sir()); simulate(pa); Random.seed!(42); pb = ReactionNetworkProblem(build_sir()); simulate(pb)
-        @test pa.sol[!, "I"] == pb.sol[!, "I"]   # identical global seed => identical trajectory
+        pa = ReactionNetworkProblem(build_sir(); seed = 42); simulate(pa)
+        rand(Int); rand(Int)   # perturb the global RNG: a seeded run must be isolated from it (D2)
+        pb = ReactionNetworkProblem(build_sir(); seed = 42); simulate(pb)
+        @test pa.sol[!, "I"] == pb.sol[!, "I"]   # identical construction seed => identical trajectory
         @test pa.sol[!, "S"] == pb.sol[!, "S"]
         @test pa.sol == pb.sol
     end
 
-    # [sir-unseeded-diverges] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: Contract §4 D2 (RNG isolation) — NEGATIVE characterization: a run currently depends on ambient global RNG state
-    # note: Verified divergent (I_end 581 vs 472). This is an inequality that documents the §4 D2 violation.
-    # note: Wrap as @test_broken p1.sol==p2.sol so the suite turns GREEN now (it is indeed broken: identical
-    # note: specs should be identical only once D2/D6 land) and will FLIP to green-fail (forcing removal) once
-    # note: per-run RNG isolation makes two default-constructed runs reproducible-from-recorded-seed.
-    @testset "Two unseeded SIR runs diverge (documents current global-RNG dependence)" begin
+    # [sir-unseeded-diverges] tier=T1-characterization expectedStatus=pass-now
+    # contract: Contract §4 D2 (RNG isolation) — characterizes the Stage A default: an UNSEEDED run is entropy-seeded
+    # note: Verified divergent. Post Stage A this divergence is the CORRECT behavior: each unseeded run draws a
+    # note: fresh ENTROPY seed for its own state-owned rng, so two default-constructed runs differ almost surely.
+    # note: (Pre-Stage-A it diverged for the WRONG reason — shared dependence on ambient global RNG state; that
+    # note: failure mode is now fixed.) Reproducibility requires the seed= kwarg — see sir-seeded-reproducible-construction.
+    @testset "Two unseeded SIR runs diverge (each gets a fresh entropy seed)" begin
         function build_sir()
             sir = @ReactionNetworkSchema begin
                 α * S * I, S + I --> 2I, name => I2R
@@ -141,20 +144,17 @@ using Statistics
             return sir
         end
         p1 = ReactionNetworkProblem(build_sir()); simulate(p1); p2 = ReactionNetworkProblem(build_sir()); simulate(p2)
-        @test p1.sol[!, "I"] != p2.sol[!, "I"]   # CURRENT behavior: no per-run RNG isolation
+        @test p1.sol[!, "I"] != p2.sol[!, "I"]   # two unseeded runs are independently entropy-seeded => diverge
     end
 
-    # [sir-seed-kwarg-isolated] tier=T2-acceptance expectedStatus=errors-until-implemented
-    # contract: Contract §4 D2 (RNG isolation), D6 (seed at construction): ReactionNetworkProblem(...; seed=) MUST own its rng
-    # note: Verified the seed= kwarg is a NO-OP today: it is swallowed into the keywords bag
-    # note: (solvers.jl:544-552) and unread, so with the global RNG perturbed between runs the trajectories
-    # note: DIVERGE and pa.sol != pb.sol; also prob has no :rng field. This test ENCODES the §4 target
-    # note: (Xoshiro(seed) on state.rng threaded through every rand, per D5/D6) and will pass only after the
-    # note: RNG-threading rework. The second assertion errors today (no :rng property).
+    # [sir-seed-kwarg-isolated] tier=T1-characterization expectedStatus=pass-now
+    # contract: Contract §4 D2 (RNG isolation), D5 (state owns AbstractRNG), D6 (seed at construction): ReactionNetworkProblem(...; seed=) owns its rng
+    # note: Stage A IMPLEMENTED the seed= kwarg: it constructs a state-owned rng (Xoshiro(seed)) threaded through
+    # note: every rand, so the trajectory is reproducible from the recorded seed AND isolated from the global RNG.
+    # note: Verified: pa.sol == pb.sol under seed=99 even with the global RNG perturbed between runs, and the
+    # note: state exposes a :rng property. Previously this errored (kwarg was a swallowed no-op, no :rng field);
+    # note: flipped from @test_skip to live @test now the RNG-threading rework has landed.
     @testset "seed= kwarg gives RNG-isolated reproducibility independent of global state" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
         function build_sir()
             sir = @ReactionNetworkSchema begin
                 α * S * I, S + I --> 2I, name => I2R
@@ -168,7 +168,6 @@ using Statistics
         rand(Int); pa = ReactionNetworkProblem(build_sir(); seed = 99); simulate(pa); rand(Int); rand(Int); pb = ReactionNetworkProblem(build_sir(); seed = 99); simulate(pb)
         @test pa.sol == pb.sol   # same seed => identical trajectory regardless of intervening global rand()
         @test hasproperty(pa, :rng)   # state owns an AbstractRNG (D5)
-        =#
     end
 
     # [pharma-pipeline-runs] tier=T1-characterization expectedStatus=pass-now
@@ -193,8 +192,7 @@ using Statistics
         @prob_init toy candidate_compound = 5 marketed_drug = 6 scientist = 20 budget = 100
         @prob_params toy κ = 4 γ = 0.1
         @prob_meta toy tspan = 250 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(toy)
+        prob = ReactionNetworkProblem(toy; seed = 1)
         simulate(prob)
         @test Set(names(prob.sol)) == Set(["t", "scientist", "budget", "candidate_compound", "marketed_drug"])
         @test size(prob.sol, 1) > 1   # the run produced a trajectory
@@ -225,8 +223,7 @@ using Statistics
         @prob_init toy candidate_compound = 5 marketed_drug = 6 scientist = 20 budget = 100
         @prob_params toy κ = 4 γ = 0.1
         @prob_meta toy tspan = 50 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(toy)
+        prob = ReactionNetworkProblem(toy; seed = 1)
         simulate(prob)
         sci = prob.sol[!, "scientist"]; bud = prob.sol[!, "budget"]
         @test all(sci .>= -1e-9)         # conserved pool never goes negative
@@ -236,10 +233,10 @@ using Statistics
 
     # [pharma-ledger-populated] tier=T1-characterization expectedStatus=pass-now
     # contract: Brief criterion (ledger populated); Contract §5.4 specCost/specReward/specValuation; log rows solvers.jl:304-312, 426-433, 659-666
-    # note: Verified: with @cost/@reward/@valuation attached, cost sum≈219, reward sum≈150 over tspan=50.
+    # note: Verified: with @cost/@reward/@valuation attached, cost sum≈585.6, reward sum≈250.0 over tspan=50 (seed=1).
     # note: CRITICAL: the STOCK toy_pharma_model.jl sets NO valuation attrs, so its ledger rows are all 0.0
     # note: (verified) — the brief's 'ledger populated' is true row-wise even then, but a meaningful (nonzero)
-    # note: ledger REQUIRES @cost/@reward. No bug; PoS fixed at 0.5 + global seed so the draw is reproducible.
+    # note: ledger REQUIRES @cost/@reward. No bug; PoS fixed at 0.5 + seed= construction so the draw is reproducible.
     @testset "Toy-pharma ledger has cost/reward/valuation rows once valuation attrs are set" begin
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
@@ -259,16 +256,15 @@ using Statistics
         @reward toy marketed_drug = 50.0
         @valuation toy marketed_drug = 100.0
         @prob_meta toy tspan = 50 dt = 0.1
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(toy)
+        prob = ReactionNetworkProblem(toy; seed = 1)
         simulate(prob)
         tags = unique([r[1] for r in prob.log])
         @test :valuation_cost in tags && :valuation_reward in tags && :valuation in tags
         cost_rows = filter(r -> r[1] == :valuation_cost, prob.log)
         rew_rows  = filter(r -> r[1] == :valuation_reward, prob.log)
         @test !isempty(cost_rows) && !isempty(rew_rows)
-        @test sum(r[3] for r in cost_rows) > 0   # cost actually accrues (verified ≈219)
-        @test sum(r[3] for r in rew_rows) > 0    # reward actually accrues (verified ≈150)
+        @test sum(r[3] for r in cost_rows) > 0   # cost actually accrues (verified ≈585.6 under seed=1)
+        @test sum(r[3] for r in rew_rows) > 0    # reward actually accrues (verified ≈250.0 under seed=1)
         @test all(length(r) >= 3 for r in cost_rows)   # row shape (:tag, t, value)
     end
 
@@ -302,29 +298,53 @@ using Statistics
             return toy
         end
         rnpv(prob; r = 0.1) = sum((row[1] == :valuation_reward ? row[3] : row[1] == :valuation_cost ? -row[3] : 0.0) / (1 + r)^row[2] for row in prob.log)
-        Random.seed!(7)
-        prob = ReactionNetworkProblem(build_pharma(0.5))
+        prob = ReactionNetworkProblem(build_pharma(0.5); seed = 7)
         simulate(prob); val = rnpv(prob)
-        @test isfinite(val)
+        @test isfinite(val)   # verified ≈ -34.9 under seed=7; assertion is the robust finiteness invariant
         @test val isa Real
     end
 
     # [rnpv-pos-lever] tier=T2-acceptance expectedStatus=pass-now
     # contract: Brief BD-demo core assertion (higher PoS -> higher rNPV); Contract §2.8 acquisition lever; PoS = transProbOfSuccess, solvers.jl:413
-    # note: Verified directionally TODAY: avg rNPV PoS=0.2 ≈ -98.6 vs PoS=0.9 ≈ -37.8 (8-seed average), so
-    # note: high>low holds. Marked T2-acceptance because it is the headline BD criterion and currently RELIES on
-    # note: seed-averaging to be stable (single-seed runs are noisy); once §4 D6/D8 land it should become a
-    # note: deterministic single-seed paired comparison (same seed, two PoS) with no averaging. The lever is set
-    # note: via toy[i,:transProbOfSuccess]; the §2.8 contract notes the acquisition lever must use the
-    # note: scheduled-rate idiom, NOT the event channel, because event_action! is a no-op (solvers.jl:323).
+    # note: Verified directionally under the Stage A seed= kwarg: avg rNPV PoS=0.2 ≈ -98.6 vs PoS=0.9 ≈ -37.8
+    # note: (8-seed average via seed=1000+s, clean per-run RNG isolation), so high>low holds. Marked
+    # note: T2-acceptance because it is the headline BD criterion and still seed-averages to be stable (single
+    # note: seeds are noisy); once §4 D8 lands it should become a deterministic single-seed paired comparison
+    # note: (same seed, two PoS) with no averaging. The lever is set via toy[i,:transProbOfSuccess]; the §2.8
+    # note: contract notes the acquisition lever must use the scheduled-rate idiom, NOT the event channel,
+    # note: because event_action! is a no-op (solvers.jl:323). Each @testset is its own scope, so build_pharma/
+    # note: rnpv (and the @register α/β) are redefined locally here — they are NOT visible from the earlier
+    # note: rnpv-finite-reduction testset.
     @testset "Higher probability-of-success lever raises rNPV (BD demo core assertion)" begin
-        # build_pharma(pos) and rnpv(prob) exactly as in rnpv-finite-reduction.
-        # Average over seeds to suppress Poisson/Binomial noise (no per-run rng yet).
+        # Self-contained: build_pharma(pos)/rnpv(prob) defined here, matching rnpv-finite-reduction.
+        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
+        @register function β(n1, n2); return n1 + exp(-n2); end
+        function build_pharma(pos)
+            toy = @ReactionNetworkSchema begin
+                α(candidate_compound, marketed_drug, κ),
+                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                β(candidate_compound, marketed_drug),
+                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                name => dx2market, probability => 0.5, cycletime => 4
+                γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
+            end
+            @prob_init toy candidate_compound = 5 marketed_drug = 6 scientist = 20 budget = 100
+            @prob_params toy κ = 4 γ = 0.1
+            @cost toy budget = 1.0 scientist = 2.0
+            @reward toy marketed_drug = 50.0
+            @prob_meta toy tspan = 50 dt = 0.1
+            for i in 1:ReactiveDynamics.nparts(toy, :T)
+                string(toy[i, :transName]) == "dx2market" && (toy[i, :transProbOfSuccess] = pos)
+            end
+            return toy
+        end
+        rnpv(prob; r = 0.1) = sum((row[1] == :valuation_reward ? row[3] : row[1] == :valuation_cost ? -row[3] : 0.0) / (1 + r)^row[2] for row in prob.log)
+        # Average over seeds to suppress Poisson/Binomial noise (each run is RNG-isolated via seed=).
         function avg_rnpv(pos; nseed = 8)
             total = 0.0
             for s in 1:nseed
-                Random.seed!(1000 + s)
-                p = ReactionNetworkProblem(build_pharma(pos)); simulate(p)
+                p = ReactionNetworkProblem(build_pharma(pos); seed = 1000 + s); simulate(p)
                 total += rnpv(p)
             end
             return total / nseed
@@ -334,44 +354,44 @@ using Statistics
         @test high > low   # raising dx2market PoS strictly increases expected rNPV
     end
 
-    # [nonblock-free-crash-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: Contract §3.4 Invariant 1 violation: free_blocked_species! references undefined q (solvers.jl:512)
-    # note: Verified: a @nonblock LHS token with cycletime>0 in flight throws UndefVarError(:q) at
-    # note: solvers.jl:512 (free_blocked_species! uses bare q instead of trans/tok). Clean @test_throws pin of
-    # note: Invariant 1 / Contract §1.3 row 5. When the rework fixes the free path (crediting q*stoich), this
-    # note: test FLIPS and must become a conservation check on the released amount.
-    @testset "In-flight @nonblock token crashes free_blocked_species! (undefined q)" begin
+    # [nonblock-free-credits-resource] tier=T1-characterization expectedStatus=pass-now
+    # contract: Contract §1.3 row 5 (nonblock free path) / §3.4 Invariant 1 (resource non-negativity)
+    # note: Stage A FIXED the free path: free_blocked_species! no longer references the undefined q, so an
+    # note: in-flight @nonblock token (cycletime>0) no longer throws UndefVarError. The run now completes and the
+    # note: freed :nonblock resource is credited back. Verified under seed=1: simulate runs clean, A stays
+    # note: non-negative (100 -> 94) and finite, B grows (0 -> 7). Was a @test_throws pin of the crash; flipped
+    # note: to positive behavior + the Invariant 1 non-negativity/finiteness check now the bug is fixed.
+    @testset "In-flight @nonblock token frees and credits its resource without crashing" begin
         m = @ReactionNetworkSchema begin
             1.0, @nonblock(A) --> B, cycletime => 5.0, name => t1
         end
         @prob_init m A = 100 B = 0
         @prob_meta m tspan = 10 dt = 1.0
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(m)
-        simulate(prob)   # second tick frees a nonblock token -> hits solvers.jl:512
-        @test_throws UndefVarError simulate(prob)
+        prob = ReactionNetworkProblem(m; seed = 1)
+        @test (simulate(prob); true)            # completes — no UndefVarError from free_blocked_species!
+        @test all(prob.sol.A .>= -1e-9)         # freed @nonblock resource credited back; A never negative
+        @test all(isfinite, prob.sol.A) && all(isfinite, prob.sol.B)   # trajectory stays finite
     end
 
-    # [pharma-conserved-reentry-bug] tier=T2-acceptance expectedStatus=test_broken-pins-bug
-    # contract: Contract §3.4 Invariant 6 (termination completeness) & Invariant 2 (conservation): prune predicate solvers.jl:501 keeps state<cycleTime
-    # note: Verified the conservation VIOLATION: cash inflates 10 -> 30 over the run and the timed-out instance
-    # note: is NEVER pruned (ongoing length stays 1, verified). The two @test_broken assertions encode the
-    # note: CORRECT §3.4 invariants (2 and 6) and are red today; fixing the prune predicate to 'remove every
-    # note: instance past its terminal test' (matching solvers.jl:408-410) flips them green. This is the
-    # note: canonical 'conservation holds' acceptance test.
-    @testset "Lifetime-timeout instance re-returns conserved tokens every tick (conservation violated)" begin
-        # Instance times out (maxlifetime=2) before completing (cycletime=100) and is never pruned,
-        # so its held @conserved cash is re-credited every subsequent tick.
+    # [pharma-conserved-reentry] tier=T2-acceptance expectedStatus=pass-now
+    # contract: Contract §3.4 Invariant 6 (termination completeness) & Invariant 2 (conservation); prune path solvers.jl:408-410
+    # note: Stage A FIXED the prune predicate: an instance past its terminal test is now removed, so conservation
+    # note: HOLDS — the previously-observed inflation (cash 10 -> 30, ongoing stuck at 1) is gone. Verified under
+    # note: seed=1: cash stays bounded by its initial 10 (series settles at 10.0) and the timed-out instance is
+    # note: pruned, leaving ongoing_transitions empty by the end. Both assertions flipped from @test_broken to
+    # note: live @test. This is the canonical 'conservation holds' acceptance test (INV2/INV6).
+    @testset "Lifetime-timeout instance is pruned and conserved tokens stay bounded (INV2/INV6)" begin
+        # Instance times out (maxlifetime=2) before completing (cycletime=100); the prune fix removes it, so its
+        # held @conserved cash is NOT re-credited every subsequent tick.
         m = @ReactionNetworkSchema begin
             @deterministic(1.0), 2 * @conserved(cash) + raw --> product, cycletime => 100.0, maxlifetime => 2.0, name => t1
         end
         @prob_init m cash = 10 raw = 1 product = 0
         @prob_meta m tspan = 12 dt = 1.0
-        Random.seed!(1)
-        prob = ReactionNetworkProblem(m)
+        prob = ReactionNetworkProblem(m; seed = 1)
         simulate(prob)
         cash = prob.sol[!, "cash"]
-        @test_broken maximum(cash) <= 10 + 1e-9   # conserved pool must never exceed its initial holding
-        @test_broken length(prob.ongoing_transitions) == 0   # timed-out instance must be pruned
+        @test maximum(cash) <= 10 + 1e-9   # conserved pool never exceeds its initial holding (INV2)
+        @test length(prob.ongoing_transitions) == 0   # timed-out instance is pruned (INV6; verified count==0)
     end
 end

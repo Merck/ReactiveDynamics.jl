@@ -284,10 +284,7 @@ function evolve!(state)
 
                     ix = 1
                     while allocs[j, i] > 0 && ix <= length(available_species)
-                        set_bound_transition!(
-                            available_species[ix].bound_transition,
-                            transition,
-                        )
+                        set_bound_transition!(available_species[ix], transition)
 
                         push!(bound, available_species[ix])
                         push!(structured_to_agents, type => available_species[ix])
@@ -318,7 +315,7 @@ function event_action!(state)
         !isnothing(state[i, :eventTrigger]) && !isnothing(state[i, :eventAction]) ||
             continue
         v = state[i, :eventTrigger]
-        q = v isa Bool ? (v ? 1 : 0) : (v isa Number ? rand(Poisson(v)) : 0)
+        q = v isa Bool ? (v ? 1 : 0) : (v isa Number ? rand(state.rng, Poisson(v)) : 0)
         for _ = 1:q
             state[i, :eventAction]
         end
@@ -410,7 +407,7 @@ function finish!(state)
             (ix += 1; continue)
 
         q = if trans_.state >= trans_[:transCycleTime]
-            rand(Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
+            rand(state.rng, Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
         else
             0
         end
@@ -449,10 +446,10 @@ function finish!(state)
                         )
 
                         set_bound_transition!(
-                            trans_.bound_structured_agents[agent_ix].bound_transition,
+                            trans_.bound_structured_agents[agent_ix],
                             nothing,
                         )
-                        delete!(trans_.bound_structured_agents, agent_ix)
+                        deleteat!(trans_.bound_structured_agents, agent_ix)
                     end
                 end
             end
@@ -473,7 +470,7 @@ function finish!(state)
                         )
 
                         set_bound_transition!(
-                            trans_.nonblock_structured_agents[agent_ix].bound_transition,
+                            trans_.nonblock_structured_agents[agent_ix],
                             nothing,
                         )
                         deleteat!(trans_.nonblock_structured_agents, agent_ix)
@@ -498,7 +495,16 @@ function finish!(state)
         ix += 1
     end
 
-    filter!(s -> s.state < s[:transCycleTime], state.ongoing_transitions)
+    # Prune every instance that passed the terminal test above — i.e. keep only those that
+    # have neither completed their cycle NOR aged out. This must mirror the skip condition at
+    # the top of the loop; the old predicate ignored max-lifetime, so timed-out instances
+    # (state < cycleTime but age ≥ maxLifeTime) were retained and re-emitted/​re-credited every
+    # subsequent tick (violating conservation + termination-completeness, §3.4 INV2/INV6).
+    filter!(
+        s ->
+            ((state.t - s.t) < s[:transMaxLifeTime]) && (s.state < s[:transCycleTime]),
+        state.ongoing_transitions,
+    )
 
     push!(state.log, (:terminated_all, state.t, terminated_all...))
     push!(state.log, (:terminated_success, state.t, terminated_success...))
@@ -509,7 +515,7 @@ end
 
 function free_blocked_species!(state)
     for trans in state.ongoing_transitions, tok in trans[:transLHS]
-        in(:nonblock, tok.modality) && (state.u[tok.index] += q * tok.stoich)
+        in(:nonblock, tok.modality) && (state.u[tok.index] += trans.q * tok.stoich)
     end
 
     for trans in state.ongoing_transitions
@@ -550,6 +556,16 @@ function ReactionNetworkProblem(
     merge!(keywords, Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))
 
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
+
+    # Determinism (§4 D5/D6): build the state-owned RNG. A `seed` kwarg fixes the stream;
+    # absent it, draw a fresh seed from system entropy so a default run is still self-contained.
+    # The REALIZED seed is stored on the struct (so an entropy-seeded run is replayable, D6)
+    # and `initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly (D7).
+    # Any `Integer` seed is accepted verbatim (e.g. a `hash((root, k))` ensemble member key, §4 D8).
+    seed = get(keywords, :seed, nothing)
+    seed = isnothing(seed) ? rand(Random.RandomDevice(), UInt64) : seed
+    rng = Random.Xoshiro(seed)
+    initial_rng = copy(rng)
 
     acs = remove_choose(acs)
 
@@ -607,6 +623,9 @@ function ReactionNetworkProblem(
         observables,
         wrap_fun,
         sol,
+        rng,
+        seed,
+        initial_rng,
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -623,6 +642,8 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     empty!(state.log)
     state.observables = compile_observables(state.acs)
     empty!(state.sol)
+    # Restore the RNG to its construction state so the second run reproduces the first (§4 D7).
+    state.rng = copy(state.initial_rng)
 
     return state
 end

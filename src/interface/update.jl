@@ -105,7 +105,7 @@ function mode!(acs, dict)
         end
 
         for ix in i
-            isnothing(acs[ix, specModality]) && (acs[ix, specModality] = Set{Symbol}())
+            isnothing(acs[ix, :specModality]) && (acs[ix, :specModality] = Set{Symbol}())
             union!(acs[ix, :specModality], mods)
         end
     end
@@ -490,13 +490,15 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 # Examples
 
 ```julia
-@jump acs λ Z += rand(Poisson(1.0))
+@jump acs λ Z += rand(state.rng, Poisson(1.0))
 ```
 """
 macro jump(acsex, inex, acex)
+    # The Poisson intensity draws from the state-owned RNG (§4 D2/D5); `state` is in scope
+    # because the generated trigger is compiled into a (state, transition) closure.
     return push_to_acs!(
         acsex,
-        Expr(:&&, Expr(:call, :rand, :(Poisson(max(state.dt * $inex, 0)))), acex),
+        Expr(:&&, Expr(:call, :rand, :(state.rng), :(Poisson(max(state.dt * $inex, 0)))), acex),
     )
 end
 

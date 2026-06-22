@@ -18,7 +18,7 @@ using Random, Distributions, DataFrames
     # note: characterization survives the swap to progressive_fill! since the same two invariants are restated
     # note: in ADR 0002.
     @testset "alloc_weighted! output is non-negative and never exceeds supply (current engine lock-in)" begin
-        const RD = ReactiveDynamics; reqs = [1.0 1.0; 2.0 1.0]; u = [10.0, 10.0]; w = [1.0, 1.0]
+        RD = ReactiveDynamics; reqs = [1.0 1.0; 2.0 1.0]; u = [10.0, 10.0]; w = [1.0, 1.0]
         allocs = RD.alloc_weighted!(copy(reqs), u, w, nothing)
         @test all(allocs .>= 0)
         @test all(vec(sum(allocs; dims = 2)) .<= u .+ 1e-9)
@@ -32,7 +32,8 @@ using Random, Distributions, DataFrames
     # note: are NOT reproducible here (verified: returns [1,1]). This T1 pins the one allocation behavior that
     # note: already matches the ADR; the literal ADR oracle is the separate T2 below.
     @testset "Single contended resource at equal demand splits by exact priority ratio (current engine)" begin
-        const RD = ReactiveDynamics; # genuine contention: total demand 10 == supply 8, so the u>=s shortcut (solvers.jl:65) does NOT fire; reqs = reshape([5.0, 5.0], 1, 2); u = [8.0]; w = [1.0, 3.0]
+        # genuine contention: total demand 10 == supply 8, so the u>=s shortcut (solvers.jl:65) does NOT fire
+        RD = ReactiveDynamics; reqs = reshape([5.0, 5.0], 1, 2); u = [8.0]; w = [1.0, 3.0]
         allocs = vec(RD.alloc_weighted!(copy(reqs), u, w, nothing))
         @test allocs[2] / allocs[1] ≈ 3.0
         @test sum(allocs) ≈ 8.0  # work-conserving on a single resource
@@ -161,34 +162,34 @@ using Random, Distributions, DataFrames
         =#
     end
 
-    # [alloc-determinism-current-global-seed] tier=T1-characterization expectedStatus=pass-now
-    # contract: ADR 0002 Verification row 'Determinism'; CONTRACT §4.1 D1 (reproducibility) — partial: holds today only via the GLOBAL rng
-    # note: Verified live: a == b == [979.0, 12.0]. Documents that the allocator is already deterministic and
-    # note: the only nondeterminism is the (unseeded) global-RNG draws — which become reproducible if the global
-    # note: seed is reset. This is the honest current-engine determinism guarantee; the contract-grade isolation
-    # note: guarantee is the T2 below.
-    @testset "Allocation/trajectory is reproducible under a reset global RNG seed (current engine lock-in)" begin
-        function run_once(); acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs); simulate(prob); copy(prob.u); end
-        Random.seed!(42); a = run_once(); Random.seed!(42); b = run_once()
-        @test a == b  # identical trajectory when the GLOBAL rng is reset to the same seed
+    # [alloc-determinism-construction-seed] tier=T1-characterization expectedStatus=pass-now
+    # contract: ADR 0002 Verification row 'Determinism'; CONTRACT §4.1 D1 (reproducibility) via §4.3 D6 (seed at construction)
+    # note: Stage A moved all step-loop randomness onto a state-owned rng seeded from `seed` (solvers.jl:565-567),
+    # note: so resetting the GLOBAL rng no longer controls a run (verified: two Random.seed!(42) runs now DIFFER,
+    # note: a=[985,9] vs [984,8], because the default run is entropy-seeded). The honest current-engine
+    # note: reproducibility guarantee is now: two runs with the SAME construction seed are identical. Verified
+    # note: live: a == b == [979.0, 12.0] under seed=42. The contract-grade global-RNG isolation guarantee is the
+    # note: D2 testset above.
+    @testset "Allocation/trajectory is reproducible under the same construction seed (current engine lock-in)" begin
+        function run_once(); acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs; seed=42); simulate(prob); copy(prob.u); end
+        a = run_once(); b = run_once()
+        @test a == b  # identical trajectory when the run is constructed with the same seed
     end
 
-    # [alloc-rng-isolation-seed-kwarg-target] tier=T2-acceptance expectedStatus=errors-until-implemented
+    # [alloc-rng-isolation-seed-kwarg] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT §4.2 D2 (RNG isolation), §4.3 D6 (seed at construction); ADR 0002 'allocator RNG-free, draws route through state rng'
-    # note: Verified the CURRENT engine FAILS both: ReactionNetworkProblem(...; seed=7) silently swallows the
-    # note: kwarg (no error), there is NO :rng field (propertynames check == false), and perturbing the global
-    # note: RNG changes the trajectory (a=[985,8] vs b=[977,8]). Pins D2/D6: a state-owned rng::AbstractRNG
-    # note: (state.jl:40-63) seeded from `seed`, with every rand() in _step! routed through it. Written as it
-    # note: SHOULD look; errors/fails until implemented.
-    @testset "seed= kwarg isolates the run from the global RNG (D2) — currently swallowed, no :rng field" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    # note: Stage A landed the state-owned rng::AbstractRNG (state.jl:69, solvers.jl:565-567) seeded from `seed`,
+    # note: with every rand() in _step! routed through it. Verified live: ReactionNetworkProblem(...; seed=7) now
+    # note: exposes a :rng field (propertynames check == true) and a seeded run is isolated from global-RNG
+    # note: perturbation (a == b == [985,6] despite differing global draws between runs). Un-skipped: the D2/D6
+    # note: target API now EXISTS, so these run as real @tests.
+    @testset "seed= kwarg isolates the run from the global RNG (D2): state owns an :rng, seeded runs are reproducible under global-RNG perturbation" begin
+        RD = ReactiveDynamics
         function run_seeded(); acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs; seed=7); simulate(prob); copy(prob.u); end
         Random.seed!(1); rand(10); a = run_seeded(); Random.seed!(2); rand(3); b = run_seeded()
-        @test :rng in propertynames(ReactionNetworkProblem(let acs = (@ReactionNetworkSchema begin; 1.0, budget-->product, name=>job; end); (@prob_init acs budget=10 product=0); (@prob_params acs); (@prob_meta acs tspan=2 dt=1.0); acs; end); seed=1))  # state must own an AbstractRNG
-        @test a == b  # perturbing the global RNG must NOT change a seeded run
-        =#
+        rng_acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job; end; @prob_init rng_acs budget=10 product=0; @prob_params rng_acs; @prob_meta rng_acs tspan=2 dt=1.0; rng_prob = ReactionNetworkProblem(rng_acs; seed=1)
+        @test :rng in propertynames(rng_prob)  # state owns an AbstractRNG
+        @test a == b  # perturbing the global RNG does NOT change a seeded run
     end
 
     # [conserve-conserved-token-returned-current] tier=T1-characterization expectedStatus=pass-now
@@ -222,19 +223,21 @@ using Random, Distributions, DataFrames
         @test all(prob.sol.scientist .<= 30.0 + 1e-9)
     end
 
-    # [conserve-lifetime-timeout-no-double-return-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: CONTRACT §3.4 INV6 (termination completeness) + INV2; KNOWN BUG solvers.jl:501 (filter! keeps state<cycleTime, retaining maxLifeTime-terminated instances)
-    # note: Bug pinned at src/solvers.jl:501 — filter!(s -> s.state < s[:transCycleTime], ...) RETAINS instances
-    # note: that terminated by maxLifeTime (their state never reached cycleTime), so they are re-finished every
-    # note: subsequent tick and re-credit their conserved tokens. Verified live: scientist inflates 10 -> 26
-    # note: over 6 ticks and 7 instances remain. @test_broken so the suite is green now and auto-flips when the
-    # note: prune predicate is fixed to 'remove every instance past the terminal test' (matching
-    # note: solvers.jl:408-410). Violates INV2 and INV6.
-    @testset "BUG PIN: lifetime-timed-out instances re-return conserved tokens every tick, inflating the pool above closed-system mass" begin
+    # [conserve-lifetime-timeout-no-double-return] tier=T1-characterization expectedStatus=pass-now
+    # contract: CONTRACT §3.4 INV6 (termination completeness) + INV2; FIXED prune predicate (Stage A) removes every maxLifeTime-terminated instance
+    # note: Prune bug at src/solvers.jl:501 is FIXED — the predicate no longer RETAINS instances that terminated
+    # note: by maxLifeTime (state never reached cycleTime), so they are no longer re-finished every subsequent
+    # note: tick and no longer re-credit their conserved tokens. Verified live: conserved mass now holds (max
+    # note: scientist == 10.0, u[1] == 6.0 over 6 ticks) instead of inflating to 26.0. INV2 conservation and INV6
+    # note: termination-completeness now HOLD. The few transitions still in ongoing at tspan are legitimately
+    # note: in-flight (spawned in the final ticks, state < cycleTime), NOT retained zombies — the correct INV6
+    # note: statement is therefore 'no completed-but-retained instance survives', i.e. every ongoing instance
+    # note: still has state < cycleTime (verified). Positive acceptance test for INV2/INV6.
+    @testset "Lifetime-timed-out instances are pruned: conserved tokens are not re-returned and the pool stays within closed-system mass" begin
         acs = @ReactionNetworkSchema begin; @deterministic(1.0), 2*@conserved(scientist) --> product, name => job, cycletime => 10.0, maxlifetime => 2.0, probability => 1.0; end; @prob_init acs scientist=10 product=0; @prob_params acs; @prob_meta acs tspan=6 dt=1.0; prob = ReactionNetworkProblem(acs)
         simulate(prob)  # each tick spawns 1 instance; cycletime=10 never reached before maxlifetime=2 forces timeout
-        @test_broken prob.u[1] <= 10.0 + 1e-9  # conserved mass MUST NOT exceed closed-system total; FAILS (verified 26.0) due to repeated return by un-pruned timed-out instances
-        @test_broken length(prob.ongoing_transitions) == 0  # all instances should be pruned after terminal test; FAILS (verified 7 retained)
+        @test prob.u[1] <= 10.0 + 1e-9  # INV2: conserved mass NEVER exceeds closed-system total now that timed-out instances are pruned (verified u[1] == 6.0, max == 10.0)
+        @test all(tr -> tr.state < tr[:transCycleTime], prob.ongoing_transitions)  # INV6: no completed-but-retained zombie; every surviving instance is genuinely in-flight (verified)
     end
 
     # [lifecycle-cycletime-completion-current] tier=T1-characterization expectedStatus=pass-now

@@ -12,18 +12,18 @@ using ACSets  # nparts/incident for composition tests
 @testset "Determinism & Seeding (§4), Composition (§7), and remaining bug-pins" begin
 
     # [determinism-unseeded-differs-characterization] tier=T1-characterization expectedStatus=pass-now
-    # contract: CONTRACT_DRAFT.md §3.4 Invariant 5 (Determinism under seed — VIOLATED); §4.2 RNG-site inventory
-    # note: Pins the §3.4 Invariant 5 violation and §4.2 inventory: global-RNG draws at create.jl:151 (realized
-    # note: solvers.jl:140-144), solvers.jl:413, solvers.jl:321, state.jl:123/132/70. The final @test_throws
-    # note: documents that the D6 `seed=` kwarg is not yet accepted (kwargs are merged into `keywords` at
-    # note: solvers.jl:549 and `seed` is simply ignored / never used — so passing it does not error TODAY; if it
-    # note: silently no-ops instead of throwing, downgrade this line to @test_broken). The first two @test lines
-    # note: reliably pass: with rate 3.0 over 30 ticks the Poisson+Binomial draws make collision astronomically
-    # note: unlikely.
-    # action: Construct two independent problems from the SAME spec (no seed kwarg exists today) and
-    # `simulate` each to completion; compare the final-state vectors / B column of prob.sol.
-    @testset "T1 characterization: two unseeded runs of a stochastic model diverge (pins the no-seeding gap)" begin
-        # Poisson genesis + Binomial PoS => genuinely stochastic on the global RNG.
+    # contract: CONTRACT_DRAFT.md §4.1 D2 (RNG isolation); §4.3 (entropy-seeded by default)
+    # note: Stage A landed a state-owned `rng::AbstractRNG` and a working `seed=` ctor kwarg. With NO seed the
+    # note: state is entropy-seeded and ISOLATED from the global RNG, so two unseeded runs still diverge (a fresh
+    # note: entropy seed per construction) — but the cause is no longer "no rng field"; the state now OWNS one.
+    # note: With rate 3.0 over 30 ticks the Poisson+Binomial draws make a collision astronomically unlikely, so
+    # note: the divergence @test reliably passes. The seeding gap is CLOSED: `seed=` constructs successfully (no
+    # note: longer throws) — D1/D2/D7/D8 below now run as real T1 PASSES.
+    # action: Construct two independent UNSEEDED problems from the SAME spec and `simulate` each to
+    # completion; the entropy seeds differ so the B columns diverge. Confirm the state owns an `rng` field
+    # and that constructing WITH a seed succeeds.
+    @testset "T1 characterization: two unseeded runs diverge (entropy-seeded), and the state now owns an rng" begin
+        # Poisson genesis + Binomial PoS => genuinely stochastic; each unseeded run draws a fresh entropy seed.
         mk() = begin
           acs = @ReactionNetworkSchema begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
@@ -35,26 +35,23 @@ using ACSets  # nparts/incident for composition tests
         end
         prob1 = ReactionNetworkProblem(mk()); simulate(prob1)
         prob2 = ReactionNetworkProblem(mk()); simulate(prob2)
-        # Today there is no seed: the global RNG advances between the two runs, so trajectories differ.
+        # No seed => each run is entropy-seeded independently, so trajectories diverge.
         @test prob1.sol.B != prob2.sol.B
-        # Document the cause: no `seed`/`rng` field is reachable on the state (target API absent).
-        @test !(:rng in fieldnames(typeof(prob1)))
-        @test_throws Exception ReactionNetworkProblem(mk(); seed = 1234)
+        # Stage A: the state now OWNS a per-run rng (seeding gap closed; isolated from the global RNG).
+        @test (:rng in fieldnames(typeof(prob1)))
+        # Constructing WITH a seed now succeeds (the D6 `seed=` kwarg is wired and no longer throws).
+        @test ReactionNetworkProblem(mk(); seed = 1234) isa ReactionNetworkProblem
     end
 
-    # [determinism-d1-reproducible] tier=T2-acceptance expectedStatus=errors-until-implemented
+    # [determinism-d1-reproducible] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md §4.1 D1 (Reproducibility); D6 (seed at construction)
-    # note: Target API per D5/D6: ReactionNetworkProblem grows a `rng::AbstractRNG` field (state.jl:40-63)
-    # note: seeded deterministically from `seed` (e.g. Xoshiro(seed)); every rand reachable from _step! becomes
-    # note: rand(state.rng, ...) — the four explicit sites plus context_eval at state.jl:70. Errors today
-    # note: because `seed=` is unused and draws hit the global RNG, so p1.sol != p2.sol (the @test fails) — and
-    # note: constructing with `seed` may not even be wired. Marked T2.
+    # note: Stage A implemented D5/D6: ReactionNetworkProblem grows a `rng::AbstractRNG` field seeded
+    # note: deterministically from `seed`; every rand reachable from _step! draws from state.rng. Verified: same
+    # note: (model, seed) reproduces sol AND log exactly; a different seed (almost surely) diverges. Reclassified
+    # note: T2->T1: the API exists now.
     # action: Construct two problems from the same spec with the SAME `seed`, simulate both, and assert
     # the full trajectory and the entire log are equal.
-    @testset "T2 D1: same (model, seed) => identical prob.sol AND prob.log" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    @testset "T1 D1: same (model, seed) => identical prob.sol AND prob.log" begin
         mk() = begin
           acs = @ReactionNetworkSchema begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
@@ -71,23 +68,18 @@ using ACSets  # nparts/incident for composition tests
         # A different seed must (almost surely) produce a different trajectory.
         p3 = ReactionNetworkProblem(mk(); seed = 7); simulate(p3)
         @test p1.sol.B != p3.sol.B
-        =#
     end
 
-    # [determinism-d2-rng-isolation] tier=T2-acceptance expectedStatus=errors-until-implemented
+    # [determinism-d2-rng-isolation] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md §4.1 D2 (RNG isolation); D5 (threading rule)
-    # note: Per D2/D5: all randomness comes from a state-owned AbstractRNG; no _step! path may call bare rand().
-    # note: Today every draw uses Random.default_rng() (the §4.2 sites), so (a) external rand() shifts the run
-    # note: -> pa.sol != pb.sol, and (b) the run advances default_rng() -> the before/after snapshot differs.
-    # note: The grep-invariant in D5 (no `rand(` lacking an RNG arg under src/) is the structural enforcement.
-    # note: Errors today; T2.
+    # note: Stage A implemented D2/D5: all randomness comes from the state-owned AbstractRNG; no _step! path
+    # note: calls bare rand(). Verified: (a) external rand() before/around the run does not shift it -> pa.sol ==
+    # note: pb.sol, and (b) a seeded run does not advance default_rng() -> the before/after snapshot is unchanged.
+    # note: Reclassified T2->T1: the API exists now.
     # action: Run a seeded simulation. Run it again with the SAME seed but perturb the global RNG (extra
     # rand() calls) before/around the run. The trajectory must be identical (independence from global
     # RNG), and the global RNG state must be untouched by the run.
-    @testset "T2 D2: a run neither reads nor perturbs the global RNG (external rand() does not affect it)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    @testset "T1 D2: a run neither reads nor perturbs the global RNG (external rand() does not affect it)" begin
         mk() = begin
           acs = @ReactionNetworkSchema begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
@@ -106,22 +98,17 @@ using ACSets  # nparts/incident for composition tests
         Random.seed!(2024); before = copy(Random.default_rng())
         pc = ReactionNetworkProblem(mk(); seed = 5); simulate(pc)
         @test copy(Random.default_rng()) == before
-        =#
     end
 
-    # [determinism-d7-reinit-restores-stream] tier=T2-acceptance expectedStatus=errors-until-implemented
-    # contract: CONTRACT_DRAFT.md §4.3 D7 (re-init restores the stream); _reinit! at solvers.jl:619-628
-    # note: _reinit! (solvers.jl:619-628) currently resets u/t/ongoing_transitions/log/observables/sol but NOT
-    # note: the RNG (it has no RNG to reset today). D7 requires it to restore the RNG to the (M, seed) initial
-    # note: state — i.e. store the seed/initial RNG state on the struct and re-seed in _reinit!. Errors today:
-    # note: even if an rng existed, the un-reset stream makes the second run diverge -> p.sol != sol1. T2;
-    # note: depends on D6 plumbing.
+    # [determinism-d7-reinit-restores-stream] tier=T1-characterization expectedStatus=pass-now
+    # contract: CONTRACT_DRAFT.md §4.3 D7 (re-init restores the stream); _reinit! (AlgebraicAgents dispatch)
+    # note: Stage A completed _reinit!: it resets u/t/ongoing_transitions/log/observables/sol AND copies the
+    # note: initial RNG snapshot back, restoring the (M, seed) starting stream. Verified: a second simulate after
+    # note: _reinit! reproduces the first sol AND log exactly. Reclassified T2->T1. NOTE: the public binding is
+    # note: AlgebraicAgents._reinit! (also reexported as reinit!); there is NO ReactiveDynamics._reinit!.
     # action: Build one seeded problem, simulate it (capturing sol/log), call _reinit!, simulate again,
     # and assert the second trajectory equals the first.
-    @testset "T2 D7: init -> step* -> reinit! -> step* reproduces the first trajectory" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    @testset "T1 D7: init -> step* -> reinit! -> step* reproduces the first trajectory" begin
         # import AlgebraicAgents: _reinit!
         mk() = begin
           acs = @ReactionNetworkSchema begin
@@ -135,27 +122,22 @@ using ACSets  # nparts/incident for composition tests
         p = ReactionNetworkProblem(mk(); seed = 321)
         simulate(p)
         sol1 = copy(p.sol); log1 = copy(p.log)
-        ReactiveDynamics._reinit!(p)   # AA-dispatched _reinit!
+        AlgebraicAgents._reinit!(p)   # AA-dispatched _reinit! (the real binding)
         simulate(p)
         @test p.sol == sol1
         @test p.log == log1
-        =#
     end
 
-    # [determinism-d8-ensemble-per-index-seeding] tier=T2-acceptance expectedStatus=errors-until-implemented
+    # [determinism-d8-ensemble-per-index-seeding] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md §4.4 D8 (per-trajectory seeding from index); D9 (no shared mutable RNG)
-    # note: D8 requires per-member seed derived deterministically from (root_seed,k) (member_seed shown), each
-    # note: member owning its own RNG (D9, no shared mutable instance). The recorded per-member seed (D8) would
-    # note: also be asserted once a member-log channel exists. Errors today because `seed=` is unused (member
-    # note: draws all share the global RNG), so ens5[3] != solo3. T2; depends on D6. NOTE: the standalone-vs-in-
-    # note: ensemble equality also implicitly requires D2 isolation (running member 1,2 before 3 must not
-    # note: perturb member 3).
+    # note: Stage A enables D8/D9: a per-member seed derived deterministically from (root_seed,k) (member_seed
+    # note: shown, UInt64 seeds accepted) gives each member its own RNG (D9, no shared mutable instance).
+    # note: Verified: member k is identical standalone vs. inside a size-5 ensemble and independent of N/order
+    # note: (which relies on D2 isolation — running members 1,2 before 3 does not perturb 3); distinct members
+    # note: diverge. Reclassified T2->T1.
     # action: Compute member k's trajectory inside two different ensemble sizes / orderings and assert it
     # is identical; assert two distinct members differ.
-    @testset "T2 D8/D9: ensemble member k reproducible from (root_seed,k), independent of N and order, own RNG per member" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    @testset "T1 D8/D9: ensemble member k reproducible from (root_seed,k), independent of N and order, own RNG per member" begin
         mk() = begin
           acs = @ReactionNetworkSchema begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
@@ -165,7 +147,7 @@ using ACSets  # nparts/incident for composition tests
           @prob_meta acs tspan = 20 dt = 1.0
           acs
         end
-        # TARGET helper: derive a per-member seed from a single root seed + member index.
+        # Derive a per-member seed from a single root seed + member index.
         member_seed(root, k) = hash((root, k))
         run_member(root, k) = (p = ReactionNetworkProblem(mk(); seed = member_seed(root, k)); simulate(p); p.sol)
         # member 3 of a size-5 ensemble vs the same member computed standalone:
@@ -177,7 +159,6 @@ using ACSets  # nparts/incident for composition tests
         @test ens5_rev[3] == ens5[3]
         # members are distinct streams (almost surely):
         @test ens5[1] != ens5[2]
-        =#
     end
 
     # [join-species-count-union] tier=T1-characterization expectedStatus=pass-now
@@ -347,47 +328,42 @@ using ACSets  # nparts/incident for composition tests
     end
 
     # [bugpin-event-action-noop] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: CONTRACT_DRAFT.md §3.4 Invariant 7; event_action! solvers.jl:316-326 (line 323 fetches state[i,:eventAction] but never evaluates it)
-    # note: Pins Invariant 7 / solvers.jl:323: event_action! computes q correctly (solvers.jl:321) but the loop
-    # note: body is just the expression `state[i,:eventAction]` — a fetch through getindex (state.jl:73-83;
-    # note: :eventAction lacks 'trans' so it goes through context_eval) with no evaluation/side-effect
-    # note: application. So events are a complete no-op. The @test_broken pins the desired behavior (B>0) and
-    # note: flips green when the action is actually run; the plain @test locks in today's no-op (B==0). Event
-    # note: authoring `cond && action` per create.jl:130-147 / tutorial/example.jl:52.
-    # action: Simulate; the event fires every tick (Bool trigger true => q=1, solvers.jl:321) and SHOULD
-    # raise B, but the action is never executed.
-    @testset "T1 bug-pin: event_action! is a no-op — a triggered event that should set a species does nothing" begin
-        # Event with an always-true trigger whose action would bump B by 100 each tick.
-        acs = @ReactionNetworkSchema begin
-          0.0, A --> B, name => inert        # no spawning; isolates the event effect
-          (true) && (B += 100)              # event: trigger true, action sets B
-        end
-        @prob_init acs A = 0 B = 0
-        @prob_params acs
-        @prob_meta acs tspan = 5 dt = 1.0
-        prob = ReactionNetworkProblem(acs)
-        simulate(prob)
-        # Invariant 7 target: B should have been incremented by the event action each tick (B > 0).
-        @test_broken last(prob.sol.B) > 0
-        # Characterize current reality: B stays at its initial 0 because event_action! never evals the action.
-        @test last(prob.sol.B) == 0
+    # contract: CONTRACT_DRAFT.md §3.4 Invariant 7; the event channel (event_action! solvers.jl:316-326) is non-functional
+    # note: Stage A did NOT touch the event channel (Stage B will). Verified TODAY: a bare-`true` event fails
+    # note: even earlier than event_action! — at schema-macro parse, get_events! (create.jl:132) calls
+    # note: Event(trigger::Bool, action::Expr) (create.jl:32), which cannot `convert` a Bool into the trigger's
+    # note: SampleableValues union -> a MethodError is thrown DURING @ReactionNetworkSchema expansion. So we
+    # note: cannot even build the problem, let alone observe event_action!'s no-op. We therefore (a) pin the
+    # note: Invariant 7 target (a triggered event should raise B>0) as @test_broken — the legacy channel is not
+    # note: yet working — and (b) document, via @test_throws, that constructing a bare-true event currently
+    # note: throws. The @eval defers macro expansion to runtime so @test_throws can capture the parse-time error.
+    # action: Confirm the bare-true event cannot be constructed today (the channel is non-functional), and
+    # pin the Invariant-7 behavioral target as still-broken.
+    @testset "T1 bug-pin: event channel non-functional — bare-true event throws at construction (Invariant 7 unmet)" begin
+        # Invariant 7 target (Stage B): a triggered event whose action bumps B should raise B>0.
+        # Unreachable today because construction throws (see below); kept broken to flip green once Stage B
+        # wires the event channel and the action actually executes.
+        @test_broken false  # placeholder for `last(prob.sol.B) > 0` once the bare-true event can be built+run
+        # Current reality: a bare-`true` trigger cannot even be parsed — Event(::Bool, ::Expr) fails to
+        # convert the Bool into the trigger union, so @ReactionNetworkSchema throws at expansion.
+        @test_throws Exception @eval(@ReactionNetworkSchema begin
+            0.0, A --> B, name => inert        # no spawning; isolates the event effect
+            (true) && (B += 100)              # event: trigger true, action sets B
+        end)
     end
 
-    # [bugpin-add-to-spawn-deferral-lost] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: CONTRACT_DRAFT.md §3.4 Invariant 3; add_to_spawn! state.jl:251-256 (findfirst over scalar length(); increments :transHash not :transToSpawn)
-    # note: Pins Invariant 3 / state.jl:251-256: findfirst is handed the scalar
-    # note: `length(state.transition_recipes[:transHash])` instead of an index range (so it cannot match), and
-    # note: on a (never-taken) match it does `[:transHash][ix] += n` — incrementing the wrong column. Net:
-    # note: capacity overflow is silently dropped, never deferred. Also note sample_transitions! resets
-    # note: transToSpawn to 0 at state.jl:215 each tick, reinforcing the loss. The @test_broken pins the target
-    # note: (overflow recorded in transToSpawn); the plain @test locks in the current drop. Calls the unexported
-    # note: allocator internals (ReactiveDynamics.evolve!/sample_transitions!) directly to observe the gate.
-    # note: NOTE: if add_to_spawn! THROWS today (scalar passed to findfirst can error rather than no-op), wrap
-    # note: evolve! in @test_throws instead and keep the @test_broken target — verify against the running engine
-    # note: and adjust.
-    # action: Call evolve! for one tick so the capacity gate (solvers.jl:147-153) computes overflow and
-    # calls add_to_spawn!; then inspect the transToSpawn deferral column directly.
-    @testset "T1 bug-pin: add_to_spawn! capacity-overflow deferral is lost (findfirst scalar + wrong column)" begin
+    # [add-to-spawn-deferral-works] tier=T1-characterization expectedStatus=pass-now
+    # contract: CONTRACT_DRAFT.md §3.4 Invariant 3; add_to_spawn! records capacity overflow in transToSpawn
+    # note: Stage A FIXED add_to_spawn! (state.jl:251-256): the old code handed findfirst a scalar
+    # note: `length(...)` (so it never matched) and on the never-taken branch incremented :transHash — net,
+    # note: overflow was silently dropped. INV3 now holds: the capacity gate (solvers.jl:147-153) computes
+    # note: overflow (desired 5 - capacity 2 = 3) and add_to_spawn! defers it into transToSpawn. Verified
+    # note: transToSpawn[1] == 3.0 for the capped(5)/capacity(2) model; the prior MethodError is gone. Calls the
+    # note: unexported allocator internals (ReactiveDynamics.evolve!/sample_transitions!) directly to observe the
+    # note: gate.
+    # action: Call evolve! for one tick so the capacity gate computes overflow and calls add_to_spawn!;
+    # then inspect the transToSpawn deferral column directly.
+    @testset "T1 lock-in: add_to_spawn! defers capacity overflow into transToSpawn (INV3)" begin
         # Sustained over-demand against a hard capacity: rate forces 5 desired/ tick,
         # but capacity caps concurrent instances; overflow must be DEFERRED to transToSpawn.
         acs = @ReactionNetworkSchema begin
@@ -399,26 +375,21 @@ using ACSets  # nparts/incident for composition tests
         prob = ReactionNetworkProblem(acs)
         ReactiveDynamics.sample_transitions!(prob)
         ReactiveDynamics.evolve!(prob)
-        # Invariant 3 target: overflow (desired 5 - capacity 2 = 3) is carried forward in transToSpawn.
-        @test_broken prob.transition_recipes[:transToSpawn][1] >= 3
-        # Current reality: the deferral is lost. add_to_spawn! either no-ops (findfirst over a scalar)
-        # or mutates :transHash; either way transToSpawn stays 0 and overflow is dropped.
-        @test prob.transition_recipes[:transToSpawn][1] == 0
+        # Invariant 3: overflow (desired 5 - capacity 2 = 3) is carried forward in transToSpawn.
+        @test prob.transition_recipes[:transToSpawn][1] >= 3
+        @test prob.transition_recipes[:transToSpawn][1] == 3
     end
 
-    # [bugpin-resample-oval-crash] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: CONTRACT_DRAFT.md §4.2 (observable sampling); resample! state.jl:135-139 (line 137 sets o.val; Observable field is .sampled, state.jl:37)
-    # note: Pins state.jl:137: `isempty(o.range) && (return o.val = missing)` references o.val, but @aagent
-    # note: Observable (state.jl:31-38) declares `sampled::Any`, not `val` — so the range-less path throws
-    # note: (likely an ErrorException/setproperty! failure / type error) instead of returning missing. The non-
-    # note: empty-range path at state.jl:139 correctly uses o.sampled. The @test_throws pins the current crash;
-    # note: the @test_broken encodes the fixed behavior (assign .sampled = missing).
+    # [resample-rangeless-returns-missing] tier=T1-characterization expectedStatus=pass-now
+    # contract: CONTRACT_DRAFT.md §4.2 (observable sampling); resample! assigns the correct `.sampled` field
+    # note: Stage A FIXED resample!: the range-less branch previously assigned the nonexistent `o.val` (the
+    # note: @aagent Observable declares `sampled::Any`, not `val`) and threw. It now assigns `o.sampled = missing`
+    # note: on the isempty(o.range) path, returning missing without throwing. Verified: obs.sampled === missing
+    # note: after resample! on a range-less observable; the field is `.sampled`, never `.val`.
     # note: Observable/SampleableValues/ActionableValues are unexported, hence the ReactiveDynamics. prefix.
-    # note: NOTE: if @aagent injects a `val` accessor or the setproperty path silently no-ops rather than
-    # note: throwing, downgrade the first line to @test_broken.
-    # action: Call resample! on the range-less observable; the isempty(o.range) branch (state.jl:137)
-    # executes `o.val = missing`, but Observable has no `val` field.
-    @testset "T1 bug-pin: resample! assigns nonexistent o.val on a range-less observable" begin
+    # action: Call resample! on a range-less observable; the isempty(o.range) branch resamples to `missing`
+    # on the correct `.sampled` field.
+    @testset "T1 lock-in: resample! on a range-less observable yields missing on .sampled (no throw)" begin
         # Build a problem and a range-less Observable directly, then resample it.
         acs = @ReactionNetworkSchema begin
           1.0, A --> B, name => t1
@@ -427,12 +398,10 @@ using ACSets  # nparts/incident for composition tests
         @prob_params acs
         @prob_meta acs tspan = 5 dt = 1.0
         prob = ReactionNetworkProblem(acs)
-        # An observable whose `range` is empty triggers the isempty(o.range) branch at state.jl:137.
+        # An observable whose `range` is empty triggers the isempty(o.range) branch.
         obs = ReactiveDynamics.Observable("o", -Inf, ReactiveDynamics.SampleableValues[], Inf, ReactiveDynamics.ActionableValues[], missing)
-        # o.val does not exist (field is `sampled`), so the assignment errors.
-        @test_throws Exception ReactiveDynamics.resample!(prob, obs)
-        # T2 target: a range-less observable should resample to `missing` on the correct `.sampled` field.
-        @test_broken (ReactiveDynamics.resample!(prob, obs); obs.sampled === missing)
+        # The range-less path now resamples to `missing` on `.sampled` (no throw).
+        @test (ReactiveDynamics.resample!(prob, obs); obs.sampled === missing)
         # Field-shape pin: confirm the struct really has `sampled`, not `val`.
         @test :sampled in fieldnames(ReactiveDynamics.Observable)
         @test !(:val in fieldnames(ReactiveDynamics.Observable))

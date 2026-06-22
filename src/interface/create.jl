@@ -148,7 +148,9 @@ end
 
 function expand_rate(rate)
     rate = if !(isexpr(rate, :macrocall) && (macroname(rate) == :deterministic))
-        :(rand(Poisson(max(state.dt * $rate, 0))))
+        # Genesis intensity draws from the state-owned RNG (§4 D2/D5); `state` is in scope
+        # because this Expr is compiled into a (state, transition) closure by wrap_expr.
+        :(rand(state.rng, Poisson(max(state.dt * $rate, 0))))
     else
         rate.args[3]
     end

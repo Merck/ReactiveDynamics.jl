@@ -99,26 +99,30 @@ using Statistics
         @test df.out[end] > 0
     end
 
-    # [mod-row5-perstep-consumed-nonblock-undefq-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: §1.3 row 5 ({:nonblock}); §3.4 Invariant 1 ('free_blocked_species! references undefined q'); KNOWN BUG solvers.jl:512
-    # note: Verified live: `UndefVarError: q` raised from free_blocked_species! (solvers.jl:510-513) on the 2nd
-    # note: tick once an instance is in-flight. CRUCIAL: cycletime MUST be >0 — with ct=0 the instance
-    # note: finishes+prunes before the next tick's free pass and NO crash occurs (verified). The @test_throws
-    # note: pins current behavior; the @test_broken documents the target (row-5 freed-every-step) for when :512
-    # note: is repaired.
-    # action: attempt to simulate(prob)
-    @testset "Row 5 (perstep/consumed/nonblock): in-flight @nonblock token crashes on undefined `q` (PIN)" begin
+    # [mod-row5-perstep-consumed-nonblock] tier=T1-characterization expectedStatus=pass-now
+    # contract: §1.3 row 5 ({:nonblock} ⇒ perstep,consumed,nonblock; token freed every step); §3.4 Invariant 1; FIXED solvers.jl:512
+    # note: STAGE-A FIX (was a KNOWN BUG): free_blocked_species! previously referenced an undefined bare `q` and
+    # note: raised `UndefVarError: q` on the 2nd tick once a :nonblock instance was in-flight. The free path now
+    # note: credits `trans.q * tok.stoich` back every step, so the run completes. CRUCIAL: cycletime MUST be >0 to
+    # note: keep an instance in-flight across a tick boundary and exercise free_blocked_species! at all.
+    # note: Verified live: sensor=[10,9,8,8,8,8,8] (non-negative, finite) — the per-step free credit makes the
+    # note: :nonblock pool plateau (held token returned each tick) rather than crash. Assertions are robust
+    # note: invariants (no throw; non-negative; finite), not exact sensor numerals.
+    # action: simulate(prob) — runs to completion
+    @testset "Row 5 (perstep/consumed/nonblock): in-flight @nonblock token frees q·s every step and runs to completion" begin
         # cycletime>0 keeps a :nonblock instance in-flight across a tick boundary, so free_blocked_species!
-        # (step 3 of _step!) iterates it and hits the undefined `q`.
+        # (step 3 of _step!) iterates it; the freed :nonblock resource is credited back rather than crashing on `q`.
         acs = @ReactionNetworkSchema begin
             @deterministic(1.0), @nonblock(sensor) --> reading, name => measure, cycletime => 3.0
         end
         @prob_init acs sensor = 10 reading = 0
         @prob_params acs
         prob = ReactionNetworkProblem(acs, Dict(); tspan = 5, dt = 1.0)
-        @test_throws UndefVarError simulate(prob)
-        # Pin the exact defect: the free path references a bare `q` that is not in scope at solvers.jl:512
-        @test_broken (simulate(prob); true)   # will pass once :512 is fixed to free q·s with dt_scale=1
+        @test (simulate(prob); true)              # FIXED: free_blocked_species! no longer hits undefined `q`
+        df = prob.sol
+        # the freed :nonblock resource is credited back every step ⇒ non-negative, finite trajectory
+        @test all(>=(-1e-9), df.sensor)
+        @test all(isfinite, df.sensor) && all(isfinite, df.reading)
     end
 
     # [mod-perstep-ct0-footgun] tier=T1-characterization expectedStatus=pass-now
@@ -138,19 +142,20 @@ using Statistics
         @test df.out[end] > 0    # RHS still emitted — the token is silently a no-cost input
     end
 
-    # [mod-mode-macro-bare-symbol-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: §5.4 specModality; KNOWN BUG update.jl:108 (uses bare `specModality` not `:specModality`)
-    # note: Verified live: `UndefVarError: specModality` from mode!/@mode (update.jl:108 references bare
-    # note: `specModality`; should be `:specModality`). The @test_broken expresses the intended post-fix
-    # note: behavior: @mode unions :conserved into the species' modality set. Note `acs[1,:specModality]` here
-    # note: indexes the SCHEMA (acs), not the problem.
+    # [mod-mode-macro-unions-modality] tier=T1-characterization expectedStatus=pass-now
+    # contract: §5.4 specModality; FIXED update.jl:108 (now uses `:specModality` not bare `specModality`)
+    # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: specModality` because
+    # note: update.jl:108 referenced a bare `specModality` instead of the column symbol `:specModality`. @mode now
+    # note: unions the named modality into the species' modality set. Verified live: after `@mode acs X conserved`,
+    # note: `acs[1,:specModality] == Set([:conserved])`. Note `acs[1,:specModality]` indexes the SCHEMA (acs),
+    # note: not the problem.
     # action: invoke `@mode acs X conserved`
-    @testset "@mode crashes with UndefVarError(:specModality) — bare symbol instead of :specModality (PIN)" begin
+    @testset "@mode unions :conserved into the species' modality set (specModality)" begin
         acs = @ReactionNetworkSchema begin
             1.0, X --> Y, name => t1
         end
-        @test_throws UndefVarError (@mode acs X conserved)
-        @test_broken (begin @mode acs X conserved; :conserved in acs[1, :specModality] end)
+        @mode acs X conserved
+        @test :conserved in acs[1, :specModality]
     end
 
     # [mod-construct-rejects-nonblock-conserved] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -295,17 +300,17 @@ using Statistics
         @test maximum(-diff(df.product)) <= 2.0 + 1e-9
     end
 
-    # [gen-capacity-overflow-deferral-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: §2.8 capacity mode + 'add_to_spawn! is doubly broken'; §3.4 Invariant 3; KNOWN BUG state.jl:251-256
-    # note: Verified live: `MethodError` from add_to_spawn! (state.jl:251-256). TWO defects there:
-    # note: `findfirst(pred, length(vec))` passes an Int not a range (the MethodError observed), and on match it
-    # note: does `:transHash += n` (Symbol += Float64) instead of `:transToSpawn += n`. NOTE: even the FIRST
-    # note: over-capacity tick crashes — clean capacity-clamp characterization (proposal ≤ capacity) cannot
-    # note: exercise overflow at all, so the clamp `qs[i]=min(capacity,new_instances)` (solvers.jl:153) can only
-    # note: be observed when no deferral occurs. @test_broken encodes the Invariant-3 target (live count never
-    # note: exceeds capacity, overflow carried forward).
-    # action: attempt to simulate(prob)
-    @testset "Genesis `capacity`: over-capacity proposal crashes in add_to_spawn! deferral (PIN)" begin
+    # [gen-capacity-overflow-deferral] tier=T1-characterization expectedStatus=pass-now
+    # contract: §2.8 capacity mode + add_to_spawn! deferral; §3.4 Invariant 3; FIXED state.jl:251-256
+    # note: STAGE-A FIX (was a KNOWN BUG with TWO defects in add_to_spawn!): `findfirst(pred, length(vec))` passed
+    # note: an Int not a range (raised a `MethodError`), and on match it did `:transHash += n` (Symbol += Float64)
+    # note: instead of `:transToSpawn += n`. With both repaired, the over-capacity overflow path runs: the proposal
+    # note: (3/tick) exceeds capacity (5) while instances are in-flight (ct=10), and the surplus is DEFERRED via
+    # note: add_to_spawn! rather than crashing. Verified live: simulate completes and the live concurrent count is
+    # note: exactly 5 (≤ capacity). Characterizes the working Invariant-3 deferral (live count never exceeds
+    # note: capacity, overflow carried forward).
+    # action: simulate(prob) — runs to completion
+    @testset "Genesis `capacity`: over-capacity proposal is deferred via add_to_spawn!, live count bounded by capacity" begin
         # proposal (3/tick) eventually exceeds capacity (5) while instances are in-flight (ct=10),
         # triggering the overflow-deferral path add_to_spawn!.
         acs = @ReactionNetworkSchema begin
@@ -314,8 +319,9 @@ using Statistics
         @prob_init acs slot = 100 job = 0
         @prob_params acs
         prob = ReactionNetworkProblem(acs, Dict(); tspan = 8, dt = 1.0)
-        @test_throws MethodError simulate(prob)   # findfirst handed scalar length(...) (state.jl:254)
-        @test_broken (simulate(prob); count(t -> t[:transHash] == prob[1,:transHash], prob.ongoing_transitions) <= 5)
+        @test simulate(prob) !== nothing   # FIXED: add_to_spawn! deferral no longer hits MethodError / Symbol +=
+        # Invariant 3: live concurrent instances never exceed capacity; overflow is carried forward, not dropped.
+        @test count(t -> t[:transHash] == prob[1,:transHash], prob.ongoing_transitions) <= 5
     end
 
     # [gen-capacity-clamp-no-overflow] tier=T1-characterization expectedStatus=pass-now

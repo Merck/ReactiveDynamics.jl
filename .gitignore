@@ -12,3 +12,4 @@ LocalPreferences.toml
 _*
 *.db
 *.db.wal
+dev/

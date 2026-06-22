@@ -1,5 +1,6 @@
 @reexport using AlgebraicAgents
 using DataFrames
+using Random
 
 struct UnfoldedReactant
     index::Int
@@ -60,6 +61,14 @@ end
 
     wrap_fun::Any
     sol::DataFrame
+
+    # Determinism (§4 D1–D9): a state-owned RNG is the SOLE source of randomness in the
+    # step loop. `seed` records the REALIZED construction seed (the explicit `seed=` kwarg, or
+    # the entropy-drawn one when none was given — always concrete, so any run is replayable, D6).
+    # `initial_rng` is a snapshot of `rng` at t=0 so `_reinit!` restores the exact stream (D7).
+    rng::Random.AbstractRNG
+    seed::Union{Integer,Nothing}
+    initial_rng::Random.AbstractRNG
 end
 
 # get value of a numeric expression
@@ -67,7 +76,7 @@ end
 function context_eval(state::ReactionNetworkProblem, transition, o)
     o = o isa Function ? Base.invokelatest(o, state, transition) : o
 
-    return o isa Sampleable ? rand(o) : o
+    return o isa Sampleable ? rand(state.rng, o) : o
 end
 
 function Base.getindex(state::ReactionNetworkProblem, keys...)
@@ -118,9 +127,11 @@ end
 
 compileval(ex, state) = !isa(ex, Expr) ? ex : eval(state.wrap_fun(ex))
 
+# `rng` here is the range vector (a historical misnomer); randomness is drawn from the
+# state-owned `state.rng` (§4 D2/D5), never the global RNG.
 function sample_range(rng, state)
     isempty(rng) && return missing
-    r = rand() * sum(r -> r isa Tuple ? eval(r[1]) : 1, rng)
+    r = rand(state.rng) * sum(r -> r isa Tuple ? eval(r[1]) : 1, rng)
     ix = 0
     s = 0
     while s <= r && (ix < length(rng))
@@ -129,12 +140,14 @@ function sample_range(rng, state)
     end
 
     r = rng[ix] isa Tuple ? rng[ix][2] : rng[ix]
-    return r isa Sampleable ? rand(r) : r
+    return r isa Sampleable ? rand(state.rng, r) : r
 end
 
 function resample!(state::ReactionNetworkProblem, o::Observable)
     o.last = state.t
-    isempty(o.range) && (return o.val = missing)
+    # Range-less observable resamples to `missing` on the `.sampled` field (the struct has
+    # no `.val` field — that was the bug pinned by determinism_composition_bugs.jl).
+    isempty(o.range) && (return o.sampled = missing)
 
     return o.sampled = context_eval(state, nothing, sample_range(o.range, state))
 end
@@ -251,7 +264,7 @@ set_params(state::ReactionNetworkProblem, vals...) =
 function add_to_spawn!(state::ReactionNetworkProblem, hash, n)
     ix = findfirst(
         ix -> state.transition_recipes[:transHash][ix] == hash,
-        length(state.transition_recipes[:transHash]),
+        1:length(state.transition_recipes[:transHash]),
     )
-    return !isnothing(ix) && (state.transition_recipes[:transHash][ix] += n)
+    return !isnothing(ix) && (state.transition_recipes[:transToSpawn][ix] += n)
 end
