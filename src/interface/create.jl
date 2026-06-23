@@ -299,8 +299,12 @@ function recursively_find_reactants!(reactants, pcs, ex)
                 isexpr(ex.args[i], :tuple) ? ex.args[i].args[2] : ex.args[i],
             )
         end
-    elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:structured, :move]
+    elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:structured, :move, :advance]
         return ex
+    elseif isexpr(ex, :macrocall) && macroname(ex) == :select
+        # @select(Kind, clauses): register only the KIND as a species; the clause fields
+        # (phase, npv, …) are token attributes, NOT species, so they must not be registered.
+        push!(reactants, ex.args[3])
     elseif isexpr(ex, :macrocall)
         pass_value = ex.args[3] isa QuoteNode ? ex.args[3].value : ex.args[3]
         recursively_find_reactants!(reactants, pcs, pass_value)

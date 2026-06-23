@@ -30,3 +30,6 @@ end
 @safetestset "Rules / Decisions (endogenous channel)" begin
     include("rules_decisions.jl")
 end
+@safetestset "Token filtration (@select / @advance)" begin
+    include("token_filtration.jl")
+end

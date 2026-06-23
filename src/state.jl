@@ -7,7 +7,11 @@ struct UnfoldedReactant
     species::Symbol
     stoich::ActionableValues
     modality::Set{Symbol}
+    predicate::Any   # nothing (kind-only bind, the default) or a TokenPredicate (ADR 0008 §B)
 end
+# Backward-compatible constructor: no predicate ⇒ today's kind-only binding.
+UnfoldedReactant(index, species, stoich, modality) =
+    UnfoldedReactant(index, species, stoich, modality, nothing)
 
 """
 Ongoing transition auxiliary structure.
@@ -75,6 +79,12 @@ end
     # allow-list (ADR 0006 §C) keyed by name — used by AddToken/Invoke; never eval'd.
     rules::Vector
     registry::Dict{Symbol,Any}
+
+    # Structured-token determinism (ADR 0006 §E / ADR 0008): per-species monotonic creation
+    # counter, and the realized (token-name → creation_index) map that fixes the (species,
+    # creation_index) total order tokens are selected in. Reset by _reinit! (§4 D7).
+    creation_counters::Dict{Symbol,Int}
+    creation_index::Dict{String,Int}
 end
 
 # get value of a numeric expression
@@ -233,6 +243,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
                     r.species,
                     context_eval(state, nothing, state.wrap_fun(r.stoich)),
                     r.modality ∪ state[j, :specModality],
+                    r.predicate,
                 ),
             )
         end

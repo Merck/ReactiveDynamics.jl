@@ -38,9 +38,18 @@ macro structured_token(network, type)
     end
 end
 
-# Add a structured agent instance to an instance of a reaction network.
+# Add a structured agent instance to an instance of a reaction network. Assigns the token a
+# per-species monotonic creation index (ADR 0006 §E) so the deterministic (species,
+# creation_index) selection order is well-defined before recording it in the network.
 function add_structured_token!(problem::ReactionNetworkProblem, agent)
-    return entangle!(getagent(problem, "structured"), agent)
+    entangle!(getagent(problem, "structured"), agent)
+    sp = get_species(agent)
+    if sp !== nothing
+        k = get(problem.creation_counters, sp, 0) + 1
+        problem.creation_counters[sp] = k
+        problem.creation_index[AlgebraicAgents.getname(agent)] = k
+    end
+    return agent
 end
 
 import AlgebraicAgents

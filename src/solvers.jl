@@ -10,6 +10,15 @@ function get_sampled_transition(state, i)
     return transition
 end
 
+# The token-selection predicate (ADR 0008) for structured species `type` in an LHS reactant
+# list, or `nothing` (kind-only bind) when that reactant carries none.
+function lhs_predicate(lhs, type::Symbol)
+    for r in lhs
+        r isa UnfoldedReactant && r.species == type && return r.predicate
+    end
+    return nothing
+end
+
 """
 Compute resource requirements given transition quantities.
 """
@@ -202,8 +211,14 @@ function evolve!(state)
                         )
                     end
 
+                    # ADR 0008 §B: narrow the candidate set by the LHS reactant's predicate
+                    # (kind-only when none), then the unchanged priority sort + integer take.
+                    pred = lhs_predicate(state.transitions[:transLHS][i], type)
                     available_species = filter(
-                        a -> get_species(a) == type && !isblocked(a),
+                        a ->
+                            get_species(a) == type &&
+                                !isblocked(a) &&
+                                matches(pred, a, state, transition),
                         structured_token,
                     )
 
@@ -274,8 +289,13 @@ function evolve!(state)
                         )
                     end
 
+                    # ADR 0008 §B: narrow by the in-flight transition's LHS predicate.
+                    pred = lhs_predicate(transition[:transLHS], type)
                     available_species = filter(
-                        a -> get_species(a) == type && !isblocked(a),
+                        a ->
+                            get_species(a) == type &&
+                                !isblocked(a) &&
+                                matches(pred, a, state, transition),
                         structured_token,
                     )
 
@@ -380,6 +400,30 @@ function structured_rhs(expr::Expr, state, transition)
             @error "Not enough tokens to allocate for a move."
         end
 
+    elseif isexpr(expr, :macrocall) && macroname(expr) == :advance
+        # @advance(field, value): advance a bound token's lifecycle by writing one field, keeping
+        # its identity/kind/uuid/creation_index/past_bonds (ADR 0008 §D). The phase-as-attribute
+        # generalization of @move (which writes the `species` field). `value` may read the token's
+        # own current fields via @field(name), and MAY draw (§F). The advanced token is then
+        # released. It is consumed from the first bound token of this transition.
+        field = expr.args[3]
+        field isa Symbol || error("@advance: first argument must be a field name, got $field")
+        valex = expr.args[4]
+        # No bound token to advance (the @select predicate matched nothing this firing) — a
+        # silent no-op: the instance produced no advance. finish! skips the nothing return.
+        isempty(transition.bound_structured_agents) && return nothing, nothing
+        token = first(transition.bound_structured_agents)
+        # Evaluate the value with the bound token in scope so @field(name) reads its attributes.
+        val = eval_with_token(state, transition, token, valex)
+        if field === :species
+            set_species!(token, Symbol(val))
+        else
+            setproperty!(token, field, val)
+        end
+        deleteat!(transition.bound_structured_agents, 1)
+        set_bound_transition!(token, nothing)
+        return token, get_species(token)
+
     else
         token = context_eval(state, transition, state.wrap_fun(expr))
         entangle!(getagent(state, "structured"), token)
@@ -413,6 +457,9 @@ function finish!(state)
 
                 for _ = 1:(q*stoich)
                     token, species = structured_rhs(r.species, state, trans_)
+                    # A structured-RHS op may legitimately produce nothing (e.g. @advance with no
+                    # bound token to advance) — skip the count/reward in that case.
+                    species === nothing && continue
                     i = find_index(species, state)
                     state.u[i] += 1
                     val_reward += state[i, :specReward]
@@ -635,6 +682,8 @@ function ReactionNetworkProblem(
         initial_rng,
         rules,
         registry,
+        Dict{Symbol,Int}(),
+        Dict{String,Int}(),
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -657,6 +706,9 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     for r in state.rules
         r.fire_mode === :once && (r.enabled = true)
     end
+    # Reset structured-token creation counters (the token population itself is rebuilt in Stage D).
+    empty!(state.creation_counters)
+    empty!(state.creation_index)
 
     return state
 end
