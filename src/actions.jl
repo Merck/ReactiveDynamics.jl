@@ -132,9 +132,14 @@ function set_guard!(state::ReactionNetworkProblem, t::Symbol, guard)
 end
 
 # ── Evaluate an action value in (state, transition) context via the seeded closure path ──
-# Mirrors how rate/stoich/action exprs are evaluated elsewhere (context_eval + wrap_fun).
-_eval_value(state::ReactionNetworkProblem, transition, v) =
-    context_eval(state, transition, state.wrap_fun(v))
+# Mirrors how rate/stoich/action exprs are evaluated elsewhere (context_eval + wrap_fun). A bare
+# QuoteNode (a literal symbol like `:Phase2` in an action field) is the symbol it wraps —
+# wrap_fun/context_eval pass QuoteNodes through unevaluated, so normalize here.
+function _eval_value(state::ReactionNetworkProblem, transition, v)
+    v isa QuoteNode && return v.value
+    r = context_eval(state, transition, state.wrap_fun(v))
+    return r isa QuoteNode ? r.value : r
+end
 
 # ── apply_action! — the lowering table (ADR 0010 §C / ADR 0011 §C), all eval-free ───────
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetSpecies)

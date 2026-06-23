@@ -222,10 +222,12 @@ function evolve!(state)
                         structured_token,
                     )
 
+                    # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
+                    # deterministic (species, creation_index) key — NOT the AA Dict / random-name
+                    # order, which would make WHICH equal-priority token binds non-reproducible.
                     sort!(
                         available_species;
-                        by = a -> priority(a, state.acs[i, :transName]),
-                        rev = true,
+                        by = a -> (-priority(a, state.acs[i, :transName]), token_sortkey(state, a)),
                     )
 
                     ix = 1
@@ -299,10 +301,12 @@ function evolve!(state)
                         structured_token,
                     )
 
+                    # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
+                    # deterministic (species, creation_index) key — NOT the AA Dict / random-name
+                    # order, which would make WHICH equal-priority token binds non-reproducible.
                     sort!(
                         available_species;
-                        by = a -> priority(a, state.acs[i, :transName]),
-                        rev = true,
+                        by = a -> (-priority(a, state.acs[i, :transName]), token_sortkey(state, a)),
                     )
 
                     ix = 1

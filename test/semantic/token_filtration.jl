@@ -128,6 +128,34 @@ phases(p) =
         @test run_pipeline(11) == run_pipeline(11)
     end
 
+    # ── deterministic bind total order (ADR 0008 inv 3): equal-priority ties broken by ──
+    # ── (species, creation_index), NOT the AA Dict / random token-name order ─────────────
+    @testset "equal-priority tokens bind in deterministic creation_index order (not insertion/name)" begin
+        # Two Phase2 projects with distinct npv but equal (default) priority. With rate 1 only one
+        # advances per tick, so WHICH one advances first must be reproducible across runs — it is
+        # the lower creation_index (the first added), regardless of the tokens' random names.
+        function which_advances_first(seed)
+            acs = @ReactionNetworkSchema begin
+                @deterministic(1.0),
+                @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+                name => adv, cycletime => 1.0, probability => 1.0
+            end
+            RDX.register_structured_species!(acs, :Project)
+            @prob_meta acs tspan = 2 dt = 1.0
+            p = ReactionNetworkProblem(acs; seed = seed)
+            a = RDX.FiltProjectToken(:Phase2, 111.0); add_structured_token!(p, a)  # creation_index 1
+            b = RDX.FiltProjectToken(:Phase2, 222.0); add_structured_token!(p, b)  # creation_index 2
+            simulate(p, 1)   # one tick: exactly one Phase2 advances
+            # return the npv of whichever advanced to Phase3 (the bound-first token)
+            adv = filter(t -> t.phase == :Phase3, [a, b])
+            isempty(adv) ? -1.0 : first(adv).npv
+        end
+        # the first-added token (creation_index 1, npv 111) advances first — every time
+        @test which_advances_first(1) == 111.0
+        @test which_advances_first(2) == 111.0
+        @test which_advances_first(999) == 111.0
+    end
+
     # ── degenerate (no predicate) = today's kind-only bind (backward-compat) ─────────────
     @testset "a structured LHS with no @select binds by kind only (backward-compatible)" begin
         # rate 2 (two instances/tick) + cycletime 0 (instant completion) so both distinct
