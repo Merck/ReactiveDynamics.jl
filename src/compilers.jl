@@ -175,6 +175,10 @@ function compile_attrs(acs::ReactionNetworkSchema, structured_token)
     transitions[:transToSpawn] = zeros(nparts(acs, :T))
     transitions[:transHash] =
         [coalesce(acs[i, :transName], gensym()) for i in parts(acs, :T)]
+    # Stateless per-tick guard (ADR 0010 §B): default `true` (compiled away). AND-ed with the
+    # latching transActivated gate in sample_transitions!. Authored via @conditional / the
+    # `guard =>` transition attr; carried as a compiled closure like the other trans attrs.
+    transitions[:transGuard] = Any[true for _ in parts(acs, :T)]
 
     return attrs, transitions, wrap_fun
 end

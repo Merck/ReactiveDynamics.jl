@@ -327,29 +327,31 @@ using ACSets  # nparts/incident for composition tests
         =#
     end
 
-    # [bugpin-event-action-noop] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: CONTRACT_DRAFT.md §3.4 Invariant 7; the event channel (event_action! solvers.jl:316-326) is non-functional
-    # note: Stage A did NOT touch the event channel (Stage B will). Verified TODAY: a bare-`true` event fails
-    # note: even earlier than event_action! — at schema-macro parse, get_events! (create.jl:132) calls
-    # note: Event(trigger::Bool, action::Expr) (create.jl:32), which cannot `convert` a Bool into the trigger's
-    # note: SampleableValues union -> a MethodError is thrown DURING @ReactionNetworkSchema expansion. So we
-    # note: cannot even build the problem, let alone observe event_action!'s no-op. We therefore (a) pin the
-    # note: Invariant 7 target (a triggered event should raise B>0) as @test_broken — the legacy channel is not
-    # note: yet working — and (b) document, via @test_throws, that constructing a bare-true event currently
-    # note: throws. The @eval defers macro expansion to runtime so @test_throws can capture the parse-time error.
-    # action: Confirm the bare-true event cannot be constructed today (the channel is non-functional), and
-    # pin the Invariant-7 behavioral target as still-broken.
-    @testset "T1 bug-pin: event channel non-functional — bare-true event throws at construction (Invariant 7 unmet)" begin
-        # Invariant 7 target (Stage B): a triggered event whose action bumps B should raise B>0.
-        # Unreachable today because construction throws (see below); kept broken to flip green once Stage B
-        # wires the event channel and the action actually executes.
-        @test_broken false  # placeholder for `last(prob.sol.B) > 0` once the bare-true event can be built+run
-        # Current reality: a bare-`true` trigger cannot even be parsed — Event(::Bool, ::Expr) fails to
-        # convert the Bool into the trigger union, so @ReactionNetworkSchema throws at expansion.
-        @test_throws Exception @eval(@ReactionNetworkSchema begin
-            0.0, A --> B, name => inert        # no spawning; isolates the event effect
-            (true) && (B += 100)              # event: trigger true, action sets B
-        end)
+    # [event-channel-repaired] tier=T1-characterization expectedStatus=pass-now
+    # contract: CONTRACT_DRAFT.md §3.4 Invariant 7; ADR 0010 §A — the event channel is repaired
+    # note: Stage B replaces the no-op event_action! with the endogenous decision channel: at construction
+    # note: every :E row (trigger && action) is lifted to a Rule{guard=trigger, action=RawExpr(action),
+    # note: every_tick}, and fire_rules! (src/actions.jl, _step! step 10) evaluates the guard and RUNS the
+    # note: action. So a triggered event now takes effect (Invariant 7 met). NB: a bare-`true` trigger still
+    # note: fails at @ReactionNetworkSchema parse (Event(::Bool,::Expr) cannot convert a Bool into the
+    # note: SampleableValues trigger union — a separate, pre-existing authoring limitation), so we use an
+    # note: Expr trigger `@t() >= 0.0` which is always-true and parses cleanly.
+    # action: Build a model whose event bumps B every tick; simulate; B must rise (the action ran).
+    @testset "Event channel repaired: a triggered event runs its action each tick (Invariant 7 met)" begin
+        acs = @ReactionNetworkSchema begin
+          0.0, A --> B, name => inert        # no spawning; isolates the event effect
+          (@t() >= 0.0) && (B += 100)        # event: always-true Expr trigger, action sets B
+        end
+        @prob_init acs A = 0 B = 0
+        @prob_params acs
+        @prob_meta acs tspan = 5 dt = 1.0
+        prob = ReactionNetworkProblem(acs; seed = 1)
+        # The :E row was lifted to a Rule.
+        @test length(prob.rules) == 1
+        simulate(prob)
+        # Invariant 7: the event action executed each tick, so B was incremented (B > 0).
+        @test last(prob.sol[!, "B"]) > 0
+        @test all(>=(0.0), diff(prob.sol[!, "B"]))   # monotone — the action only ever adds
     end
 
     # [add-to-spawn-deferral-works] tier=T1-characterization expectedStatus=pass-now

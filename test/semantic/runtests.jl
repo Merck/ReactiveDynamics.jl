@@ -27,3 +27,6 @@ end
 @safetestset "Reference models (SIR / toy-pharma / rNPV)" begin
     include("reference_models.jl")
 end
+@safetestset "Rules / Decisions (endogenous channel)" begin
+    include("rules_decisions.jl")
+end

@@ -69,6 +69,12 @@ end
     rng::Random.AbstractRNG
     seed::Union{Integer,Nothing}
     initial_rng::Random.AbstractRNG
+
+    # Endogenous decision channel (ADR 0010/0011, §12). `rules` are guard/action/fire_mode
+    # triples fired at _step! step 10. `registry` is the per-network host-function/kind
+    # allow-list (ADR 0006 §C) keyed by name — used by AddToken/Invoke; never eval'd.
+    rules::Vector
+    registry::Dict{Symbol,Any}
 end
 
 # get value of a numeric expression
@@ -189,13 +195,27 @@ function sample_transitions!(state::ReactionNetworkProblem)
         empty!(v)
     end
     for i = 1:length(state.transition_recipes[:trans])
-        !(state.transition_recipes[:transActivated][i]) && continue
+        # A transition fires this tick iff it is activated (latching gate, ADR 0004) AND its
+        # stateless guard holds this tick (ADR 0010 §B). We ALWAYS realize and push every
+        # transition's attributes so `state.transitions[attr]` stays parallel to the `:T`
+        # part-index that `evolve!`/`get_allocs!` index by — a non-firing transition is
+        # recorded with `transFiring = false` and `evolve!` zeroes its genesis quantity, so
+        # it makes no proposal and never competes for resources (clean ADR-0002 interaction).
+        fires =
+            state.transition_recipes[:transActivated][i] &&
+            (context_eval(state, nothing, state.transition_recipes[:transGuard][i]) != false)
         l_line, r_line = prune_r_line(state.transition_recipes[:trans][i])
 
         for attr in keys(state.transition_recipes)
             (
-                attr ∈
-                [:trans, :transPreAction, :transPostAction, :transActivated, :transHash]
+                attr ∈ [
+                    :trans,
+                    :transPreAction,
+                    :transPostAction,
+                    :transActivated,
+                    :transHash,
+                    :transGuard,
+                ]
             ) && continue
             push!(
                 state.transitions[attr],
@@ -219,6 +239,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
 
         push!(state.transitions[:transLHS], reactants)
         push!(state.transitions[:transRHS], r_line)
+        push!(state.transitions[:transFiring], fires)
 
         foreach(
             k -> push!(state.transitions[k], state.transition_recipes[k][i]),

@@ -142,6 +142,9 @@ function evolve!(state)
         parts(state, :T),
     )
     qs .= ceil.(Ref(Int), qs)
+    # A transition gated off this tick (deactivated or guard false, ADR 0010 §B) proposes no
+    # new instances — zero its genesis quantity so it never competes for resources.
+    foreach(i -> state.transitions[:transFiring][i] || (qs[i] = 0), parts(state, :T))
 
     for i in parts(state, :T)
         new_instances = qs[i] + state[i, :transToSpawn]
@@ -309,18 +312,10 @@ function evolve!(state)
     )
 end
 
-# execute callbacks
-function event_action!(state)
-    for i in parts(state, :E)
-        !isnothing(state[i, :eventTrigger]) && !isnothing(state[i, :eventAction]) ||
-            continue
-        v = state[i, :eventTrigger]
-        q = v isa Bool ? (v ? 1 : 0) : (v isa Number ? rand(state.rng, Poisson(v)) : 0)
-        for _ = 1:q
-            state[i, :eventAction]
-        end
-    end
-end
+# The legacy `event_action!` (a no-op fetch of :eventAction, the repaired CONTRACT §3.4 Inv 7
+# defect) is superseded by the endogenous decision channel `fire_rules!` (ADR 0010, src/actions.jl),
+# which evaluates each Rule's guard and runs its action at _step! step 10. :E rows are lifted to
+# Rules at construction.
 
 function allocate_for_move(t::Transition, s::Symbol)
     return t.bound_structured_agents ∩
@@ -598,13 +593,25 @@ function ReactionNetworkProblem(
         setdiff(
             filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)),
             (:trans,),
-        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash]
+        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash, :transFiring]
     transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
 
     sol = DataFrame(
         "t" => Float64[],
         (string(name) => Float64[] for name in acs[:, :specName])...,
     )
+
+    # Endogenous decision channel (ADR 0010 §12). Per-network host registry for AddToken/Invoke
+    # (ADR 0006 §C — by-name, never eval'd). Rules are built from the :E rows: a legacy event
+    # `trigger && action` becomes a Rule{guard=trigger, action=RawExpr(action), every_tick}.
+    # Typed Rules can also be supplied directly via the `rules=` kwarg / @rule authoring.
+    registry = Dict{Symbol,Any}(get(keywords, :registry, Dict{Symbol,Any}()))
+    rules = Any[
+        Rule(Symbol("rule_", i), acs[i, :eventTrigger], RawExpr(acs[i, :eventAction]))
+        for i in parts(acs, :E) if
+        !isnothing(acs[i, :eventTrigger]) && !isnothing(acs[i, :eventAction])
+    ]
+    append!(rules, get(keywords, :rules, Any[]))
 
     network = ReactionNetworkProblem(
         name,
@@ -626,6 +633,8 @@ function ReactionNetworkProblem(
         rng,
         seed,
         initial_rng,
+        rules,
+        registry,
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -644,6 +653,10 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     empty!(state.sol)
     # Restore the RNG to its construction state so the second run reproduces the first (§4 D7).
     state.rng = copy(state.initial_rng)
+    # Reset every `once` rule's latch so a re-run from the same seed reproduces the lever (§4 D7).
+    for r in state.rules
+        r.fire_mode === :once && (r.enabled = true)
+    end
 
     return state
 end
@@ -675,7 +688,11 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
     finish!(state)
     update_u_structured!(state)
 
-    event_action!(state)
+    # Step 10 (§3.3): fire the endogenous decision channel (ADR 0010). Rules see this tick's
+    # post-finish state; their writes land on this tick's ledger row and the next tick's
+    # genesis/guards. Replaces the old no-op event_action! slot.
+    fire_rules!(state)
+    update_u_structured!(state)
 
     push!(
         state.log,

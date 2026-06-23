@@ -370,32 +370,28 @@ using Statistics
         @test df.cohort[end] == 9.0                    # 3 boundaries * 3 each
     end
 
-    # [gen-event-action-broken] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: §3.4 Invariant 7 (event_action! does not run actions, solvers.jl:323); §2.8 'acquisition lever must use scheduled, NOT events'
-    # note: The event channel is non-functional. event_action! (solvers.jl:316-326) computes the firing count q
-    # note: correctly (solvers.jl:321) but the loop body is the bare expression `state[i, :eventAction]`
-    # note: (solvers.jl:323) — it FETCHES the action without binding its result back into u/p, so a value-write-back
-    # note: event has no effect; and an `X += n` action whose LHS appears in the trigger threw UndefVarError on the
-    # note: var-substitution path when run during drafting. Either way the Invariant-7 obligation is UNMET — which
-    # note: is why §2.8 routes the acquisition lever through the scheduled rate idiom, not the event channel.
-    @testset "Event actions do not take effect — Invariant 7 is unmet (PIN)" begin
-        # A scheduled budget injection expressed as an event. Under a correct engine, budget would be set.
+    # [gen-event-action-repaired] tier=T1-characterization expectedStatus=pass-now
+    # contract: §3.4 Invariant 7 (repaired); ADR 0010 §A — the scheduled in-model lever via the event/Rule channel
+    # note: Stage B repairs the event channel: each :E row is lifted at construction to a Rule
+    # note: {guard=trigger, action=RawExpr(action), every_tick}, and fire_rules! (src/actions.jl, _step! step
+    # note: 10) evaluates the guard and RUNS the action (no longer the bare no-op fetch). A scheduled
+    # note: injection `(@t() > T) && (budget += N)` now takes effect on schedule — the §2.8 acquisition-lever
+    # note: idiom is live (and the typed Rule/SetSpecies form in rules_decisions.jl is the preferred surface).
+    # note: `budget` must be a real species column (it is set by the action), so it appears on an inert
+    # note: transition to enter :S.
+    @testset "Event action takes effect on schedule — Invariant 7 met (the in-model lever)" begin
+        # A scheduled budget injection expressed as an event: from t>2 the action adds 999 each tick.
         acs = @ReactionNetworkSchema begin
+            0.0, budget --> budget, name => budget_holder   # inert; declares `budget` as a species
             0.0, raw --> product, name => t1
-            (@t() > 2.0) && (budget = 999.0)
+            (@t() > 2.0) && (budget += 999.0)
         end
         @prob_init acs raw = 10 product = 0 budget = 0
         @prob_params acs
-        prob = ReactionNetworkProblem(acs, Dict(); tspan = 5, dt = 1.0)
-        # The engine either silently no-ops the action (fetch-only, solvers.jl:323) or throws on the action's
-        # var-substitution path. Pin the CONTRACT obligation (budget set by the event) as broken until fixed.
-        local ran = false
-        try
-            simulate(prob)
-            ran = true
-        catch
-            ran = false   # an action that throws is also a failure of Invariant 7
-        end
-        @test_broken ran && prob.sol[!, "budget"][end] == 999.0
+        prob = ReactionNetworkProblem(acs, Dict(); tspan = 5, dt = 1.0, seed = 1)
+        simulate(prob)
+        # Invariant 7: the event fired on schedule, so budget rose from 0 once t crossed 2.
+        @test prob.sol[!, "budget"][end] > 0.0
+        @test prob.sol[!, "budget"][findfirst(<=(2.0), prob.sol[!, "t"])] == 0.0  # nothing before the trigger
     end
 end

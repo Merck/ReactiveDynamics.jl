@@ -222,6 +222,7 @@ include.(readdir(joinpath(@__DIR__, "interface"); join = true))
 include.(readdir(joinpath(@__DIR__, "utils"); join = true))
 include.(readdir(joinpath(@__DIR__, "operators"); join = true))
 include("solvers.jl")
+include("actions.jl")
 #include("optim.jl")
 include("loadsave.jl")
 
