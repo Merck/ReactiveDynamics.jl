@@ -314,6 +314,21 @@ end
         @test any(d -> occursin("illegal in a Rule", d.msg), RDX.validate(m))
     end
 
+    @testset "E7: a Field node in a @select predicate clause is rejected (ADR 0008 §D)" begin
+        import JSON
+        # @field is legal only in a SetField/@advance value — a Field in a predicate clause would
+        # crash at runtime (@field is a macro), so validate must reject it up front.
+        m = JSON.parse("""
+        { "meta":{"tspan":5.0,"dt":1.0},"params":[],
+          "species":[{"name":"Project","structured":true}],
+          "transitions":[{"id":"adv","rate":1.0,"rate_mode":"deterministic"}],
+          "reactants":[{"transition":"adv","side":"lhs",
+            "predicate":{"kind":"Project","clauses":[["npv",">",{"node":"field","name":"npv"}]]}},
+            {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Done"}}] }
+        """)
+        @test any(d -> occursin("Field", d.msg) && occursin("legal only", d.msg), RDX.validate(m))
+    end
+
     # ── E8: the BD pipeline as model.rdj.json — JSON ≡ DSL trajectory (the north-star) ──
     @testset "E8: BD pipeline loaded from model.rdj.json matches the DSL model byte-for-byte" begin
         demodir = normpath(joinpath(homedir(), "ReactiveDynamics-review", "demo", "bd_acquisition"))

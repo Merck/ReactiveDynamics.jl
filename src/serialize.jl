@@ -296,6 +296,13 @@ end
 # Action VALUES are ExprNodes in JSON, lowered via to_expr to the Expr the apply_action!/
 # _eval_value path consumes (actions.jl). RawExpr is intentionally NOT serializable (the legacy
 # bridge for non-typed Exprs — a JSON model uses typed verbs only; ADR 0005 open question).
+#
+# NOTE (serialize-direction fidelity): the to_dict path lowers a stored action-value Expr back to
+# a node via from_expr WITHOUT a species/params context, so a bare symbol classifies to its
+# default NodeRef(:species, …). This is runtime-harmless — both NodeRef kinds lower to the same
+# bare symbol via to_expr, so a from_json-loaded model is unaffected — and only mislabels the JSON
+# `ref.kind` tag when re-serializing a model whose actions were hand-built from raw Exprs. JSON-
+# authored actions carry typed nodes and never round-trip through from_expr, so they are exact.
 stmt_to_dict(s::SetSpecies) = Dict{String,Any}(
     "verb" => "set_species", "name" => string(s.name),
     "value" => node_to_dict(from_expr(s.value)), "mode" => string(s.mode))
@@ -439,9 +446,11 @@ struct Diagnostic
 end
 Base.string(d::Diagnostic) = "[$(d.severity)] $(d.path): $(d.msg)"
 
-# Walk an ExprNode dict, collecting op/dist/ref/arity diagnostics (rule 1). `allow_sample`
-# governs whether a Sample node is legal here (false in a predicate clause value, §9.5).
-function _validate_node!(diags, d, path; species, params, obs, allow_sample = true)
+# Walk an ExprNode dict, collecting op/dist/ref/arity diagnostics (rule 1). `allow_sample` governs
+# whether a Sample node is legal here (false in a predicate clause value — no RNG, §9.5); `allow_field`
+# governs whether a Field (@field) node is legal here (true only in a SetField/@advance value,
+# ADR 0008 §D — a Field in a predicate clause would crash at runtime since @field is a macro).
+function _validate_node!(diags, d, path; species, params, obs, allow_sample = true, allow_field = true)
     d isa AbstractDict || return diags        # a bare literal scalar — fine
     tag = get(d, "node", nothing)
     if tag == "const"
@@ -456,20 +465,23 @@ function _validate_node!(diags, d, path; species, params, obs, allow_sample = tr
         op = Symbol(get(d, "op", ""))
         op in OP_WHITELIST || push!(diags, Diagnostic(:error, path, "op $op ∉ OP_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample)
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample, allow_field)
         end
     elseif tag == "sample"
         allow_sample || push!(diags, Diagnostic(:error, path, "Sample (RNG) is not 𝓕ₜ-measurable here (no draws in a predicate)"))
         Symbol(get(d, "dist", "")) in DIST_WHITELIST ||
             push!(diags, Diagnostic(:error, path, "dist $(get(d,"dist","")) ∉ DIST_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample)
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample, allow_field)
         end
-    elseif tag == "timeref" || tag == "field"
-        # ok (Field legality vs context is a §9.5 rule; here just structural)
+    elseif tag == "field"
+        allow_field || push!(diags, Diagnostic(:error, path,
+            "Field (@field) is legal only in a SetField/@advance value, not here (ADR 0008 §D)"))
+    elseif tag == "timeref"
+        # ok
     elseif tag == "choose"
         for (i, alt) in enumerate(get(d, "alts", []))
-            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, allow_sample)
+            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, allow_sample, allow_field)
         end
     else
         push!(diags, Diagnostic(:error, path, "unknown node tag `$tag`"))
@@ -545,7 +557,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
                     push!(diags, Diagnostic(:error, "reactants[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
                 # the clause VALUE must be 𝓕ₜ-measurable (no Sample)
                 c[3] isa AbstractDict &&
-                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, allow_sample = false)
+                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, allow_sample = false, allow_field = false)
             end
         end
     end
