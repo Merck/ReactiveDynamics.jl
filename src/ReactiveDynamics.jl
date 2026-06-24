@@ -217,6 +217,7 @@ function merge_acs!(acs::ReactionNetworkSchema, transitions, reactants, obs, eve
 end
 
 include("state.jl")
+include("exprnode.jl")
 include("compilers.jl")
 include.(readdir(joinpath(@__DIR__, "interface"); join = true))
 include.(readdir(joinpath(@__DIR__, "utils"); join = true))
@@ -224,6 +225,7 @@ include.(readdir(joinpath(@__DIR__, "operators"); join = true))
 include("solvers.jl")
 include("predicates.jl")
 include("actions.jl")
+include("serialize.jl")
 #include("optim.jl")
 include("loadsave.jl")
 
