@@ -13,6 +13,18 @@ using Random, Distributions, DataFrames
 
 const RDX = ReactiveDynamics
 
+# A structured token kind for the SetTokens population-write test (defined in RD scope).
+@register begin
+    @aagent BaseStructuredToken AbstractStructuredToken struct RuleProjectToken
+        phase::Symbol
+        npv::Float64
+    end
+    function RuleProjectToken(phase, npv)
+        return RuleProjectToken("RP" * string(rand(1:10^9)), :Project, nothing,
+            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[], phase, npv)
+    end
+end
+
 # A minimal model with a `cash` pool and an inert holder so cash is a real species column.
 # `@prob_meta` eval's its values in module scope, so tspan/dt are passed via the constructor
 # (the `tspan=`/`dt=` kwargs) rather than threaded through the macro.
@@ -124,5 +136,30 @@ end
         b = mk(); simulate(b)
         @test a.sol[!, "cash"] == b.sol[!, "cash"]      # seeded Poisson multiplicity is reproducible
         @test a.sol[!, "cash"][end] > 0.0               # fired some positive number of times
+    end
+
+    # ── (I) SetTokens population write with @field — the ADR-0011 idiom ─────────────────
+    @testset "SetTokens writes a @select-ed population's own field via @field (ADR 0011 §A)" begin
+        # "write down all Phase-2 pos_remaining by 10% on a competitor readout" — a Rule action
+        # over a selected population, reading each token's OWN current field via @field. This must
+        # use eval_with_token (the SetField value-eval), not the plain closure path (@field is a
+        # syntactic marker that must be substituted to a literal before eval, else it errors).
+        acs = @ReactionNetworkSchema begin
+            0.0, A --> B, name => inert
+        end
+        @prob_init acs A = 0 B = 0
+        RDX.register_structured_species!(acs, :Project)
+        p = RDX.ReactionNetworkProblem(acs; tspan = 3, dt = 1.0, seed = 1,
+            population = [RDX.RuleProjectToken(:Phase2, 100.0),
+                         RDX.RuleProjectToken(:Phase2, 200.0),
+                         RDX.RuleProjectToken(:Phase1, 50.0)])
+        act = RDX.SetTokens(
+            RDX.TokenPredicate(:Project, [RDX.Clause(:phase, :(==), :(:Phase2))]),
+            [:npv => :(@field(npv) * 0.9)],
+        )
+        RDX.apply_action!(p, nothing, act)
+        npvs = sort([t.npv for t in values(RDX.inners(RDX.getagent(p, "structured")))])
+        # Phase2: 100→90, 200→180 (each ×0.9); Phase1 50 untouched (not selected)
+        @test npvs == [50.0, 90.0, 180.0]
     end
 end

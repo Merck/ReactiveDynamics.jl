@@ -184,12 +184,17 @@ function apply_action!(state::ReactionNetworkProblem, transition, a::SetField)
 end
 
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetTokens)
-    # Iterate matched tokens in the (species, creation_index) total order (§9.2) and write
-    # each field. The predicate evaluator + total order arrive with Stage C; this dispatches
-    # to `select_tokens` once that exists.
+    # Iterate matched tokens in the (species, creation_index) total order (§9.2) and write each
+    # field. SetTokens is the population generalization of SetField (ADR 0011 §A), so a value is
+    # evaluated IN THE SELECTED TOKEN's context via `eval_with_token` (NOT `_eval_value`): that
+    # rewrites every `@field(name)` to a literal read of the token's own current attribute before
+    # the seeded-closure eval — so `pos_remaining => @field(pos_remaining) * 0.9` writes each token
+    # down by 10%. (`@field` is a syntactic marker, not a real macro; sending it through wrap_fun
+    # directly would error at macro-expansion.) `transition` is nothing in a Rule, the firing
+    # instance in a post-action — it carries through to context_eval for params/obs/time/Sample.
     for tok in select_tokens(state, a.predicate)
         for (f, vex) in a.assigns
-            setproperty!(tok, f, _eval_value(state, tok.bound_transition, vex))
+            setproperty!(tok, f, eval_with_token(state, transition, tok, vex))
         end
     end
     return nothing
