@@ -43,9 +43,9 @@ The decomposition is the BD insight: most of the deal's value comes from the **c
 - [`host.jl`](host.jl) — the `ProjectToken` kind (host Julia, never serialized), the per-network registry the `AddToken` lever references by name, the coarse pipeline model builder, the initial portfolio, and the acquisition Rule.
 - [`analysis.jl`](analysis.jl) — the rNPV roll-up and ensemble/Δ post-processing. Discounting is pure post-processing; the engine does no discounting (MVP §5 / finding D).
 - [`run_demo.jl`](run_demo.jl) — the scenario grid (S0–S5) + driver + report.
+- [`model.rdj.json`](model.rdj.json) — the same pipeline as an **eval-free JSON model** (ADR 0005, Stage E). `from_json_model(read("model.rdj.json", String); registry = PROJECT_REGISTRY)` builds a model byte-for-byte identical to the in-Julia DSL under the same seed (verified, `serialization_ir.jl::E8`). The host `ProjectToken` type + registry stay host Julia (referenced by name); the JSON carries no code.
 
 ## Milestone-1 caveats (deliberate)
 
-- **The model is built in-Julia via `@ReactionNetworkSchema`**, not authored as eval-free JSON — that is Phase-1 Stage E (ADR 0005). The demo's *trajectory* does not depend on serialization; once Stage E lands the same model becomes an LLM-authorable `model.rdj.json`.
 - **Synergies are param-mediated** (a Ref to a param the rule flips); token-pool-mediated synergy (a PoS reading sibling token counts via `TokenAgg`) is a clean Milestone-2 extension.
 - **Refinement** (the §11 `refine` granularity-substitution demo) is Milestone-2.
