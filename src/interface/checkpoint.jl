@@ -103,7 +103,11 @@ function restore(spec, dump::StateDump; registry = Dict{Symbol,Any}(), kwargs...
     problem.t = dump.t
     problem.u .= dump.u
     problem.rng = Random.Xoshiro(dump.rng_state...)
+    # Restore the creation counters AND the realized (name → creation_index) map from the dump,
+    # rather than relying on the rebuild order to reproduce them — the dump is the source of truth
+    # for the (species, creation_index) selection order (defensive against future rebuild changes).
     merge!(empty!(problem.creation_counters), dump.creation_counters)
+    merge!(empty!(problem.creation_index), dump.creation_index)
     for r in problem.rules
         haskey(dump.rule_latches, r.id) && (r.enabled = dump.rule_latches[r.id])
     end

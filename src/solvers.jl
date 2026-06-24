@@ -404,7 +404,11 @@ function structured_rhs(expr::Expr, state, transition)
 
             return token, species_to
         else
+            # No bound token of species_from to move — a graceful no-op (finish! skips a nothing
+            # species), consistent with @advance; do NOT fall through to an implicit nothing that
+            # would crash the (token, species) unpack at the call site.
             @error "Not enough tokens to allocate for a move."
+            return nothing, nothing
         end
 
     elseif isexpr(expr, :macrocall) && macroname(expr) == :advance
