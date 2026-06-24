@@ -9,6 +9,18 @@ using Random, Distributions, DataFrames
 
 const RDX = ReactiveDynamics
 
+# A structured token kind for the E4 phase-pipeline tests (defined in RD scope, the @register idiom).
+@register begin
+    @aagent BaseStructuredToken AbstractStructuredToken struct SerProjectToken
+        phase::Symbol
+        npv::Float64
+    end
+    function SerProjectToken(phase, npv)
+        return SerProjectToken("SP" * string(rand(1:10^9)), :Project, nothing,
+            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[], phase, npv)
+    end
+end
+
 @testset "Typed ExprNode IR + JSON serialization (ADR 0005)" begin
 
     # ── E1: to_expr lowers to the exact DSL Expr; from_expr is the structural inverse ──
@@ -79,6 +91,96 @@ const RDX = ReactiveDynamics
         @test p.sol.B[end] > 0.0                       # the A --> B transition fired
         # the assembled reaction line is the expected Expr
         @test p.acs[1, :trans] == :(A → B)
+    end
+
+    # ── E3: Sample / TimeRef / Choose + rate_mode Poisson wrapping/unwrapping ──────────
+    @testset "E3: Sample lowers to rand(state.rng, Dist(...)); DIST_WHITELIST enforced" begin
+        s = RDX.Sample(:Poisson, [RDX.Const(0.3)])
+        @test RDX.to_expr(s) == :(rand(state.rng, Poisson(0.3)))
+        @test_throws Exception RDX.to_expr(RDX.Sample(:NotADist, [RDX.Const(1.0)]))
+        @test RDX.to_expr(RDX.TimeRef()).args[1] == Symbol("@t")
+    end
+
+    @testset "E3: rate_mode poisson lowers to the documented expand_rate Expr; unwrap inverts" begin
+        # bare intensity 0.3 * beta, poisson mode ⇒ the wrapped expand_rate shape
+        bare = RDX.Call(:*, [RDX.Const(0.3), RDX.NodeRef(:param, :beta)])
+        lowered = RDX.lower_rate(bare, :poisson)
+        @test lowered == :(rand(state.rng, Poisson(max(state.dt * (0.3 * beta), 0))))
+        # unwrap recovers (bare, :poisson)
+        node, mode = RDX.rate_from_expr(lowered; params = Set([:beta]))
+        @test mode == :poisson
+        @test node == bare
+        # deterministic mode is bare, and unwraps to (bare, :deterministic)
+        @test RDX.lower_rate(RDX.Const(2.0), :deterministic) === 2.0
+        n2, m2 = RDX.rate_from_expr(2.0)
+        @test m2 == :deterministic && n2 == RDX.Const(2.0)
+    end
+
+    @testset "E3: a Choose-rate model simulates deterministically under a fixed seed" begin
+        # @choose branches between two rates; recursively_choose consumes it through state.rng
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":10.0,"dt":1.0},
+          "params":[],
+          "species":[{"name":"A","init":1000},{"name":"B"}],
+          "transitions":[{"id":"t1","name":"t1","rate":3.0,"rate_mode":"deterministic",
+                          "cycletime":0.0,"prob_of_success":1.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+        """
+        p1 = RDX.from_json_model(json; seed = 42); simulate(p1)
+        p2 = RDX.from_json_model(json; seed = 42); simulate(p2)
+        @test p1.sol == p2.sol           # same (model, seed) ⇒ identical
+    end
+
+    # ── E4: reactants[] → reaction-line :trans Expr (stoich, modality, @select, @advance) ──
+    @testset "E4: multi-LHS + integer stoich assembles to the runtime-parsed reaction line" begin
+        rs = [
+            Dict("transition" => "t", "species" => "X", "side" => "lhs", "stoich" => 1),
+            Dict("transition" => "t", "species" => "Y", "side" => "lhs", "stoich" => 2),
+            Dict("transition" => "t", "species" => "Z", "side" => "rhs", "stoich" => 1),
+        ]
+        line = RDX.assemble_reaction_line(rs)
+        @test line == :((X + 2Y) → Z)
+    end
+
+    @testset "E4: LHS modality macros (@conserved/@rate) are emitted per the 3-axis modality" begin
+        rs = [
+            Dict("transition" => "t", "species" => "scientist", "side" => "lhs", "stoich" => 3,
+                "modality" => Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")),
+            Dict("transition" => "t", "species" => "budget", "side" => "lhs", "stoich" => 1,
+                "modality" => Dict("allocation" => "perstep", "return" => "consumed", "blocking" => "block")),
+            Dict("transition" => "t", "species" => "out", "side" => "rhs", "stoich" => 1),
+        ]
+        line = RDX.assemble_reaction_line(rs)
+        # the LHS terms wrap their species in @conserved / @rate; the runtime parser unions these
+        s = string(line)
+        @test occursin("@conserved", s) && occursin("scientist", s)
+        @test occursin("@rate", s) && occursin("budget", s)
+    end
+
+    @testset "E4: @select(Project,phase==:Phase2)-->@advance(phase,:Phase3) — JSON ≡ DSL behavior" begin
+        # the JSON form of the Stage-C phase-advance pipeline (one Project kind, phase attribute)
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
+          "params":[],
+          "species":[{"name":"Project","structured":true}],
+          "transitions":[{"id":"adv","name":"adv","rate":1.0,"rate_mode":"deterministic",
+                          "cycletime":1.0,"prob_of_success":1.0}],
+          "reactants":[
+            {"transition":"adv","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
+            {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Phase3"}} ] }
+        """
+        REG = Dict{Symbol,Any}(:Project => (s, f) -> RDX.SerProjectToken(get(f, :phase, :Phase2), get(f, :npv, 0.0)))
+        # build the same advance_model behavior: seed two Phase2 + one Phase1, advance the Phase2's
+        toks() = [RDX.SerProjectToken(:Phase2, 1.0), RDX.SerProjectToken(:Phase2, 2.0), RDX.SerProjectToken(:Phase1, 3.0)]
+        p = RDX.from_json_model(json; seed = 1, registry = REG, population = toks())
+        # structural match ignoring LineNumberNodes (macrocalls carry source-line metadata)
+        import MacroTools
+        @test MacroTools.striplines(p.acs[1, :trans]) ==
+            MacroTools.striplines(:((@select(Project, phase == :Phase2)) → @advance(phase, :Phase3)))
+        simulate(p)
+        ph = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(p, "structured")))]))
+        @test ph == ["Phase1", "Phase3", "Phase3"]    # the two Phase2 projects advanced
     end
 
     @testset "E2: model_to_dict ∘ build_acs round-trips on the parsed Dict" begin

@@ -143,6 +143,10 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
     isempty(diags) || error("from_json_model: model failed validation:\n" * join(string.(diags), "\n"))
     acs = build_acs_from_dict(d; registry = registry)
     kw = _meta_kwargs(d)
+    haskey(kw, :tspan) || error(
+        "from_json_model: meta.tspan is required (the simulation horizon) — add e.g. " *
+        "\"meta\": { \"tspan\": 100.0, \"dt\": 1.0 } to the model document.",
+    )
     seed === nothing && haskey(kw, :seed) && (seed = kw[:seed])
     return ReactionNetworkProblem(
         acs;
@@ -173,9 +177,9 @@ to_json_model(acs::ReactionNetworkSchema; meta = Dict{String,Any}()) =
 to_json_model(prob::ReactionNetworkProblem; meta = Dict{String,Any}()) =
     to_json_model(prob.acs; meta = meta)
 
-# ── Rate lowering (full Sample/rate_mode handling is E3; E2 covers the bare-scalar core) ──
+# ── Rate lowering + unwrapping (E3) ─────────────────────────────────────────────────────
 # A JSON rate carries the BARE intensity; the engine's expand_rate wraps it (Poisson per tick,
-# or used as-is under @deterministic). We reproduce that here so the :transRate column matches.
+# or used as-is under @deterministic). lower_rate reproduces that so the :transRate column matches.
 function lower_rate(rate_node::ExprNode, rate_mode::Symbol)
     bare = to_expr(rate_node)
     if rate_mode === :deterministic
@@ -185,15 +189,88 @@ function lower_rate(rate_node::ExprNode, rate_mode::Symbol)
     end
 end
 
-# ── Reaction-line assembly (full modality/@select/@advance is E4; E2 covers plain species) ──
+# The inverse: recover (bare-intensity ExprNode, rate_mode) from a stored :transRate Expr, so a
+# DSL-authored model can be serialized to JSON. A wrapped `rand(state.rng, Poisson(max(state.dt *
+# <bare>, 0)))` ⇒ (<bare>, :poisson); anything else ⇒ (rate, :deterministic).
+function rate_from_expr(rate; species = Set{Symbol}(), params = Set{Symbol}())
+    if rate isa Expr && rate.head == :call && rate.args[1] == :rand
+        distcall = rate.args[end]
+        if distcall isa Expr && distcall.head == :call && distcall.args[1] == :Poisson
+            maxcall = distcall.args[2]                       # max(state.dt * <bare>, 0)
+            if maxcall isa Expr && maxcall.head == :call && maxcall.args[1] == :max
+                prod = maxcall.args[2]                       # state.dt * <bare>
+                if prod isa Expr && prod.head == :call && prod.args[1] == :*
+                    bare = prod.args[3]                      # the bare intensity (state.dt is args[2])
+                    return from_expr(bare; species, params), :poisson
+                end
+            end
+        end
+    end
+    return from_expr(rate; species, params), :deterministic
+end
+
+# ── Reaction-line assembly (E4) ─────────────────────────────────────────────────────────
 # Assemble a transition's reactants[] (grouped lhs/rhs) into the single :trans reaction-line Expr
-# `rate, LHS --> RHS` that merge_acs!/the runtime parser consume. E2: plain species + integer
-# stoich; modality macros, @select predicates, and @advance RHS are added in E4.
-function _reactant_term(r::AbstractDict)
-    sp = Symbol(r["species"])
-    st = _attr_node(get(r, "stoich", 1))
-    stv = to_expr(st)
-    return (stv == 1 || stv === 1.0) ? sp : Expr(:call, :*, stv, sp)
+# `LHS --> RHS` that merge_acs!/the runtime parser consume. A reactant row may carry: `species`
+# (or a `predicate` for @select on the LHS), `stoich`, `modality` (3-axis, LHS), or `advance`
+# (field+value, an RHS @advance) — assembled into exactly the macrocall Expr shapes the parser
+# (reaction_parser.jl / create.jl) expects.
+const _LN = LineNumberNode(0, :none)
+
+# The species "atom" of a reactant: a bare species symbol, or a @select(Kind, clauses) macrocall
+# (LHS predicate), or a @advance(field, value)/@structured/@move macrocall (RHS).
+function _reactant_atom(r::AbstractDict)
+    if haskey(r, "predicate")                       # @select(Kind, clause && clause …)
+        pd = r["predicate"]
+        kind = Symbol(pd["kind"])
+        clauses = get(pd, "clauses", [])
+        if isempty(clauses)
+            return Expr(:macrocall, Symbol("@select"), _LN, kind)
+        end
+        clause_exprs = [_clause_expr(c) for c in clauses]
+        conj = foldl((a, b) -> Expr(:(&&), a, b), clause_exprs)
+        return Expr(:macrocall, Symbol("@select"), _LN, kind, conj)
+    elseif haskey(r, "advance")                     # @advance(field, value) — RHS field write
+        adv = r["advance"]
+        return Expr(
+            :macrocall,
+            Symbol("@advance"),
+            _LN,
+            Symbol(adv["field"]),
+            to_expr(_attr_node(adv["value"])),
+        )
+    else
+        return Symbol(r["species"])
+    end
+end
+
+# A predicate clause `field op value` (op ∈ PRED_OP_WHITELIST), value lowered via to_expr.
+function _clause_expr(c)
+    field = Symbol(c[1])
+    op = Symbol(c[2])
+    val = to_expr(_attr_node(c[3]))
+    return Expr(:call, op, field, val)
+end
+
+# Wrap an LHS atom in its modality macros (@conserved/@rate/@nonblock) per the 3-axis modality.
+# The parser unions these macro names into the reactant's modality Set (reaction_parser.jl).
+function _apply_modality(atom, m)
+    m === nothing && return atom
+    s = m isa AbstractDict ? modality_from_dict(m) : m   # Set{Symbol}
+    out = atom
+    # nest so the innermost wraps the species; order is irrelevant (the parser unions a Set)
+    :conserved in s && (out = Expr(:macrocall, Symbol("@conserved"), _LN, out))
+    :rate in s && (out = Expr(:macrocall, Symbol("@rate"), _LN, out))
+    :nonblock in s && (out = Expr(:macrocall, Symbol("@nonblock"), _LN, out))
+    return out
+end
+
+# A full reactant term: optional integer stoich coefficient × the (modality-wrapped) atom.
+function _reactant_term(r::AbstractDict; lhs::Bool)
+    atom = _reactant_atom(r)
+    lhs && haskey(r, "modality") && (atom = _apply_modality(atom, r["modality"]))
+    stv = to_expr(_attr_node(get(r, "stoich", 1)))
+    return (stv == 1 || stv === 1.0) ? atom : Expr(:call, :*, stv, atom)
 end
 
 function _sum_terms(terms)
@@ -203,8 +280,8 @@ function _sum_terms(terms)
 end
 
 function assemble_reaction_line(reactants)
-    lhs = [_reactant_term(r) for r in reactants if String(r["side"]) == "lhs"]
-    rhs = [_reactant_term(r) for r in reactants if String(r["side"]) == "rhs"]
+    lhs = [_reactant_term(r; lhs = true) for r in reactants if String(r["side"]) == "lhs"]
+    rhs = [_reactant_term(r; lhs = false) for r in reactants if String(r["side"]) == "rhs"]
     return Expr(:call, :→, _sum_terms(lhs), _sum_terms(rhs))
 end
 
