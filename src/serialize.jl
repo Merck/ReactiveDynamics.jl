@@ -148,11 +148,14 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
         "\"meta\": { \"tspan\": 100.0, \"dt\": 1.0 } to the model document.",
     )
     seed === nothing && haskey(kw, :seed) && (seed = kw[:seed])
+    # rules[] (ADR 0010) → typed Rule structs passed to the constructor (the endogenous channel).
+    rules = Any[rule_from_dict(r) for r in get(d, "rules", [])]
     return ReactionNetworkProblem(
         acs;
         seed = seed,
         registry = registry,
         population = population,
+        rules = rules,
         filter(p -> p.first ∉ (:seed,), kw)...,
     )
 end
@@ -285,26 +288,304 @@ function assemble_reaction_line(reactants)
     return Expr(:call, :→, _sum_terms(lhs), _sum_terms(rhs))
 end
 
-# ── modality 3-axis ⟷ Set{Symbol} (full bijection + illegal-row rejection is E6) ─────────
-function modality_from_dict(m::AbstractDict)
-    s = Set{Symbol}()
-    get(m, "allocation", "upfront") == "perstep" && push!(s, :rate)
-    get(m, "return", "consumed") == "conserved" && push!(s, :conserved)
-    get(m, "blocking", "block") == "nonblock" && push!(s, :nonblock)
-    return s
+# ── E5: action statement + predicate (de)serialization ──────────────────────────────────
+# Action VALUES are ExprNodes in JSON, lowered via to_expr to the Expr the apply_action!/
+# _eval_value path consumes (actions.jl). RawExpr is intentionally NOT serializable (the legacy
+# bridge for non-typed Exprs — a JSON model uses typed verbs only; ADR 0005 open question).
+stmt_to_dict(s::SetSpecies) = Dict{String,Any}(
+    "verb" => "set_species", "name" => string(s.name),
+    "value" => node_to_dict(from_expr(s.value)), "mode" => string(s.mode))
+stmt_to_dict(s::SetParams) = Dict{String,Any}(
+    "verb" => "set_params",
+    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns])
+stmt_to_dict(s::SetField) = Dict{String,Any}(
+    "verb" => "set_field", "field" => string(s.field), "value" => node_to_dict(from_expr(s.value)))
+stmt_to_dict(s::SetTokens) = Dict{String,Any}(
+    "verb" => "set_tokens", "predicate" => pred_to_dict(s.predicate),
+    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns])
+stmt_to_dict(s::AddToken) = Dict{String,Any}(
+    "verb" => "add_token", "kind" => string(s.kind),
+    "fields" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.fields])
+stmt_to_dict(s::Activate) = Dict{String,Any}("verb" => "activate", "transition" => string(s.transition))
+stmt_to_dict(s::Deactivate) = Dict{String,Any}("verb" => "deactivate", "transition" => string(s.transition))
+stmt_to_dict(s::Invoke) =
+    Dict{String,Any}("verb" => "invoke", "fn" => string(s.fn), "args" => [node_to_dict(from_expr(a)) for a in s.args])
+stmt_to_dict(s::Log) = Dict{String,Any}("verb" => "log", "msg" => s.msg isa Union{Expr,Symbol} ? node_to_dict(from_expr(s.msg)) : s.msg)
+stmt_to_dict(s::Seq) = Dict{String,Any}("verb" => "seq", "stmts" => [stmt_to_dict(x) for x in s.stmts])
+stmt_to_dict(::RawExpr) =
+    error("RawExpr is not JSON-serializable (the legacy non-typed bridge) — re-express with typed action verbs")
+
+# A value-expr in an action field arrives as a node dict (typed) or a bare literal.
+_stmt_value(x) = to_expr(_attr_node(x))
+
+function stmt_from_dict(d::AbstractDict)
+    verb = d["verb"]
+    if verb == "set_species"
+        return SetSpecies(Symbol(d["name"]), _stmt_value(d["value"]), Symbol(get(d, "mode", "set")))
+    elseif verb == "set_params"
+        return SetParams([Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["assigns"]])
+    elseif verb == "set_field"
+        return SetField(Symbol(d["field"]), _stmt_value(d["value"]))
+    elseif verb == "set_tokens"
+        return SetTokens(pred_from_dict(d["predicate"]),
+            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["assigns"]])
+    elseif verb == "add_token"
+        return AddToken(Symbol(d["kind"]),
+            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["fields"]])
+    elseif verb == "activate"
+        return Activate(Symbol(d["transition"]))
+    elseif verb == "deactivate"
+        return Deactivate(Symbol(d["transition"]))
+    elseif verb == "invoke"
+        return Invoke(Symbol(d["fn"]), Any[_stmt_value(a) for a in get(d, "args", [])])
+    elseif verb == "log"
+        return Log(d["msg"] isa AbstractDict ? _stmt_value(d["msg"]) : d["msg"])
+    elseif verb == "seq"
+        return Seq(ActionStmt[stmt_from_dict(x) for x in d["stmts"]])
+    else
+        error("stmt_from_dict: unknown action verb $(verb)")
+    end
 end
 
-# ── observables[] loader (full structured form is E6) ───────────────────────────────────
-_load_observables!(acs, obs) = acs   # E6
+# TokenPredicate ⟷ JSON (the @select predicate). Clause value is an ExprNode (or literal).
+pred_to_dict(p::TokenPredicate) = Dict{String,Any}(
+    "kind" => string(p.kind),
+    "clauses" => [[string(c.field), string(c.op), node_to_dict(from_expr(c.value))] for c in p.clauses])
+function pred_from_dict(d::AbstractDict)
+    clauses = Clause[]
+    for c in get(d, "clauses", [])
+        op = Symbol(c[2])
+        op in PRED_OP_WHITELIST || error("pred_from_dict: op $op ∉ PRED_OP_WHITELIST")
+        push!(clauses, Clause(Symbol(c[1]), op, _stmt_value(c[3])))
+    end
+    return TokenPredicate(Symbol(d["kind"]), clauses)
+end
 
-# ── validate (full 7-rule pass is E7; E2 ships a permissive stub so from_json_model works) ──
+# A Rule ⟷ JSON (ADR 0010): id, guard ExprNode, action stmt, fire_mode.
+rule_to_dict(r::Rule) = Dict{String,Any}(
+    "id" => string(r.id), "guard" => node_to_dict(from_expr(r.guard)),
+    "action" => stmt_to_dict(r.action), "fire_mode" => string(r.fire_mode))
+rule_from_dict(d::AbstractDict) = Rule(
+    Symbol(d["id"]), _stmt_value(d["guard"]), stmt_from_dict(d["action"]);
+    fire_mode = Symbol(get(d, "fire_mode", "every_tick")))
+
+# ── E6: modality 3-axis ⟷ Set{Symbol} — the bijective 5-row translation (CONTRACT §1.1/§1.3) ──
+# The 5 legal rows (CONTRACT §1.3). An illegal combination is rejected with a citing message.
+function to_set(allocation::Symbol, ret::Symbol, blocking::Symbol)
+    # row 5: nonblock ⇒ consumed (CONTRACT §1.4 illegal: nonblock+conserved)
+    blocking === :nonblock && ret === :conserved &&
+        error("illegal modality (CONTRACT §1.4): blocking=nonblock requires return=consumed")
+    s = Set{Symbol}()
+    allocation === :perstep && push!(s, :rate)
+    ret === :conserved && push!(s, :conserved)
+    blocking === :nonblock && push!(s, :nonblock)
+    return s
+end
+function from_set(s::Set{Symbol})
+    return (
+        allocation = (:rate in s ? :perstep : :upfront),
+        return_ = (:conserved in s ? :conserved : :consumed),
+        blocking = (:nonblock in s ? :nonblock : :block),
+    )
+end
+
+function modality_from_dict(m::AbstractDict)
+    return to_set(
+        Symbol(get(m, "allocation", "upfront")),
+        Symbol(get(m, "return", "consumed")),
+        Symbol(get(m, "blocking", "block")),
+    )
+end
+
+# ── observables[] loader (E6): structured FoldedObservable, eval-free ───────────────────
+# {name, every, on:[ExprNode], range:[{weight, value:ExprNode}]} → an :obs row (no eval).
+function _load_observables!(acs, obs)
+    for o in obs
+        every = Float64(get(o, "every", Inf))
+        on = SampleableValues[to_expr(_attr_node(e)) for e in get(o, "on", [])]
+        range = SampleableRange[]
+        for r in get(o, "range", [])
+            w = Float64(get(r, "weight", 1.0))
+            v = to_expr(_attr_node(r["value"]))
+            push!(range, (w, v))
+        end
+        fo = FoldedObservable(range, every, on)
+        add_part!(acs, :obs; obsName = Symbol(o["name"]), obsOpts = fo)
+    end
+    return acs
+end
+
+function obs_to_dict(name, o::FoldedObservable)
+    return Dict{String,Any}(
+        "name" => string(name),
+        "every" => o.every,
+        "on" => [node_to_dict(from_expr(e)) for e in o.on],
+        "range" => [Dict("weight" => (r isa Tuple ? r[1] : 1.0),
+                         "value" => node_to_dict(from_expr(r isa Tuple ? r[2] : r))) for r in o.range],
+    )
+end
+
+# ── E7: validate — the eval-free pre-load self-check (ADR 0005 §70 + ADR 0007/0008 rules) ──
+# A PURE walk over the parsed Dict: NO node_from_dict, NO to_expr, NO eval. An LLM runs this to
+# self-check a model before from_json. Returns diagnostics; from_json_model gates on isempty.
 struct Diagnostic
-    severity::Symbol
+    severity::Symbol   # :error | :warn
     path::String
     msg::String
 end
 Base.string(d::Diagnostic) = "[$(d.severity)] $(d.path): $(d.msg)"
-validate(d::AbstractDict; registry = Dict{Symbol,Any}()) = Diagnostic[]   # E7 fills the rules
+
+# Walk an ExprNode dict, collecting op/dist/ref/arity diagnostics (rule 1). `allow_sample`
+# governs whether a Sample node is legal here (false in a predicate clause value, §9.5).
+function _validate_node!(diags, d, path; species, params, obs, allow_sample = true)
+    d isa AbstractDict || return diags        # a bare literal scalar — fine
+    tag = get(d, "node", nothing)
+    if tag == "const"
+        # ok (integrality/range checked by the consuming attribute, not here)
+    elseif tag == "ref"
+        kind = Symbol(get(d, "kind", ""))
+        nm = Symbol(get(d, "name", ""))
+        kind in REF_KINDS || push!(diags, Diagnostic(:error, path, "ref kind $kind ∉ $REF_KINDS"))
+        pool = kind === :species ? species : kind === :param ? params : obs
+        nm in pool || push!(diags, Diagnostic(:error, path, "ref to undeclared $kind `$nm`"))
+    elseif tag == "call"
+        op = Symbol(get(d, "op", ""))
+        op in OP_WHITELIST || push!(diags, Diagnostic(:error, path, "op $op ∉ OP_WHITELIST"))
+        for (i, a) in enumerate(get(d, "args", []))
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample)
+        end
+    elseif tag == "sample"
+        allow_sample || push!(diags, Diagnostic(:error, path, "Sample (RNG) is not 𝓕ₜ-measurable here (no draws in a predicate)"))
+        Symbol(get(d, "dist", "")) in DIST_WHITELIST ||
+            push!(diags, Diagnostic(:error, path, "dist $(get(d,"dist","")) ∉ DIST_WHITELIST"))
+        for (i, a) in enumerate(get(d, "args", []))
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample)
+        end
+    elseif tag == "timeref" || tag == "field"
+        # ok (Field legality vs context is a §9.5 rule; here just structural)
+    elseif tag == "choose"
+        for (i, alt) in enumerate(get(d, "alts", []))
+            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, allow_sample)
+        end
+    else
+        push!(diags, Diagnostic(:error, path, "unknown node tag `$tag`"))
+    end
+    return diags
+end
+
+# Is a JSON attribute value a literal (a number/bool/string or a Const node)? Used for rule 5
+# (a TVE=no attribute must be a literal, not a non-trivial tree).
+_is_literal(x) = !(x isa AbstractDict) || get(x, "node", "") == "const"
+
+function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
+    diags = Diagnostic[]
+    species = Set(Symbol(s["name"]) for s in get(d, "species", []))
+    structured = Set(Symbol(s["name"]) for s in get(d, "species", []) if get(s, "structured", false) === true)
+    params = Set(Symbol(p["name"]) for p in get(d, "params", []))
+    obs = Set(Symbol(o["name"]) for o in get(d, "observables", []))
+    regnames = Set(keys(registry))
+
+    # rule 5 (TVE policy): init/cost-type species attrs must be literals; structured/modality too
+    for (i, s) in enumerate(get(d, "species", []))
+        for k in ("init", "cost", "reward", "valuation")
+            haskey(s, k) && !_is_literal(s[k]) &&
+                push!(diags, Diagnostic(:error, "species[$i].$k", "must be a literal (TVE=no, §5 A3)"))
+        end
+        # rule 4: modality must be a legal 5-row combo (§1.4)
+        if haskey(s, "modality")
+            m = s["modality"]
+            try
+                to_set(Symbol(get(m, "allocation", "upfront")), Symbol(get(m, "return", "consumed")),
+                    Symbol(get(m, "blocking", "block")))
+            catch e
+                push!(diags, Diagnostic(:error, "species[$i].modality", sprint(showerror, e)))
+            end
+        end
+    end
+
+    # rule 1 + rule 3: transition attr nodes + ranges/integrality
+    ids = Set{String}()
+    for (i, tr) in enumerate(get(d, "transitions", []))
+        push!(ids, string(tr["id"]))
+        haskey(tr, "rate") && _validate_node!(diags, tr["rate"], "transitions[$i].rate"; species, params, obs)
+        for (k, lo, hi) in (("prob_of_success", 0.0, 1.0),)
+            if haskey(tr, k) && _is_literal(tr[k])
+                v = tr[k] isa AbstractDict ? get(tr[k], "value", nothing) : tr[k]
+                v isa Real && !(lo <= v <= hi) &&
+                    push!(diags, Diagnostic(:error, "transitions[$i].$k", "must be in [$lo,$hi], got $v"))
+            end
+        end
+        for k in ("cycletime", "capacity", "max_lifetime")
+            if haskey(tr, k) && _is_literal(tr[k])
+                v = tr[k] isa AbstractDict ? get(tr[k], "value", nothing) : tr[k]
+                v isa Real && v < 0 &&
+                    push!(diags, Diagnostic(:error, "transitions[$i].$k", "must be ≥ 0, got $v"))
+            end
+        end
+    end
+
+    # rule 2: dangling reactant FKs (+ §9.5 predicate well-formedness, rule 7)
+    for (i, r) in enumerate(get(d, "reactants", []))
+        string(get(r, "transition", "")) in ids ||
+            push!(diags, Diagnostic(:error, "reactants[$i].transition", "dangling FK `$(get(r,"transition",""))`"))
+        if haskey(r, "species")
+            Symbol(r["species"]) in species ||
+                push!(diags, Diagnostic(:error, "reactants[$i].species", "undeclared species `$(r["species"])`"))
+        end
+        if haskey(r, "predicate")   # rule 7: predicate over a structured kind; clause values 𝓕ₜ-measurable
+            pd = r["predicate"]
+            Symbol(get(pd, "kind", "")) in structured ||
+                push!(diags, Diagnostic(:error, "reactants[$i].predicate.kind", "kind `$(get(pd,"kind",""))` is not a structured species"))
+            for (j, c) in enumerate(get(pd, "clauses", []))
+                Symbol(c[2]) in PRED_OP_WHITELIST ||
+                    push!(diags, Diagnostic(:error, "reactants[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
+                # the clause VALUE must be 𝓕ₜ-measurable (no Sample)
+                c[3] isa AbstractDict &&
+                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, allow_sample = false)
+            end
+        end
+    end
+
+    # rules[] / events[]: guard nodes + action verb + AddToken.kind/Invoke.fn registry resolution
+    for (i, r) in enumerate(get(d, "rules", []))
+        haskey(r, "guard") && _validate_node!(diags, r["guard"], "rules[$i].guard"; species, params, obs)
+        haskey(r, "action") && _validate_action!(diags, r["action"], "rules[$i].action"; species, params, obs, structured, regnames, in_rule = true)
+    end
+
+    # rule 6: population[] well-formedness (ADR 0007)
+    for (i, pe) in enumerate(get(d, "population", []))
+        haskey(pe, "species") && Symbol(pe["species"]) in structured ||
+            push!(diags, Diagnostic(:error, "population[$i].species", "must be a declared structured species"))
+        haskey(pe, "kind") && !(Symbol(pe["kind"]) in regnames) &&
+            push!(diags, Diagnostic(:error, "population[$i].kind", "kind `$(pe["kind"])` not in registry"))
+    end
+
+    return diags
+end
+
+# Validate an action statement dict (rule 1 over its values + verb/registry checks).
+function _validate_action!(diags, a, path; species, params, obs, structured, regnames, in_rule)
+    a isa AbstractDict || return diags
+    verb = get(a, "verb", nothing)
+    if verb == "set_field" && in_rule
+        push!(diags, Diagnostic(:error, path, "SetField is illegal in a Rule (no bound token, ADR 0010 §C)"))
+    elseif verb == "add_token"
+        Symbol(get(a, "kind", "")) in regnames ||
+            push!(diags, Diagnostic(:error, "$path.kind", "AddToken kind `$(get(a,"kind",""))` not in registry"))
+    elseif verb == "invoke"
+        Symbol(get(a, "fn", "")) in regnames ||
+            push!(diags, Diagnostic(:error, "$path.fn", "Invoke fn `$(get(a,"fn",""))` not in registry"))
+    elseif verb == "seq"
+        for (i, s) in enumerate(get(a, "stmts", []))
+            _validate_action!(diags, s, "$path.stmts[$i]"; species, params, obs, structured, regnames, in_rule)
+        end
+    elseif verb === nothing
+        push!(diags, Diagnostic(:error, path, "action missing `verb`"))
+    elseif !(Symbol(verb) in ACTION_VERBS)
+        push!(diags, Diagnostic(:error, path, "unknown action verb `$verb`"))
+    end
+    return diags
+end
 
 # ── to_json helpers ─────────────────────────────────────────────────────────────────────
 function _species_to_dict(acs, i)

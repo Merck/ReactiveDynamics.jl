@@ -183,6 +183,137 @@ end
         @test ph == ["Phase1", "Phase3", "Phase3"]    # the two Phase2 projects advanced
     end
 
+    # ── E5: action + predicate + rule (de)serialization ────────────────────────────────
+    @testset "E5: every ActionStmt verb round-trips through stmt_to_dict/from_dict" begin
+        stmts = ReactiveDynamics.ActionStmt[
+            RDX.SetSpecies(:cash, 500, :inc),
+            RDX.SetParams([:synergy => 1]),
+            RDX.AddToken(:ProjectToken, [:phase => QuoteNode(:Phase2), :npv => 1400.0]),
+            RDX.Activate(:line),
+            RDX.Deactivate(:line),
+            RDX.Invoke(:rebalance, Any[0.5]),
+            RDX.Log("acquired"),
+            RDX.Seq(ReactiveDynamics.ActionStmt[RDX.SetSpecies(:cash, 300, :inc), RDX.SetParams([:s => 1])]),
+        ]
+        for s in stmts
+            d = RDX.stmt_to_dict(s)
+            s2 = RDX.stmt_from_dict(d)
+            @test typeof(s2) === typeof(s)
+        end
+        # RawExpr is intentionally not serializable
+        @test_throws Exception RDX.stmt_to_dict(RDX.RawExpr(:(x += 1)))
+    end
+
+    @testset "E5: TokenPredicate round-trips; op outside PRED_OP_WHITELIST rejected" begin
+        pred = RDX.TokenPredicate(:Project, [RDX.Clause(:phase, :(==), :(:Phase2)), RDX.Clause(:npv, :(>), 100.0)])
+        d = RDX.pred_to_dict(pred)
+        p2 = RDX.pred_from_dict(d)
+        @test p2.kind == :Project && length(p2.clauses) == 2
+        @test_throws Exception RDX.pred_from_dict(Dict("kind" => "Project", "clauses" => [["phase", "~~", "x"]]))
+    end
+
+    @testset "E5: a rules[]-bearing JSON model fires the lever at the right tick" begin
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
+          "params":[],
+          "species":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
+          "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
+          "reactants":[{"transition":"inert","species":"A","side":"lhs","stoich":1},
+                       {"transition":"inert","species":"B","side":"rhs","stoich":1}],
+          "rules":[ { "id":"lever", "fire_mode":"once",
+                      "guard": {"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
+                      "action": {"verb":"set_species","name":"cash","mode":"inc","value":{"node":"const","value":500}} } ] }
+        """
+        p = RDX.from_json_model(json; seed = 1)
+        @test length(p.rules) == 1
+        simulate(p)
+        @test p.u[RDX.find_index(:cash, p)] == 500.0     # the once-rule injected capital after t>2
+        @test count(>(0.0), diff(p.sol[!, "cash"])) == 1 # exactly once
+    end
+
+    # ── E6: modality 3-axis ⟷ Set{Symbol} bijection + observables ──────────────────────
+    @testset "E6: the 5 legal modality rows round-trip; illegal combos rejected" begin
+        legal = [
+            (:upfront, :consumed, :block),    # row 1: {}
+            (:upfront, :conserved, :block),   # row 2: {conserved}
+            (:perstep, :consumed, :block),    # row 3: {rate}
+            (:perstep, :conserved, :block),   # row 4: {rate, conserved}
+            (:upfront, :consumed, :nonblock), # row 5: {nonblock}
+        ]
+        for (a, r, b) in legal
+            s = RDX.to_set(a, r, b)
+            fs = RDX.from_set(s)
+            @test (fs.allocation, fs.return_, fs.blocking) == (a, r, b)   # round-trip identity
+        end
+        # illegal: nonblock + conserved (CONTRACT §1.4)
+        @test_throws Exception RDX.to_set(:upfront, :conserved, :nonblock)
+        # JSON modality dict → Set
+        @test RDX.modality_from_dict(Dict("allocation" => "perstep", "return" => "conserved", "blocking" => "block")) == Set([:rate, :conserved])
+        @test RDX.modality_from_dict(Dict("allocation" => "upfront", "return" => "consumed", "blocking" => "block")) == Set{Symbol}()
+    end
+
+    # ── E7: validate — the eval-free pre-load self-check ───────────────────────────────
+    @testset "E7: a valid model validates clean; each rule's violation yields a diagnostic" begin
+        import JSON
+        valid = JSON.parse("""
+        { "meta":{"tspan":5.0,"dt":1.0},
+          "params":[{"name":"beta","value":0.4}],
+          "species":[{"name":"A","init":100},{"name":"B"}],
+          "transitions":[{"id":"t1","rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
+                          "prob_of_success":0.5,"cycletime":2.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+        """)
+        @test isempty(RDX.validate(valid))
+
+        # rule 1: unknown ref name
+        bad_ref = deepcopy(valid); bad_ref["transitions"][1]["rate"]["args"][2]["name"] = "nonexistent"
+        @test any(d -> occursin("undeclared", d.msg), RDX.validate(bad_ref))
+        # rule 1: bad op
+        bad_op = deepcopy(valid); bad_op["transitions"][1]["rate"]["op"] = "system"
+        @test any(d -> occursin("OP_WHITELIST", d.msg), RDX.validate(bad_op))
+        # rule 2: dangling reactant FK
+        bad_fk = deepcopy(valid); bad_fk["reactants"][1]["transition"] = "ghost"
+        @test any(d -> occursin("dangling", d.msg), RDX.validate(bad_fk))
+        # rule 3: prob_of_success out of [0,1]
+        bad_pos = deepcopy(valid); bad_pos["transitions"][1]["prob_of_success"] = 1.5
+        @test any(d -> occursin("[0.0,1.0]", d.msg), RDX.validate(bad_pos))
+        # rule 3: negative cycletime
+        bad_ct = deepcopy(valid); bad_ct["transitions"][1]["cycletime"] = -1.0
+        @test any(d -> occursin("≥ 0", d.msg), RDX.validate(bad_ct))
+        # rule 4: illegal modality (nonblock+conserved)
+        bad_mod = deepcopy(valid)
+        bad_mod["species"][1]["modality"] = Dict("allocation"=>"upfront","return"=>"conserved","blocking"=>"nonblock")
+        @test any(d -> occursin("§1.4", d.msg), RDX.validate(bad_mod))
+        # rule 1 in a predicate: Sample is not 𝓕ₜ-measurable
+        bad_pred = deepcopy(valid)
+        bad_pred["reactants"][1] = Dict("transition"=>"t1","side"=>"lhs",
+            "predicate"=>Dict("kind"=>"A","clauses"=>[["phase","==",Dict("node"=>"sample","dist"=>"Poisson","args"=>[Dict("node"=>"const","value"=>1.0)])]]))
+        # A is not structured AND the clause has a Sample → at least one diagnostic
+        @test !isempty(RDX.validate(bad_pred))
+
+        # from_json_model gates on validation
+        @test_throws Exception RDX.from_json_model(JSON.json(bad_ref))
+    end
+
+    @testset "E7: AddToken/Invoke kind/fn must resolve against the registry" begin
+        import JSON
+        m = JSON.parse("""
+        { "meta":{"tspan":5.0,"dt":1.0},"params":[],"species":[{"name":"A","init":0}],
+          "transitions":[{"id":"t1","rate":1.0,"rate_mode":"deterministic"}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1}],
+          "rules":[{"id":"r","fire_mode":"once",
+                    "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
+                    "action":{"verb":"add_token","kind":"Unregistered","fields":[]}}] }
+        """)
+        @test any(d -> occursin("not in registry", d.msg), RDX.validate(m))   # empty registry
+        @test isempty(filter(d -> occursin("not in registry", d.msg),
+            RDX.validate(m; registry = Dict{Symbol,Any}(:Unregistered => identity))))
+        # SetField in a Rule is illegal (no bound token)
+        m["rules"][1]["action"] = Dict("verb"=>"set_field","field"=>"phase","value"=>Dict("node"=>"const","value"=>"X"))
+        @test any(d -> occursin("illegal in a Rule", d.msg), RDX.validate(m))
+    end
+
     @testset "E2: model_to_dict ∘ build_acs round-trips on the parsed Dict" begin
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{},
