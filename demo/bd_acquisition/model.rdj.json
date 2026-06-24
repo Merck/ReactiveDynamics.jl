@@ -1,0 +1,76 @@
+{
+  "rd_format": "reactive-dynamics-model",
+  "version": "1.0",
+  "meta": { "tspan": 40.0, "dt": 1.0, "alloc_strategy": "weighted" },
+  "params": [
+    { "name": "synergy_pos", "value": 0 },
+    { "name": "synergy_eff", "value": 0 }
+  ],
+  "species": [
+    { "name": "Project", "structured": true },
+    { "name": "scientist", "init": 40 },
+    { "name": "budget", "init": 200 }
+  ],
+  "transitions": [
+    { "id": "adv_discovery", "name": "adv_discovery", "rate": 2.0, "rate_mode": "deterministic",
+      "cycletime": 1.0, "prob_of_success": 0.45, "priority": 1.0 },
+    { "id": "adv_phase1", "name": "adv_phase1", "rate": 2.0, "rate_mode": "deterministic",
+      "cycletime": 1.5, "prob_of_success": 0.6, "priority": 1.5 },
+    { "id": "adv_phase2", "name": "adv_phase2", "rate": 2.0, "rate_mode": "deterministic",
+      "cycletime": { "node": "call", "op": "-", "args": [ { "node": "const", "value": 2.0 },
+                     { "node": "call", "op": "*", "args": [ { "node": "const", "value": 0.5 },
+                       { "node": "ref", "kind": "param", "name": "synergy_eff" } ] } ] },
+      "prob_of_success": { "node": "call", "op": "+", "args": [ { "node": "const", "value": 0.4 },
+                     { "node": "call", "op": "*", "args": [ { "node": "const", "value": 0.2 },
+                       { "node": "ref", "kind": "param", "name": "synergy_pos" } ] } ] },
+      "priority": 2.0 },
+    { "id": "adv_phase3", "name": "adv_phase3", "rate": 2.0, "rate_mode": "deterministic",
+      "cycletime": { "node": "call", "op": "-", "args": [ { "node": "const", "value": 3.0 },
+                     { "node": "ref", "kind": "param", "name": "synergy_eff" } ] },
+      "prob_of_success": { "node": "call", "op": "+", "args": [ { "node": "const", "value": 0.65 },
+                     { "node": "call", "op": "*", "args": [ { "node": "const", "value": 0.15 },
+                       { "node": "ref", "kind": "param", "name": "synergy_pos" } ] } ] },
+      "priority": 3.0 },
+    { "id": "adv_filed", "name": "adv_filed", "rate": 2.0, "rate_mode": "deterministic",
+      "cycletime": 1.0, "prob_of_success": 0.9, "priority": 4.0 },
+    { "id": "financing", "name": "financing", "rate": 30.0, "rate_mode": "deterministic" }
+  ],
+  "reactants": [
+    { "transition": "adv_discovery", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Discovery"] ] } },
+    { "transition": "adv_discovery", "side": "lhs", "species": "scientist", "stoich": 2,
+      "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
+    { "transition": "adv_discovery", "side": "lhs", "species": "budget", "stoich": 2,
+      "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
+    { "transition": "adv_discovery", "side": "rhs", "advance": { "field": "phase", "value": "Phase1" } },
+
+    { "transition": "adv_phase1", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase1"] ] } },
+    { "transition": "adv_phase1", "side": "lhs", "species": "scientist", "stoich": 3,
+      "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
+    { "transition": "adv_phase1", "side": "lhs", "species": "budget", "stoich": 3,
+      "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
+    { "transition": "adv_phase1", "side": "rhs", "advance": { "field": "phase", "value": "Phase2" } },
+
+    { "transition": "adv_phase2", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase2"] ] } },
+    { "transition": "adv_phase2", "side": "lhs", "species": "scientist", "stoich": 4,
+      "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
+    { "transition": "adv_phase2", "side": "lhs", "species": "budget", "stoich": 5,
+      "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
+    { "transition": "adv_phase2", "side": "rhs", "advance": { "field": "phase", "value": "Phase3" } },
+
+    { "transition": "adv_phase3", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase3"] ] } },
+    { "transition": "adv_phase3", "side": "lhs", "species": "scientist", "stoich": 5,
+      "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
+    { "transition": "adv_phase3", "side": "lhs", "species": "budget", "stoich": 8,
+      "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
+    { "transition": "adv_phase3", "side": "rhs", "advance": { "field": "phase", "value": "Filed" } },
+
+    { "transition": "adv_filed", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Filed"] ] } },
+    { "transition": "adv_filed", "side": "lhs", "species": "scientist", "stoich": 1,
+      "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
+    { "transition": "adv_filed", "side": "lhs", "species": "budget", "stoich": 2,
+      "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
+    { "transition": "adv_filed", "side": "rhs", "advance": { "field": "phase", "value": "Market" } },
+
+    { "transition": "financing", "side": "rhs", "species": "budget", "stoich": 1 }
+  ]
+}

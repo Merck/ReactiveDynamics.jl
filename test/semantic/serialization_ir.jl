@@ -314,6 +314,28 @@ end
         @test any(d -> occursin("illegal in a Rule", d.msg), RDX.validate(m))
     end
 
+    # ── E8: the BD pipeline as model.rdj.json — JSON ≡ DSL trajectory (the north-star) ──
+    @testset "E8: BD pipeline loaded from model.rdj.json matches the DSL model byte-for-byte" begin
+        demodir = normpath(joinpath(homedir(), "ReactiveDynamics-review", "demo", "bd_acquisition"))
+        include(joinpath(demodir, "host.jl"))   # ProjectToken kind + PROJECT_REGISTRY + DSL builder
+        mpath = joinpath(demodir, "model.rdj.json")
+        # DSL-built
+        pd = ReactionNetworkProblem(build_pipeline_model(); tspan = 40, dt = 1.0, seed = 7,
+            registry = PROJECT_REGISTRY, population = initial_population())
+        simulate(pd)
+        # JSON-built (same registry, same initial population, same seed)
+        pj = RDX.from_json_model(read(mpath, String); seed = 7,
+            registry = PROJECT_REGISTRY, population = initial_population())
+        simulate(pj)
+        @test pd.sol == pj.sol   # identical trajectory ⇒ the JSON model is the DSL model
+        phd = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(pd, "structured")))]))
+        phj = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(pj, "structured")))]))
+        @test phd == phj
+        # the JSON model validates clean against its registry
+        import JSON
+        @test isempty(RDX.validate(JSON.parse(read(mpath, String)); registry = PROJECT_REGISTRY))
+    end
+
     @testset "E2: model_to_dict ∘ build_acs round-trips on the parsed Dict" begin
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{},

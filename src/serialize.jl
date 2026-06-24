@@ -126,12 +126,16 @@ function build_acs_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
     return acs
 end
 
-# meta[] → keywords. Returns (acs, meta_kwargs, population) for from_json_model.
+# meta[] → keywords. String-valued meta keys that the engine compares as Symbols (the allocation
+# strategy) are symbolized — otherwise `state.p[:strategy] == :weighted` fails for a JSON "weighted"
+# and the allocator silently falls through to the greedy branch (a different trajectory).
+const _SYMBOL_META = (:alloc_strategy, :strategy, :schedule)
 function _meta_kwargs(d::AbstractDict)
     m = get(d, "meta", Dict{String,Any}())
     kw = Dict{Symbol,Any}()
     for (k, v) in m
-        kw[Symbol(k)] = v
+        key = Symbol(k)
+        kw[key] = (key in _SYMBOL_META && v isa AbstractString) ? Symbol(v) : v
     end
     return kw
 end

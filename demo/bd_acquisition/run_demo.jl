@@ -14,6 +14,13 @@ const HERE = @__DIR__
 include(joinpath(HERE, "host.jl"))
 include(joinpath(HERE, "analysis.jl"))
 
+# The pipeline is also serialized as an eval-free `model.rdj.json` (ADR 0005, Stage E). Loading it
+# via from_json_model with the host PROJECT_REGISTRY yields a model byte-for-byte identical to the
+# DSL build_pipeline_model() under the same seed (verified in test/semantic/serialization_ir.jl::E8).
+# Set RD_BD_FROM_JSON=1 to drive the demo from the JSON artifact instead of the in-Julia DSL.
+const MODEL_JSON = joinpath(HERE, "model.rdj.json")
+build_pipeline_from_json() = ReactiveDynamics.from_json_model(read(MODEL_JSON, String); registry = PROJECT_REGISTRY)
+
 # Build + run one scenario to completion under a given seed. A scenario is a choice of which
 # synergies the acquisition rule arms (MVP §2.1); S0 arms no rule at all (no deal).
 function run_scenario(scenario::Symbol, seed; tspan = 40.0, T_acq = 8.0)
