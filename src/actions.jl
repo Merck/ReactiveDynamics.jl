@@ -131,6 +131,19 @@ function set_guard!(state::ReactionNetworkProblem, t::Symbol, guard)
     return state.transition_recipes[:transGuard][ix] = state.wrap_fun(guard)
 end
 
+# Live-phase guard (ADR 0007 §A): species identification (equalize!) reindexes the :S table via
+# rem_parts! (operators/equalize.jl), which would invalidate the construction-frozen, position-
+# indexed compiled closures (ADR 0004 INV-2). It is an AUTHORING-only op; calling it on a
+# constructed/live ReactionNetworkProblem must refuse rather than corrupt the closures. (The
+# authoring-phase equalize!(::ReactionNetworkSchema, …) stays unrestricted.)
+function equalize!(state::ReactionNetworkProblem, args...)
+    return error(
+        "equalize! reindexes the species table (rem_parts!) and is illegal on a live, constructed " *
+        "model (ADR 0004 INV-2 / ADR 0007 §A): the position-indexed compiled closures are frozen " *
+        "at construction. Identify species at AUTHORING time, before ReactionNetworkProblem(...).",
+    )
+end
+
 # ── Evaluate an action value in (state, transition) context via the seeded closure path ──
 # Mirrors how rate/stoich/action exprs are evaluated elsewhere (context_eval + wrap_fun). A bare
 # QuoteNode (a literal symbol like `:Phase2` in an action field) is the symbol it wraps —

@@ -134,31 +134,33 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     return acs
 end
 
-# ── Initial portfolio (interim: imperative host instantiation; declarative population[] is Stage D) ──
-# Seed the starting pipeline with organic programs spread across phases.
-function seed_portfolio!(prob)
-    organic = [
-        (:Discovery, 800.0, :onc),
-        (:Discovery, 600.0, :immuno),
-        (:Phase1, 1000.0, :onc),
-        (:Phase1, 900.0, :cns),
-        (:Phase2, 1500.0, :onc),
-        (:Phase2, 1200.0, :immuno),
-        (:Phase3, 2000.0, :onc),
+# ── Initial portfolio — DECLARATIVE initial marking (ADR 0007 §B, the "list of structures" form) ──
+# The starting pipeline is a declarative `population[]` value passed to the constructor, so a
+# structured run is reproducible from (model, population, seed) (MVP finding H, §8.2 S2) — not
+# built by imperative post-construction host code. Here it is an explicit list of host token
+# structs (the maintainer's "instantiate as a list of structures"); the count+attribute-dist
+# PopulationEntry form is the alternative for "N programs with sampled NPV".
+const ORGANIC_PORTFOLIO = [
+    (:Discovery, 800.0, :onc),
+    (:Discovery, 600.0, :immuno),
+    (:Phase1, 1000.0, :onc),
+    (:Phase1, 900.0, :cns),
+    (:Phase2, 1500.0, :onc),
+    (:Phase2, 1200.0, :immuno),
+    (:Phase3, 2000.0, :onc),
+]
+
+function initial_population()
+    pos_from_here() = prod(get(PHASE_POS, p, 1.0) for p in PHASES if p != :Market)
+    return [
+        ReactiveDynamics.ProjectToken(;
+            phase = ph,
+            npv_peak = npv,
+            pos_remaining = pos_from_here(),
+            therapeutic_area = area,
+            acquired = false,
+        ) for (ph, npv, area) in ORGANIC_PORTFOLIO
     ]
-    for (ph, npv, area) in organic
-        add_structured_token!(
-            prob,
-            ReactiveDynamics.ProjectToken(;
-                phase = ph,
-                npv_peak = npv,
-                pos_remaining = prod(get(PHASE_POS, p, 1.0) for p in PHASES if p != :Market),
-                therapeutic_area = area,
-                acquired = false,
-            ),
-        )
-    end
-    return prob
 end
 
 # ── The acquisition lever (endogenous Rule, ADR 0010) ───────────────────────────────────

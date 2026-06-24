@@ -18,8 +18,16 @@ include(joinpath(HERE, "analysis.jl"))
 # synergies the acquisition rule arms (MVP §2.1); S0 arms no rule at all (no deal).
 function run_scenario(scenario::Symbol, seed; tspan = 40.0, T_acq = 8.0)
     acs = build_pipeline_model()
-    prob = ReactionNetworkProblem(acs; tspan = tspan, dt = 1.0, seed = seed, registry = PROJECT_REGISTRY)
-    seed_portfolio!(prob)
+    # The starting portfolio is the declarative initial marking (ADR 0007 §B) — passed to the
+    # constructor, instantiated before t=0, reproducible as part of (model, population, seed).
+    prob = ReactionNetworkProblem(
+        acs;
+        tspan = tspan,
+        dt = 1.0,
+        seed = seed,
+        registry = PROJECT_REGISTRY,
+        population = initial_population(),
+    )
     if scenario != :S0
         # synergy toggles per scenario (MVP §4 grid)
         res = scenario in (:S2, :S5)           # resource synergy: +scientists

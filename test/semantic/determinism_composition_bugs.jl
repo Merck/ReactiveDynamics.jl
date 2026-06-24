@@ -295,22 +295,17 @@ using ACSets  # nparts/incident for composition tests
         @test_broken isdefined(ReactiveDynamics, :include_model)
     end
 
-    # [equalize-live-guard-refuses] tier=T2-acceptance expectedStatus=errors-until-implemented
-    # contract: ADR 0004 INV-2 (No mid-run reindex; the sole offender operators/equalize.jl:52 must refuse under a runtime live guard)
-    # note: ADR 0004 INV-2: rem_parts!(acs,:S,...) at equalize.jl:52 is the one mid-run reindexer that breaks
-    # note: every position-indexed compiled closure (compilers.jl:149 varmap, sample_transitions! positional
-    # note: loop state.jl:178-191) and MUST refuse on a stepping model. Errors-until-implemented because there
-    # note: is NO live guard today: equalize! takes a ReactionNetworkSchema, not a ReactionNetworkProblem, so
-    # note: equalize!(prob, ...) currently throws a MethodError (which technically satisfies @test_throws
-    # note: Exception for the wrong reason) — the real target is a deliberate live-guard error plus an equalize!
-    # note: method that accepts the live state and refuses. Treat the MethodError-today as accidental; T2 pins
-    # note: the intended guard.
-    # action: Step the live problem one tick, then attempt to equalize species on the LIVE state; the
-    # reindexing rem_parts! must be refused.
-    @testset "T2: equalize!'s rem_parts! must refuse on a live/stepping model (ADR 0004 INV-2)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+    # [equalize-live-guard-refuses] tier=T1-characterization expectedStatus=pass-now
+    # contract: ADR 0004 INV-2 / ADR 0007 §A (No mid-run reindex; the rem_parts! reindexer must refuse on a live model)
+    # note: Stage D added the §A live-phase guard: a constructed ReactionNetworkProblem has live==true, and
+    # note: equalize!(::ReactionNetworkProblem, …) (src/actions.jl) deliberately errors — species identification
+    # note: reindexes the :S table via rem_parts! (equalize.jl:52), which would invalidate the construction-
+    # note: frozen, position-indexed compiled closures (compilers.jl varmap, sample_transitions! positional
+    # note: loop). Identify species at AUTHORING time, before construction. The authoring-phase
+    # note: equalize!(::ReactionNetworkSchema, …) stays unrestricted (the §7 path).
+    # action: Construct + step the live problem, then attempt to equalize species on the LIVE state; the
+    # reindexing rem_parts! must be refused, and the species indexing must be unchanged after the refusal.
+    @testset "equalize!'s rem_parts! refuses on a live/stepping model (ADR 0004 INV-2 / ADR 0007 §A)" begin
         acs = @ReactionNetworkSchema begin
           1.0, A --> B, name => t1
           1.0, A2 --> B, name => t2
@@ -319,12 +314,12 @@ using ACSets  # nparts/incident for composition tests
         @prob_params acs
         @prob_meta acs tspan = 10 dt = 1.0
         prob = ReactionNetworkProblem(acs)
-        simulate(prob, 1)   # advance to a tick boundary; model is now live
-        # TARGET: equalize!/@equalize on a live ReactionNetworkProblem must error (live guard), not silently rem_parts! the acs out from under the compiled closures.
+        @test prob.live == true
+        simulate(prob, 1)   # advance to a tick boundary; model is live
+        # the live-guard refuses, rather than silently rem_parts!-ing the acs out from under the closures
         @test_throws Exception equalize!(prob, [[(:catchall, :A), (:catchall, :A2)]])
-        # and the model's species indexing must be unchanged after the refusal.
+        # the model's species indexing is unchanged after the refusal
         @test ReactiveDynamics.nparts(prob, :S) == 3
-        =#
     end
 
     # [event-channel-repaired] tier=T1-characterization expectedStatus=pass-now

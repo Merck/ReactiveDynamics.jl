@@ -30,6 +30,7 @@ The decomposition is the BD insight: most of the deal's value comes from the **c
 | Demo element | Engine mechanism |
 |---|---|
 | Program / asset | a `ProjectToken` structured token (host Julia, [`host.jl`](host.jl)), identity preserved across phases |
+| Initial portfolio | the declarative `population[]` initial marking (ADR 0007 §B, Stage D): `initial_population()` is a list of `ProjectToken` structs passed to the constructor, instantiated before t=0 — reproducible input, not imperative post-construction host code (MVP finding H) |
 | Pipeline phase | a `phase` **attribute** on the single `:Project` kind (phase-as-attribute, ADR 0008) — not a species per phase |
 | Phase advance | a transition selecting an in-phase token via `@select(Project, phase==:PhaseN)` (Stage C), consuming `@conserved(scientist)` + `@rate(budget)`, advancing via `@advance(phase, :PhaseN1)` on `Binomial(q, PoS)` success |
 | Failure / kill | `Binomial` failure ⇒ the bound token soft-retires (its species flips to `:removed`, ADR 0006); its `phase` records how far it got |
@@ -45,7 +46,6 @@ The decomposition is the BD insight: most of the deal's value comes from the **c
 
 ## Milestone-1 caveats (deliberate)
 
-- **Initial portfolio is imperative host code** (`seed_portfolio!`), not the declarative `population[]` array — that is Phase-1 Stage D (ADR 0007). The starting pipeline is therefore not yet part of the serializable model document.
-- **The model is built in-Julia via `@ReactionNetworkSchema`**, not authored as eval-free JSON — that is Phase-1 Stage E (ADR 0005). The demo's *trajectory* does not depend on serialization.
+- **The model is built in-Julia via `@ReactionNetworkSchema`**, not authored as eval-free JSON — that is Phase-1 Stage E (ADR 0005). The demo's *trajectory* does not depend on serialization; once Stage E lands the same model becomes an LLM-authorable `model.rdj.json`.
 - **Synergies are param-mediated** (a Ref to a param the rule flips); token-pool-mediated synergy (a PoS reading sibling token counts via `TokenAgg`) is a clean Milestone-2 extension.
 - **Refinement** (the §11 `refine` granularity-substitution demo) is Milestone-2.

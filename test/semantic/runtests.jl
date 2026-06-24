@@ -33,3 +33,6 @@ end
 @safetestset "Token filtration (@select / @advance)" begin
     include("token_filtration.jl")
 end
+@safetestset "Declarative initial state + checkpoint" begin
+    include("initial_state.jl")
+end

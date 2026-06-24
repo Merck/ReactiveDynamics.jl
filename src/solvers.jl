@@ -688,9 +688,21 @@ function ReactionNetworkProblem(
         registry,
         Dict{Symbol,Int}(),
         Dict{String,Int}(),
+        collect(get(keywords, :population, [])),
+        Dict{String,Dict{Symbol,Any}}(),
+        false,
     )
 
     entangle!(network, FreeAgent("structured"))
+
+    # Instantiate the declarative initial marking (ADR 0007 §B) into the structured container,
+    # in declared order, with seeded attribute draws + creation indices — BEFORE t=0/the first
+    # step, so a structured run is reproducible from (model, seed, population). Then arm the §A
+    # phase guard: the model is now Live and reindexers (rem_parts!) must refuse.
+    instantiate_population!(network)
+    snapshot_population!(network)
+    update_u_structured!(network)
+    network.live = true
 
     # save!(network)
 
@@ -710,9 +722,28 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     for r in state.rules
         r.fire_mode === :once && (r.enabled = true)
     end
-    # Reset structured-token creation counters (the token population itself is rebuilt in Stage D).
+    # Tear down the live token population and rebuild the declarative initial marking (ADR 0007
+    # §D): without this the END-state tokens survive into the next run. Reset the creation
+    # counters, then re-instantiate population[] in declared order through the restored RNG — so
+    # `init → step* → reinit! → step*` reproduces the first trajectory for structured models too
+    # (closing §4 D7 for structured runs). NB the explicit-host-token population form holds the
+    # SAME agent objects; re-entangling them after a run re-uses them with reset bonds.
+    container = getagent(state, "structured")
+    for tok in collect(values(inners(container)))
+        disentangle!(tok)
+    end
     empty!(state.creation_counters)
     empty!(state.creation_index)
+    for entry in state.population
+        if !(entry isa PopulationEntry)
+            set_bound_transition!(entry, nothing)
+            empty!(entry.past_bonds)
+            # restore the SAME object's attributes (species/phase/…) to their captured t=0 values
+            restore_token_snapshot!(state, entry)
+        end
+    end
+    instantiate_population!(state)
+    update_u_structured!(state)
 
     return state
 end

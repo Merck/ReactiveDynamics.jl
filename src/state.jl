@@ -85,6 +85,18 @@ end
     # creation_index) total order tokens are selected in. Reset by _reinit! (§4 D7).
     creation_counters::Dict{Symbol,Int}
     creation_index::Dict{String,Int}
+
+    # Declarative initial marking (ADR 0007 §B). `population` is the structured-token initial
+    # state (the analogue of specInitVal for plain species): either a vector of declarative
+    # PopulationEntry specs (count + seeded attribute exprs) OR already-constructed host token
+    # agents. Stored so _reinit! can rebuild the exact t=0 marking (§D, closing §4 D7 for
+    # structured runs). For the explicit-host-token form `init_snapshot` records each token's
+    # initial field values (by token name) so _reinit! can restore the SAME objects to their t=0
+    # attributes (species/phase/…), not just reset their bonds. `live` arms the §A phase guard:
+    # once constructed, reindexers (rem_parts!) refuse.
+    population::Vector
+    init_snapshot::Dict{String,Dict{Symbol,Any}}
+    live::Bool
 end
 
 # get value of a numeric expression
