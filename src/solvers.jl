@@ -302,11 +302,14 @@ function evolve!(state)
                     )
 
                     # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
-                    # deterministic (species, creation_index) key — NOT the AA Dict / random-name
-                    # order, which would make WHICH equal-priority token binds non-reproducible.
+                    # deterministic (species, creation_index) key. NB use `transition.i` (the recipe
+                    # index stored at spawn), NOT the loop var `i` — here `i` indexes the
+                    # ongoing_transitions array, not the :T schema row, so `state.acs[i, …]` would
+                    # read the wrong transition's priority (latent: harmless only while priority is
+                    # the default 0.0 for all tokens; a per-transition priority override would hit it).
                     sort!(
                         available_species;
-                        by = a -> (-priority(a, state.acs[i, :transName]), token_sortkey(state, a)),
+                        by = a -> (-priority(a, state.acs[transition.i, :transName]), token_sortkey(state, a)),
                     )
 
                     ix = 1
@@ -485,11 +488,13 @@ function finish!(state)
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
                 if tok.species ∈ state.structured_token
                     for _ = 1:(trans_.q*tok.stoich)
-                        isempty(trans_.bound_structured_agents) && break
                         agent_ix = findfirst(
                             a -> get_species(a) == tok.species,
                             trans_.bound_structured_agents,
                         )
+                        # No more bound tokens of this species to release (a multi-species
+                        # transition may exhaust one species before the q*stoich count) — stop.
+                        isnothing(agent_ix) && break
 
                         set_bound_transition!(
                             trans_.bound_structured_agents[agent_ix],
@@ -514,6 +519,7 @@ function finish!(state)
                             a -> get_species(a) == tok.species,
                             trans_.nonblock_structured_agents,
                         )
+                        isnothing(agent_ix) && break   # no more nonblock tokens of this species
 
                         set_bound_transition!(
                             trans_.nonblock_structured_agents[agent_ix],
