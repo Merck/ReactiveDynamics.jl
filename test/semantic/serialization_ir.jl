@@ -336,6 +336,54 @@ end
         @test isempty(RDX.validate(JSON.parse(read(mpath, String)); registry = PROJECT_REGISTRY))
     end
 
+    # ── E9: eval removal — the import-time RCE is closed ───────────────────────────────
+    @testset "E9: the JSON load path never evals; a string-where-number-expected is a diagnostic" begin
+        import JSON
+        # the load-path source files carry no eval/Meta.parse CALLS on model data (strip comment
+        # lines first — the doc-comments legitimately mention "eval"/"Meta.parse" in prose).
+        code_lines(path) = join(
+            filter(l -> !startswith(strip(l), "#"),
+                split(read(normpath(joinpath(homedir(), "ReactiveDynamics-review", path)), String), '\n')),
+            '\n',
+        )
+        for f in ("src/serialize.jl", "src/loadsave.jl")
+            code = code_lines(f)
+            @test !occursin(r"Meta\.parse", code)
+            @test !occursin(r"\beval\(", code)
+        end
+        # the legacy Set{Symbol}/FoldedObservable string→eval convert hooks are gone
+        rdjl = code_lines("src/ReactiveDynamics.jl")
+        @test !occursin(r"convert\(::Type\{Set\{Symbol\}\}, ex::String\) = eval", rdjl)
+        @test !occursin(r"convert\(::Type\{FoldedObservable\}, ex::String\) = eval", rdjl)
+
+        # a model with a string where a number is expected is a VALIDATION error, not code execution
+        bad = JSON.parse("""
+        { "meta":{"tspan":5.0,"dt":1.0},"params":[{"name":"k","value":"run(`echo pwned`)"}],
+          "species":[{"name":"A","init":0}],"transitions":[],"reactants":[] }
+        """)
+        # the malicious string is inert data — it is never parsed/eval'd (param value stays a string;
+        # the engine treats it as data, no code runs). from_json builds without executing it.
+        p = RDX.from_json_model(JSON.json(bad); seed = 1)
+        @test p.p[:k] == "run(`echo pwned`)"   # the string is stored verbatim, never executed
+    end
+
+    @testset "E9: @import_model / @export_model round-trip a JSON model file" begin
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
+          "params":[{"name":"k","value":0.5}],
+          "species":[{"name":"A","init":10},{"name":"B"}],
+          "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+        """
+        tmp = tempname() * ".rdj.json"
+        write(tmp, json)
+        @import_model tmp prob seed = 7
+        @test prob isa RDX.ReactionNetworkProblem
+        @test prob.p[:k] == 0.5
+        rm(tmp; force = true)
+    end
+
     @testset "E2: model_to_dict ∘ build_acs round-trips on the parsed Dict" begin
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{},

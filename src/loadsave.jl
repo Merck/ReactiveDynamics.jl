@@ -1,254 +1,71 @@
-export @import_network, @export_network
-export @load_models
-export @import_solution, @export_solution
+# Model + solution persistence. The model format is the single eval-free JSON (`model.rdj.json`,
+# ADR 0005): `@import_model`/`@export_model` delegate to the typed-IR loader (src/serialize.jl),
+# which NEVER `Meta.parse`s or `eval`s a model field — closing the import-time RCE that the old
+# TOML/CSV loader had (it `eval`'d attribute strings and whole `registered` function bodies). The
+# TOML/CSV/JLD2 model zoo is removed per ADR 0005. Solution OUTPUTS (the `sol` DataFrame) are a
+# separate concern and may still be written to CSV for human inspection.
+
+export @import_model, @export_model
 export @export_solution_as_table, @export_solution_as_csv
-export @export, @import
 
-using TOML, JLD2, CSV
 using DataFrames
-
-const objects_aliases = Dict(
-    :S => "spec",
-    :T => "trans",
-    :P => "prm",
-    :M => "meta",
-    :E => "event",
-    :obs => "obs",
-)
-
-const RN_attrs = string.(propertynames(ReactionNetworkSchema().subparts))
-
-function get_attrs(object)
-    object = object isa Symbol ? objects_aliases[object] : object
-
-    return filter(x -> occursin(object, x), RN_attrs)
-end
-
-function export_network(acs::ReactionNetworkSchema)
-    dict = Dict()
-    for (key, val) in objects_aliases
-        push!(dict, val => [])
-        for i in parts(acs, key)
-            dict_ = Dict()
-            for attr in get_attrs(val)
-                attr_val = acs[i, Symbol(attr)]
-                ismissing(attr_val) && continue
-                attr_val = attr_val isa Number ? attr_val : string(attr_val)
-                push!(dict_, string(attr) => attr_val)
-            end
-            push!(dict[val], dict_)
-        end
-    end
-
-    return dict
-end
-
-function load_network(dict::Dict)
-    acs = ReactionNetworkSchema()
-    for (key, val) in objects_aliases
-        val == "prm" && continue
-        for row in get(dict, val, [])
-            i = add_part!(acs, key)
-            for (attr, attrval) in row
-                set_subpart!(acs, i, Symbol(attr), attrval)
-                if (acs[i, Symbol(attr)] isa String && !(contains(attr, "name")))
-                    acs[i, Symbol(attr)] = MacroTools.striplines(Meta.parse(attrval))
-                end
-            end
-        end
-    end
-
-    for row in get(dict, "prm", [])
-        i = add_part!(acs, :P)
-        for (attr, attrval) in row
-            if attr == "prmVal"
-                attrval = attrval isa String ? eval(Meta.parseall(attrval)) : attrval
-            end
-            set_subpart!(acs, i, Symbol(attr), attrval)
-        end
-    end
-
-    for row in get(dict, "registered", [])
-        eval(Meta.parseall(row["body"]))
-    end
-
-    return assign_defaults!(acs)
-end
-
-function import_network_csv(pathmap)
-    dict = Dict()
-    for (key, paths) in pathmap
-        push!(dict, key => [])
-        for path in paths
-            data = DataFrame(
-                CSV.File(
-                    path;
-                    delim = ";;",
-                    types = String,
-                    stripwhitespace = true,
-                    comment = "#",
-                ),
-            )
-            for row in eachrow(data)
-                object = Dict()
-                for (attr, val) in Iterators.zip(keys(row), values(row))
-                    !ismissing(val) && push!(object, string(attr) => val)
-                end
-                push!(dict[key], object)
-            end
-        end
-    end
-
-    return load_network(dict)
-end
-
-function import_network(path::AbstractString)
-    if splitext(path)[2] == ".csv"
-        pathmap =
-            Dict(val => [] for val in [collect(values(objects_aliases)); "registered"])
-        for row in CSV.File(path; delim = ";;", stripwhitespace = true, comment = "#")
-            push!(pathmap[row.type], joinpath(dirname(path), row.path))
-        end
-
-        import_network_csv(pathmap)
-    else
-        load_network(TOML.parsefile(path))
-    end
-end
-
-function export_network(acs::ReactionNetworkSchema, path::AbstractString)
-    if splitext(path)[2] == ".csv"
-        exported_network = export_network(acs)
-        paths = DataFrame(; type = [], path = [])
-        for (key, objs) in exported_network
-            push!(paths, (key, "export-$key.csv"))
-            objs_exported = DataFrame(Dict(attr => [] for attr in get_attrs(key)))
-            for obj in objs
-                push!(
-                    objs_exported,
-                    [get(obj, key, missing) for key in names(objs_exported)],
-                )
-            end
-
-            CSV.write(
-                joinpath(dirname(path), "export-$key.csv"),
-                objs_exported;
-                delim = ";;",
-            )
-        end
-        CSV.write(path, paths; delim = ";;")
-    else
-        open(io -> TOML.print(io, export_network(acs)), path, "w+")
-    end
-end
+using CSV
 
 """
-Export model to a file: this can be either a single TOML file encoding the entire model,
-or a batch of CSV files (a root file and a number of files, each per a class of objects).
+    @import_model "model.rdj.json"
+    @import_model "model.rdj.json" prob   registry=Dict(:Kind=>ctor)
 
-See `tutorials/loadsave` for an example.
+Load a model from an eval-free `model.rdj.json` document (ADR 0005) and construct a
+`ReactionNetworkProblem`. The document is inert data: it is validated and lowered through the
+typed ExprNode IR, never `eval`'d. Host token kinds / callbacks are supplied BY NAME through the
+`registry` (ADR 0006 §C); the file alone cannot execute code.
 
 # Examples
 
 ```julia
-@export_network acs "acs_data.toml" # as a TOML
-@export_network acs "csv/model.csv" # as a CSV
+@import_model "pipeline.rdj.json" prob
+prob = from_json_model(read("pipeline.rdj.json", String); seed = 1, registry = REG)
 ```
 """
-macro export_network(acsex, pathex)
-    return :(export_network($(esc(acsex)), $(string(pathex))))
-end
-
-"""
-Import a model from a file: this can be either a single TOML file encoding the entire model,
-or a batch of CSV files (a root file and a number of files, each per a class of objects).
-
-See `tutorials/loadsave` for an example.
-
-# Examples
-
-```julia
-@import_network "model.toml"
-@import_network "csv/model.toml"
-```
-"""
-macro import_network(pathex, name = gensym())
-    return :($(esc(name)) = import_network($(string(pathex))))
-end
-
-macro load_models(pathex)
-    callex = :(
-        begin end
+macro import_model(pathex, name = gensym(), kwargs...)
+    return :(
+        $(esc(name)) =
+            from_json_model(read($(esc(pathex)), String); $(map(esc, kwargs)...))
     )
-    for line in readlines(string(pathex))
-        name, pathex = split(line, ';')
-        name = isempty(name) ? gensym() : Symbol(name)
-        push!(callex.args, :($(esc(name)) = import_network($(string(pathex)))))
-    end
-
-    return callex
 end
 
 """
-    @import_solution "sol.jld2"
-    @import_solution "sol.jld2" sol
+    @export_model prob "model.rdj.json"
 
-Import a solution from a file.
+Serialize a model to an eval-free `model.rdj.json` document (ADR 0005).
 
 # Examples
 
 ```julia
-@import_solution "sir_acs_sol/serialized/sol.jld2"
+@export_model prob "pipeline.rdj.json"
 ```
 """
-macro import_solution(pathex, varname = "sol")
-    return :(JLD2.load($(string(pathex)), $(string(varname))))
+macro export_model(probex, pathex)
+    return :(write($(esc(pathex)), to_json_model($(esc(probex)))))
 end
 
-"""
-    @export_solution sol
-    @export_solution sol "sol.jld2"
-
-Export a solution to a file.
-
-# Examples
-
-```julia
-@export_solution sol "sol.jdl2"
-```
-"""
-macro export_solution(solex, pathex = "sol.jld2")
-    return :(JLD2.save($(string(pathex)), $(string(solex)), $(esc(solex))))
-end
+# ── Solution outputs (CSV; the model is the reproducible input, the solution is output) ──
 
 """
     @export_solution_as_table sol
 
-Export a solution as a `DataFrame`.
-
-# Examples
-
-```julia
-@export_solution_as_table sol
-```
+Export a solution's trajectory as a `DataFrame`.
 """
-macro export_solution_as_table(solex, pathex = "sol.jld2")
+macro export_solution_as_table(solex, pathex = "sol")
     return :(DataFrame($(esc(solex)).sol))
 end
 
 get_DataFrame(sol) = sol.sol
 
 """
-    @export_solution_as_csv sol
     @export_solution_as_csv sol "sol.csv"
 
-Export a solution to a file.
-
-# Examples
-
-```julia
-@export_solution_as_csv sol "sol.csv"
-```
+Export a solution's trajectory to a CSV file.
 """
 macro export_solution_as_csv(solex, pathex = "sol.csv")
     return :(CSV.write($(string(pathex)), get_DataFrame($(esc(solex)))))

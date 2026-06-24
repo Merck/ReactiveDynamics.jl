@@ -98,8 +98,11 @@ Base.convert(::Type{Union{String,Symbol,Missing}}, ex::String) =
 
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
 
-Base.convert(::Type{Set{Symbol}}, ex::String) = eval(Meta.parse(ex))
-Base.convert(::Type{FoldedObservable}, ex::String) = eval(Meta.parse(ex))
+# The Set{Symbol}/FoldedObservable string→eval convert hooks were removed (ADR 0005): they
+# `eval`'d attribute strings on assignment (an import-time RCE vector). The JSON loader builds
+# these as typed values directly (modality 3-axis → Set via to_set, observables structurally),
+# so no string-eval path remains. (The SampleableValues parse above is parse-only — no eval —
+# and is retained for the legacy DSL string-attr assignment.)
 
 prettynames = Dict(
     :transRate => [:rate],
