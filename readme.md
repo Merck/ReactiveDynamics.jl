@@ -52,7 +52,7 @@ Another package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgen
 
 ## Four Sketches
 
-For other examples, see the **[tutorials](tutorial)**.
+For comprehensive, self-contained worked examples, see the **[demos](demo)** — [`demo/core_engine_tour`](demo/core_engine_tour) (the metalanguage, resource modalities, the priority allocator, composition, and seeded ensembles) and [`demo/agentic_pipeline`](demo/agentic_pipeline) (structured tokens, in-model decision rules, eval-free JSON models, and checkpointing), alongside the end-to-end [`demo/bd_acquisition`](demo/bd_acquisition) case study.
 
 ### SIR Model
 
