@@ -1,7 +1,7 @@
 # BD acquisition-impact demo — analysis / post-processing (MVP §5).
 #
 # Outcome metrics computed from the final token population + ledger streams: portfolio rNPV
-# (the headline), # launches, P(launch), peak capital, scientist utilization, and the
+# (the headline), # launches, P(launch), the injection-robust financing dip + pool troughs, and the
 # treatment effect Δ-rNPV = rNPV(Sₖ) − rNPV(S0), ensemble-averaged (MVP §4.1 — single RNG
 # stream kept, per-entity substreams are §4.6 future work). Discounting/roll-ups are pure
 # post-processing; the engine does no discounting (MVP §5 / finding D).
@@ -45,19 +45,26 @@ function metrics(prob; acq_price = 0.0)
     launches = count(reached_market, toks)
     active = count(is_active, toks)
     retired = count(t -> !is_active(t), toks)
-    # Peak capital requirement = the largest cumulative budget burn (the financing ask). Budget is
-    # a pool that financing refills; the peak draw-down below the initial level proxies the ask.
+    # Peak capital requirement (the financing ask) = the deepest draw-down of the budget reserve
+    # BELOW ITS STARTING LEVEL: budget[1] - min(budget). This is injection-robust — a resource-
+    # synergy deal that injects +capital (SetSpecies(:budget,+Δ)) raises max(budget), so the naive
+    # max-min would conflate the injected capital with the acquirer's own financing dip and report
+    # a spuriously larger ask for exactly the scenarios that ease it. Measuring the dip below start
+    # answers the real question: "how much of my own reserve did I have to burn through?"
     budget = prob.sol[!, "budget"]
-    peak_capital = maximum(budget) - minimum(budget)
+    peak_capital = budget[1] - minimum(budget)
+    # Resource contention proxy: the trough of each pool (how close the binding constraint ran to
+    # empty). Reported instead of a utilization ratio because injecting +scientists changes the
+    # pool size, so a 1 - sci/max(sci) ratio is not comparable across scenarios either.
     sci = prob.sol[!, "scientist"]
-    utilization = 1 .- sci ./ maximum(sci)   # fraction of scientists in use over time
     return (
         rnpv = portfolio_rnpv(prob; acq_price = acq_price),
         launches = launches,
         active = active,
         retired = retired,
         peak_capital = peak_capital,
-        mean_utilization = mean(utilization),
+        cash_trough = minimum(budget),       # lowest the cash reserve got (0 ⇒ fully cash-starved)
+        sci_trough = minimum(sci),           # lowest the scientist pool got (0 ⇒ fully booked)
     )
 end
 
@@ -71,13 +78,30 @@ end
 mean_rnpv(ms) = mean(m.rnpv for m in ms)
 mean_launches(ms) = mean(m.launches for m in ms)
 p_launch(ms) = mean(m.launches >= 1 for m in ms)
+mean_peak_capital(ms) = mean(m.peak_capital for m in ms)
+mean_cash_trough(ms) = mean(m.cash_trough for m in ms)
+mean_sci_trough(ms) = mean(m.sci_trough for m in ms)
+
+# Standard error of the mean across ensemble members — the honest spread on every headline scalar
+# (the ensemble gives a DISTRIBUTION, §4 D8/D9; reporting a point estimate without it overstates
+# precision). `sem(getfield)` pulls one metric field out of the per-member vector.
+sem(xs) = length(xs) <= 1 ? 0.0 : std(xs) / sqrt(length(xs))
+sem_rnpv(ms) = sem([m.rnpv for m in ms])
+sem_launches(ms) = sem([m.launches for m in ms])
 
 # Δ-rNPV treatment effect: ensemble-averaged difference of means (NOT per-seed paired, MVP §4.1
 # finding A — the two scenarios desync the shared RNG after the deal). Returns the deal's
 # attributable change in portfolio value, launches, and launch probability.
 function treatment_effect(baseline_ms, deal_ms)
+    b = [m.rnpv for m in baseline_ms]
+    d = [m.rnpv for m in deal_ms]
+    # SE of the difference of means (independent ensembles, §4.1 — the two arms desync the shared
+    # RNG after the deal, so this is the unpaired estimator): se = √(var_b/n_b + var_d/n_d).
+    se_delta = (length(b) <= 1 || length(d) <= 1) ? 0.0 :
+               sqrt(var(b) / length(b) + var(d) / length(d))
     return (
         delta_rnpv = mean_rnpv(deal_ms) - mean_rnpv(baseline_ms),
+        se_delta_rnpv = se_delta,
         delta_launches = mean_launches(deal_ms) - mean_launches(baseline_ms),
         delta_p_launch = p_launch(deal_ms) - p_launch(baseline_ms),
         baseline_rnpv = mean_rnpv(baseline_ms),

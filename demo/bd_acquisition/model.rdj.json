@@ -9,7 +9,7 @@
   "species": [
     { "name": "Project", "structured": true },
     { "name": "scientist", "init": 40 },
-    { "name": "budget", "init": 200 }
+    { "name": "budget", "init": 150 }
   ],
   "transitions": [
     { "id": "adv_discovery", "name": "adv_discovery", "rate": 2.0, "rate_mode": "deterministic",
@@ -33,7 +33,7 @@
       "priority": 3.0 },
     { "id": "adv_filed", "name": "adv_filed", "rate": 2.0, "rate_mode": "deterministic",
       "cycletime": 1.0, "prob_of_success": 0.9, "priority": 4.0 },
-    { "id": "financing", "name": "financing", "rate": 30.0, "rate_mode": "deterministic" }
+    { "id": "financing", "name": "financing", "rate": 16.0, "rate_mode": "deterministic" }
   ],
   "reactants": [
     { "transition": "adv_discovery", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Discovery"] ] } },

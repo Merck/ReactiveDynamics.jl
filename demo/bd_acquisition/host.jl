@@ -82,6 +82,18 @@ const PHASE_CT = Dict(             # per-phase cycle time (ticks/years)
     :Filed => 1.0,
 )
 
+# Probability of launch FROM a given phase = product of the per-phase PoS for every phase still
+# ahead of it (Market itself has no gate ⇒ 1.0). A Phase-3 program only has to clear Phase3→Filed
+# →Market, so it carries far more remaining PoS than a Discovery program. Used both for the
+# organic portfolio's `pos_remaining` and for the acquired Phase-2 programs (so both are on the
+# same risk scale). [Earlier the organic seeding ignored the phase and gave every program the
+# whole-ladder product — a valuation bug that understated late-stage value ~9×.]
+function pos_from_phase(ph)
+    idx = findfirst(==(ph), PHASES)
+    idx === nothing && return 1.0
+    return prod(get(PHASE_POS, p, 1.0) for p in PHASES[idx:end])
+end
+
 # ── The coarse pipeline model (one @select/@advance transition per phase boundary) ──────
 # Each advance: select a Project in phase N (with enough remaining PoS), consume scientists
 # (@conserved, returned at finish) and burn budget (@rate), and on Binomial(q, PoS) success
@@ -120,15 +132,19 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
         @select(Project, phase == :Filed) + 1 * @conserved(scientist) + 2 * @rate(budget) -->
         @advance(phase, :Market),
         name => adv_filed, cycletime => 1.0, probability => 0.9, priority => 4.0
-        # budget replenishment (financing): a steady inflow each tick
-        @deterministic(30.0), ∅ --> budget, name => financing
+        # budget replenishment (financing): a steady inflow each tick. Calibrated (with the budget0
+        # below) so cash is a GENUINELY BINDING constraint — the organic pipeline runs the pools
+        # near empty (budget/scientists both bottom out in single digits), so the deal's resource
+        # synergy has something real to relieve and the engine's resource-contention machinery
+        # (ADR 0002 priority allocator) is actually exercised rather than idle on a slack model.
+        @deterministic(16.0), ∅ --> budget, name => financing
     end
 
     register_structured_species!(acs, :Project)
     # Declare the resource pools and the synergy params. (@prob_params/@prob_meta eval their RHS
     # in module scope, so synergy values are set via set_params! with the function args, and
     # tspan/dt are passed to the constructor as kwargs.)
-    @prob_init acs scientist = 40 budget = 200
+    @prob_init acs scientist = 40 budget = 150
     @prob_params acs synergy_pos = 0 synergy_eff = 0
     ReactiveDynamics.set_params!(acs, Dict(:synergy_pos => synergy_pos, :synergy_eff => synergy_eff))
     return acs
@@ -151,12 +167,11 @@ const ORGANIC_PORTFOLIO = [
 ]
 
 function initial_population()
-    pos_from_here() = prod(get(PHASE_POS, p, 1.0) for p in PHASES if p != :Market)
     return [
         ReactiveDynamics.ProjectToken(;
             phase = ph,
             npv_peak = npv,
-            pos_remaining = pos_from_here(),
+            pos_remaining = pos_from_phase(ph),   # remaining PoS from THIS phase forward (per-phase)
             therapeutic_area = area,
             acquired = false,
         ) for (ph, npv, area) in ORGANIC_PORTFOLIO
@@ -166,7 +181,7 @@ end
 # ── The acquisition lever (endogenous Rule, ADR 0010) ───────────────────────────────────
 # Fires once at t > T_acq: injects M acquired Phase-2 programs and (synergy 2) bumps scientists,
 # (synergies 3/4) flips the synergy_pos/synergy_eff params. Built as a typed Rule the driver arms.
-function acquisition_rule(; T_acq = 4.0, n_programs = 3, extra_scientists = 12,
+function acquisition_rule(; T_acq = 4.0, n_programs = 3, extra_scientists = 0, extra_budget = 0,
         synergy_pos = false, synergy_eff = false)
     actions = ReactiveDynamics.ActionStmt[]
     for _ = 1:n_programs
@@ -175,11 +190,15 @@ function acquisition_rule(; T_acq = 4.0, n_programs = 3, extra_scientists = 12,
             AddToken(:ProjectToken, [
                 :phase => QuoteNode(:Phase2),
                 :npv_peak => 1400.0,
-                :pos_remaining => 0.4 * 0.65 * 0.9,
+                :pos_remaining => pos_from_phase(:Phase2),   # same per-phase risk scale as organic
             ]),
         )
     end
+    # Resource synergy (MVP §2.1): the target brings BOTH headcount and capital. On the calibrated
+    # binding model, capital is the tighter constraint, so the budget injection is what actually
+    # relieves the organic pipeline — headcount alone is near-inert (see the calibration note).
     extra_scientists > 0 && push!(actions, SetSpecies(:scientist, extra_scientists, :inc))
+    extra_budget > 0 && push!(actions, SetSpecies(:budget, extra_budget, :inc))
     (synergy_pos || synergy_eff) && push!(
         actions,
         SetParams([:synergy_pos => (synergy_pos ? 1 : 0), :synergy_eff => (synergy_eff ? 1 : 0)]),

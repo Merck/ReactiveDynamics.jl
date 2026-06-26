@@ -12,18 +12,24 @@ julia --project=. demo/bd_acquisition/run_demo.jl
 
 ## What it shows
 
-The headline is **Δ-rNPV** — the deal's attributable change in risk-adjusted portfolio NPV, computed as an **ensemble-averaged difference of means** across N seeds (not a per-seed paired difference; the contract keeps a single state-owned RNG stream, so the two scenarios desync after the deal — [MVP §4.1](../../docs/MVP_BD_DEMO.md) finding A). A representative 24-seed run:
+The headline is **Δ-rNPV** — the deal's attributable change in risk-adjusted portfolio NPV, computed as an **ensemble-averaged difference of means** across N seeds (not a per-seed paired difference; the contract keeps a single state-owned RNG stream, so the two scenarios desync after the deal — [MVP §4.1](../../docs/MVP_BD_DEMO.md) finding A). The default run uses 160 seeds, because the per-scenario SE (~±450 at 24 seeds) otherwise swamps the synergy decomposition. The canonical 160-seed run (root seed 2026):
 
-| Scenario | mean rNPV | mean launches | P(≥1 launch) | Δ-rNPV vs S0 |
-|---|--:|--:|--:|--:|
-| **S0** Baseline (no deal) | 2117 | 1.17 | 0.75 | — |
-| **S1** Deal, pipeline-only | 2622 | 1.79 | 0.88 | +504 |
-| **S2** + resource synergy | 2482 | 1.67 | 0.88 | +365 |
-| **S3** + capability/PoS synergy | 4625 | 3.42 | 0.92 | **+2508** |
-| **S4** + op-efficiency synergy | 2903 | 2.08 | 0.96 | +786 |
-| **S5** Full (all synergies) | 4356 | 3.25 | 0.96 | **+2238** |
+| Scenario | mean rNPV | launches | P(≥1) | cash⌄ | sci⌄ | Δ-rNPV vs S0 (±1 SE) |
+|---|--:|--:|--:|--:|--:|--:|
+| **S0** Baseline (no deal) | 2282 | 1.21 | 0.81 | 16 | 8 | — |
+| **S1** Deal, pipeline-only | 2736 | 1.76 | 0.88 | 16 | 7 | +454 ± 152 |
+| **S2** + resource synergy | 3092 | 2.16 | 0.95 | 16 | 9 | +810 ± 168 |
+| **S3** + capability/PoS synergy | 3287 | 2.15 | 0.98 | 16 | 7 | **+1005 ± 145** |
+| **S4** + op-efficiency synergy | 2750 | 1.83 | 0.89 | 16 | 7 | +468 ± 158 |
+| **S5** Full (all synergies) | 3945 | 2.84 | 0.97 | 33 | 16 | **+1663 ± 182** |
 
-The decomposition is the BD insight: most of the deal's value comes from the **capability/PoS synergy raising the success probability of the programs already in the pipeline** (S3), not from the acquired programs themselves (S1). A partner can read off "the deal is worth ~+2200 net of a 400 price, and the value is in the platform synergy — so don't pay for it as a pipeline-only bolt-on."
+`cash⌄`/`sci⌄` = the low-water marks of the budget / scientist pools (near zero ⇒ that resource is binding). The company's own financing dip is exactly `150 − cash⌄` (a 150-unit starting reserve), injection-robust — so a deal that injects capital can only shrink it; it does not appear as a separate column. Marginal synergy contributions over the pipeline-only deal (S1): **resource +356, capability/PoS +551, op-efficiency +14**.
+
+Three reads a BD partner takes away:
+
+1. **The value is in the platform, not the pipeline.** The largest single synergy is **capability/PoS — the target's platform raising the success probability of the programs the company *already owns*** (S3 marginal +551), not the acquired programs themselves (S1 +454). Don't price the deal as a pipeline-only bolt-on.
+2. **Cash is the binding constraint, and the deal absorbs its own capital.** The budget pool runs to its floor (`cash⌄ ≈ 16`) in every scenario through S4 — the pipeline is cash-starved. Resource synergy (S2) injects capital, but it is *fully absorbed into running more programs in parallel*: the cash trough stays pinned at the floor and the financing dip doesn't shrink. Only the **full deal (S5)** — where capability synergy also pushes more programs through to launch and out of the pool — finally leaves real slack (cash⌄ 16 → 33, sci⌄ 8 → 16, own-reserve dip 134 → 117). That capital-is-consumed-not-banked dynamic is exactly the system-level effect a spreadsheet rNPV misses. *(The naive "max − min budget" reading would have shown the ask doubling here — an artifact of counting the injected capital itself; the injection-robust dip-below-start is flat-to-down.)*
+3. **Operational-efficiency synergy is ≈ 0 here** (+14, within noise). An honest, non-obvious finding: shorter cycle times barely help when **capital, not time, is the binding constraint** (the cash pool floors out while scientists rarely do). The same deal in a time-constrained pipeline would value op-efficiency very differently — which is the point of having a dynamic model.
 
 ## How it maps to the engine (Phase-1 capabilities)
 
@@ -34,7 +40,8 @@ The decomposition is the BD insight: most of the deal's value comes from the **c
 | Pipeline phase | a `phase` **attribute** on the single `:Project` kind (phase-as-attribute, ADR 0008) — not a species per phase |
 | Phase advance | a transition selecting an in-phase token via `@select(Project, phase==:PhaseN)` (Stage C), consuming `@conserved(scientist)` + `@rate(budget)`, advancing via `@advance(phase, :PhaseN1)` on `Binomial(q, PoS)` success |
 | Failure / kill | `Binomial` failure ⇒ the bound token soft-retires (its species flips to `:removed`, ADR 0006); its `phase` records how far it got |
-| **The acquisition** | an **endogenous Rule** (ADR 0010, Stage B): `fire_mode: once`, guard `@t() > T_acq`, action `Seq[AddToken(ProjectToken…), SetSpecies(scientist,+Δ), SetParams(synergy…)]`. The lever lives *in the model*, not in host patch code |
+| **The acquisition** | an **endogenous Rule** (ADR 0010, Stage B): `fire_mode: once`, guard `@t() > T_acq`, action `Seq[AddToken(ProjectToken…), SetSpecies(scientist,+Δ), SetSpecies(budget,+Δ), SetParams(synergy…)]`. The lever lives *in the model*, not in host patch code |
+| Resource contention | the model is calibrated so cash (and headcount) **genuinely bind** — the organic pipeline runs the `budget`/`scientist` pools into single digits, so the ADR-0002 priority allocator actually rations scarce resources (an over-provisioned model would leave the engine's contention machinery idle and make resource synergy inert) |
 | Synergies | param-mediated (MVP §2.1): the acquisition rule flips `synergy_pos`/`synergy_eff`, which the late-phase transitions read in their `probability`/`cycletime` ExprNodes |
 | Determinism / counterfactual | every draw routes through the state-owned RNG seeded by `seed=` (Stage A, §4 D1–D9); each ensemble member is seeded `hash((root_seed, k))` (D8); a run is fully determined by `(model, scenario, seed)` |
 
@@ -42,8 +49,10 @@ The decomposition is the BD insight: most of the deal's value comes from the **c
 
 - [`host.jl`](host.jl) — the `ProjectToken` kind (host Julia, never serialized), the per-network registry the `AddToken` lever references by name, the coarse pipeline model builder, the initial portfolio, and the acquisition Rule.
 - [`analysis.jl`](analysis.jl) — the rNPV roll-up and ensemble/Δ post-processing. Discounting is pure post-processing; the engine does no discounting (MVP §5 / finding D).
-- [`run_demo.jl`](run_demo.jl) — the scenario grid (S0–S5) + driver + report.
+- [`run_demo.jl`](run_demo.jl) — the scenario grid (S0–S5) + driver + report (default 160 seeds; the table prints Δ-rNPV ± SE, the financing dip, the cash/scientist low-water marks, and the marginal synergy decomposition).
 - [`model.rdj.json`](model.rdj.json) — the same pipeline as an **eval-free JSON model** (ADR 0005, Stage E). `from_json_model(read("model.rdj.json", String); registry = PROJECT_REGISTRY)` builds a model byte-for-byte identical to the in-Julia DSL under the same seed (verified, `serialization_ir.jl::E8`). The host `ProjectToken` type + registry stay host Julia (referenced by name); the JSON carries no code.
+- [`figures.jl`](figures.jl) → [`figures/`](figures/) — the presentation charts (Δ-rNPV waterfall, synergy decomposition with ±SE bars, rNPV distribution, binding-cash-constraint view), generated from the same engine run.
+- [`BRIEF.md`](BRIEF.md) — the one-page technical-executive brief tying the figures to the engine mechanisms.
 
 ## Milestone-1 caveats (deliberate)
 

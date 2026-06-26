@@ -45,7 +45,8 @@ function run_scenario(scenario::Symbol, seed; tspan = 40.0, T_acq = 8.0)
             acquisition_rule(;
                 T_acq = T_acq,
                 n_programs = 3,
-                extra_scientists = res ? 15 : 0,
+                extra_scientists = res ? 15 : 0,    # resource synergy: +headcount AND +capital (§2.1)
+                extra_budget = res ? 250 : 0,
                 synergy_pos = pos,
                 synergy_eff = eff,
             ),
@@ -60,7 +61,10 @@ end
 # deal is value-accretive and the synergy decomposition is visible.)
 const ACQ_PRICE = 400.0
 
-function main(; root_seed = 2026, nseed = 24)
+# nseed default is 160: at 24 seeds the per-scenario SE (~±450) swamps the synergy decomposition
+# (the marginal synergies are ~100–550 apart), so the ordering looks noisy/non-monotone; by ~160
+# seeds the SE (~±150) resolves res < pos and op-efficiency≈0 as real, stable signals.
+function main(; root_seed = 2026, nseed = 160)
     println("=" ^ 78)
     println("BD ACQUISITION-IMPACT DEMO — acquisition effect on a pharma pipeline portfolio")
     println("  ensemble: $nseed seeds from root $root_seed  |  horizon 40 ticks  |  acq price $(ACQ_PRICE)")
@@ -84,26 +88,39 @@ function main(; root_seed = 2026, nseed = 24)
     end
 
     base = results[:S0]
-    println("\nScenario                      mean rNPV    mean launches   P(≥1 launch)   Δ-rNPV vs S0")
-    println("-" ^ 92)
+    # Resource columns are the two pools' LOW-WATER MARKS (cash⌄, sci⌄) — independent signals of
+    # which constraint binds. (We don't also print the financing dip: it is exactly 150 − cash⌄,
+    # i.e. a linear transform of cash⌄, so it would carry no extra information; it appears once in
+    # the headline below as the "capital ask" framing.)
+    println("\nScenario                      mean rNPV     launches  P(≥1)   cash⌄   sci⌄   Δ-rNPV vs S0 (±SE)")
+    println("-" ^ 100)
     for s in scenarios
         ms = results[s]
         te = treatment_effect(base, ms)
         @printf(
-            "%-28s  %9.1f    %9.2f       %8.2f      %+10.1f\n",
+            "%-28s  %9.1f    %6.2f   %5.2f   %6.1f  %5.1f   %s\n",
             labels[s],
             mean_rnpv(ms),
             mean_launches(ms),
             p_launch(ms),
-            s == :S0 ? 0.0 : te.delta_rnpv,
+            mean_cash_trough(ms),      # cash⌄: lowest the budget pool reached (binding ⇒ near 0)
+            mean_sci_trough(ms),       # sci⌄: lowest the scientist pool reached
+            s == :S0 ? "      —" : @sprintf("%+8.1f ± %5.1f", te.delta_rnpv, te.se_delta_rnpv),
         )
     end
 
     println("\nHeadline (Full deal S5 vs Baseline S0):")
     te = treatment_effect(base, results[:S5])
-    @printf("  Δ-rNPV (deal value, net of price)  : %+.1f\n", te.delta_rnpv)
+    @printf("  Δ-rNPV (deal value, net of price)  : %+.1f ± %.1f (1 SE, %d seeds)\n", te.delta_rnpv, te.se_delta_rnpv, nseed)
     @printf("  Δ-launches (extra programs to mkt) : %+.2f\n", te.delta_launches)
     @printf("  Δ-P(launch)                        : %+.2f\n", te.delta_p_launch)
+    @printf("  cash trough, baseline → full deal  : %.1f → %.1f (the deal EASES the cash squeeze)\n",
+            mean_cash_trough(base), mean_cash_trough(results[:S5]))
+    println("\nSynergy decomposition (marginal Δ over S1 pipeline-only):")
+    s1 = treatment_effect(base, results[:S1]).delta_rnpv
+    for (s, name) in ((:S2, "resource (capital+headcount)"), (:S3, "capability/PoS"), (:S4, "op-efficiency"))
+        @printf("  %-30s : %+8.1f\n", name, treatment_effect(base, results[s]).delta_rnpv - s1)
+    end
     println("\nReproducible: each cell is a (model, scenario, seed) triple; the lever is in-model")
     println("(an ADR-0010 Rule), so re-running with the same root seed gives identical numbers.")
     return results
