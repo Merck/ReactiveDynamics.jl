@@ -53,6 +53,7 @@ Three reads a BD partner takes away:
 - [`model.rdj.json`](model.rdj.json) — the same pipeline as an **eval-free JSON model** (ADR 0005, Stage E). `from_json_model(read("model.rdj.json", String); registry = PROJECT_REGISTRY)` builds a model byte-for-byte identical to the in-Julia DSL under the same seed (verified, `serialization_ir.jl::E8`). The host `ProjectToken` type + registry stay host Julia (referenced by name); the JSON carries no code.
 - [`figures.jl`](figures.jl) → [`figures/`](figures/) — the presentation charts (Δ-rNPV waterfall, synergy decomposition with ±SE bars, rNPV distribution, binding-cash-constraint view), generated from the same engine run.
 - [`BRIEF.md`](BRIEF.md) — the one-page technical-executive brief tying the figures to the engine mechanisms.
+- [`presentation.html`](presentation.html) — a self-contained static HTML walkthrough (no server, no build step to view) structured as an HBR-style technical paper: it leads with **the framework as reusable architecture** for rapid valuation/impact modeling, then uses the BD acquisition as one worked case (assume → declare → simulate → read out) with an interactive counterfactual console and charts rendered client-side as SVG from the real 160-seed ensemble. [`export_data.jl`](export_data.jl) dumps that ensemble to `presentation_data.json`; [`build_presentation.jl`](build_presentation.jl) inlines it into the page. Regenerate with `julia --project=. demo/bd_acquisition/export_data.jl && julia demo/bd_acquisition/build_presentation.jl`.
 
 ## Milestone-1 caveats (deliberate)
 
