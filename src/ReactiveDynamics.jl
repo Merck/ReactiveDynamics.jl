@@ -228,6 +228,10 @@ include.(readdir(joinpath(@__DIR__, "operators"); join = true))
 include("solvers.jl")
 include("predicates.jl")
 include("actions.jl")
+# Per-program (per-structured-token) ledger (MVP finding D) — placed after actions.jl so it sees
+# the ReactionNetworkProblem/Transition types and the token accessors; the hooks in solvers.jl
+# call into it. Kept in its own file to minimize merge surface with the allocator rewrite.
+include("ledger.jl")
 include("serialize.jl")
 #include("optim.jl")
 include("loadsave.jl")

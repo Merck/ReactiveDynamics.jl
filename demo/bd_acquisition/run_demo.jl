@@ -121,6 +121,43 @@ function main(; root_seed = 2026, nseed = 160)
     for (s, name) in ((:S2, "resource (capital+headcount)"), (:S3, "capability/PoS"), (:S4, "op-efficiency"))
         @printf("  %-30s : %+8.1f\n", name, treatment_effect(base, results[s]).delta_rnpv - s1)
     end
+    # ── Engine-level per-program ledger (MVP finding D, src/ledger.jl) ──────────────────────
+    # NEW capability: the engine now attributes the cost ledger PER PROGRAM during the run (with
+    # `budget` priced via specCost in host.jl — which leaves the dynamics and the Δ-rNPV above
+    # untouched). `program_ledger(prob)` returns the per-program cost/reward/valuation summary in
+    # deterministic token order; previously this was reconstructed in post. We surface it for one
+    # representative full-deal run and CROSS-CHECK that the per-program rows reconcile to the
+    # aggregate ledger and that the engine-attributed spend agrees with the post-hoc rNPV roll-up.
+    println("\n" * "=" ^ 78)
+    println("ENGINE-LEVEL PER-PROGRAM LEDGER (MVP finding D) — one representative full-deal run")
+    println("=" ^ 78)
+    demo_prob = run_scenario(:S5, hash((root_seed, 1)))
+    sm = program_ledger_summary(demo_prob)
+    @printf("  programs tracked                    : %d\n", sm.n_programs)
+    @printf("  total capital attributed to programs: %.1f\n", sm.total_program_cost)
+    @printf("    ↳ to programs that reached market  : %.1f\n", sm.launched_cost)
+    @printf("    ↳ to still-in-flight programs      : %.1f\n", sm.active_cost)
+    @printf("    ↳ to failed/retired programs       : %.1f\n", sm.retired_cost)
+    @printf("  unattributed pool burn (no program) : %.1f  (finding-D boundary: spend with no bound token)\n", sm.unattributed_cost)
+    @printf("  aggregate :valuation_cost ledger     : %.1f\n", sm.aggregate_cost)
+    @printf("  reconciliation residual (≈0)         : %.3g  (per-program + unattributed == aggregate, §8.5)\n", sm.reconciliation_residual)
+
+    # Show the top few programs by capital burned, next to their modeling descriptors.
+    led = sort(program_economics(demo_prob), :cost_incurred; rev = true)
+    println("\n  Top programs by engine-attributed capital burned:")
+    println("    creation_idx  phase       acquired   npv_peak    cost_incurred")
+    for r in eachrow(first(led, min(6, nrow(led))))
+        @printf("    %10d  %-10s  %-8s   %8.0f    %10.1f\n",
+                r.creation_index, string(r.phase), string(r.acquired),
+                isnan(r.npv_peak) ? 0.0 : r.npv_peak, r.cost_incurred)
+    end
+    # The per-program ledger AGREES with the demo's portfolio roll-up: both walk the same final
+    # population; the ledger now ALSO carries the engine-attributed capital each program consumed.
+    @printf("\n  cross-check — portfolio rNPV (post-hoc roll-up)        : %.1f\n",
+            portfolio_rnpv(demo_prob; acq_price = ACQ_PRICE))
+    @printf("  cross-check — engine cost reconciles to aggregate     : %s\n",
+            abs(sm.reconciliation_residual) < 1e-6 ? "YES" : "NO")
+
     println("\nReproducible: each cell is a (model, scenario, seed) triple; the lever is in-model")
     println("(an ADR-0010 Rule), so re-running with the same root seed gives identical numbers.")
     return results

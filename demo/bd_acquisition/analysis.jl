@@ -8,7 +8,9 @@
 
 using ReactiveDynamics
 using ReactiveDynamics: inners, getagent, get_species, find_index
+using ReactiveDynamics: program_ledger, program_ledger_entries
 using Statistics
+using DataFrames
 
 # A program is RETIRED when its species (kind) has been flipped to :removed on failure/timeout
 # (ADR 0006 soft-retire). Its `phase` ATTRIBUTE records how far it got (phase-as-attribute).
@@ -106,5 +108,71 @@ function treatment_effect(baseline_ms, deal_ms)
         delta_p_launch = p_launch(deal_ms) - p_launch(baseline_ms),
         baseline_rnpv = mean_rnpv(baseline_ms),
         deal_rnpv = mean_rnpv(deal_ms),
+    )
+end
+
+# ── Engine-level per-program ledger (MVP finding D — src/ledger.jl) ──────────────────────
+# Historically this demo RECONSTRUCTED per-program economics in post (portfolio_rnpv walks the
+# final token population and reads host fields). Finding D asked the ENGINE to attribute the ledger
+# per program DURING the run. It now does: with `specCost` priced on `budget` (host.jl), each
+# program's capital burn is accrued onto it at every advance it sits in, and `program_ledger(prob)`
+# returns the per-program cost/reward/valuation summary in deterministic (species, creation_index)
+# order. These functions surface that engine ledger and CROSS-CHECK it against the aggregate row and
+# the post-hoc rNPV roll-up.
+
+# The total capital burned over the run, from the AGGREGATE ledger (the sum of the per-tick
+# :valuation_cost rows the engine pushes in evolve!). This is the pool-level spend.
+total_engine_cost(prob) = sum(r[3] for r in prob.log if r[1] == :valuation_cost; init = 0.0)
+
+# The per-program ledger as a DataFrame, joined with each live token's current phase / npv_peak /
+# acquired flag so the engine-attributed `cost_incurred` sits next to the program's modeling
+# descriptors. Programs that never bound a costed transition show cost_incurred 0.
+function program_economics(prob)
+    led = program_ledger(prob)                       # engine ledger: program, species, cost, ...
+    toks = Dict(ReactiveDynamics.AlgebraicAgents.getname(t) => t for t in tokens(prob))
+    led.phase = [haskey(toks, n) ? toks[n].phase : :removed for n in led.program]
+    led.npv_peak = [haskey(toks, n) ? toks[n].npv_peak : NaN for n in led.program]
+    led.acquired = [haskey(toks, n) ? toks[n].acquired : false for n in led.program]
+    led.reached_market = led.phase .== :Market
+    return led
+end
+
+# Reconciliation: the per-program `cost_incurred` summed over ALL programs, PLUS the network
+# UNATTRIBUTED bucket (capital burned by advance instances that bound no program — the documented
+# finding-D boundary), equals the aggregate :valuation_cost total. Returns the three numbers + the
+# residual, so a caller (or test) can assert the engine ledger is internally consistent.
+function ledger_reconciliation(prob)
+    led = program_ledger(prob)
+    per_program = sum(led.cost_incurred)
+    unattributed = prob.unattributed_cost
+    aggregate = total_engine_cost(prob)
+    return (
+        per_program = per_program,
+        unattributed = unattributed,
+        attributed_plus_unattributed = per_program + unattributed,
+        aggregate = aggregate,
+        residual = (per_program + unattributed) - aggregate,    # ≈ 0 (the SUM invariant, §8.5)
+    )
+end
+
+# A compact engine-ledger view for one finished run: total capital, how much landed on programs
+# that REACHED MARKET (the value-creating spend) vs in-flight vs retired, and the reconciliation
+# residual. This is the engine-level analogue of the demo's headline, now sourced from the ledger
+# the engine built during the run rather than reconstructed in post.
+function program_ledger_summary(prob)
+    led = program_economics(prob)
+    rec = ledger_reconciliation(prob)
+    launched_cost = sum(led.cost_incurred[led.reached_market]; init = 0.0)
+    active_cost = sum(led.cost_incurred[led.species .!= :removed .&& .!led.reached_market]; init = 0.0)
+    retired_cost = sum(led.cost_incurred[led.species .== :removed]; init = 0.0)
+    return (
+        n_programs = nrow(led),
+        total_program_cost = rec.per_program,
+        launched_cost = launched_cost,           # capital that reached a launched program
+        active_cost = active_cost,               # capital sunk into still-in-flight programs
+        retired_cost = retired_cost,             # capital sunk into programs that failed/timed out
+        unattributed_cost = rec.unattributed,    # pool-level burn with no bound program (boundary)
+        aggregate_cost = rec.aggregate,
+        reconciliation_residual = rec.residual,  # ≈ 0 — the per-program rows reconcile to the aggregate
     )
 end

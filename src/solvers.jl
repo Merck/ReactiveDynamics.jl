@@ -348,6 +348,12 @@ function evolve!(state)
     state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
 
+    # MVP finding D — per-program ledger: snapshot the spawn-phase per-transition consumption
+    # BEFORE the bind loop below mutates `allocs[j,i]` (it decrements it per bound token). Each
+    # spawned transition i consumes `spawn_allocs[:, i]`; we attribute that cost to the tokens it
+    # binds (src/ledger.jl::attribute_cost!), once the bind list is populated, just below.
+    spawn_allocs = copy(allocs)
+
     structured_token = collect(values(inners(getagent(state, "structured"))))
 
     # add spawned transitions to the heap
@@ -410,6 +416,11 @@ function evolve!(state)
                 end
             end
 
+            # MVP finding D — attribute this spawned transition's upfront resource cost
+            # (spawn_allocs[:, i]) to the program(s) it just bound (src/ledger.jl). Done here,
+            # AFTER the bind loop, so `transition.bound_structured_agents` is populated.
+            attribute_cost!(state, transition, @view spawn_allocs[:, i])
+
             context_eval(state, transition, state.wrap_fun(state.acs[i, :transPreAction]))
         end
     end
@@ -443,6 +454,10 @@ function evolve!(state)
     )
     state.u .-= sum(allocs; dims = 2)
     actual_allocs .+= sum(allocs; dims = 2)
+
+    # MVP finding D — snapshot the ongoing-phase per-transition consumption (mostly the @rate burn,
+    # e.g. the BD demo's per-tick `budget` spend) BEFORE the nonblock-bind loop mutates allocs.
+    ongoing_allocs = copy(allocs)
 
     for i in eachindex(state.ongoing_transitions)
         transition = state.ongoing_transitions[i]
@@ -494,6 +509,12 @@ function evolve!(state)
                     end
                 end
             end
+
+            # MVP finding D — attribute this in-flight transition's per-tick (rate/nonblock)
+            # resource cost to its bound program(s). `bound_structured_agents` (the @select'd token,
+            # bound at spawn) plus any nonblock tokens just bound are charged; an instance with no
+            # bound program books its burn against the unattributed bucket (src/ledger.jl).
+            attribute_cost!(state, transition, @view ongoing_allocs[:, i])
         end
     end
 
@@ -631,6 +652,13 @@ function finish!(state)
             0
         end
 
+        # MVP finding D — per-program ledger: snapshot the program(s) bound to this finishing
+        # transition (an @advance/@move RHS op moves the bound token OUT of bound_structured_agents
+        # during the loop below, so we must capture them first) and the running reward BEFORE its
+        # RHS emission, to attribute this transition's realized reward to its program(s) afterward.
+        reward_before = val_reward
+        finishing_tokens = _bound_tokens(trans_)
+
         for r in extract_reactants(trans_[:transRHS], state)
             if r.species isa Expr
                 stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
@@ -652,6 +680,12 @@ function finish!(state)
                 val_reward += state[i, :specReward] * q * stoich
             end
         end
+
+        # MVP finding D — attribute this transition's realized reward (the delta it just emitted) to
+        # the program(s) it was bound to, split evenly; an unbound (plain) reaction's reward goes to
+        # the unattributed bucket (src/ledger.jl). Use the pre-RHS snapshot so an advanced/moved
+        # program (already removed from bound_structured_agents) still receives its reward.
+        attribute_reward!(state, trans_, finishing_tokens, val_reward - reward_before)
 
         for tok in trans_[:transLHS]
             if in(:conserved, tok.modality)
@@ -873,6 +907,11 @@ function ReactionNetworkProblem(
         collect(get(keywords, :population, [])),
         Dict{String,Dict{Symbol,Any}}(),
         false,
+        # Per-program ledger (MVP finding D, src/ledger.jl): empty at construction, populated at the
+        # bind/finish sites in evolve!/finish!, reset by _reinit!.
+        Dict{String,ProgramLedger}(),
+        0.0,
+        0.0,
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -916,6 +955,9 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     end
     empty!(state.creation_counters)
     empty!(state.creation_index)
+    # Clear the per-program ledger so a re-run from the same seed rebuilds it identically (§4 D7,
+    # MVP finding D — mirrors the creation_counters reset above).
+    reset_program_ledger!(state)
     for entry in state.population
         if !(entry isa PopulationEntry)
             set_bound_transition!(entry, nothing)
@@ -971,6 +1013,12 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
             state.u' * [state[i, :specValuation] for i in parts(state, :S)],
         ),
     )
+
+    # MVP finding D — mark each live program to market (its species' specValuation) and push the
+    # per-tick per-program ledger row, in deterministic token order, right after the aggregate
+    # :valuation row so the per-program and aggregate views are consistent (src/ledger.jl).
+    attribute_valuation!(state)
+    push_program_ledger_row!(state)
 
     state.t += state.dt
 
