@@ -19,121 +19,284 @@ function lhs_predicate(lhs, type::Symbol)
     return nothing
 end
 
-"""
-Compute resource requirements given transition quantities.
-"""
-function get_reqs_init!(reqs, qs, state)
-    reqs .= 0.0
-    for i in axes(reqs, 2)
-        for tok in state[i, :transLHS]
-            !any(m -> m in tok.modality, [:rate, :nonblock]) &&
-                (reqs[tok.index, i] += qs[i] * tok.stoich)
-        end
-    end
-
-    return reqs
-end
-
-"""
-Compute resource requirements given transition quantities.
-"""
-function get_reqs_ongoing!(reqs, qs, state)
-    reqs .= 0.0
-    for i in eachindex(state.ongoing_transitions)
-        for tok in state.ongoing_transitions[i][:transLHS]
-            in(:rate, tok.modality) &&
-                (state.ongoing_transitions[i][:transCycleTime] > 0) &&
-                (reqs[tok.index, i] += qs[i] * tok.stoich * state.dt)
-            if in(:rate, tok.modality) && in(tok.species, state.structured_token)
-                error(
-                    "Modality `:rate` is not supported for structured species in transition $(trans[:transName]).",
-                )
-            end
-            in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
-        end
-    end
-
-    return reqs
-end
-
-"""
-Given requirements, return available allocation.
-"""
-function get_allocs!(reqs, u, state, priorities, strategy = :weighted)
-    return if strategy == :weighted
-        alloc_weighted!(reqs, u, priorities, state)
-    else
-        alloc_greedy!(reqs, u, priorities, state)
-    end
-end
-
-function alloc_weighted!(reqs, u, priorities, state)
-    allocs = zero(reqs)
-    for i in axes(reqs, 1)
-        s = sum(reqs[i, :])
-        u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
-        foreach(j -> allocs[i, j] = reqs[i, j] * priorities[j], 1:size(reqs, 2))
-        s = sum(allocs[i, :])
-        allocs[i, :] .*= (s == 0) ? 0.0 : (max(0, u[i]) / s)
-    end
-
-    return allocs
-end
-
-function alloc_greedy!(reqs, u, priorities, state)
-    allocs = zero(reqs)
-    sorted_trans = sort(1:size(reqs, 2); by = i -> -priorities[i])
-    for i in axes(reqs, 1)
-        s = sum(reqs[i, :])
-        u[i] >= s && (allocs[i, :] .= reqs[i, :]; continue)
-        a = u[i]
-        j = 1
-        while a > 0 && j <= size(reqs, 2)
-            allocs[i, sorted_trans[j]] = min(reqs[i, sorted_trans[j]], a)
-            a -= allocs[i, sorted_trans[j]]
-            j += 1
-        end
-    end
-
-    return allocs
-end
-
-"""
-Given resource requirements and available allocations, output resulting shift size for each transition.
-"""
-function get_frac_satisfied(allocs, reqs, state)
-    for i in eachindex(allocs)
-        allocs[i] = min(1, (reqs[i] == 0.0 ? 1 : (allocs[i] / reqs[i])))
-    end
-    qs = vec(minimum(allocs; dims = 1))
-    foreach(i -> allocs[:, i] .= reqs[:, i] * qs[i], 1:size(reqs, 2))
-
-    return qs
-end
-
 isinteger(x::Number) = x == trunc(x)
 
+# ── Priority-weighted progressive-filling allocator (ADR 0002) ───────────────────────────
+#
+# Each tick, transition instances compete for the finite shared supply `u[s]`. Demand is
+# conjunctive (Leontief): an instance needs ALL of its required species at once, so a partial
+# share of one species without the others is wasted. ADR 0002 fixes the policy as priority-
+# weighted max-min fairness, computed by weighted progressive filling (water-filling). The
+# single allocator below replaces the old seven-function tangle (`get_reqs_init!`,
+# `get_reqs_ongoing!`, `get_allocs!`/`alloc_weighted!`/`alloc_greedy!`, `get_frac_satisfied`,
+# `get_init_satisfied`) and the `state.p[:strategy]` `:weighted`/`:greedy` switch — strict
+# greedy is just the `priority → ∞` limit of weighted filling and needs no separate path.
+#
+# The allocator is RNG-free and deterministic: no `sort` with unstable ties; the only tie-break
+# (integer top-up) is a stable `(-priority, index)` order. It is work-conserving (a resource is
+# left idle only once every transition that could use it is frozen) and conjunctive-consistent
+# (`alloc[s,t] = f[t]·req[s,t]` by construction — nothing is stranded).
+
 """
-Given available allocations and qties of transitions requested to spawn, return number of spawned transitions. Update `alloc` to match actual allocation.
+Struct-of-arrays scratch for the progressive-filling allocator (ADR 0002 "Proposed Julia
+surface"). One workspace is built per `evolve!` call site each tick; `req` is filled by
+`build_requirements!`. The other fields are the iteration state:
+
+  - `req::Matrix` — S×T, units of species `s` per unit fill of transition `t`.
+  - `f::Vector`   — T, the per-transition fill fraction (the allocator's output).
+  - `r::Vector`   — S, remaining supply during filling.
+  - `active`      — T, which transitions are still being filled.
+  - `D::Vector`   — S, per-species weighted demand of the currently active transitions.
+
+`AllocWorkspace(req::Matrix)` builds a workspace sized to a given requirement matrix (the
+unit-test entry point); `AllocWorkspace(nS, nT)` allocates a zeroed workspace of a given shape.
 """
-function get_init_satisfied(allocs, qs, state)
-    reqs = zero(allocs)
-    for i in axes(allocs, 2)
-        all(allocs[:, i] .>= 0) || (allocs[:, i] .= 0.0; qs[i] = 0)
-        for tok in state[i, :transLHS]
-            !any(m -> m in tok.modality, [:rate, :nonblock]) &&
-                (reqs[tok.index, i] += tok.stoich)
+struct AllocWorkspace
+    req::Matrix{Float64}     # S×T, rebuilt each call
+    f::Vector{Float64}       # T
+    r::Vector{Float64}       # S
+    active::BitVector        # T
+    D::Vector{Float64}       # S
+end
+
+function AllocWorkspace(nS::Integer, nT::Integer)
+    return AllocWorkspace(
+        zeros(Float64, nS, nT),
+        zeros(Float64, nT),
+        zeros(Float64, nS),
+        falses(nT),
+        zeros(Float64, nS),
+    )
+end
+
+function AllocWorkspace(req::AbstractMatrix)
+    return AllocWorkspace(copy(Matrix{Float64}(req)), size(req)...)
+end
+function AllocWorkspace(req::Matrix{Float64}, nS::Integer, nT::Integer)
+    return AllocWorkspace(
+        req,
+        zeros(Float64, nT),
+        zeros(Float64, nS),
+        falses(nT),
+        zeros(Float64, nS),
+    )
+end
+
+"""
+    build_requirements!(ws, state, qs; counted, dt_scale, ongoing)
+
+Fill `ws.req[s,t]` — the per-unit-fill demand of each transition — from the transitions' LHS
+tokens. One parametrized builder for both phases (replaces `get_reqs_init!`/`get_reqs_ongoing!`):
+
+  - **Spawn** (`ongoing=false`): `counted` excludes `:rate` and `:nonblock` (upfront tokens only),
+    `dt_scale = 1`. `qs[t]` is the desired spawn count of recipe row `t`.
+  - **Ongoing** (`ongoing=true`): include `:rate` tokens scaled by `dt_scale = state.dt` (only when
+    the in-flight transition's `transCycleTime > 0`) and `:nonblock` tokens unscaled. `qs[i]` is the
+    in-flight instance count of `state.ongoing_transitions[i]`.
+
+The modality rules match the deleted builders exactly; the conjunctive `req[s,t]` here is the
+demand per unit fill, so `alloc[s,t] = f[t]·req[s,t]`.
+"""
+function build_requirements!(
+    ws::AllocWorkspace,
+    state,
+    qs;
+    counted = nothing,
+    dt_scale = 1,
+    ongoing = false,
+)
+    reqs = ws.req
+    reqs .= 0.0
+    if ongoing
+        for i in eachindex(state.ongoing_transitions)
+            for tok in state.ongoing_transitions[i][:transLHS]
+                if in(:rate, tok.modality)
+                    in(tok.species, state.structured_token) && error(
+                        "Modality `:rate` is not supported for structured species in transition $(state.ongoing_transitions[i][:transName]).",
+                    )
+                    (state.ongoing_transitions[i][:transCycleTime] > 0) &&
+                        (reqs[tok.index, i] += qs[i] * tok.stoich * dt_scale)
+                end
+                in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
+            end
+        end
+    else
+        for i in axes(reqs, 2)
+            for tok in state[i, :transLHS]
+                # Spawn counts only "upfront" tokens: everything that is neither `:rate`
+                # (consumed continuously while in-flight) nor `:nonblock` (claimed but not held).
+                !any(m -> m in tok.modality, [:rate, :nonblock]) &&
+                    (reqs[tok.index, i] += qs[i] * tok.stoich)
+            end
         end
     end
 
-    for i in eachindex(allocs)
-        allocs[i] = reqs[i] == 0.0 ? Inf : floor(allocs[i] / reqs[i])
+    return reqs
+end
+
+"""
+    progressive_fill!(ws, u, w; fmax = fill(Inf, length(w))) -> f
+
+Weighted progressive filling (water-filling) — the unified allocator core (ADR 0002 "Algorithm").
+Returns the per-transition fill-fraction vector `f` (also stored in `ws.f`); the caller derives
+`alloc[s,t] = ws.req[s,t] * f[t]` and debits `state.u .-= sum(alloc; dims=2)`.
+
+Inputs: `ws.req[s,t] ≥ 0` (rebuilt by `build_requirements!`), supply `u[s] ≥ 0`, fill-rate weights
+`w[t] = priority[t] ≥ 0`, and per-transition caps `fmax[t]` (desired instances/progress; `Inf`
+= fill until a required resource exhausts).
+
+Every active transition's fill grows at rate `w[t]`; at each step the largest step `dτ` is taken
+that neither overdraws a resource nor overshoots a cap, then any transition that hit its cap or
+that needs a now-saturated resource is frozen. Properties (ADR 0002):
+
+  - **work-conserving** — a resource is idle only once every transition wanting it is frozen;
+  - **conjunctive-consistent** — `alloc = f' .* req`, so nothing is stranded;
+  - **deterministic** — no RNG, no unstable sort; simultaneous freezes are order-independent.
+
+**Zero-priority "leftover only" — two-stage** (ADR 0002 Resolved #3). `w[t] = 0` means "run only
+from genuinely leftover resource": stage 1 fills the positive-priority transitions; stage 2 fills
+the zero-priority transitions, at equal weight, from the supply that stage 1 left behind. A
+zero-priority transition therefore never competes with positive-priority demand and advances only
+if positive-priority demand did not exhaust its required species.
+"""
+function progressive_fill!(ws::AllocWorkspace, u, w; fmax = fill(Inf, length(w)))
+    nT = length(w)
+    f = ws.f
+    fill!(f, 0.0)
+
+    # Stage 1: positive-priority tier fills from the full supply.
+    pos = [t for t = 1:nT if w[t] > 0]
+    _fill_tier!(ws, u, w, fmax, pos)
+
+    # Stage 2: zero-priority tier fills the leftover, at equal weight (max-min fair). Recover the
+    # residual supply after stage 1, then fill the w[t]==0 transitions with a flat unit weight.
+    zero_tier = [t for t = 1:nT if w[t] == 0]
+    if !isempty(zero_tier)
+        r = ws.r
+        copyto!(r, u)
+        for t = 1:nT, s in axes(ws.req, 1)
+            r[s] -= ws.req[s, t] * f[t]
+        end
+        @. r = max(0.0, r)
+        _fill_tier!(ws, r, fill(1.0, nT), fmax, zero_tier)
     end
 
-    foreach(i -> qs[i] = min(qs[i], minimum(allocs[:, i])), 1:size(reqs, 2))
-    foreach(i -> allocs[:, i] .= reqs[:, i] * qs[i], 1:size(reqs, 2))
+    return f
+end
 
-    return qs
+# Core water-filling loop restricted to a tier of transition indices `tier`, drawing from supply
+# `supply` with weights `weights` and caps `fmax`. Advances `ws.f[t]` for t in the tier in place;
+# transitions outside the tier are untouched. Terminates in at most S+|tier| iterations because
+# each iteration freezes ≥1 transition or saturates ≥1 resource.
+function _fill_tier!(ws::AllocWorkspace, supply, weights, fmax, tier)
+    isempty(tier) && return ws.f
+    f = ws.f
+    r = ws.r
+    active = ws.active
+    D = ws.D
+    nS = size(ws.req, 1)
+
+    copyto!(r, supply)
+    fill!(active, false)
+
+    # Demand-free transitions (positive cap, no positive resource demand) fill immediately and
+    # consume nothing; others with a positive cap and positive weight start active.
+    for t in tier
+        has_demand = any(s -> ws.req[s, t] > 0, 1:nS)
+        if fmax[t] > 0 && !has_demand
+            f[t] = fmax[t]
+        elseif fmax[t] > f[t] && weights[t] > 0 && has_demand
+            active[t] = true
+        end
+    end
+
+    tol = 1e-12
+    while any(active)
+        # 1. largest fill-step τ that neither overdraws a resource nor overshoots a cap.
+        dτ = Inf
+        fill!(D, 0.0)
+        for t in tier
+            active[t] || continue
+            for s = 1:nS
+                D[s] += weights[t] * ws.req[s, t]
+            end
+        end
+        for s = 1:nS
+            D[s] > 0 && (dτ = min(dτ, r[s] / D[s]))
+        end
+        for t in tier
+            active[t] && (dτ = min(dτ, (fmax[t] - f[t]) / weights[t]))
+        end
+        isfinite(dτ) || break
+
+        # 2. advance all active fills and debit resources.
+        for t in tier
+            active[t] && (f[t] += weights[t] * dτ)
+        end
+        for s = 1:nS
+            r[s] = max(0.0, r[s] - D[s] * dτ)
+        end
+
+        # 3. freeze transitions that hit their cap, or that need a now-saturated resource.
+        for t in tier
+            active[t] && f[t] >= fmax[t] - tol && (active[t] = false; f[t] = fmax[t])
+        end
+        for s = 1:nS
+            if r[s] <= tol
+                for t in tier
+                    active[t] && ws.req[s, t] > 0 && (active[t] = false)
+                end
+            end
+        end
+    end
+
+    return f
+end
+
+"""
+    spawn_integer!(ws, u, w, q_desired) -> Vector{Int}
+
+Integer spawn wrapper (ADR 0002 "Spawn phase"). Runs `progressive_fill!` with `fmax = q_desired`
+to get the real-valued fair fill `f`, floors it to whole instances `n = floor.(f)`, then does a
+**deterministic priority-ordered integer top-up**: with the supply left after the floored grants,
+iterate transitions in `(-priority, index)` order (priority descending, index ascending as the
+stable tie-break) and, while a whole additional instance fits, grant it; repeat until none fits.
+
+Keeps spawn counts integral while staying work-conserving and deterministic. `ws.req` must already
+hold the spawn requirements (call `build_requirements!` first). Replaces `get_init_satisfied`.
+"""
+function spawn_integer!(ws::AllocWorkspace, u, w, q_desired)
+    nT = length(w)
+    fmax = Float64.(q_desired)
+    progressive_fill!(ws, u, w; fmax = fmax)
+
+    n = floor.(Int, ws.f)
+
+    # Residual supply after the floored grants.
+    r = ws.r
+    copyto!(r, u)
+    for t = 1:nT, s in axes(ws.req, 1)
+        r[s] -= ws.req[s, t] * n[t]
+    end
+
+    # Deterministic top-up: (-priority, index) order, grant whole instances while they fit.
+    order = sort(1:nT; by = t -> (-w[t], t))
+    progress = true
+    while progress
+        progress = false
+        for t in order
+            n[t] >= q_desired[t] && continue
+            fits = all(s -> r[s] >= ws.req[s, t] - 1e-12, axes(ws.req, 1))
+            fits || continue
+            for s in axes(ws.req, 1)
+                r[s] -= ws.req[s, t]
+            end
+            n[t] += 1
+            progress = true
+        end
+    end
+
+    return n
 end
 
 """
@@ -143,7 +306,6 @@ function evolve!(state)
     actual_allocs = zero(state.u)
 
     ## schedule new transitions
-    reqs = zeros(nparts(state, :S), nparts(state, :T))
     qs = zeros(nparts(state, :T))
 
     foreach(
@@ -165,11 +327,15 @@ function evolve!(state)
         qs[i] = min(capacity, new_instances)
     end
 
-    reqs = get_reqs_init!(reqs, qs, state)
-
-    allocs = get_allocs!(reqs, state.u, state, state[:, :transPriority], state.p[:strategy])
-
-    qs .= get_init_satisfied(allocs, qs, state)
+    # Spawn allocation (ADR 0002). Build PER-INSTANCE upfront requirements (qs=1) so a unit of
+    # fill is one instance, then `spawn_integer!` returns whole instance counts under priority-
+    # weighted progressive filling + a deterministic integer top-up. `allocs[s,t]` is the realized
+    # demand (per-instance req × granted count) consumed below and read by the structured bind loop.
+    ws = AllocWorkspace(nparts(state, :S), nparts(state, :T))
+    build_requirements!(ws, state, ones(nparts(state, :T)); ongoing = false)
+    n = spawn_integer!(ws, state.u, state[:, :transPriority], qs)
+    allocs = ws.req .* reshape(Float64.(n), 1, :)
+    qs .= n
 
     push!(
         state.log,
@@ -248,19 +414,22 @@ function evolve!(state)
         end
     end
 
-    ## evolve ongoing transitions 
-    reqs = zeros(nparts(state, :S), length(state.ongoing_transitions))
+    ## evolve ongoing transitions
+    # Ongoing allocation (ADR 0002). `req` is the full per-tick demand of each in-flight instance
+    # group (instance count × stoich; `:rate` scaled by dt when transCycleTime>0, `:nonblock`
+    # unscaled). Each group fills at most fraction 1.0 of its requested progress this tick
+    # (`fmax = 1`), so the fill fraction `f[i]` ∈ [0,1] IS the saturation `qs[i]` and progress
+    # advances by `qs[i]*dt`. Priority is re-read FRESH per tick from the recipe row `t.i`
+    # (`state[t.i, :transPriority]` → per-tick context_eval), NOT the spawn-time snapshot — so a
+    # time-varying transPriority applies to in-flight instances too (ADR 0002 "fresh per tick").
+    nong = length(state.ongoing_transitions)
+    ws = AllocWorkspace(nparts(state, :S), nong)
     qs = map(t -> t.q, state.ongoing_transitions)
-
-    get_reqs_ongoing!(reqs, qs, state)
-    allocs = get_allocs!(
-        reqs,
-        state.u,
-        state,
-        map(t -> t[:transPriority], state.ongoing_transitions),
-        state.p[:strategy],
-    )
-    qs .= get_frac_satisfied(allocs, reqs, state)
+    build_requirements!(ws, state, qs; ongoing = true, dt_scale = state.dt)
+    w = [state[t.i, :transPriority] for t in state.ongoing_transitions]
+    progressive_fill!(ws, state.u, w; fmax = fill(1.0, nong))
+    qs = copy(ws.f)
+    allocs = ws.req .* reshape(qs, 1, :)
     push!(
         state.log,
         (
@@ -609,7 +778,10 @@ function ReactionNetworkProblem(
     ])
 
     merge!(keywords, Dict(collect(kwargs)))
-    merge!(keywords, Dict(:strategy => get(keywords, :alloc_strategy, :weighted)))
+    # `alloc_strategy` (legacy :weighted/:greedy switch) is accepted and IGNORED: ADR 0002 makes
+    # the priority-weighted progressive-filling allocator the single policy (strict greedy is its
+    # priority→∞ limit, not a separate path), so the allocator no longer reads `state.p[:strategy]`.
+    # A JSON/DSL model may still carry the key; it is a harmless no-op rather than a hard error.
 
     keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
 
@@ -680,7 +852,7 @@ function ReactionNetworkProblem(
         attrs,
         transition_recipes,
         u0_init,
-        merge(p, Dict(:strategy => get(keywords, :alloc_strategy, :weighted))),
+        p,
         keywords[:tspan][1],
         structured_token_names,
         keywords[:tspan],

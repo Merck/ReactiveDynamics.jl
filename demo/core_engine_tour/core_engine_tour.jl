@@ -256,26 +256,34 @@ banner("§4. The priority-weighted allocator under genuine contention (ADR 0002)
 # =============================================================================
 #
 # When several transitions want the same scarce pool in one tick, the engine
-# rations it with a PRIORITY-WEIGHTED allocator. The core routine is
-# `alloc_weighted!(reqs, supply, weights, state)`. The crucial subtlety: the
-# split only happens under GENUINE CONTENTION — if supply ≥ total demand, every
-# request is granted in full (no scaling). Let's see both regimes directly.
+# rations it with a PRIORITY-WEIGHTED progressive-filling allocator (ADR 0002).
+# The core routine is `progressive_fill!(ws, supply, weights; fmax)`, returning a
+# per-transition fill fraction `f`; the realized allocation is `ws.req .* f'`.
+# Each transition's fill grows at a rate proportional to its priority weight; a
+# transition freezes when it hits its cap (`fmax`) or a resource it needs runs
+# out. It is WORK-CONSERVING (nothing usable is left idle) and conjunctive-
+# consistent (nothing is stranded). Let's see both regimes directly.
 #
-# Two requesters each demand 5 from a supply of 8 (total demand 10 > 8 ⇒
-# contended), with priority weights 1 and 3. At equal demand the split equals
-# the priority ratio, and it is WORK-CONSERVING (the whole supply is used).
+# Two requesters each demand 5 from a supply of 8 (uncapped, fmax=Inf ⇒ fill
+# until the resource exhausts), with priority weights 1 and 3. At equal demand
+# the split equals the priority ratio, and the whole supply is used.
 
 reqs = reshape([5.0, 5.0], 1, 2)        # req[resource, transition]
 supply = [8.0]
 weights = [1.0, 3.0]
-allocs = vec(ReactiveDynamics.alloc_weighted!(copy(reqs), supply, weights, nothing))
-println("Direct call — contended (demand 10 > supply 8), weights 1:3")
+ws = ReactiveDynamics.AllocWorkspace(reqs)
+f = ReactiveDynamics.progressive_fill!(ws, supply, weights; fmax = [Inf, Inf])
+allocs = vec(ws.req .* f')
+println("Direct call — contended (supply 8 < uncapped demand), weights 1:3")
 println("  allocation          : ", allocs, "  (ratio ", round(allocs[2] / allocs[1]; digits = 2),
         " ≈ 3.0, the priority ratio)")
 println("  sum allocated       : ", sum(allocs), "  (= supply 8 ⇒ work-conserving)")
 
-# The no-contention regime: bump supply above total demand and nothing scales.
-allocs_slack = vec(ReactiveDynamics.alloc_weighted!(copy(reqs), [20.0], weights, nothing))
+# The no-contention regime: cap each requester at its full demand (fmax = 1 unit
+# of fill each) over an ample supply — both granted in full, priority irrelevant.
+ws_slack = ReactiveDynamics.AllocWorkspace(reqs)
+f_slack = ReactiveDynamics.progressive_fill!(ws_slack, [20.0], weights; fmax = [1.0, 1.0])
+allocs_slack = vec(ws_slack.req .* f_slack')
 println("Direct call — SLACK (supply 20 ≥ demand 10)")
 println("  allocation          : ", allocs_slack, "  (granted in full; priority is irrelevant when nothing is scarce)")
 
@@ -544,7 +552,7 @@ println("""
       `capacity` bound on concurrency, and `maxlifetime` timeout.
   §3  Resource modalities: raw-consumed vs @conserved vs @rate vs @nonblock vs
       the stacked rented hold — plus the @rate-with-cycletime=0 foot-gun.
-  §4  The priority-weighted allocator: alloc_weighted! directly (contended and
+  §4  The priority-weighted allocator: progressive_fill! directly (contended and
       slack), then genuine in-model contention where higher priority wins.
   §5  Genesis: Poisson source (∅, dt-invariant), token-gated flow/routing, and
       scheduled @periodic batch intake.

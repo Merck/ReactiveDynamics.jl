@@ -10,31 +10,29 @@ using Random, Distributions, DataFrames
 
 @testset "Allocation (ADR 0002), Conservation & Non-negativity (§3.4), Instance Lifecycle (§2.4/§3.2)" begin
 
-    # [alloc-nonneg-capacity-current] tier=T1-characterization expectedStatus=pass-now
+    # [alloc-nonneg-capacity] tier=T1-characterization expectedStatus=pass-now
     # contract: ADR 0002 'Invariant test plan' (non-negativity & capacity); CONTRACT §3.4 INV1
-    # note: Locks in the two universally-true allocation guards on the CURRENT alloc_weighted!
-    # note: (src/solvers.jl:61-72). Verified: returns the raw reqs here (u>=total demand so no contention), all
-    # note: >=0 and within supply. The `state` arg is unused (dead arg, passed as nothing). This
-    # note: characterization survives the swap to progressive_fill! since the same two invariants are restated
-    # note: in ADR 0002.
-    @testset "alloc_weighted! output is non-negative and never exceeds supply (current engine lock-in)" begin
-        RD = ReactiveDynamics; reqs = [1.0 1.0; 2.0 1.0]; u = [10.0, 10.0]; w = [1.0, 1.0]
-        allocs = RD.alloc_weighted!(copy(reqs), u, w, nothing)
+    # note: The two universally-true allocation guards, now on the progressive_fill! allocator
+    # note: (ADR 0002 replaced the alloc_weighted!/alloc_greedy! switch). With fmax=[1,1] each
+    # note: transition fills at most its full per-instance demand and u >= total demand, so the
+    # note: alloc is the raw req — all >=0 and within supply.
+    @testset "progressive_fill! output is non-negative and never exceeds supply" begin
+        RD = ReactiveDynamics; req = [1.0 1.0; 2.0 1.0]; ws = RD.AllocWorkspace(req); u = [10.0, 10.0]; w = [1.0, 1.0]
+        f = RD.progressive_fill!(ws, u, w; fmax = [1.0, 1.0]); allocs = ws.req .* f'
         @test all(allocs .>= 0)
         @test all(vec(sum(allocs; dims = 2)) .<= u .+ 1e-9)
     end
 
-    # [alloc-priority-ratio-contended-current] tier=T1-characterization expectedStatus=pass-now
+    # [alloc-priority-ratio-contended] tier=T1-characterization expectedStatus=pass-now
     # contract: ADR 0002 priority semantics: 'at equal demand the split equals the priority ratio (1 vs 3 -> 1:3)'
-    # note: Verified live: alloc_weighted! gives [2.0, 6.0] for (req=5,5; u=8; w=1,3). NOTE the inputs must be
-    # note: genuinely contended (total demand >= supply) or the solvers.jl:65 `u>=s` shortcut returns reqs
-    # note: unscaled — that shortcut is exactly why the ADR's literal priority-split inputs (req=1 each, u=10)
-    # note: are NOT reproducible here (verified: returns [1,1]). This T1 pins the one allocation behavior that
-    # note: already matches the ADR; the literal ADR oracle is the separate T2 below.
-    @testset "Single contended resource at equal demand splits by exact priority ratio (current engine)" begin
-        # genuine contention: total demand 10 == supply 8, so the u>=s shortcut (solvers.jl:65) does NOT fire
-        RD = ReactiveDynamics; reqs = reshape([5.0, 5.0], 1, 2); u = [8.0]; w = [1.0, 3.0]
-        allocs = vec(RD.alloc_weighted!(copy(reqs), u, w, nothing))
+    # note: The headline guarantee on the new allocator: a single contended resource (u=8, two
+    # note: trans need 5 each, fmax=Inf) splits in the exact priority ratio 1:3 -> f=[1.0,3.0],
+    # note: alloc=[2,6]. Work-conserving (full 8 used). Unlike the old alloc_weighted! this no
+    # note: longer needs total-demand>=supply to avoid a no-contention shortcut — fmax=Inf means
+    # note: fill until the resource exhausts.
+    @testset "Single contended resource at equal demand splits by exact priority ratio" begin
+        RD = ReactiveDynamics; req = reshape([5.0, 5.0], 1, 2); ws = RD.AllocWorkspace(req); u = [8.0]; w = [1.0, 3.0]
+        f = RD.progressive_fill!(ws, u, w; fmax = [Inf, Inf]); allocs = vec(ws.req .* f')
         @test allocs[2] / allocs[1] ≈ 3.0
         @test sum(allocs) ≈ 8.0  # work-conserving on a single resource
     end
@@ -47,15 +45,13 @@ using Random, Distributions, DataFrames
     # note: means 'fill until the resource exhausts', which is the semantic the current code lacks. Target
     # note: surface per ADR 0002 'Proposed Julia surface'.
     @testset "progressive_fill! priority-split: u=10, two trans need 1 each, w=1 vs 3 -> f=[2.5,7.5]" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; ws = RD.AllocWorkspace(reshape([1.0,1.0],1,2)); # req[s,t]; u = [10.0]; w = [1.0, 3.0]; fmax = [Inf, Inf]
-        f = RD.progressive_fill!(ws, u, w; fmax = fmax)  # target API; alloc[s,t] = f' .* ws.req
+        RD = ReactiveDynamics
+        ws = RD.AllocWorkspace(reshape([1.0, 1.0], 1, 2))  # req[s,t]
+        u = [10.0]; w = [1.0, 3.0]; fmax = [Inf, Inf]
+        f = RD.progressive_fill!(ws, u, w; fmax = fmax)  # alloc[s,t] = f' .* ws.req
         @test f ≈ [2.5, 7.5]
         @test f[2] / f[1] ≈ w[2] / w[1]
-        @test sum(f' .* ws.req) ≈ 10.0  # resource fully consumed (work-conserving)
-        =#
+        @test sum(ws.req .* f') ≈ 10.0  # resource fully consumed (work-conserving)
     end
 
     # [alloc-conjunctive-no-stranding-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -64,16 +60,19 @@ using Random, Distributions, DataFrames
     # note: get_frac_satisfied leaves resource used = [2.0, 3.0] of [10,10] (massive stranding) and qs=[1,1]
     # note: instead of f=[3.33,3.33]. This test encodes the target progressive-fill behavior and errors until
     # note: the new allocator lands.
-    @testset "Conjunctive 2-resource consistency: alloc ≈ f'.*req, both resources fully used, nothing stranded" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = [1.0 1.0; 2.0 1.0]; ws = RD.AllocWorkspace(req); u = [10.0, 10.0]; w = [1.0, 1.0]
+    @testset "Conjunctive 2-resource consistency: alloc ≈ f'.*req, binding resource fully used, nothing stranded" begin
+        RD = ReactiveDynamics
+        req = [1.0 1.0; 2.0 1.0]; ws = RD.AllocWorkspace(req); u = [10.0, 10.0]; w = [1.0, 1.0]
         f = RD.progressive_fill!(ws, u, w; fmax = [Inf, Inf]); alloc = ws.req .* f'
         @test alloc ≈ ws.req .* f'  # conjunctive consistency by construction
-        @test f ≈ [10/3, 10/3] atol=1e-3
-        @test vec(sum(alloc; dims = 2)) ≈ [10.0, 10.0]  # both resources at capacity, no stranding
-        =#
+        @test f ≈ [10 / 3, 10 / 3] atol = 1e-3
+        # ADR-0002 oracle f=[10/3,10/3]: species 2 (demand D=3) is the BINDING resource and
+        # saturates first (2·10/3 + 1·10/3 = 10), freezing BOTH transitions. Species 1 (demand
+        # D=2) is then at 10/3+10/3 = 20/3 with 10/3 left idle — work-conserving, because no
+        # unfrozen transition can use it. (The ADR table's "both resources fully used" gloss is
+        # only true for the SYMMETRIC 'Differing binding res' row req=[[2,1],[1,2]]; for THIS
+        # asymmetric req the binding-resource fill is the correct, verified value.)
+        @test vec(sum(alloc; dims = 2)) ≈ [20 / 3, 10.0]  # binding resource (2) at capacity, no stranding
     end
 
     # [alloc-work-conservation-capped-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -82,15 +81,12 @@ using Random, Distributions, DataFrames
     # note: strands the freed 3 units). Requires fmax-capping support in progressive_fill!, which does not exist
     # note: yet. ADR oracle is explicit that the naive split would use only 7/10.
     @testset "Work-conservation: T1 capped at fmax=2 -> leftover flows to T2, f=[2,8], 10/10 used" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = reshape([1.0, 1.0], 1, 2); ws = RD.AllocWorkspace(req); u = [10.0]; w = [1.0, 1.0]; fmax = [2.0, Inf]
+        RD = ReactiveDynamics
+        req = reshape([1.0, 1.0], 1, 2); ws = RD.AllocWorkspace(req); u = [10.0]; w = [1.0, 1.0]; fmax = [2.0, Inf]
         f = RD.progressive_fill!(ws, u, w; fmax = fmax)
         @test f ≈ [2.0, 8.0]
         @test sum(ws.req .* f') ≈ 10.0  # no usable resource left idle while T2 still wants it
         @test f[1] ≈ fmax[1]  # T1 frozen exactly at its cap
-        =#
     end
 
     # [alloc-priority-zero-leftover-only-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -99,15 +95,13 @@ using Random, Distributions, DataFrames
     # note: semantics (ADR 0002 Resolved #3). The current alloc_weighted! has no leftover tier — a zero priority
     # note: just yields a zero weight column and zero alloc, not the two-stage leftover fill. Target API only.
     @testset "priority=0 is leftover-only (two-stage): T1(prio1,cap4) + T2(prio0) over u=10 -> f=[4,6]; T1 uncapped -> f=[10,0]" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = reshape([1.0, 1.0], 1, 2); ws = RD.AllocWorkspace(req); u = [10.0]
-        f_a = RD.progressive_fill!(ws, copy(u), [1.0, 0.0]; fmax = [4.0, Inf]); f_b = RD.progressive_fill!(ws, copy(u), [1.0, 0.0]; fmax = [Inf, Inf])
+        RD = ReactiveDynamics
+        req = reshape([1.0, 1.0], 1, 2); ws = RD.AllocWorkspace(req); u = [10.0]
+        f_a = copy(RD.progressive_fill!(ws, copy(u), [1.0, 0.0]; fmax = [4.0, Inf]))
+        f_b = copy(RD.progressive_fill!(ws, copy(u), [1.0, 0.0]; fmax = [Inf, Inf]))
         @test f_a ≈ [4.0, 6.0]  # zero-prio T2 takes only the leftover after T1's cap
         @test f_b ≈ [10.0, 0.0]  # uncapped positive-prio T1 starves zero-prio T2
         @test f_b[2] == 0.0  # priority=0 never advances under contention
-        =#
     end
 
     # [alloc-weighted-conjunctive-ratio-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -116,15 +110,12 @@ using Random, Distributions, DataFrames
     # note: reqs (u for X=6 >= total X demand 2 trips the shortcut) giving qs=[1,1], no weighting. Target
     # note: allocator only.
     @testset "Weighted + conjunctive: shared scarce X (u=6), w=1 vs 2 -> f=[2,4], X used 6/6, ratio exactly 2:1" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = [1.0 1.0; 1.0 1.0]; ws = RD.AllocWorkspace(req); u = [6.0, 100.0]; w = [1.0, 2.0]
+        RD = ReactiveDynamics
+        req = [1.0 1.0; 1.0 1.0]; ws = RD.AllocWorkspace(req); u = [6.0, 100.0]; w = [1.0, 2.0]
         f = RD.progressive_fill!(ws, u, w; fmax = [Inf, Inf])
         @test f ≈ [2.0, 4.0]
         @test f[2] / f[1] ≈ 2.0
         @test sum((ws.req .* f')[1, :]) ≈ 6.0  # the binding resource X fully used
-        =#
     end
 
     # [alloc-3way-stranding-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -132,15 +123,12 @@ using Random, Distributions, DataFrames
     # note: Generalizes work-conservation to >2 contenders with even redistribution of freed capacity. Target
     # note: progressive_fill! only.
     @testset "3-way redistribution: u=12, w=1, T1 capped at 2 -> f=[2,5,5], freed amount split evenly, 12/12 used" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = reshape([1.0, 1.0, 1.0], 1, 3); ws = RD.AllocWorkspace(req); u = [12.0]; w = [1.0, 1.0, 1.0]; fmax = [2.0, Inf, Inf]
+        RD = ReactiveDynamics
+        req = reshape([1.0, 1.0, 1.0], 1, 3); ws = RD.AllocWorkspace(req); u = [12.0]; w = [1.0, 1.0, 1.0]; fmax = [2.0, Inf, Inf]
         f = RD.progressive_fill!(ws, u, w; fmax = fmax)
         @test f ≈ [2.0, 5.0, 5.0]
         @test sum(ws.req .* f') ≈ 12.0
         @test f[2] ≈ f[3]  # the 10 freed/remaining units split evenly among absorbers
-        =#
     end
 
     # [alloc-integer-spawn-topup-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -150,16 +138,13 @@ using Random, Distributions, DataFrames
     # note: (solvers.jl:110-128) floors per-resource but has no documented deterministic top-up rule. Target
     # note: surface.
     @testset "spawn_integer!: u=7, each instance needs 2, want 5 each, equal prio -> n=[2,1], leftover 1, deterministic" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        const RD = ReactiveDynamics; req = reshape([2.0, 2.0], 1, 2); ws = RD.AllocWorkspace(req); u = [7.0]; w = [1.0, 1.0]; q_desired = [5, 5]
-        n = RD.spawn_integer!(ws, u, w, q_desired)  # target API, returns Vector{Int}
+        RD = ReactiveDynamics
+        req = reshape([2.0, 2.0], 1, 2); ws = RD.AllocWorkspace(req); u = [7.0]; w = [1.0, 1.0]; q_desired = [5, 5]
+        n = RD.spawn_integer!(ws, u, w, q_desired)  # returns Vector{Int}
         @test n isa Vector{Int}
         @test n == [2, 1]  # 1.75 each floored to [1,1], deterministic priority/index top-up grants the +1 to T1 (lower index on ties)
         @test sum(ws.req[1, :] .* n) <= u[1]  # integral allocation fits in supply
         @test eltype(n) === Int && all(n .>= 0)
-        =#
     end
 
     # [alloc-determinism-construction-seed] tier=T1-characterization expectedStatus=pass-now
@@ -276,14 +261,29 @@ using Random, Distributions, DataFrames
     # note: expectation but only becomes a DETERMINISTIC test under D8 seeding. Errors-until-implemented on the
     # note: rng threading.
     @testset "PoS Binomial: over an ensemble, ~q*pos firings succeed (mean of successful completions ≈ pos)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        function member(k); acs = @ReactionNetworkSchema begin; @deterministic(1.0), budget --> product, name => job, cycletime => 0.0, probability => 0.3; end; @prob_init acs budget=1 product=0; @prob_params acs; @prob_meta acs tspan=200 dt=1.0; prob = ReactionNetworkProblem(acs; seed = hash((42, k))); simulate(prob); prob.sol.product[end]; end; results = [member(k) for k in 1:50]
-        run a 50-member ensemble, each seeded deterministically from a root seed + member index (D8); each completes ~200 single-tick instances with pos=0.3
+        function member(k)
+            # NB the LHS token is @conserved(budget): the reference block's stated premise is that
+            # ~200 single-tick instances complete over tspan=200, which requires budget to persist
+            # across ticks. A PLAIN `budget` LHS is consumed irreversibly, so budget=1 permits
+            # exactly ONE spawn ever and the ensemble mean would be a single Bernoulli(0.3) (~0.3
+            # products, fraction ~0.0016) — the block's own "completes ~200 instances" premise is
+            # then unsatisfiable. @conserved(budget) (held at spawn, returned at completion) is the
+            # faithful model: 1 unit funds 1 instance/tick, ~200 complete, success fraction → pos.
+            acs = @ReactionNetworkSchema begin
+                @deterministic(1.0), @conserved(budget) --> product, name => job, cycletime => 0.0, probability => 0.3
+            end
+            @prob_init acs budget = 1 product = 0
+            @prob_params acs
+            @prob_meta acs tspan = 200 dt = 1.0
+            prob = ReactionNetworkProblem(acs; seed = hash((42, k)))
+            simulate(prob)
+            prob.sol.product[end]
+        end
+        # 50-member ensemble, each seeded deterministically from a root seed + member index (D8);
+        # each completes ~200 single-tick instances with pos=0.3.
+        results = [member(k) for k = 1:50]
         @test isapprox(mean(results) / 200, 0.3; atol = 0.05)  # empirical success fraction ≈ probOfSuccess
-        @test [member(k) for k in 1:5] == [member(k) for k in 1:5]  # D8: ensemble reproducible from the root seed, member k independent of N/order
-        =#
+        @test [member(k) for k = 1:5] == [member(k) for k = 1:5]  # D8: ensemble reproducible from the root seed, member k independent of N/order
     end
 
     # [lifecycle-lifetime-zero-success-ensemble-target] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -297,11 +297,17 @@ using Random, Distributions, DataFrames
     # action: 30-member seeded ensemble; every instance times out at age 1 << cycletime 100, so success
     # count is identically 0 regardless of pos
     @testset "Lifetime timeout before cycletime gives 0 successes across a seeded ensemble (q=0 deterministically)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        function member(k); acs = @ReactionNetworkSchema begin; @deterministic(1.0), budget --> product, name => job, cycletime => 100.0, maxlifetime => 1.0, probability => 0.9; end; @prob_init acs budget=10000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs; seed = hash((7, k))); simulate(prob); prob.sol.product[end]; end
-        @test all(member(k) == 0.0 for k in 1:30)  # q=0 on every timeout in every member, independent of seed/pos
-        =#
+        function member(k)
+            acs = @ReactionNetworkSchema begin
+                @deterministic(1.0), budget --> product, name => job, cycletime => 100.0, maxlifetime => 1.0, probability => 0.9
+            end
+            @prob_init acs budget = 10000 product = 0
+            @prob_params acs
+            @prob_meta acs tspan = 20 dt = 1.0
+            prob = ReactionNetworkProblem(acs; seed = hash((7, k)))
+            simulate(prob)
+            prob.sol.product[end]
+        end
+        @test all(member(k) == 0.0 for k = 1:30)  # q=0 on every timeout in every member, independent of seed/pos
     end
 end

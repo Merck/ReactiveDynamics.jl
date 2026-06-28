@@ -126,9 +126,10 @@ function build_acs_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
     return acs
 end
 
-# meta[] → keywords. String-valued meta keys that the engine compares as Symbols (the allocation
-# strategy) are symbolized — otherwise `state.p[:strategy] == :weighted` fails for a JSON "weighted"
-# and the allocator silently falls through to the greedy branch (a different trajectory).
+# meta[] → keywords. A few string-valued meta keys are symbolized for backward compatibility.
+# `alloc_strategy`/`strategy` are now accepted-and-ignored (ADR 0002 makes priority-weighted
+# progressive filling the single allocation policy — there is no longer a :weighted/:greedy
+# switch), so symbolizing them is harmless; `schedule` is likewise a legacy no-op key.
 const _SYMBOL_META = (:alloc_strategy, :strategy, :schedule)
 function _meta_kwargs(d::AbstractDict)
     m = get(d, "meta", Dict{String,Any}())
