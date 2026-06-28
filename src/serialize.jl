@@ -164,8 +164,26 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
     )
 end
 
-function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}())
-    return Dict{String,Any}(
+# The declared species + param NAME sets, typed Set{Symbol} (an empty comprehension would infer
+# Set{Any}, which from_expr/rate_from_expr reject). Threaded into every from_expr call so a stored
+# attribute Expr's bare symbols classify back to the right NodeRef kind.
+function _name_sets(acs::ReactionNetworkSchema)
+    species = Set{Symbol}(acs[i, :specName] for i in parts(acs, :S))
+    params = Set{Symbol}(acs[i, :prmName] for i in parts(acs, :P) if !isnothing(acs[i, :prmName]))
+    return species, params
+end
+
+# model_to_dict is the EXPORT envelope — the structural inverse of build_acs_from_dict
+# (~line 73). It emits every top-level array build_acs_from_dict reads back: params[], species[],
+# transitions[], reactants[], observables[], plus rules[] when the caller passes a constructed
+# model's typed Rule vector (a DSL/loaded model → JSON → from_json_model → equivalent model).
+# The species/param NAME SETS are threaded into every from_expr call below so a stored attribute
+# Expr's bare symbols are classified back to the right NodeRef kind (species vs param), matching
+# how the authoring DSL named them — exactly the inverse of to_expr's name→state.u[i]/state.p[:k]
+# substitution (ADR 0005 §66).
+function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}(), rules = [])
+    species, params = _name_sets(acs)
+    d = Dict{String,Any}(
         "rd_format" => "reactive-dynamics-model",
         "version" => "1.0",
         "meta" => meta,
@@ -174,15 +192,42 @@ function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}())
             for i in parts(acs, :P) if !isnothing(acs[i, :prmName])
         ],
         "species" => [_species_to_dict(acs, i) for i in parts(acs, :S)],
-        "transitions" => [_transition_to_dict(acs, i) for i in parts(acs, :T)],
+        "transitions" => [_transition_to_dict(acs, i; species, params) for i in parts(acs, :T)],
         "reactants" => _reactants_to_dict(acs),
     )
+    # observables[] (the inverse of _load_observables!, ~line 413) — emit only if any :obs row.
+    obs = [obs_to_dict(acs[i, :obsName], acs[i, :obsOpts]) for i in parts(acs, :obs)]
+    isempty(obs) || (d["observables"] = obs)
+    # rules[] (the endogenous channel, ADR 0010) — a constructed model carries its typed Rules on
+    # the ReactionNetworkProblem (prob.rules), so to_json_model(::ReactionNetworkProblem) passes
+    # them through here. A bare schema acs has none. Legacy :E event rows are NOT emitted: they are
+    # lifted to RawExpr-action Rules at construction (solvers.jl ~line 671), and RawExpr is the
+    # non-typed bridge that is intentionally not JSON-serializable (stmt_to_dict(::RawExpr) errors).
+    rule_dicts = [rule_to_dict(r) for r in rules if r.action isa ActionStmt && !(r.action isa RawExpr)]
+    isempty(rule_dicts) || (d["rules"] = rule_dicts)
+    return d
 end
 
 to_json_model(acs::ReactionNetworkSchema; meta = Dict{String,Any}()) =
     JSON.json(model_to_dict(acs; meta = meta))
-to_json_model(prob::ReactionNetworkProblem; meta = Dict{String,Any}()) =
-    to_json_model(prob.acs; meta = meta)
+# A constructed model also carries its typed Rules — round-trip them through rules[] — and its
+# solver settings (tspan/dt/seed), which live on the ReactionNetworkProblem (not the acs) and merge
+# into the meta bag at construction (solvers.jl ~line 544). When the caller supplies no `meta`, we
+# reconstruct it from those fields so the exported document is COMPLETE and re-importable on its own
+# (from_json_model requires meta.tspan). An explicit `meta` always takes precedence.
+function to_json_model(prob::ReactionNetworkProblem; meta = Dict{String,Any}())
+    full = _meta_from_prob(prob)
+    merge!(full, meta)   # caller-supplied keys win
+    return JSON.json(model_to_dict(prob.acs; meta = full, rules = prob.rules))
+end
+
+# Reconstruct the meta bag from a constructed model's solver fields. `tspan` is stored as a
+# (t0, tend) tuple; the JSON `tspan` is the horizon `tend` (the scalar from_json_model passes on).
+function _meta_from_prob(prob::ReactionNetworkProblem)
+    m = Dict{String,Any}("tspan" => float(prob.tspan[2]), "dt" => float(prob.dt))
+    prob.seed === nothing || (m["seed"] = prob.seed)
+    return m
+end
 
 # ── Rate lowering + unwrapping (E3) ─────────────────────────────────────────────────────
 # A JSON rate carries the BARE intensity; the engine's expand_rate wraps it (Poisson per tick,
@@ -604,22 +649,192 @@ function _validate_action!(diags, a, path; species, params, obs, structured, reg
 end
 
 # ── to_json helpers ─────────────────────────────────────────────────────────────────────
+# Emit only NON-DEFAULT scalar attrs (mirroring defargs in ReactiveDynamics.jl), so the JSON stays
+# clean and re-import reconstructs the same value via assign_defaults!. A literal Const lowered by
+# the loader is a bare Number here, so we emit the bare number (the loader's _attr_node wraps it).
 function _species_to_dict(acs, i)
     sp = Dict{String,Any}("name" => string(acs[i, :specName]))
     iv = acs[i, :specInitVal]
     iv isa Number && iv != 0 && (sp["init"] = iv)
+    # cost/reward/valuation default to 0.0 (defargs[:S]); emit only when set (TVE=no literals).
+    for (col, key) in (:specCost => "cost", :specReward => "reward", :specValuation => "valuation")
+        v = acs[i, col]
+        v isa Number && v != 0 && (sp[key] = v)
+    end
     acs[i, :specStructured] && (sp["structured"] = true)
     isempty(acs[i, :specModality]) || (sp["modality"] = modality_to_dict(acs[i, :specModality]))
     return sp
 end
 
-function _transition_to_dict(acs, i)
-    tr = Dict{String,Any}("id" => string(coalesce(acs[i, :transName], Symbol("t", i))))
-    !ismissing(acs[i, :transName]) && (tr["name"] = string(acs[i, :transName]))
-    return tr   # rate/attrs round-trip is exercised at the node level; full emit is E8
+# Emit a transition's `id`/`name`, its `rate`(+`rate_mode`), and every non-default attr column
+# (cycletime/prob_of_success/capacity/priority/max_lifetime/multiplier) as an ExprNode dict, plus
+# pre/post actions when they are typed ActionStmts. The structural inverse of the transitions[]
+# loop in build_acs_from_dict (~line 98): that loop reads `id` as the reactant FK, `rate`+`rate_mode`
+# (lowered by lower_rate), and the jsonkey→col attrs (lowered by to_expr); we recover each.
+#
+# `id` is the transition's `transName` (the FK the BD model.rdj.json uses, e.g. "adv_discovery") —
+# falling back to a positional "t<i>" for an unnamed transition so the reactant FKs still resolve.
+function _transition_to_dict(acs, i; species = Set{Symbol}(), params = Set{Symbol}())
+    name = acs[i, :transName]
+    tr = Dict{String,Any}("id" => string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name))
+    (ismissing(name) || isnothing(name)) || (tr["name"] = string(name))
+
+    # rate: rate_from_expr Poisson-unwraps the stored :transRate Expr back to (bare-intensity node,
+    # rate_mode) — the inverse of lower_rate (~line 190). A bare value ⇒ :deterministic.
+    rate_node, rate_mode = rate_from_expr(acs[i, :transRate]; species, params)
+    tr["rate"] = node_to_dict(rate_node)
+    tr["rate_mode"] = string(rate_mode)
+
+    # the ExprNode-valued attrs: emit only when present and DIFFERENT from the construction default
+    # (defargs[:T]) so the JSON matches what import expects as the default. Each is lowered back to
+    # a node by from_expr (the inverse of to_expr on import).
+    for (col, key, default) in (
+        (:transCycleTime, "cycletime", 0.0),
+        (:transProbOfSuccess, "prob_of_success", 1),
+        (:transCapacity, "capacity", Inf),
+        (:transPriority, "priority", 1),
+        (:transMaxLifeTime, "max_lifetime", Inf),
+        (:transMultiplier, "multiplier", 1),
+    )
+        v = acs[i, col]
+        (isnothing(v) || _is_default_attr(v, default)) && continue
+        tr[key] = node_to_dict(from_expr(v; species, params))
+    end
+
+    # pre/post actions: a JSON-authored model holds these as typed ActionStmts (the action family,
+    # ADR 0010/0011), which serialize losslessly via stmt_to_dict. A DSL-built model instead stores
+    # a raw Expr here (the default empty `:(())` for no action) — that has no typed verb, so it is
+    # NOT serializable; we emit it only when it is a typed ActionStmt, and otherwise drop the empty
+    # default. A non-empty raw-Expr action would be lost (documented limitation, mirrors RawExpr).
+    for (col, key) in (:transPreAction => "pre_action", :transPostAction => "post_action")
+        a = acs[i, col]
+        a isa ActionStmt && (tr[key] = stmt_to_dict(a))
+    end
+    return tr
 end
 
-_reactants_to_dict(acs) = Dict{String,Any}[]   # full emit assembled in E8
+# Is a stored attribute value the construction default (so it can be omitted)? Numeric compare with
+# Inf/Int/Float tolerance; `:(())` (the empty pre/post action) is handled separately above.
+_is_default_attr(v, default) = v isa Number && default isa Number && (v == default)
+
+# ── _reactants_to_dict — the EXPORT inverse of assemble_reaction_line (~line 289) ─────────
+# assemble_reaction_line turns reactants[] dicts INTO a transition's :trans reaction-line Expr;
+# this is the exact inverse: it decomposes each transition's stored :trans Expr back into the flat
+# reactants[] list (one dict per reactant term, tagged with its transition FK + side). It is the
+# highest-risk export piece — it must reproduce exactly the reactant dicts the loader consumes.
+#
+# Method: split the stored `LHS → RHS` line (the same `prune_r_line` split the runtime does, but
+# eval-free — we only need the LHS/RHS arms, not the @choose resolution), then walk each arm with
+# the runtime `recursive_find_reactants!` (reaction_parser.jl:74). That walker is PURE on a raw
+# Expr (no state) and yields the same FoldedReactant structs the runtime extracts — species/kind,
+# integer-or-Expr stoich, the 3-axis modality Set (from @conserved/@rate/@nonblock wrappers), and
+# the @select TokenPredicate. From each FoldedReactant we emit the inverse of _reactant_atom /
+# _apply_modality / the stoich coefficient.
+function _reactants_to_dict(acs)
+    species, params = _name_sets(acs)
+    out = Dict{String,Any}[]
+    for i in parts(acs, :T)
+        name = acs[i, :transName]
+        id = string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name)
+        line = acs[i, :trans]
+        lhs, rhs = _split_reaction_line(line)
+        for r in _static_reactants(lhs)
+            push!(out, _reactant_to_dict(r, id, "lhs"; species, params))
+        end
+        for r in _static_reactants(rhs)
+            push!(out, _reactant_to_dict(r, id, "rhs"; species, params))
+        end
+    end
+    return out
+end
+
+# Split a stored reaction line into (LHS, RHS) Exprs. The line is `Expr(:call, arrow, LHS, RHS)`;
+# forward arrows keep (args[2], args[3]) and backward arrows flip — the eval-free counterpart of
+# prune_r_line (state.jl:192). `∅` (empty_set) arms yield no reactants via _static_reactants.
+function _split_reaction_line(line)
+    if line isa Expr && line.head == :call && line.args[1] in fwd_arrows
+        return line.args[2], line.args[3]
+    elseif line isa Expr && line.head == :call && line.args[1] in bwd_arrows
+        return line.args[3], line.args[2]
+    else
+        error("_reactants_to_dict: unexpected reaction line shape $(repr(line)) " *
+              "(a @choose/bidirectional line is not yet supported by the export path)")
+    end
+end
+
+# Walk one arm of the reaction line into FoldedReactants, reusing the runtime parser unchanged.
+# An `∅`/`0` arm contributes nothing (recursive_find_reactants! drops it).
+_static_reactants(arm) =
+    recursive_find_reactants!(arm, 1.0, Set{Symbol}(), Vector{FoldedReactant}())
+
+# A single FoldedReactant → its reactants[] dict. Three shapes, mirroring _reactant_atom's three
+# branches in reverse:
+#   • a @select LHS  → {side, predicate:{kind, clauses}}  (FoldedReactant.predicate ≠ nothing)
+#   • an @advance/@structured/@move RHS → {side, advance:{field, value}} / {side, structured/move:…}
+#     (FoldedReactant.species is a macrocall Expr)
+#   • a plain species → {side, species, stoich, modality}
+function _reactant_to_dict(r::FoldedReactant, id, side; species, params)
+    d = Dict{String,Any}("transition" => id, "side" => side)
+    if r.predicate !== nothing
+        # @select(Kind, clauses) — the inverse of _reactant_atom's predicate branch. pred_to_dict
+        # emits {kind, clauses:[[field, op, value-node], …]} exactly as the loader's predicate{} reads.
+        d["predicate"] = pred_to_dict(r.predicate)
+    elseif r.species isa Expr && isexpr(r.species, :macrocall)
+        _emit_macro_reactant!(d, r.species; species, params)
+    else
+        # a plain species term: name, integer-or-Expr stoich (omit the default 1), 3-axis modality.
+        d["species"] = string(r.species)
+        _emit_stoich!(d, r.stoich)
+        isempty(r.modality) || (d["modality"] = modality_to_dict(r.modality))
+    end
+    return d
+end
+
+# Decompose a structured RHS macrocall (@advance / @structured / @move) back to its JSON form —
+# the inverse of _reactant_atom's @advance branch and the structured_rhs (solvers.jl:352) shapes.
+function _emit_macro_reactant!(d, mc::Expr; species, params)
+    name = macroname(mc)
+    if name === :advance
+        # @advance(field, value) — an RHS lifecycle field-write (ADR 0008 §D).
+        field = mc.args[3]
+        valex = mc.args[4]
+        d["advance"] = Dict{String,Any}(
+            "field" => string(field isa QuoteNode ? field.value : field),
+            "value" => node_to_dict(from_expr(valex; species, params)),
+        )
+    elseif name === :move
+        # @move(from, to) — species relabel (ADR 0006). Emit the two species symbols.
+        d["move"] = Dict{String,Any}(
+            "from" => string(_macro_sym(mc.args[3])),
+            "to" => string(_macro_sym(mc.args[4])),
+        )
+    elseif name === :structured
+        # @structured(expr) / @structured(token, species) — a host-built RHS token. The body is
+        # host Julia (an Expr), not a typed node, so it cannot round-trip eval-free; surface that.
+        error("_reactants_to_dict: @structured RHS carries a host Expr body and is not " *
+              "JSON-serializable (use @advance / a typed AddToken rule instead)")
+    else
+        error("_reactants_to_dict: unsupported reactant macrocall @$(name)")
+    end
+    return d
+end
+
+_macro_sym(x) = x isa QuoteNode ? x.value : x
+
+# Emit a stoich coefficient, omitting the default 1. The runtime parser carries stoich as a Float
+# multiplier (multiplex), so an integer authored as `2` comes back as `2.0`; coerce an integral
+# Float back to Int so the re-imported reaction line is the SAME Expr (`2 * X`, not `2.0 * X`).
+function _emit_stoich!(d, stoich)
+    if stoich isa Number
+        (stoich == 1) && return d                      # default coefficient — omit
+        s = (stoich isa AbstractFloat && isinteger(stoich)) ? Int(stoich) : stoich
+        d["stoich"] = s
+    else
+        # an expression-valued stoich (rare) — emit as a node; the loader lowers it via to_expr.
+        d["stoich"] = node_to_dict(from_expr(stoich))
+    end
+    return d
+end
 
 modality_to_dict(s::Set{Symbol}) = Dict{String,Any}(
     "allocation" => (:rate in s ? "perstep" : "upfront"),

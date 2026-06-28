@@ -363,8 +363,10 @@ println("was not selected and is untouched. @field read each token's OWN npv bef
 #
 # We (a) write the SAME pipeline as JSON, (b) `validate` it (clean), (c) show a deliberately
 # broken model producing a diagnostic, (d) load it and confirm the JSON-built run matches the
-# DSL-built run under the same seed, and (e) make the security point with an inert malicious
-# string.
+# DSL-built run under the same seed, (e) make the security point with an inert malicious string,
+# (f) load the document from a file with `@import_model`, and (g) the INVERSE — export a LIVE
+# model back to a full JSON document with `to_json_model`/`@export_model` and reload it loss-free
+# (a model is DATA in BOTH directions: author-as-JSON → load, and build/load → export → reload).
 
 # The pipeline as a JSON model. Structured species carry "structured": true; a pipeline step's
 # reactants are an LHS predicate + an RHS advance. (Bare string "Phase2" in clause arrays.)
@@ -442,13 +444,33 @@ simulate(p_fromfile)
 println("(f) @import_model from a file: rebuilt a ", typeof(p_fromfile).name.name,
         "; final phases match the in-memory build? ", phases_of(p_fromfile) == phases_of(p_dsl))
 rm(tmp; force = true)
-# NOTE (honest scope): the INVERSE — emitting a *live* model back to a full JSON document
-# (`to_json_model`/`@export_model`) — is not yet complete (transition rates/reactants are stubbed
-# pending the E8 emitter). The model's reproducible artifact today is the authored input document
-# above; the run's OUTPUT (the solution trajectory) is exported separately via the solution macros.
+
+# (g) the INVERSE direction — emit a LIVE model back to a full JSON document. `to_json_model`
+# (and the `@export_model` macro) is the structural inverse of `from_json_model`: it walks the
+# constructed model's stored columns — the rate (Poisson-unwrapped to its bare intensity + a
+# rate_mode), the ExprNode-valued attrs, and the reaction line decomposed back into reactants[]
+# (the inverse of the import-time reaction-line assembly) — and re-emits the eval-free document.
+# A model is therefore DATA in both directions: author-as-JSON → load, AND build/load → export.
+# We export the live DSL-built model, reload the emitted JSON, and confirm the reload is the SAME
+# model — identical trajectory under the same seed (and re-validating clean).
+exported = to_json_model(p_dsl)                            # live model → eval-free JSON document
+p_roundtrip = from_json_model(exported; seed = 7, registry = REGISTRY, population = shared_pop())
+simulate(p_roundtrip)
+println("(g) to_json_model(live model) -> reload -> simulate:")
+println("    re-exported model validates clean?  ",
+        isempty(validate(JSON.parse(exported); registry = REGISTRY)))
+println("    reloaded final phases match DSL?     ", phases_of(p_roundtrip) == phases_of(p_dsl))
+println("    trajectories identical (sol == sol): ", p_dsl.sol == p_roundtrip.sol,
+        "  ⇒ build/load → export → reload is loss-free; a model is DATA in both directions.")
+# Idempotency: exporting the reload reproduces the same document (round-trip is a fixed point).
+println("    export idempotent (re-export == export)? ",
+        JSON.parse(to_json_model(p_roundtrip)) == JSON.parse(exported))
+
+# (h) the run's OUTPUT (the solution trajectory) is a SEPARATE artifact from the model document —
+# the model is the reproducible input, the trajectory is its result (ADR 0005 §76).
 soltable = @export_solution_as_table p_fromfile           # the trajectory as a DataFrame
-println("    solution trajectory exported as a ", size(soltable, 1), "×", size(soltable, 2),
-        " DataFrame via @export_solution_as_table")
+println("(h) solution trajectory exported as a ", size(soltable, 1), "×", size(soltable, 2),
+        " DataFrame via @export_solution_as_table (the run OUTPUT, distinct from the model).")
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §6. Checkpoint & replay — dump_state / restore + reinit determinism
@@ -519,7 +541,7 @@ We toured, on ONE small R&D portfolio, the engine's production & agentic machine
   §2  Predicate selection         @select(npv > θ) binds a subset; deterministic ties     ADR 0008
   §3  In-model decision rule      a once-Rule lever: SetSpecies+SetParams+AddToken in Seq  ADR 0010
   §4  Population write            SetTokens(@field) revalues a selected sub-population      ADR 0011
-  §5  Model-as-data (JSON)        eval-free load; JSON ≡ DSL; inert malicious string        ADR 0005
+  §5  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
   §6  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007
 
 The through-line: a model — species, pipeline, levers, and starting portfolio — is reproducible
