@@ -39,3 +39,6 @@ end
 @safetestset "Serialization / typed ExprNode IR" begin
     include("serialization_ir.jl")
 end
+@safetestset "AlgebraicAgents integration & external coupling" begin
+    include("aa_integration.jl")
+end
