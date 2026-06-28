@@ -39,3 +39,6 @@ end
 @safetestset "Serialization / typed ExprNode IR" begin
     include("serialization_ir.jl")
 end
+@safetestset "Per-program ledger (finding D)" begin
+    include("program_ledger.jl")
+end

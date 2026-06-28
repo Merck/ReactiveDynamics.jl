@@ -147,6 +147,18 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     @prob_init acs scientist = 40 budget = 150
     @prob_params acs synergy_pos = 0 synergy_eff = 0
     ReactiveDynamics.set_params!(acs, Dict(:synergy_pos => synergy_pos, :synergy_eff => synergy_eff))
+
+    # Price the `budget` burn so the ENGINE-LEVEL per-program ledger (MVP finding D, src/ledger.jl)
+    # captures each program's capital spend during the run: specCost is read ONLY by the ledger
+    # rows (solvers.jl :valuation_cost) and the per-program attribution — NOT by the dynamics
+    # (allocation/genesis/finish are untouched), so this leaves the trajectory, the pools, and the
+    # Δ-rNPV EXACTLY as before. 1 currency per budget unit burned ⇒ a program's `cost_incurred`
+    # is the budget it consumed across every advance it sat in. (Reward is left to the post-hoc
+    # rNPV roll-up — a launched program's value is its discounted npv_peak, not a per-tick specReward
+    # — so the demo READS cost from the engine ledger and computes value itself; finding D's
+    # documented boundary: cost is cleanly attributable per program, valuation stays a post-hoc roll-up.)
+    bi = findfirst(==(:budget), acs[:, :specName])
+    acs[bi, :specCost] = 1.0
     return acs
 end
 

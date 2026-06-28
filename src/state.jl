@@ -2,6 +2,24 @@
 using DataFrames
 using Random
 
+# Per-program (per-structured-token) ledger accumulator (MVP finding D — the logic lives in
+# src/ledger.jl; only this small data struct is here so the ReactionNetworkProblem field below can
+# name its element type, since state.jl is `include`d before ledger.jl). `cost_incurred` is capital
+# burned on behalf of this program; `reward_realized` is reward credited when a transition it was
+# bound to finished successfully; `valuation` is its current mark-to-market; `entries` is the
+# append-only `(t, kind, amount, transition_name)` audit trail. See ledger.jl for the attribution
+# rule and its documented boundary.
+mutable struct ProgramLedger
+    species::Symbol
+    creation_index::Int
+    cost_incurred::Float64
+    reward_realized::Float64
+    valuation::Float64
+    entries::Vector{Tuple{Float64,Symbol,Float64,String}}
+end
+ProgramLedger(species::Symbol, creation_index::Int) =
+    ProgramLedger(species, creation_index, 0.0, 0.0, 0.0, Tuple{Float64,Symbol,Float64,String}[])
+
 struct UnfoldedReactant
     index::Int
     species::Symbol
@@ -97,6 +115,17 @@ end
     population::Vector
     init_snapshot::Dict{String,Dict{Symbol,Any}}
     live::Bool
+
+    # Per-program (per-structured-token) ledger (MVP finding D — src/ledger.jl). `program_ledgers`
+    # maps a token's stable network identity (`AlgebraicAgents.getname`, the same key as
+    # `creation_index`) to its running cost/reward/valuation accumulator + append-only audit trail.
+    # `unattributed_cost`/`unattributed_reward` collect spend/reward from transitions with NO bound
+    # structured token (plain reactions), so the per-program rows + these buckets SUM EXACTLY to the
+    # aggregate `:valuation_cost`/`:valuation_reward` rows (the invariant in program_ledger.jl).
+    # All three are reset by _reinit! (§4 D7), mirroring `creation_counters`.
+    program_ledgers::Dict{String,ProgramLedger}
+    unattributed_cost::Float64
+    unattributed_reward::Float64
 end
 
 # get value of a numeric expression
