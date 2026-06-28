@@ -29,6 +29,9 @@ node_to_dict(n::Choose) = Dict{String,Any}(
     "alts" => [Dict{String,Any}("weight" => w, "value" => node_to_dict(v)) for (w, v) in n.alts],
 )
 node_to_dict(n::Field) = Dict{String,Any}("node" => "field", "name" => string(n.name))
+# ExternalRef (ADR 0012 §B2): a declared inputs[] port read. The JSON carries only the port NAME;
+# the foreign-agent topology that fills it lives host-side in add_wire! (Invariant 4, eval-free).
+node_to_dict(n::ExternalRef) = Dict{String,Any}("node" => "externalref", "port" => string(n.port))
 
 function node_from_dict(d::AbstractDict)
     tag = d["node"]
@@ -52,6 +55,8 @@ function node_from_dict(d::AbstractDict)
         return Choose([(Float64(a["weight"]), node_from_dict(a["value"])) for a in d["alts"]])
     elseif tag == "field"
         return Field(Symbol(d["name"]))
+    elseif tag == "externalref"
+        return ExternalRef(Symbol(d["port"]))
     else
         error("node_from_dict: unknown node tag $(tag)")
     end
@@ -154,12 +159,17 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
     seed === nothing && haskey(kw, :seed) && (seed = kw[:seed])
     # rules[] (ADR 0010) → typed Rule structs passed to the constructor (the endogenous channel).
     rules = Any[rule_from_dict(r) for r in get(d, "rules", [])]
+    # inputs[] (ADR 0012 §B1) → the declared external read ports + their pre-wire defaults. The
+    # default seeds `state.external_inputs[port]` at construction so a port read before any wire
+    # delivers a value (or in a standalone run with no wires) is still well-defined (§B3).
+    external_inputs = inputs_from_dict(get(d, "inputs", []))
     return ReactionNetworkProblem(
         acs;
         seed = seed,
         registry = registry,
         population = population,
         rules = rules,
+        external_inputs = external_inputs,
         filter(p -> p.first ∉ (:seed,), kw)...,
     )
 end
@@ -408,6 +418,29 @@ function modality_from_dict(m::AbstractDict)
     )
 end
 
+# ── inputs[] loader (ADR 0012 §B1): declared external read ports + pre-wire defaults ────
+# A model-local `inputs[]` array names the OBSERVABLE-level ports the network may read; each port
+# may carry an optional `default` — the value used before any AA wire has delivered (and in a
+# standalone, wire-less run). The default is a LITERAL value (a bare JSON scalar or a Const node),
+# not a live expression: it must be a concrete `state.external_inputs[port]` seed, evaluable with
+# no `state`/RNG. Returns a `Dict{Symbol,Any}(port => default_value)`; a port without a default is
+# omitted (a read before its wire delivers then KeyErrors, surfacing the missing-default — exactly
+# as a missing param would). The wiring itself is host-side (`add_wire!`), never in this document.
+function inputs_from_dict(inputs)
+    seed = Dict{Symbol,Any}()
+    for inp in inputs
+        port = Symbol(inp["port"])
+        if haskey(inp, "default")
+            node = _attr_node(inp["default"])
+            node isa Const ||
+                error("inputs_from_dict: port `$port` default must be a literal value (a bare " *
+                      "scalar or a Const node), not a live expression — got $(typeof(node))")
+            seed[port] = node.value
+        end
+    end
+    return seed
+end
+
 # ── observables[] loader (E6): structured FoldedObservable, eval-free ───────────────────
 # {name, every, on:[ExprNode], range:[{weight, value:ExprNode}]} → an :obs row (no eval).
 function _load_observables!(acs, obs)
@@ -450,7 +483,8 @@ Base.string(d::Diagnostic) = "[$(d.severity)] $(d.path): $(d.msg)"
 # whether a Sample node is legal here (false in a predicate clause value — no RNG, §9.5); `allow_field`
 # governs whether a Field (@field) node is legal here (true only in a SetField/@advance value,
 # ADR 0008 §D — a Field in a predicate clause would crash at runtime since @field is a macro).
-function _validate_node!(diags, d, path; species, params, obs, allow_sample = true, allow_field = true)
+function _validate_node!(diags, d, path; species, params, obs, ports = Set{Symbol}(),
+        allow_sample = true, allow_field = true)
     d isa AbstractDict || return diags        # a bare literal scalar — fine
     tag = get(d, "node", nothing)
     if tag == "const"
@@ -465,23 +499,29 @@ function _validate_node!(diags, d, path; species, params, obs, allow_sample = tr
         op = Symbol(get(d, "op", ""))
         op in OP_WHITELIST || push!(diags, Diagnostic(:error, path, "op $op ∉ OP_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample, allow_field)
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, ports, allow_sample, allow_field)
         end
     elseif tag == "sample"
         allow_sample || push!(diags, Diagnostic(:error, path, "Sample (RNG) is not 𝓕ₜ-measurable here (no draws in a predicate)"))
         Symbol(get(d, "dist", "")) in DIST_WHITELIST ||
             push!(diags, Diagnostic(:error, path, "dist $(get(d,"dist","")) ∉ DIST_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, allow_sample, allow_field)
+            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, ports, allow_sample, allow_field)
         end
     elseif tag == "field"
         allow_field || push!(diags, Diagnostic(:error, path,
             "Field (@field) is legal only in a SetField/@advance value, not here (ADR 0008 §D)"))
+    elseif tag == "externalref"
+        # rule 8 (ADR 0012 §B2): an ExternalRef's port must be a declared inputs[] port. The node
+        # is eval-free and 𝓕ₜ-measurable everywhere (it reads the latched buffer, never the RNG),
+        # so it is legal in any value context — only an UNDECLARED port is flagged.
+        Symbol(get(d, "port", "")) in ports ||
+            push!(diags, Diagnostic(:error, path, "ExternalRef port `$(get(d,"port",""))` is not a declared inputs[] port"))
     elseif tag == "timeref"
         # ok
     elseif tag == "choose"
         for (i, alt) in enumerate(get(d, "alts", []))
-            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, allow_sample, allow_field)
+            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, ports, allow_sample, allow_field)
         end
     else
         push!(diags, Diagnostic(:error, path, "unknown node tag `$tag`"))
@@ -499,6 +539,8 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
     structured = Set(Symbol(s["name"]) for s in get(d, "species", []) if get(s, "structured", false) === true)
     params = Set(Symbol(p["name"]) for p in get(d, "params", []))
     obs = Set(Symbol(o["name"]) for o in get(d, "observables", []))
+    # rule 8 (ADR 0012 §B2): the declared external input ports an ExternalRef may reference.
+    ports = Set(Symbol(inp["port"]) for inp in get(d, "inputs", []))
     regnames = Set(keys(registry))
 
     # rule 5 (TVE policy): init/cost-type species attrs must be literals; structured/modality too
@@ -523,7 +565,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
     ids = Set{String}()
     for (i, tr) in enumerate(get(d, "transitions", []))
         push!(ids, string(tr["id"]))
-        haskey(tr, "rate") && _validate_node!(diags, tr["rate"], "transitions[$i].rate"; species, params, obs)
+        haskey(tr, "rate") && _validate_node!(diags, tr["rate"], "transitions[$i].rate"; species, params, obs, ports)
         for (k, lo, hi) in (("prob_of_success", 0.0, 1.0),)
             if haskey(tr, k) && _is_literal(tr[k])
                 v = tr[k] isa AbstractDict ? get(tr[k], "value", nothing) : tr[k]
@@ -557,15 +599,15 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
                     push!(diags, Diagnostic(:error, "reactants[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
                 # the clause VALUE must be 𝓕ₜ-measurable (no Sample)
                 c[3] isa AbstractDict &&
-                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, allow_sample = false, allow_field = false)
+                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, ports, allow_sample = false, allow_field = false)
             end
         end
     end
 
     # rules[] / events[]: guard nodes + action verb + AddToken.kind/Invoke.fn registry resolution
     for (i, r) in enumerate(get(d, "rules", []))
-        haskey(r, "guard") && _validate_node!(diags, r["guard"], "rules[$i].guard"; species, params, obs)
-        haskey(r, "action") && _validate_action!(diags, r["action"], "rules[$i].action"; species, params, obs, structured, regnames, in_rule = true)
+        haskey(r, "guard") && _validate_node!(diags, r["guard"], "rules[$i].guard"; species, params, obs, ports)
+        haskey(r, "action") && _validate_action!(diags, r["action"], "rules[$i].action"; species, params, obs, ports, structured, regnames, in_rule = true)
     end
 
     # rule 6: population[] well-formedness (ADR 0007)
@@ -579,9 +621,14 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
     return diags
 end
 
-# Validate an action statement dict (rule 1 over its values + verb/registry checks).
-function _validate_action!(diags, a, path; species, params, obs, structured, regnames, in_rule)
+# Validate an action statement dict (rule 1 over its values + verb/registry checks). `ports`
+# (ADR 0012 §B2) lets rule 8 flag an undeclared ExternalRef inside an action VALUE (e.g. a
+# `set_params` value driven by an external signal) — actions are among the "value" contexts §B2
+# enumerates.
+function _validate_action!(diags, a, path; species, params, obs, ports = Set{Symbol}(), structured, regnames, in_rule)
     a isa AbstractDict || return diags
+    # Walk every node-valued field of the statement (rule 1 + rule 8 over its values).
+    _walk_action_values!(diags, a, path; species, params, obs, ports)
     verb = get(a, "verb", nothing)
     if verb == "set_field" && in_rule
         push!(diags, Diagnostic(:error, path, "SetField is illegal in a Rule (no bound token, ADR 0010 §C)"))
@@ -593,12 +640,30 @@ function _validate_action!(diags, a, path; species, params, obs, structured, reg
             push!(diags, Diagnostic(:error, "$path.fn", "Invoke fn `$(get(a,"fn",""))` not in registry"))
     elseif verb == "seq"
         for (i, s) in enumerate(get(a, "stmts", []))
-            _validate_action!(diags, s, "$path.stmts[$i]"; species, params, obs, structured, regnames, in_rule)
+            _validate_action!(diags, s, "$path.stmts[$i]"; species, params, obs, ports, structured, regnames, in_rule)
         end
     elseif verb === nothing
         push!(diags, Diagnostic(:error, path, "action missing `verb`"))
     elseif !(Symbol(verb) in ACTION_VERBS)
         push!(diags, Diagnostic(:error, path, "unknown action verb `$verb`"))
+    end
+    return diags
+end
+
+# Validate the node-valued fields of an action statement (the `value`/`assigns[].value`/`fields[].
+# value`/`args[]` slots). Used by rule 1 (op/dist/ref) and rule 8 (ExternalRef port declared).
+# A `seq`'s nested stmts are walked by `_validate_action!` itself; we skip them here.
+function _walk_action_values!(diags, a, path; species, params, obs, ports)
+    haskey(a, "value") &&
+        _validate_node!(diags, a["value"], "$path.value"; species, params, obs, ports)
+    for key in ("assigns", "fields")
+        for (i, asg) in enumerate(get(a, key, []))
+            haskey(asg, "value") &&
+                _validate_node!(diags, asg["value"], "$path.$key[$i].value"; species, params, obs, ports)
+        end
+    end
+    for (i, arg) in enumerate(get(a, "args", []))
+        _validate_node!(diags, arg, "$path.args[$i]"; species, params, obs, ports)
     end
     return diags
 end

@@ -674,6 +674,14 @@ function ReactionNetworkProblem(
     ]
     append!(rules, get(keywords, :rules, Any[]))
 
+    # External coupling (ADR 0012 §B). Seed the per-tick input buffer from the declared `inputs[]`
+    # defaults (passed by from_json_model as `external_inputs=`), so a port read before any AA wire
+    # delivers — or in a standalone wire-less run — has a well-defined fallback (§B3). The buffer is
+    # re-derived every `_prestep!` (merged over a copy of the defaults); the defaults snapshot is
+    # kept immutable so `_reinit!` can restore the pre-wire seed (§4 D7).
+    external_input_defaults = Dict{Symbol,Any}(get(keywords, :external_inputs, Dict{Symbol,Any}()))
+    external_inputs = copy(external_input_defaults)
+
     network = ReactionNetworkProblem(
         name,
         acs,
@@ -701,6 +709,8 @@ function ReactionNetworkProblem(
         collect(get(keywords, :population, [])),
         Dict{String,Dict{Symbol,Any}}(),
         false,
+        external_inputs,
+        external_input_defaults,
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -754,6 +764,12 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     end
     instantiate_population!(state)
     update_u_structured!(state)
+
+    # Drop stale latched external-input wire values and restore the pre-wire defaults (ADR 0012
+    # §B3 / §10.4 / §4 D7), so the first post-reinit `_prestep!` re-latches from a clean seed and
+    # `init → step* → reinit! → step*` reproduces the first coupled trajectory.
+    empty!(state.external_inputs)
+    merge!(state.external_inputs, state.external_input_defaults)
 
     return state
 end
