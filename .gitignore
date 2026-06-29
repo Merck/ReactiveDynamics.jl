@@ -13,3 +13,4 @@ _*
 *.db
 *.db.wal
 dev/
+.claude/

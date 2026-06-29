@@ -42,3 +42,6 @@ end
 @safetestset "Per-program ledger (finding D)" begin
     include("program_ledger.jl")
 end
+@safetestset "AlgebraicAgents integration & external coupling" begin
+    include("aa_integration.jl")
+end

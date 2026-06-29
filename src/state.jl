@@ -126,6 +126,20 @@ end
     program_ledgers::Dict{String,ProgramLedger}
     unattributed_cost::Float64
     unattributed_reward::Float64
+
+    # External coupling buffer (ADR 0012 §B3). The per-tick latch of declared `inputs[]` ports:
+    # `_prestep!` reads RD's incoming AA wires ONCE per tick (before any sibling `_step!`) and
+    # merges them over the declared input DEFAULTS into this Dict, so every `ExternalRef(port)`
+    # read within a tick returns the SAME value — the source's previous-tick-boundary projection
+    # (Invariant 2, the §4-D4 sibling-order hazard the latch closes). Transient run-state: seeded
+    # from the declared defaults at construction, re-seeded by `_reinit!` (§10.4), recomputed every
+    # `_prestep!`, and NOT persisted by `dump_state` (recovered on the next prestep).
+    external_inputs::Dict{Symbol,Any}
+    # The immutable declared-default snapshot (the §B1 `inputs[]` defaults), paired with
+    # `external_inputs` exactly as `initial_rng` is paired with `rng` (§4 D7): `_reinit!` restores
+    # `external_inputs` to a copy of this so a re-run drops stale latched wire values but KEEPS the
+    # pre-wire defaults, and every `_prestep!` merges wire reads OVER a copy of it.
+    external_input_defaults::Dict{Symbol,Any}
 end
 
 # get value of a numeric expression
