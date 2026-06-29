@@ -603,4 +603,30 @@ end
         rm(tmp; force = true)
     end
 
+    # The integration seam between ADR-0012 inputs[] IMPORT (inputs_from_dict) and the completed
+    # JSON EXPORT (model_to_dict): a model that declares external read ports must round-trip them.
+    # The ports + pre-wire defaults live on the ReactionNetworkProblem (external_input_defaults),
+    # not the acs, so to_json_model(::ReactionNetworkProblem) threads them through model_to_dict's
+    # inputs[] kwarg — the inverse of inputs_from_dict. Closes the round-trip-symmetry gap.
+    @testset "E10: declared inputs[] ports survive load → export → reload (ADR 0012 ⟷ export)" begin
+        import JSON
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
+          "params":[],
+          "species":[{"name":"x","init":10}],
+          "transitions":[{"id":"t1","rate":{"node":"const","value":1.0},"rate_mode":"deterministic"}],
+          "reactants":[{"transition":"t1","species":"x","side":"lhs"}],
+          "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.5}},
+                    {"port":"sentiment","default":{"node":"const","value":1.0}}] }
+        """
+        prob = RDX.from_json_model(json)
+        @test prob.external_input_defaults == Dict(:ext_rate => 0.5, :sentiment => 1.0)
+        d = JSON.parse(RDX.to_json_model(prob))
+        @test haskey(d, "inputs")                         # inputs[] is emitted on export
+        @test Set(p["port"] for p in d["inputs"]) == Set(["ext_rate", "sentiment"])
+        @test isempty(RDX.validate(d))                    # the re-exported document validates clean
+        prob2 = RDX.from_json_model(RDX.to_json_model(prob))
+        @test prob2.external_input_defaults == prob.external_input_defaults  # ports round-trip
+    end
+
 end

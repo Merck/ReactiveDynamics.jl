@@ -192,7 +192,8 @@ end
 # Expr's bare symbols are classified back to the right NodeRef kind (species vs param), matching
 # how the authoring DSL named them — exactly the inverse of to_expr's name→state.u[i]/state.p[:k]
 # substitution (ADR 0005 §66).
-function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}(), rules = [])
+function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}(), rules = [],
+                       inputs = Dict{Symbol,Any}())
     species, params = _name_sets(acs)
     d = Dict{String,Any}(
         "rd_format" => "reactive-dynamics-model",
@@ -216,6 +217,14 @@ function model_to_dict(acs::ReactionNetworkSchema; meta = Dict{String,Any}(), ru
     # non-typed bridge that is intentionally not JSON-serializable (stmt_to_dict(::RawExpr) errors).
     rule_dicts = [rule_to_dict(r) for r in rules if r.action isa ActionStmt && !(r.action isa RawExpr)]
     isempty(rule_dicts) || (d["rules"] = rule_dicts)
+    # inputs[] (ADR 0012 §B1) — the inverse of inputs_from_dict (~line 430). Declared external read
+    # ports + their pre-wire literal defaults live on the ReactionNetworkProblem (external_input_-
+    # defaults), so to_json_model(::ReactionNetworkProblem) passes them through. A default is a
+    # literal value (inputs_from_dict requires a Const), so it round-trips as a `const` node. Sorted
+    # by port name for deterministic output (the buffer is an unordered Dict).
+    input_dicts = [Dict{String,Any}("port" => string(p), "default" => node_to_dict(Const(inputs[p])))
+                   for p in sort!(collect(keys(inputs)))]
+    isempty(input_dicts) || (d["inputs"] = input_dicts)
     return d
 end
 
@@ -229,7 +238,8 @@ to_json_model(acs::ReactionNetworkSchema; meta = Dict{String,Any}()) =
 function to_json_model(prob::ReactionNetworkProblem; meta = Dict{String,Any}())
     full = _meta_from_prob(prob)
     merge!(full, meta)   # caller-supplied keys win
-    return JSON.json(model_to_dict(prob.acs; meta = full, rules = prob.rules))
+    return JSON.json(model_to_dict(prob.acs; meta = full, rules = prob.rules,
+                                   inputs = prob.external_input_defaults))
 end
 
 # Reconstruct the meta bag from a constructed model's solver fields. `tspan` is stored as a
