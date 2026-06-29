@@ -417,4 +417,190 @@ end
         @test Set(sp["name"] for sp in back["species"]) == Set(["A", "B"])
     end
 
+    # ── E10: the EXPORT path — to_json_model is the inverse of from_json_model ───────────
+    # Completed _transition_to_dict / _reactants_to_dict (the inverse of assemble_reaction_line):
+    # a DSL-or-JSON model → to_json_model → from_json_model is an EQUIVALENT model. The standard of
+    # correctness is reconstructed-Expr equality (striplines) + a trajectory-equal simulation under
+    # a fixed seed + idempotency of re-export — NOT raw-JSON-byte equality (the import-side
+    # `_sum_terms` foldl re-associates an n-ary `+` reaction sum, a cosmetic Expr-nesting difference
+    # that `recursive_find_reactants!` flattens identically, so the trajectory is unaffected).
+    @testset "E10: a built model exports + re-imports with matching rate/attr nodes" begin
+        import JSON
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
+          "params":[{"name":"beta","value":0.4}],
+          "species":[{"name":"cash","init":0,"cost":2.0,"valuation":-1.0},
+                     {"name":"A","init":10},{"name":"B","reward":50.0}],
+          "transitions":[{"id":"t1","name":"t1",
+              "rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
+              "rate_mode":"poisson","prob_of_success":0.8,"cycletime":2.0,"priority":3.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":2},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+        """
+        p = RDX.from_json_model(json; seed = 1)
+        back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
+
+        # the rate node + rate_mode round-trip (Poisson-unwrapped back to the bare 0.3*beta tree)
+        t1 = first(filter(t -> t["id"] == "t1", back["transitions"]))
+        @test t1["rate_mode"] == "poisson"
+        @test RDX.node_from_dict(t1["rate"]) ==
+              RDX.Call(:*, [RDX.Const(0.3), RDX.NodeRef(:param, :beta)])
+        # the ExprNode-valued attrs survive (emitted as Const nodes, the inverse of to_expr)
+        @test RDX.node_from_dict(t1["prob_of_success"]) == RDX.Const(0.8)
+        @test RDX.node_from_dict(t1["cycletime"]) == RDX.Const(2.0)
+        @test RDX.node_from_dict(t1["priority"]) == RDX.Const(3.0)
+        # non-default species attrs are emitted; defaults (e.g. cash.reward=0) are omitted
+        cash = first(filter(s -> s["name"] == "cash", back["species"]))
+        @test cash["cost"] == 2.0 && cash["valuation"] == -1.0 && !haskey(cash, "reward")
+        @test first(filter(s -> s["name"] == "B", back["species"]))["reward"] == 50.0
+        # the reactants[] decompose back to the same (species, side, stoich) the loader consumes
+        ra = Set((r["species"], r["side"], get(r, "stoich", 1)) for r in back["reactants"])
+        @test ra == Set([("A", "lhs", 2), ("B", "rhs", 1)])
+
+        # full equivalence: re-import and simulate — identical trajectory under the same seed
+        p2 = RDX.from_json_model(JSON.json(back); seed = 1)
+        simulate(p); simulate(p2)
+        @test p.sol == p2.sol
+    end
+
+    @testset "E10: modality / @select / @advance reactants are the inverse of assemble_reaction_line" begin
+        import MacroTools, JSON
+        # a phase-advance transition with a @select LHS, @conserved/@rate resources, integer stoich,
+        # and an @advance RHS — exercising every reactant shape _reactants_to_dict must invert.
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
+          "params":[],
+          "species":[{"name":"Project","structured":true},{"name":"sci","init":10},{"name":"bud","init":20}],
+          "transitions":[{"id":"adv","name":"adv","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0}],
+          "reactants":[
+            {"transition":"adv","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
+            {"transition":"adv","side":"lhs","species":"sci","stoich":3,
+             "modality":{"allocation":"upfront","return":"conserved","blocking":"block"}},
+            {"transition":"adv","side":"lhs","species":"bud","stoich":5,
+             "modality":{"allocation":"perstep","return":"consumed","blocking":"block"}},
+            {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Phase3"}} ] }
+        """
+        REG = Dict{Symbol,Any}(:Project => (s, f) -> RDX.SerProjectToken(get(f, :phase, :Phase2), get(f, :npv, 0.0)))
+        toks() = [RDX.SerProjectToken(:Phase2, 1.0), RDX.SerProjectToken(:Phase2, 2.0)]
+        p = RDX.from_json_model(json; seed = 1, registry = REG, population = toks())
+        back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 5.0, "dt" => 1.0)))
+
+        # the @select predicate is recovered exactly (kind + clause)
+        sel = first(filter(r -> haskey(r, "predicate"), back["reactants"]))
+        @test sel["predicate"]["kind"] == "Project"
+        @test RDX.node_from_dict(sel["predicate"]["clauses"][1][3]) == RDX.Const(:Phase2)
+        # the @advance RHS field-write is recovered
+        adv = first(filter(r -> haskey(r, "advance"), back["reactants"]))
+        @test adv["advance"]["field"] == "phase"
+        @test RDX.node_from_dict(adv["advance"]["value"]) == RDX.Const(:Phase3)
+        # the 3-axis modality is recovered per species
+        sci = first(filter(r -> get(r, "species", "") == "sci", back["reactants"]))
+        @test sci["modality"] == Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
+        @test sci["stoich"] == 3
+        bud = first(filter(r -> get(r, "species", "") == "bud", back["reactants"]))
+        @test bud["modality"]["allocation"] == "perstep" && bud["stoich"] == 5
+
+        # re-imported :trans is the SAME reaction-line Expr (striplines: macrocalls carry line meta)
+        p2 = RDX.from_json_model(JSON.json(back); seed = 1, registry = REG, population = toks())
+        @test MacroTools.striplines(p.acs[1, :trans]) == MacroTools.striplines(p2.acs[1, :trans])
+        # and the two Phase2 projects advance to Phase3 identically
+        simulate(p); simulate(p2)
+        ph(q) = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(q, "structured")))]))
+        @test ph(p) == ph(p2) == ["Phase3", "Phase3"]
+    end
+
+    @testset "E10: typed Rules round-trip through to_json_model(prob).rules[]" begin
+        import JSON
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
+          "params":[],"species":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
+          "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
+          "reactants":[{"transition":"inert","species":"A","side":"lhs","stoich":1},
+                       {"transition":"inert","species":"B","side":"rhs","stoich":1}],
+          "rules":[{"id":"lever","fire_mode":"once",
+                    "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
+                    "action":{"verb":"set_species","name":"cash","mode":"inc","value":{"node":"const","value":500}}}] }
+        """
+        p = RDX.from_json_model(json; seed = 1)
+        back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
+        @test haskey(back, "rules") && length(back["rules"]) == 1
+        @test back["rules"][1]["id"] == "lever" && back["rules"][1]["fire_mode"] == "once"
+        @test back["rules"][1]["action"]["verb"] == "set_species"
+        # re-import fires the lever identically
+        p2 = RDX.from_json_model(JSON.json(back); seed = 1)
+        @test length(p2.rules) == 1
+        simulate(p); simulate(p2)
+        @test p.sol == p2.sol
+        @test p2.u[RDX.find_index(:cash, p2)] == 500.0
+    end
+
+    @testset "E10: a DSL-built model (@ReactionNetworkSchema) exports to a re-importable JSON" begin
+        import MacroTools, JSON
+        # build directly with the authoring DSL (NOT from JSON), then export → re-import.
+        acs = @ReactionNetworkSchema begin
+            1.0, A --> B, name => grow, probability => 0.5, cycletime => 2.0
+            @deterministic(3.0), 2 * B --> C, name => merge
+        end
+        json = RDX.to_json_model(acs; meta = Dict("tspan" => 5.0, "dt" => 1.0))
+        p = RDX.from_json_model(json; seed = 1)
+        # the assembled reaction lines re-parse to the same FoldedReactant decomposition: a grow
+        # transition A→B and a merge transition 2B→C.
+        @test MacroTools.striplines(p.acs[1, :trans]) == MacroTools.striplines(:(A → B))
+        @test MacroTools.striplines(p.acs[2, :trans]) == MacroTools.striplines(:(2B → C))
+        # the rate modes are recovered: grow poisson-wrapped, merge bare (@deterministic)
+        back = JSON.parse(json)
+        grow = first(filter(t -> t["id"] == "grow", back["transitions"]))
+        merge_ = first(filter(t -> t["id"] == "merge", back["transitions"]))
+        @test grow["rate_mode"] == "poisson" && merge_["rate_mode"] == "deterministic"
+        @test grow["prob_of_success"] == Dict{String,Any}("node" => "const", "value" => 0.5, "symbol" => false)
+    end
+
+    # ── E10: the BD model.rdj.json fixture — load → export → reload → trajectory-equal ──
+    @testset "E10: BD model.rdj.json survives load→export→reload trajectory-equal (the fixture)" begin
+        import JSON
+        demodir = normpath(joinpath(homedir(), "ReactiveDynamics-review", "demo", "bd_acquisition"))
+        include(joinpath(demodir, "host.jl"))
+        mpath = joinpath(demodir, "model.rdj.json")
+        meta = Dict("tspan" => 40.0, "dt" => 1.0, "alloc_strategy" => "weighted")
+
+        p1 = RDX.from_json_model(read(mpath, String); seed = 7,
+            registry = PROJECT_REGISTRY, population = initial_population())
+        json2 = RDX.to_json_model(p1; meta = meta)            # the now-real export
+        p2 = RDX.from_json_model(json2; seed = 7,
+            registry = PROJECT_REGISTRY, population = initial_population())
+        simulate(p1); simulate(p2)
+        @test p1.sol == p2.sol                                # trajectory-equal under the same seed
+        ph(q) = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(q, "structured")))]))
+        @test ph(p1) == ph(p2)
+
+        # re-export validates clean against the host registry (still an eval-free, loadable model)
+        @test isempty(RDX.validate(JSON.parse(json2); registry = PROJECT_REGISTRY))
+
+        # idempotency: to_json_model(reload(to_json_model(m))) parses equal to to_json_model(m)
+        p3 = RDX.from_json_model(json2; seed = 7,
+            registry = PROJECT_REGISTRY, population = initial_population())
+        @test JSON.parse(RDX.to_json_model(p3; meta = meta)) == JSON.parse(json2)
+    end
+
+    @testset "E10: @export_model writes a JSON file that @import_model reloads equivalently" begin
+        import JSON
+        json = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
+          "params":[{"name":"k","value":0.5}],
+          "species":[{"name":"A","init":10},{"name":"B"}],
+          "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+        """
+        prob = RDX.from_json_model(json; seed = 7)
+        tmp = tempname() * ".rdj.json"
+        @export_model prob tmp                       # now writes a FULL, loadable model (was a stub)
+        @import_model tmp reloaded seed = 7
+        @test reloaded isa RDX.ReactionNetworkProblem
+        @test reloaded.p[:k] == 0.5
+        simulate(prob); simulate(reloaded)
+        @test prob.sol == reloaded.sol
+        rm(tmp; force = true)
+    end
+
 end
