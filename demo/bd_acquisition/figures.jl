@@ -27,19 +27,23 @@ const GOLD = RGB(0.83, 0.62, 0.18)
 const GREY = RGB(0.62, 0.65, 0.70)
 const RUST = RGB(0.72, 0.34, 0.22)
 
-# ── Run the full grid once and cache per-member metric vectors ──────────────────────────
+# ── Run the full grid once and cache the per-scenario engine ensembles ──────────────────
+# Each entry is an `EnsembleProblem` (RD.ensemble via scenario_ensemble); per-member metric vectors
+# are read with the `*_samples` helpers, the acquisition price netted in the metric closures.
 function run_grid(; root_seed = 2026, nseed = 160)
     scenarios = [:S0, :S1, :S2, :S3, :S4, :S5]
-    Dict(s => ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed,
-                       acq_price = (s == :S0 ? 0.0 : ACQ_PRICE)) for s in scenarios)
+    Dict(s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
+         for s in scenarios)
 end
 
 function make_figures(; nseed = 160)
     @info "Running S0–S5 grid for figures ($nseed seeds)…"
     R = run_grid(; nseed = nseed)
     base = R[:S0]
-    Δ(s)   = treatment_effect(base, R[s]).delta_rnpv
-    SEΔ(s) = treatment_effect(base, R[s]).se_delta_rnpv
+    price(s) = s == :S0 ? 0.0 : ACQ_PRICE
+    rnpv(s) = rnpv_samples(R[s]; acq_price = price(s))          # per-member rNPV vector, price-netted
+    Δ(s)   = treatment_effect(base, R[s]; deal_price = price(s)).delta_rnpv
+    SEΔ(s) = treatment_effect(base, R[s]; deal_price = price(s)).se_delta_rnpv
 
     # ── Figure 1: Δ-rNPV waterfall (bridge) ──────────────────────────────────────────────
     # Steps: baseline level → + pipeline → + resource → + capability → + op-eff → +interaction → Full.
@@ -54,7 +58,7 @@ function make_figures(; nseed = 160)
                "+ Capability\n/PoS synergy", "+ Op-eff.\nsynergy", "+ Inter-\naction", "Full deal\n(S5)"]
     incr    = [s1, marg_res, marg_pos, marg_eff, interaction]      # the five additive blocks
     barcols = [TEAL, GOLD, RUST, GREY, RGB(0.55,0.58,0.63)]
-    base0   = mean_rnpv(base)
+    base0   = mean_rnpv(base; acq_price = 0.0)
     total   = base0 + sum(incr)
     n       = length(steps)
     hw      = 0.38                                                  # half-width of each bar
@@ -87,8 +91,10 @@ function make_figures(; nseed = 160)
     labels2 = ["Pipeline\nonly (S1)", "Resource\n(capital+HC)", "Capability\n/PoS", "Op-efficiency", "Full deal\n(S5)"]
     # values: S1 over S0; marginals over S1; S5 over S0
     vals2 = [s1, marg_res, marg_pos, marg_eff, Δ(:S5)]
-    # SEs: S1 and S5 are vs-S0 SEs; marginals use the paired SE over S1
-    paired_se(s) = (d = [m.rnpv for m in R[s]] .- [m.rnpv for m in R[:S1]]; std(d)/sqrt(length(d)))
+    # SEs: S1 and S5 are vs-S0 SEs; marginals use the paired SE over S1. The per-member rNPV vectors
+    # are price-netted and seed-aligned (member k in every scenario shares seed hash((2026,k))), so a
+    # per-seed paired difference is well-defined.
+    paired_se(s) = (d = rnpv(s) .- rnpv(:S1); std(d)/sqrt(length(d)))
     ses2 = [SEΔ(:S1), paired_se(:S2), paired_se(:S3), paired_se(:S4), SEΔ(:S5)]
     cols2 = [TEAL, GOLD, RUST, GREY, NAVY]
     n2 = length(labels2)
@@ -112,8 +118,8 @@ function make_figures(; nseed = 160)
     # Overlaid histograms (base Plots; StatsPlots/violin not in the env) — the point is that the
     # deal shifts the WHOLE distribution right, not just the mean, and the arms overlap (so the
     # headline Δ is a mean shift over wide per-seed spread, consistent with the ±SE on the table).
-    r0 = [m.rnpv for m in R[:S0]]
-    r5 = [m.rnpv for m in R[:S5]]
+    r0 = rnpv(:S0)
+    r5 = rnpv(:S5)
     edges = range(min(minimum(r0), minimum(r5)), max(maximum(r0), maximum(r5)); length = 28)
     # headroom: tallest bin (the baseline mode) must not clip under the legend
     ymax = 1.18 * maximum(vcat(

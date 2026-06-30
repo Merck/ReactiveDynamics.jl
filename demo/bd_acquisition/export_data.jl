@@ -19,31 +19,34 @@ jarr(v) = "[" * join((@sprintf("%.4f", x) for x in v), ",") * "]"
 function export_data(; root_seed = 2026, nseed = 160)
     scenarios = [:S0, :S1, :S2, :S3, :S4, :S5]
     @info "Running S0–S5 grid for export ($nseed seeds)…"
-    R = Dict(
-        s => ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed,
-                      acq_price = (s == :S0 ? 0.0 : ACQ_PRICE)) for s in scenarios
-    )
+    # Each scenario is an engine EnsembleProblem (RD.ensemble via scenario_ensemble); per-member
+    # vectors and summary stats come from the engine-backed analysis helpers. The acquisition price
+    # is netted in the metric closures (deals carry it, S0 does not).
+    R = Dict(s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
+             for s in scenarios)
     base = R[:S0]
+    price(s) = s == :S0 ? 0.0 : ACQ_PRICE
     out = joinpath(HERE, "presentation_data.json")
     open(out, "w") do io
         println(io, "{")
         println(io, "  \"nseed\": $nseed, \"root_seed\": $root_seed, \"acq_price\": $(ACQ_PRICE),")
         println(io, "  \"scenarios\": {")
         for (i, s) in enumerate(scenarios)
-            ms = R[s]
-            te = treatment_effect(base, ms)
+            ens = R[s]
+            te = treatment_effect(base, ens; deal_price = price(s))
             comma = i < length(scenarios) ? "," : ""
             println(io, "    \"$s\": {")
-            @printf(io, "      \"mean_rnpv\": %.4f, \"sem_rnpv\": %.4f,\n", mean_rnpv(ms), sem_rnpv(ms))
-            @printf(io, "      \"mean_launches\": %.4f, \"p_launch\": %.4f,\n", mean_launches(ms), p_launch(ms))
+            @printf(io, "      \"mean_rnpv\": %.4f, \"sem_rnpv\": %.4f,\n",
+                    mean_rnpv(ens; acq_price = price(s)), sem_rnpv(ens; acq_price = price(s)))
+            @printf(io, "      \"mean_launches\": %.4f, \"p_launch\": %.4f,\n", mean_launches(ens), p_launch(ens))
             @printf(io, "      \"mean_cash_trough\": %.4f, \"mean_sci_trough\": %.4f,\n",
-                    mean_cash_trough(ms), mean_sci_trough(ms))
+                    mean_cash_trough(ens), mean_sci_trough(ens))
             @printf(io, "      \"delta_rnpv\": %.4f, \"se_delta_rnpv\": %.4f, \"delta_launches\": %.4f,\n",
                     te.delta_rnpv, te.se_delta_rnpv, te.delta_launches)
-            println(io, "      \"rnpv\": ", jarr([m.rnpv for m in ms]), ",")
-            println(io, "      \"launches\": ", jarr([m.launches for m in ms]), ",")
-            println(io, "      \"cash_trough\": ", jarr([m.cash_trough for m in ms]), ",")
-            println(io, "      \"sci_trough\": ", jarr([m.sci_trough for m in ms]))
+            println(io, "      \"rnpv\": ", jarr(rnpv_samples(ens; acq_price = price(s))), ",")
+            println(io, "      \"launches\": ", jarr(launch_samples(ens)), ",")
+            println(io, "      \"cash_trough\": ", jarr(cash_trough_samples(ens)), ",")
+            println(io, "      \"sci_trough\": ", jarr(sci_trough_samples(ens)))
             println(io, "    }$comma")
         end
         println(io, "  }")

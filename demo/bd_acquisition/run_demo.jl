@@ -80,14 +80,17 @@ function main(; root_seed = 2026, nseed = 160)
         :S5 => "Full (all synergies)",
     )
 
+    # Each scenario runs as an engine EnsembleProblem (RD.ensemble via scenario_ensemble) — the
+    # per-member seeding hash((root_seed,k)) is identical to the old hand-rolled loop, so the numbers
+    # are unchanged. The acquisition price is netted in the metric closures (deals carry it, S0 does
+    # not), not baked into the ensemble, so one ensemble per scenario serves every metric.
     results = Dict{Symbol,Any}()
     for s in scenarios
-        price = s == :S0 ? 0.0 : ACQ_PRICE
-        ms = ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed, acq_price = price)
-        results[s] = ms
+        results[s] = scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
     end
 
     base = results[:S0]
+    price(s) = s == :S0 ? 0.0 : ACQ_PRICE
     # Resource columns are the two pools' LOW-WATER MARKS (cash⌄, sci⌄) — independent signals of
     # which constraint binds. (We don't also print the financing dip: it is exactly 150 − cash⌄,
     # i.e. a linear transform of cash⌄, so it would carry no extra information; it appears once in
@@ -95,31 +98,31 @@ function main(; root_seed = 2026, nseed = 160)
     println("\nScenario                      mean rNPV     launches  P(≥1)   cash⌄   sci⌄   Δ-rNPV vs S0 (±SE)")
     println("-" ^ 100)
     for s in scenarios
-        ms = results[s]
-        te = treatment_effect(base, ms)
+        ens = results[s]
+        te = treatment_effect(base, ens; deal_price = price(s))
         @printf(
             "%-28s  %9.1f    %6.2f   %5.2f   %6.1f  %5.1f   %s\n",
             labels[s],
-            mean_rnpv(ms),
-            mean_launches(ms),
-            p_launch(ms),
-            mean_cash_trough(ms),      # cash⌄: lowest the budget pool reached (binding ⇒ near 0)
-            mean_sci_trough(ms),       # sci⌄: lowest the scientist pool reached
+            mean_rnpv(ens; acq_price = price(s)),
+            mean_launches(ens),
+            p_launch(ens),
+            mean_cash_trough(ens),     # cash⌄: lowest the budget pool reached (binding ⇒ near 0)
+            mean_sci_trough(ens),      # sci⌄: lowest the scientist pool reached
             s == :S0 ? "      —" : @sprintf("%+8.1f ± %5.1f", te.delta_rnpv, te.se_delta_rnpv),
         )
     end
 
     println("\nHeadline (Full deal S5 vs Baseline S0):")
-    te = treatment_effect(base, results[:S5])
+    te = treatment_effect(base, results[:S5]; deal_price = ACQ_PRICE)
     @printf("  Δ-rNPV (deal value, net of price)  : %+.1f ± %.1f (1 SE, %d seeds)\n", te.delta_rnpv, te.se_delta_rnpv, nseed)
     @printf("  Δ-launches (extra programs to mkt) : %+.2f\n", te.delta_launches)
     @printf("  Δ-P(launch)                        : %+.2f\n", te.delta_p_launch)
     @printf("  cash trough, baseline → full deal  : %.1f → %.1f (the deal EASES the cash squeeze)\n",
             mean_cash_trough(base), mean_cash_trough(results[:S5]))
     println("\nSynergy decomposition (marginal Δ over S1 pipeline-only):")
-    s1 = treatment_effect(base, results[:S1]).delta_rnpv
+    s1 = treatment_effect(base, results[:S1]; deal_price = ACQ_PRICE).delta_rnpv
     for (s, name) in ((:S2, "resource (capital+headcount)"), (:S3, "capability/PoS"), (:S4, "op-efficiency"))
-        @printf("  %-30s : %+8.1f\n", name, treatment_effect(base, results[s]).delta_rnpv - s1)
+        @printf("  %-30s : %+8.1f\n", name, treatment_effect(base, results[s]; deal_price = ACQ_PRICE).delta_rnpv - s1)
     end
     # ── Engine-level per-program ledger (MVP finding D, src/ledger.jl) ──────────────────────
     # NEW capability: the engine now attributes the cost ledger PER PROGRAM during the run (with
