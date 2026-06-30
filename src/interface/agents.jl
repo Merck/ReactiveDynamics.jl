@@ -151,6 +151,19 @@ end
 # Priority with which an unbound agent will be assigned to a transition.
 priority(a::AbstractStructuredToken, transition) = 0.0
 
+export log_token_fields
+
+# Per-token trajectory-log hook (ADR 0013 §A1 / CONTRACT §14.1). A host KIND overrides this to
+# declare WHICH fields the orchestrator records into `state.token_trajectory` each tick, e.g.
+#
+#     ReactiveDynamics.log_token_fields(t::ProjectToken) = (; t.phase, t.npv_peak, t.pos_remaining)
+#
+# The default logs NOTHING — the trajectory log is bounded by per-kind opt-in (Invariant 2), so it
+# does not grow for kinds that don't opt in (load-bearing because retired tokens are KEPT under the
+# Milestone-1 soft-`:removed` decision). The hook MUST be 𝓕ₜ-measurable: a pure field read, no RNG,
+# no future (Invariant 1) — it returns the snapshot rather than holding it, keeping storage central.
+log_token_fields(::AbstractStructuredToken) = NamedTuple()
+
 # What species (place) is an agent currently assigned to.
 get_species(a::AbstractStructuredToken) = a.species
 set_species!(a::AbstractStructuredToken, species::Symbol) = a.species = species

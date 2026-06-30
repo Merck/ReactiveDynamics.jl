@@ -236,4 +236,14 @@ include("serialize.jl")
 #include("optim.jl")
 include("loadsave.jl")
 
+# Phase-0.6 analysis & visualization layer (ADR 0013/0014, CONTRACT §14/§15). All read-only over a
+# finished run; placed last so they see the run-state, ledger, predicate/sortkey, and serializer.
+#   analysis.jl  — §14.1 per-token trajectory log helpers + §14.2 ensemble runner / EnsembleProblem.
+#   export.jl    — §14.3 results export bundle (JSON+CSV core; Arrow via RDArrowExt weakdep).
+#   visualize.jl — §15.2 network exec map (Layer A network_graph, Layer B to_graphviz/draw_network,
+#                  Layer C exec_map). Result-plot recipes + `_draw` live in ext/RDPlotsExt.jl.
+include("analysis.jl")
+include("export.jl")
+include("visualize.jl")
+
 end

@@ -15,7 +15,6 @@ IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -27,10 +26,32 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
+# AlgebraicAgents is pulled directly from the published GitHub repo (Merck/AlgebraicAgents.jl)
+# rather than the registry release, so RD tracks the upstream source the ADR 0012/0013/0014
+# integration verifies against. Declarative `[sources]` (Julia 1.11+) keeps the pin in
+# Project.toml; `Pkg.resolve()`/`instantiate` writes the exact tree-sha into Manifest.toml.
+[sources]
+AlgebraicAgents = {url = "https://github.com/Merck/AlgebraicAgents.jl.git", rev = "main"}
+
+# Optional, lazily-loaded backends (ADR 0013 §C / ADR 0014 §A2). Both extensions carry their
+# heavy dependency as a weakdep so the core package stays lean and loads with them absent:
+#   • RDPlotsExt  — the seven result-plot @recipes + the generic `_draw` reduction (needs Plots).
+#   • RDArrowExt  — the byte-faithful Arrow writer for the rectangular export artifacts (needs Arrow).
+# Plots was a hard dep historically; it is now weak because the ONLY core code that used it was the
+# now-removed dead SciML plotting + `_draw`, and `_draw` moved into the extension.
+[weakdeps]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+
+[extensions]
+RDArrowExt = "Arrow"
+RDPlotsExt = "Plots"
+
 [compat]
 julia = "1.11"
 CSV = "0.10"
 Plots = "1.40"
+Arrow = "2"
 StatsFuns = "1.5"
 AlgebraicAgents = "0.3"
 ACSets = "0.2"

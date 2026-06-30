@@ -45,3 +45,9 @@ end
 @safetestset "AlgebraicAgents integration & external coupling" begin
     include("aa_integration.jl")
 end
+@safetestset "Analysis & observability (§14)" begin
+    include("analysis_observability.jl")
+end
+@safetestset "Visualization (§15)" begin
+    include("visualization.jl")
+end

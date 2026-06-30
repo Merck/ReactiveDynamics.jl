@@ -140,6 +140,15 @@ end
     # `external_inputs` to a copy of this so a re-run drops stale latched wire values but KEEPS the
     # pre-wire defaults, and every `_prestep!` merges wire reads OVER a copy of it.
     external_input_defaults::Dict{Symbol,Any}
+
+    # Per-token trajectory log (ADR 0013 §A / CONTRACT §14.1). The time-indexed companion to the
+    # per-program ledger: each tick `push_token_trajectory_row!` appends `(t, token_name, species,
+    # fields)` for every token whose KIND opts in via `log_token_fields(tok)::NamedTuple` (default
+    # empty), iterated in `token_sortkey` order — the same seam (`solvers.jl`, right after
+    # `push_program_ledger_row!`), observation point, and determinism guarantee as the ledger row it
+    # generalizes (§4 D4). `species` is captured at log time (it can change under soft-retire). Sibling
+    # of `log`; bounded by per-kind opt-in (Invariant 2); reset by `_reinit!` like the ledger (§4 D7).
+    token_trajectory::Vector{Tuple{Float64,String,Symbol,NamedTuple}}
 end
 
 # get value of a numeric expression

@@ -922,6 +922,9 @@ function ReactionNetworkProblem(
         0.0,
         external_inputs,
         external_input_defaults,
+        # Per-token trajectory log (ADR 0013 §14.1): empty at construction, appended each tick by
+        # push_token_trajectory_row! for opted-in kinds, reset by _reinit!.
+        Tuple{Float64,String,Symbol,NamedTuple}[],
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -968,6 +971,9 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     # Clear the per-program ledger so a re-run from the same seed rebuilds it identically (§4 D7,
     # MVP finding D — mirrors the creation_counters reset above).
     reset_program_ledger!(state)
+    # Clear the per-token trajectory log too (ADR 0013 §14.1 — same §4 D7 rebuild contract as the
+    # ledger: `init → step* → reinit! → step*` must reproduce the first run's trajectory rows).
+    empty!(state.token_trajectory)
     for entry in state.population
         if !(entry isa PopulationEntry)
             set_bound_transition!(entry, nothing)
@@ -1035,6 +1041,12 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
     # :valuation row so the per-program and aggregate views are consistent (src/ledger.jl).
     attribute_valuation!(state)
     push_program_ledger_row!(state)
+
+    # ADR 0013 §14.1: snapshot each opted-in token's declared fields into the per-token trajectory
+    # log, at the SAME seam as the per-program ledger row (all physics done, tokens in final
+    # positions, timestamp still this tick's `t`) and in the SAME deterministic token order — so the
+    # trajectory log and the ledger share one observation point and one determinism guarantee.
+    push_token_trajectory_row!(state)
 
     state.t += state.dt
 
