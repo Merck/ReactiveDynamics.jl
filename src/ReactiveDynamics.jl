@@ -183,7 +183,13 @@ function rem_parts!(acs::ReactionNetworkSchema, obj::Symbol, idxs)
         for a in keys(SCHEMA[obj])
             c = _col(acs, a)
             if p != last
-                c.v[p] = c.v[last]
+                # Move the last row into the freed slot. Guard on `def[last]`: for a non-bits column
+                # (e.g. Vector{Set{Symbol}}, Vector{FoldedObservable}) an UNDEFINED last cell is a
+                # `#undef` slot, and reading `c.v[last]` would throw UndefRefError — so only copy the
+                # value when it is defined; otherwise just carry the (un)defined flag.
+                if c.def[last]
+                    c.v[p] = c.v[last]
+                end
                 c.def[p] = c.def[last]
             end
             resize!(c.v, last - 1)

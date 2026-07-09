@@ -271,6 +271,24 @@ using Random, Distributions, DataFrames
         @test nparts(m, :T) == 2
     end
 
+    # [store-rem_parts-swap-pop-undef-nonbits] tier=T1-characterization expectedStatus=pass-now (WS-1 store)
+    # contract: ADR 0003 Phase 1 — the typed-struct store's rem_parts! clones ACSets swap-and-pop EXACTLY,
+    # incl. the case where the moved last row has an UNDEFINED non-bits cell (a species with no modality set
+    # yet ⇒ #undef Vector{Set{Symbol}} slot). A naive `c.v[p]=c.v[last]` would throw UndefRefError there.
+    # note: Regression for a latent crash found by adversarial review of the store swap: rem_parts! must guard
+    # note: the swap on the source cell's `def` flag. Exercised directly (add species without modality, then
+    # note: rem_parts! a middle row so the undefined last row is swapped in) and via equalize! below.
+    @testset "store: rem_parts! swap-and-pop is exact and safe with undefined non-bits cells" begin
+        acs = ReactiveDynamics.ReactionNetworkSchema()
+        for s in (:A, :B, :C, :D, :E, :F)
+            ReactiveDynamics.add_part!(acs, :S; specName = s)   # NO modality ⇒ specModality cell #undef
+        end
+        # swap-and-pop order (victims [2,4] reversed): remove 4 → F fills slot4; remove 2 → E fills slot2.
+        ReactiveDynamics.rem_parts!(acs, :S, [2, 4])            # must NOT throw on the #undef Set column
+        @test acs[:, :specName] == [:A, :E, :C, :F]            # exact ACSets swap-and-pop surviving order
+        @test nparts(acs, :S) == 4
+    end
+
     # [equalize-reactant-fk-repoint] tier=T2-acceptance expectedStatus=errors-until-implemented
     # contract: ADR 0003 (promote transition<->reactant relation to typed ReactantSpec incidence table); CONTRACT_DRAFT.md Pending §Composition (structurally exact species-merge)
     # note: Encodes ADR 0003: the transition<->reactant relation becomes a typed ReactantSpec incidence table
