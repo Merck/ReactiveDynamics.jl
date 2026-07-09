@@ -51,3 +51,6 @@ end
 @safetestset "Visualization (§15)" begin
     include("visualization.jl")
 end
+@safetestset "Exported symbols resolve (WS-4)" begin
+    include("exports_resolve.jl")
+end
