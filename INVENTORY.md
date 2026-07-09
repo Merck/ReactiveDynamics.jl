@@ -106,28 +106,28 @@ This is now enforced by `test/semantic/exports_resolve.jl` (see intro), so the c
 
 ---
 
-## ACSet Schema
+## Schema / static store (post-WS-1)
 
-> **Pending WS-1 (2026-07-09):** this section is intentionally left UNTOUCHED by the WS-4 housekeeping refresh — the ADR-0003 store swap (WS-1) will rewrite the schema, so refreshing it now would collide. Re-verify this section against source after WS-1 lands.
+> **Refreshed 2026-07-09 for the ADR-0003 store swap (WS-1).** ACSets is GONE (dropped from `[deps]`). The static authoring/IR store is now a dependency-free typed-struct-of-columns, defined in the module root `src/ReactiveDynamics.jl`. Line numbers below are approximate — re-grep before use.
 
-The schema lives in the module root, `src/ReactiveDynamics.jl`. It was migrated on this branch from a Catlab `@present FreeSchema` to an ACSets `BasicSchema`.
+- **`const SCHEMA`** — a `NamedTuple` of the six objects (`:S` species, `:T` transitions, `:E` events, `:obs` observables, `:P` params, `:M` meta — zero homs), each mapping `attr ⇒ element-type`. The single source of truth replacing the old ACSets `BasicSchema`; declaration order is load-bearing (it fixes `propertynames(acs.subparts)` order for the eight `"spec"`/`"trans"`-substring reflection loops). Derived: `ATTR2OBJ`, `ALLATTRS` (27 attrs), `columns(SCHEMA[,obj])`.
+- **`struct ReactionNetworkSchema{parts::Dict{Symbol,Int}, subparts::NamedTuple, reactants::Vector{ReactantSpec}}`** — the static network container (unchanged NAME, so every `state.acs::ReactionNetworkSchema` annotation still compiles). `subparts` is a `NamedTuple` of `AttrColumn{T}(v::Vector{T}, def::Vector{Bool})` columns in `ALLATTRS` order; an undefined cell reads `nothing`. An explicit typed inner constructor prevents the auto-`(Any,Any,Any)` field ctor from colliding with the legacy 3-arg `ReactionNetworkSchema(transitions,reactants,obs)`. Content-based `Base.hash` (the derived `reactants` table is excluded so `_model_hash` is stable across promotion).
+- **Shim verbs** (RD-owned, EXPORTED — no longer ACSets': `nparts`/`parts`/`dom_parts`/`incident`/`subpart`/`set_subpart!`/`add_part!`/`add_parts!`/`rem_parts!`). `getindex`/`setindex!` in 4 forms; `[:,attr]`/`subpart` return COPIES; `incident` = `findall(isequal)`. **`rem_parts!` is SWAP-AND-POP** (last row fills each freed slot, reverse-iterating sorted victims — cloning ACSets 0.2.29 exactly; equalize.jl relies on the surviving-row order).
 
-- **`TheoryReactionNetwork = BasicSchema(...)`** — `ReactiveDynamics.jl:30-76`. Six object classes (no homs): `:S` species, `:T` transitions, `:E` events, `:obs` observables, `:P` params, `:M` meta. Seven `AttrType`s: `SymbolicAttributeT`, `DescriptiveAttributeT`, `SampleableAttributeT`, `ModalityAttributeT`, `PcsOptT`, `PrmAttributeT`, `BoolAttributeT`. (The line-31 comment mislabels `:P`/`:M` as "model params, solver args" — `:P` is params, `:M` is meta.)
-- **`@acset_type FoldedReactionNetworkType(TheoryReactionNetwork)`** — `ReactiveDynamics.jl:78`.
-- **`const ReactionNetworkSchema = FoldedReactionNetworkType{Symbol, Union{String,Symbol,Missing}, SampleableValues, Set{Symbol}, FoldedObservable, Any, Bool}`** — `ReactiveDynamics.jl:80-88`. This concrete type is the package's primary static network container (distinct from the runtime `ReactionNetworkProblem` engine state).
+Object/attribute model (element types):
 
-Current attribute shape (`ReactiveDynamics.jl:42-75`):
-
-| Object | Attributes (col → AttrType) |
+| Object | Attributes (col → type) |
 |---|---|
-| `:S` species | `specName`→Symbolic, `specModality`→Modality(`Set{Symbol}`), `specInitVal`/`specInitUncertainty`/`specCost`/`specReward`/`specValuation`→Sampleable, **`specStructured`→Bool (NEW)** |
-| `:T` transitions | `trans`/`transPriority`/`transRate`/`transCycleTime`/`transProbOfSuccess`/`transCapacity`/`transMaxLifeTime`/`transPreAction`/`transPostAction`/`transMultiplier`→Sampleable, `transName`→Descriptive |
-| `:E` events | `eventTrigger`/`eventAction`→Sampleable |
-| `:obs` observables | `obsName`→Symbolic, `obsOpts`→PcsOpt(`FoldedObservable`) |
-| `:P` params | `prmName`→Symbolic, `prmVal`→Prm(`Any`) |
-| `:M` meta | `metaKeyword`→Symbolic, `metaVal`→Sampleable |
+| `:S` species | `specName`→Symbol, `specModality`→`Set{Symbol}`, `specInitVal`/`specInitUncertainty`/`specCost`/`specReward`/`specValuation`→SampleableValues, `specStructured`→Bool, **`specRole`→Symbol (WS-2, ADR 0009 §A port role, default `:private`)** |
+| `:T` transitions | `trans`/`transPriority`/`transRate`/`transCycleTime`/`transProbOfSuccess`/`transCapacity`/`transMaxLifeTime`/`transPreAction`/`transPostAction`/`transMultiplier`→SampleableValues, `transName`→`Union{String,Symbol,Missing}` |
+| `:E` events | `eventTrigger`/`eventAction`→SampleableValues |
+| `:obs` observables | `obsName`→Symbol, `obsOpts`→`FoldedObservable` |
+| `:P` params | `prmName`→Symbol, `prmVal`→Any |
+| `:M` meta | `metaKeyword`→Symbol, `metaVal`→SampleableValues |
 
-Supporting metadata tables (also in the root, all bare non-const globals): `prettynames` (`:104`, user alias → canonical attr), `defargs` (`:117`, per-object default attribute values; `:specStructured => false` at `:135`), `compilable_attrs` (`:141`, **DEAD** — computed via `eltype(attr)==SampleableValues` over a Symbol so always empty; zero other references), `species_modalities` (`:144`, `[:nonblock,:conserved,:rate]`). Construction routines: `assign_defaults!` (`:146`), `add_obs!` (`:174`), `merge_acs!` (`:200`), and the 4-arg/3-arg `ReactionNetworkSchema` constructors (`:166`/`:170`). String→attribute coercion is via `Base.convert` overloads (`:90-102`); two of them (`Set{Symbol}` at `:101`, `FoldedObservable` at `:102`) call `eval(Meta.parse(...))` on attribute strings — arbitrary-code evaluation in module scope.
+**Promoted reactant relation (WS-1 Phase 2, ADR 0003):** `struct ReactantSpec{trans::Int (FK→:T), species::Int (FK→:S, 0=dynamic), stoich, side::Symbol, modality::Set{Symbol}, expr}` — a `Vector{ReactantSpec}` FIELD on the store (NOT a 7th SCHEMA object, so it stays out of the reflection loops). `populate_reactant_specs!` (serialize.jl) derives it from the `:trans` column via the eval-free `_split_reaction_line`/`_static_reactants` decomposition; the `expr` field is the escape-hatch for dynamic reactants. Accessors: `reactant_specs`/`specname`/`find_index(::Symbol,::ReactionNetworkSchema)`. `equalize!` re-derives it post-merge for a structural FK-repoint.
+
+Supporting root tables/routines: `prettynames` (user alias → canonical attr), `defargs` (per-object defaults, incl. `:specStructured => false`, `:specRole => :private`), `species_modalities` (`[:nonblock,:conserved,:rate]`), `assign_defaults!`, `add_obs!`, `merge_acs!`, the 3/4-arg constructors. `compilable_attrs` was DELETED (dead). String→attribute coercion is `convert(Symbol,String)` on assignment (the only live hook; the old eval-based Set/FoldedObservable convert hooks were already removed per ADR 0005).
 
 ---
 
