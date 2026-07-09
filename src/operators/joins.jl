@@ -83,6 +83,13 @@ Prepend species names with a model identifier (unless a global species name).
 function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
     specmap = Dict()
     for i in parts(acs, :S)
+        # ADR 0009 §A / CONTRACT §11.1: a `shared`-role species is identified by BARE name across all
+        # fragments (the first-class @catchall) — it is NOT namespaced. `private` (default) and the
+        # open `input`/`output` ports namespace as usual here; @compose (§E) re-identifies the open
+        # ports afterwards by FK-repoint. (A species carrying no role reads :private via port_role.)
+        if port_role(acs, i) === :shared
+            continue
+        end
         new_name = normalize_name(name, i, acs[i, :specName], eqs)
         push!(specmap, acs[i, :specName] => (acs[i, :specName] = new_name))
     end

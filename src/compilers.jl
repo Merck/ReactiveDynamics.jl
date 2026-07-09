@@ -139,7 +139,8 @@ end
 
 function skip_compile(attr)
     return any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) ||
-           (string(attr) == "trans")
+           (string(attr) == "trans") ||
+           (attr === :specRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
 end
 
 function compile_attrs(acs::ReactionNetworkSchema, structured_token)

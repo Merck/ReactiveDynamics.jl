@@ -54,6 +54,11 @@ const SCHEMA = (
         specReward = SampleableValues,
         specValuation = SampleableValues,
         specStructured = Bool,
+        # ADR 0009 §A / CONTRACT §11.1 — open-port role: a thin closed tag on the Species record
+        # (NOT a new table). role ∈ {:private (default, auto-namespaced m__X on compose), :input,
+        # :output (open ports; directionality advisory), :shared (bare-name identified, the
+        # first-class @catchall)}. Drives @compose port-matching and refine boundary identification.
+        specRole = Symbol,
     ),
     T = (
         trans = SampleableValues,
@@ -171,6 +176,21 @@ function find_index(species::Symbol, acs::ReactionNetworkSchema)
     inc = incident(acs, species, :specName)
     return isempty(inc) ? nothing : first(inc)
 end
+
+# ── ADR 0009 §A / CONTRACT §11.1 — open-port roles (a closed tag on the Species record) ────────
+const PORT_ROLES = (:private, :input, :output, :shared)
+
+# The role of species `i`, defaulting to :private (a species authored before roles existed, or one
+# whose specRole cell is unset, is internal/namespaced). Assign-defaults seeds :private, but read
+# defensively so `port_role` is correct on a not-yet-defaulted schema too.
+function port_role(acs::ReactionNetworkSchema, i::Integer)
+    r = acs[i, :specRole]
+    return (r === nothing || r === missing) ? :private : r
+end
+port_role(acs::ReactionNetworkSchema, name::Symbol) =
+    (i = find_index(name, acs); i === nothing ? nothing : port_role(acs, i))
+
+is_open_port(role::Symbol) = role === :input || role === :output
 
 # ACSets hashed a static model by CONTENT (so export.jl `_model_hash = hash(prob.acs)` names a
 # stable bundle dir); a struct's default hash is object-identity. Preserve content-hashing. The
@@ -310,6 +330,7 @@ defargs = Dict(
         :specReward => 0.0,
         :specValuation => 0.0,
         :specStructured => false,
+        :specRole => :private,          # ADR 0009 §A — default port role (internal, namespaced)
     ),
     :P => Dict{Symbol,Any}(:prmVal => missing),
     :M => Dict{Symbol,Any}(:metaVal => missing),
