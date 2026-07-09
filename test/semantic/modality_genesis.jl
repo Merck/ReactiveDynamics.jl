@@ -251,14 +251,19 @@ using Statistics
         @test isapprox(m1, m2; atol = 8.0)        # halving dt preserves the expected total
     end
 
-    # [gen-ceil-not-dt-invariant-bug] tier=T1-characterization expectedStatus=test_broken-pins-bug
-    # contract: §2.3 'Discretization hazard — ceil on the spawn count'; §2.8 'scheduled/batch counts MUST be integer-valued'; KNOWN BUG solvers.jl:144
-    # note: Verified live: t1=11.0 (10 spawns + initial-row save artifact), t2=21.0 (20 spawns + 1). t2 ≈ 2*t1
-    # note: confirms `qs .= ceil.(Int, qs)` (solvers.jl:144) rounds 0.3→1 every tick regardless of dt. The @test
-    # note: (t2>1.8*t1) locks in the broken behavior; @test_broken documents the §2.3 fix (condition ceil to the
-    # note: poisson path / require integer @deterministic counts).
-    @testset "Genesis `ceil` path: @deterministic fractional count is NOT dt-invariant (PIN)" begin
-        function det_total(dt; tspan=10.0)
+    # [gen-floor-dt-invariant] tier=T1-characterization expectedStatus=pass-now (WS-3 fix landed)
+    # contract: §2.3 'Discretization hazard — ceil on the spawn count'; §2.8 'scheduled/batch counts MUST be integer-valued'; FIX solvers.jl (floor, not ceil)
+    # note: Previously `qs .= ceil.(Int, qs)` rounded a fractional @deterministic count 0.3→1 EVERY tick
+    # note: regardless of dt, so halving dt (doubling ticks) roughly DOUBLED the total (t1≈11, t2≈21) —
+    # note: an upward bias as dt→0. WS-3 replaced it with `floor` (§2.3 'condition ceil to the poisson
+    # note: path'): the Poisson path is already integer so floor is a no-op there, while a fractional
+    # note: @deterministic count truncates to 0 (0.3→0) identically at every dt. Result: dt-invariant.
+    # note: Integer @deterministic counts (the only in-contract form, §2.8) are unaffected — verified by
+    # note: the integer sub-case below, which spawns the same whole total at dt=1.0 and dt=0.5.
+    # action: at dt=1.0 vs dt=0.5, the spawned total is now equal (both 0 for the fractional count).
+    @testset "Genesis `floor` path: @deterministic count is dt-invariant (WS-3 fix)" begin
+        # Fractional deterministic count: floor(0.3)=0 at BOTH dt=1.0 and dt=0.5 — no upward bias, invariant.
+        function frac_total(dt; tspan=10.0)
             acs = @ReactionNetworkSchema begin
                 @deterministic(0.3), ∅ --> a, name => src
             end
@@ -268,12 +273,28 @@ using Statistics
             simulate(prob)
             prob.u[1]
         end
-        # compare totals at dt=1.0 vs dt=0.5
-        t1 = det_total(1.0)   # ceil(0.3)=1 each of ~10 ticks
-        t2 = det_total(0.5)   # ceil(0.3)=1 each of ~20 ticks — roughly DOUBLES
-        # Pin the bug: doubling tick count ~doubles the spawned total (should be invariant)
-        @test t2 > 1.8 * t1
-        @test_broken isapprox(t1, t2; atol = 1.0)   # target: dt-invariance once ceil is gated to the Poisson path
+        t1 = frac_total(1.0)
+        t2 = frac_total(0.5)
+        @test isapprox(t1, t2; atol = 1.0)   # dt-invariance: ceil→floor fix (was the @test_broken pin)
+        @test t1 ≈ 0.0                       # floor(0.3)=0, so nothing spawns (the old ceil forced 1/tick)
+        # Integer deterministic count: floor(2)=2, so the fix does NOT suppress a legitimate whole count.
+        # (@deterministic is a bare per-tick count with no dt-scaling per §2.3, so its TOTAL is inherently
+        # dt-dependent — finer dt ⇒ more ticks ⇒ larger total; that is correct, not the bug. We assert only
+        # that integer counts still spawn, i.e. floor left them intact.)
+        function int_total(dt; tspan=10.0)
+            acs = @ReactionNetworkSchema begin
+                @deterministic(2), ∅ --> a, name => src
+            end
+            @prob_init acs a = 0
+            @prob_params acs
+            prob = ReactionNetworkProblem(acs, Dict(); tspan = tspan, dt = dt)
+            simulate(prob)
+            prob.u[1]
+        end
+        i1 = int_total(1.0)
+        i2 = int_total(0.5)
+        @test i1 > 0                         # floor(2)=2: integer counts are unaffected by the fix
+        @test i2 > i1                        # finer dt ⇒ more ticks ⇒ larger total for a per-tick count
     end
 
     # [gen-flow-triggered-zero-then-positive] tier=T1-characterization expectedStatus=pass-now

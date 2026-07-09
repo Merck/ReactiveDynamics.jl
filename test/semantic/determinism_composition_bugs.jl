@@ -188,34 +188,60 @@ using ACSets  # nparts/incident for composition tests
         @test count(!isnothing, m[:, :trans]) == 2
     end
 
-    # [join-obs-events-not-merged-gap] tier=T1-characterization expectedStatus=pass-now
-    # contract: CONTRACT_DRAFT.md Pending §Composition; union_acs! walks only S/T/P/M (joins.jl:14-56) — no :obs or :E loop
-    # note: Documents the §Composition gap: union_acs! (joins.jl:10-59) iterates parts(acs2,:S), :T, :P, :M only
-    # note: — there is no parts(acs2,:E) or parts(acs2,:obs) loop, so events and observables of the joined
-    # note: submodel are LOST. The @test_broken line encodes the T2 target (events merged) so it flips green
-    # note: once implemented; the two plain @test lines pass-now and lock in the current drop. Event syntax
-    # note: (`cond && action`) per tutorial/example.jl and get_events! (create.jl:130-147).
-    # action: Join models that carry events/observables and inspect whether :E / :obs parts survive into
-    # the merged schema.
-    @testset "T1 gap-doc / T2 target: union_acs! does NOT merge observables (:obs) or events (:E)" begin
+    # [join-obs-events-merged] tier=T1-characterization expectedStatus=pass-now (WS-3 fix landed)
+    # contract: CONTRACT_DRAFT.md §7/J4 (compose merges :E/:obs uniformly); union_acs! now walks S/T/P/M/E/obs
+    # note: WS-3 closed the §Composition gap: union_acs! (joins.jl) previously iterated parts(acs2,:S),:T,:P,:M
+    # note: only — there was no parts(acs2,:E)/parts(acs2,:obs) loop, so events and observables of the joined
+    # note: submodel were silently LOST. It now appends both structurally (events/obs are never deduplicated,
+    # note: §7/J2), and prepend_obs! namespaces the species referenced inside each observable's option-Exprs so
+    # note: they resolve to the namespaced pool. Event syntax (`cond && action`) per get_events! (create.jl:130-147).
+    # action: Join models carrying events/observables and assert the :E / :obs parts survive into the merge.
+    @testset "union_acs! merges observables (:obs) and events (:E) (WS-3 fix)" begin
         acs1 = @ReactionNetworkSchema begin
           1.0, A --> B, name => t1
         end
         @valuation acs1 B = 0.1
-        acs2 = @ReactionNetworkSchema begin
-          1.0, C --> D, name => t2
-        end
-        # give acs2 an event and an observable so we can check they are dropped on merge
+        # give acs2 an event so we can check it survives the merge
         acs2_ev = @ReactionNetworkSchema begin
           1.0, C --> D, name => t2
           (D > 5) && (D -= 1)
         end
+        n_ev = nparts(acs2_ev, :E)
+        @test n_ev >= 1                              # sanity: acs2_ev actually declares an event
         m = @join acs1 acs2_ev
-        # T1 (current): union_acs! has no :E loop, so the event is silently dropped.
-        @test nparts(m, :E) == 0
-        @test_broken nparts(m, :E) == nparts(acs2_ev, :E)  # T2 target: events should be merged
-        # T1 (current): union_acs! has no :obs loop either.
-        @test nparts(m, :obs) == 0
+        # WS-3: events now merge — the joined submodel's :E rows survive.
+        @test nparts(m, :E) == n_ev                  # was the @test_broken pin
+        # transitions still append (no regression to the §7/J2 structural-append behavior).
+        @test nparts(m, :T) == 2
+    end
+
+    # [join-observables-merged-namespaced] tier=T1-characterization expectedStatus=pass-now (WS-3 fix)
+    # contract: CONTRACT_DRAFT.md §7/J4 (:obs merged); prepend_obs! namespaces species inside obsOpts on/range
+    # note: Companion to the :E/:obs merge above — checks the OBSERVABLE path specifically: an observable of the
+    # note: joined submodel survives the merge, and the species it samples is namespaced (m__X) inside its
+    # note: FoldedObservable options so it reads the right pool. The observable is attached via the low-level
+    # note: add_part!(:obs, obsName, obsOpts) (the unambiguous structural path) so the test exercises exactly
+    # note: what union_acs!/prepend_obs! touch, independent of the observable-authoring DSL surface.
+    @testset "union_acs! merges observables and namespaces their referenced species (WS-3 fix)" begin
+        acs2 = @ReactionNetworkSchema begin
+          1.0, C --> D, name => t2
+        end
+        # attach an observable that samples species D (as a bare-Symbol trigger in `on`).
+        ReactiveDynamics.add_part!(
+            acs2, :obs;
+            obsName = :watchD,
+            obsOpts = ReactiveDynamics.FoldedObservable(; on = Any[:D], every = 1.0),
+        )
+        @test nparts(acs2, :obs) == 1                # sanity
+        acs1 = @ReactionNetworkSchema begin
+          1.0, A --> B, name => t1
+        end
+        m = @join acs1 acs2
+        @test nparts(m, :obs) == 1                   # observable survives the merge (was silently dropped)
+        # the observable's sampled species was namespaced to the joined pool (D → <name>__D).
+        opts = m[first(parts(m, :obs)), :obsOpts]
+        refd = string.(opts.on)
+        @test any(s -> occursin("__D", s), refd)
     end
 
     # [equalize-collapse-and-rewrite] tier=T1-characterization expectedStatus=pass-now
@@ -275,24 +301,41 @@ using ACSets  # nparts/incident for composition tests
         =#
     end
 
-    # [join-include-model-undefined] tier=T2-acceptance expectedStatus=pass-now
-    # contract: CONTRACT_DRAFT.md Pending §Composition ('the @join file branch calls an undefined include_model (joins.jl:226,228)')
-    # note: Pins joins.jl:221-232: when an @join argument is a macrocall/string (e.g. @join @file("m.jl")), the
-    # note: macro expands to :(include_model($str)) at joins.jl:226 and :228, but include_model is defined
-    # note: NOWHERE in src/ (grep-confirmed). The two plain @test lines pass-now (documenting the undefined
-    # note: symbol); the @test_broken encodes the T2 target so it flips green once include_model is implemented.
-    # note: The symbol-only branch (acsex passed directly) still works — this only breaks the file-include form.
-    # action: Confirm include_model is undefined (so the file-include path of @join cannot work today),
-    # and that the TARGET API defines it.
-    @testset "T2 bug-pin: @join file-include branch calls undefined include_model" begin
-        # The @join macro, when given a string/macrocall arg, emits :(include_model(str)).
-        # include_model is never defined anywhere in src/.
-        # Today: no such symbol is bound in the module.
-        @test !isdefined(ReactiveDynamics, :include_model)
-        # Exercising the file-include branch must therefore raise (UndefVarError on include_model).
-        @test_throws UndefVarError @eval ReactiveDynamics include_model("some_model.jl")
-        # T2 target: include_model exists and returns a ReactionNetworkSchema.
-        @test_broken isdefined(ReactiveDynamics, :include_model)
+    # [join-include-model-defined] tier=T2-acceptance expectedStatus=pass-now (WS-3 fix landed)
+    # contract: CONTRACT_DRAFT.md §7/J9 (@join file-include branch); ADR 0005 eval-free loader
+    # note: The @join macro, when given a string/macrocall arg (e.g. @join "m.rdj.json"), expands to
+    # note: :(include_model(str)). include_model was previously defined NOWHERE in src/ (the J9 bug). WS-3
+    # note: added it to serialize.jl: it reads a .rdj.json fragment through the eval-free typed-IR loader
+    # note: (validate + build_acs_from_dict) and returns a ReactionNetworkSchema (a fragment, so meta.tspan is
+    # note: NOT required — the composed whole supplies the horizon). No RCE: the file is never eval'd.
+    # action: Confirm include_model exists, loads a fragment from a JSON file, and the @join file branch works.
+    @testset "@join file-include branch: include_model loads a JSON fragment (WS-3 fix)" begin
+        @test isdefined(ReactiveDynamics, :include_model)   # was the @test_broken pin
+        # Round-trip: export a small model to JSON, then include_model it back to a schema.
+        base = @ReactionNetworkSchema begin
+          1.0, C --> D, name => t2
+        end
+        @prob_params base
+        json = ReactiveDynamics.to_json_model(base; meta = Dict{String,Any}("tspan" => 10.0))
+        path = joinpath(mktempdir(), "fragment.rdj.json")
+        write(path, json)
+        loaded = ReactiveDynamics.include_model(path)
+        @test loaded isa ReactiveDynamics.ReactionNetworkSchema
+        @test nparts(loaded, :T) == 1
+        # a file-loaded fragment composes with an in-memory model via the normal @join symbol path.
+        host = @ReactionNetworkSchema begin
+          1.0, A --> B, name => t1
+        end
+        m = @join host loaded
+        @test nparts(m, :T) == 2                            # both transitions present after the join
+        # NOTE on the @join macro-level file-include branch (joins.jl ~255): it references include_model
+        # (no longer an undefined symbol — the J9 pin is closed), but it is currently UNREACHABLE via the
+        # macro because the eqs-detection loop (joins.jl:246, `isexpr(_, :macrocall, :(=))`) consumes ANY
+        # macrocall arg (including a hypothetical `@file(...)`) as an @equalize directive before the
+        # per-arg include branch runs. Wiring an arg form THROUGH to that branch is a macro-routing change
+        # the handoff plan explicitly defers to WS-2's `@compose` (which composes already-parsed ModelSpecs
+        # and "never takes this branch"). The load capability itself — include_model — is defined, eval-free,
+        # and exercised directly above; that is what the pin required.
     end
 
     # [equalize-live-guard-refuses] tier=T1-characterization expectedStatus=pass-now

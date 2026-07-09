@@ -312,7 +312,16 @@ function evolve!(state)
         i -> qs[i] = state[i, :transRate] * state[i, :transMultiplier],
         parts(state, :T),
     )
-    qs .= ceil.(Ref(Int), qs)
+    # Integerize the spawn-count proposal by FLOORING, not `ceil` (CONTRACT §2.3, §2.8). On the
+    # Poisson genesis path `transRate` is already a whole `rand(Poisson(dt·rate))` draw (create.jl:153),
+    # so `floor` is a no-op there and spawning stays dt-invariant in expectation. The ONLY source of a
+    # fractional `qs` is the `@deterministic` bare-count path: a fractional count (e.g. 0.3) previously
+    # got `ceil`'d up to 1 EVERY tick, so halving `dt` (doubling the tick count) roughly doubled the
+    # spawned total — an upward bias as dt→0. Flooring truncates a fractional deterministic count to
+    # whole instances (0.3 → 0), removing that discretization hazard; integer `@deterministic` counts
+    # (the only in-contract form, §2.8) are unaffected. This is the "condition ceil to the poisson path"
+    # fix given there is no genesis-mode tag to branch on.
+    qs .= floor.(Ref(Int), qs)
     # A transition gated off this tick (deactivated or guard false, ADR 0010 §B) proposes no
     # new instances — zero its genesis quantity so it never competes for resources.
     foreach(i -> state.transitions[:transFiring][i] || (qs[i] = 0), parts(state, :T))

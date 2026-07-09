@@ -55,6 +55,25 @@ function union_acs!(acs1, acs2, name = gensym("acs"), eqs = [])
         !ismissing(acs2[i, :metaVal]) && (acs1[first(inc), :metaVal] = acs2[i, :metaVal])
     end
 
+    # Events (:E) and observables (:obs) are STRUCTURAL — appended, never deduplicated (like :T,
+    # §7/J2). The historic gap (union_acs! walked only :S/:T/:P/:M) silently DROPPED both on join
+    # (determinism_composition_bugs.jl §"union_acs! does NOT merge observables/events"). `prepend!`
+    # (above) already namespaced the species referenced inside each event's trigger/action Expr and
+    # inside each observable's option-Exprs (via prepend_obs), so both merges are pure structural
+    # copies of already-namespaced rows.
+    for i in parts(acs2, :E)
+        add_part!(
+            acs1,
+            :E;
+            eventTrigger = acs2[i, :eventTrigger],
+            eventAction = acs2[i, :eventAction],
+        )
+    end
+
+    for i in parts(acs2, :obs)
+        add_part!(acs1, :obs; obsName = acs2[i, :obsName], obsOpts = acs2[i, :obsOpts])
+    end
+
     return acs1
 end
 
@@ -70,6 +89,10 @@ function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
 
     for attr in propertynames(acs.subparts)
         attr == :specName && continue
+        # Observable options live inside a FoldedObservable struct (the :obsOpts column), not as a
+        # bare Expr the loop below rewrites — handle them structurally via prepend_obs! so species
+        # referenced inside `on`/`range` exprs are namespaced consistently with every other attr.
+        attr == :obsOpts && continue
         attr_ = acs[:, attr]
         for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
@@ -78,23 +101,34 @@ function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
         end
     end
 
+    for i in parts(acs, :obs)
+        prepend_obs!(acs[i, :obsOpts], specmap)
+    end
+
     return acs
 end
 
 """
-Prepend identifier of an observable with a model identifier.
+Namespace the species referenced inside an observable's option expressions.
+
+`prepend!` renames every species `X → parent__X` and records the map in `specmap`. An observable's
+sampling triggers (`on`) and range endpoints (`range`) are stored as Exprs inside a `FoldedObservable`
+(the `:obsOpts` column), which `prepend!`'s attribute loop skips — so without this the observable would
+still reference the pre-namespaced species and silently read the wrong (or a missing) pool after a join.
+This mirrors the per-attribute `escape_ref` + `recursively_substitute_vars!` rewrite `prepend!` applies
+to every other spec-referencing attribute. The observable's own NAME (`obsName`) is intentionally left
+un-namespaced — rate/guard exprs reference observables by bare name via `@obs(x)`.
 """
-function prepend_obs end
-
-function prepend_obs(ex::Expr, name)
-    return prewalk(ex -> if (isexpr(ex, :macrocall) && (macroname(ex) == :obs))
-        (ex.args[end] = Symbol(name, "__", ex.args[end]); ex)
-    else
-        ex
-    end, ex)
+function prepend_obs!(opts::FoldedObservable, specmap)
+    keys_ = collect(keys(specmap))
+    subst(ex) = recursively_substitute_vars!(specmap, escape_ref(ex, keys_))
+    opts.on = map(subst, opts.on)
+    opts.range = map(
+        r -> r isa Tuple ? (r[1], subst(r[2])) : subst(r),
+        opts.range,
+    )
+    return opts
 end
-
-prepend_obs(ex, _) = ex
 
 ## species name normalization
 normalize_name(name::Symbol, parent_name) = Symbol("$(parent_name)__$name")

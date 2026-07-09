@@ -146,6 +146,20 @@ function _meta_kwargs(d::AbstractDict)
     return kw
 end
 
+# Load a model FRAGMENT from a JSON file as a static `ReactionNetworkSchema` (NOT a constructed
+# ReactionNetworkProblem). This is the target of `@join`'s file-include branch (joins.jl): when a
+# `@join` argument is a path/macrocall, the macro expands to `include_model(path)`, whose result is
+# fed to `union_acs!`. Unlike `from_json_model`, it does NOT require `meta.tspan` — a joined fragment
+# carries no simulation horizon of its own; the composed whole supplies it. The loader is eval-free
+# (build_acs_from_dict / validate — the ADR-0005 typed IR), so the file-include path carries no RCE.
+function include_model(path::AbstractString; registry = Dict{Symbol,Any}())
+    d = JSON.parse(read(path, String))
+    diags = validate(d; registry = registry)
+    isempty(diags) ||
+        error("include_model: $(repr(path)) failed validation:\n" * join(string.(diags), "\n"))
+    return build_acs_from_dict(d; registry = registry)
+end
+
 # ── from_json / to_json (the model envelope) ────────────────────────────────────────────
 function from_json_model(json::AbstractString; seed = nothing, registry = Dict{Symbol,Any}(), population = [])
     d = JSON.parse(json)
