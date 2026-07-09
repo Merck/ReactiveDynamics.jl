@@ -3,10 +3,14 @@
 export @push, @name_transition, @mode, @add_species
 export @periodic, @jump
 export @prob_init, @prob_uncertainty, @prob_params, @prob_meta
-export @prob_role, @list_by_role, @list_roles
-export @prob_check_verbose
 export @aka
 export @register
+
+# NOTE (WS-4 housekeeping): three dangling exports were DELETED from here — `@prob_role`,
+# `@list_by_role`, `@list_roles` (a legacy roles/actors ontology that was never implemented: no
+# macro definitions, no `specRole` schema attribute), and `@prob_check_verbose` (see below). The
+# role concept was dropped; ADR 0009's `PortRole` is an unrelated per-Species `role` field authored
+# inside `@ReactionNetworkSchema`, not a `@prob_role`-style config macro, so nothing is repurposed.
 
 using DataFrames
 using MacroTools: striplines
@@ -463,13 +467,10 @@ function get_alias(acs, ob)
     )
 end
 
-"""
-Check model parameters have been set. # msg as return value
-"""
-macro prob_check_verbose(acsex) # msg as return value
-    return :(missing_params = check_params($(esc(acsex)));
-    isempty(missing_params) ? "Params OK." : "Missing params: $missing_params")
-end
+# NOTE (WS-4 housekeeping): `@prob_check_verbose` was REMOVED here (definition + export above). It
+# called an undefined `check_params`, so it threw at call time; it was vestigial — referenced by no
+# code, test, demo, or doc, and the CONTRACT specifies no param-completeness check macro. Removed
+# rather than back-filled with a `check_params` implementation nothing consumes.
 
 """
 Add a periodic callback to a model.
