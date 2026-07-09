@@ -629,4 +629,41 @@ end
         @test prob2.external_input_defaults == prob.external_input_defaults  # ports round-trip
     end
 
+    # ── ADR 0003 Phase 2: the promoted ReactantSpec incidence table ─────────────────────────────
+    @testset "ReactantSpec table: population, FK exactness, escape-hatch, and JSON round-trip" begin
+        acs = @ReactionNetworkSchema begin
+          1.0, 2 * A + @conserved(B) --> C, name => rx
+        end
+        RDX.populate_reactant_specs!(acs)
+        rs = RDX.reactant_specs(acs)
+        # every static reactant carries an in-range integer FK and no escape-hatch expr.
+        static = filter(r -> r.species != 0, rs)
+        @test !isempty(static)
+        @test all(r -> 1 <= r.species <= RDX.nparts(acs, :S), static)
+        @test all(r -> r.expr === nothing, static)
+        # FK targets match the species names / sides / stoich the reaction line declares.
+        byname = Dict(RDX.specname(acs, r.species) => r for r in static)
+        @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].stoich == 2.0
+        @test haskey(byname, :B) && byname[:B].side == :lhs && :conserved in byname[:B].modality
+        @test haskey(byname, :C) && byname[:C].side == :rhs
+        # JSON round-trip: the table is DERIVED from :trans, which round-trips, so re-populating the
+        # reloaded model reproduces the same FK rows (species-name → side → stoich).
+        @prob_params acs
+        json = RDX.to_json_model(acs; meta = Dict{String,Any}("tspan" => 5.0))
+        acs2 = RDX.build_acs_from_dict(RDX.JSON.parse(json))
+        RDX.populate_reactant_specs!(acs2)
+        rt(m) = sort([(string(RDX.specname(m, r.species)), r.side, Float64(r.stoich))
+                      for r in RDX.reactant_specs(m) if r.species != 0])
+        @test rt(acs2) == rt(acs)
+
+        # Escape-hatch: a dynamic RHS (@advance field write, ADR 0008) is a species=0 / expr-carried
+        # row, NOT a static FK — the table records it without inventing a bogus FK.
+        acs3 = @ReactionNetworkSchema begin
+          1.0, @select(Project, phase == :Phase2) --> @advance(phase, :Phase3), name => adv
+        end
+        RDX.populate_reactant_specs!(acs3)
+        rs3 = RDX.reactant_specs(acs3)
+        @test any(r -> r.species == 0 && r.expr !== nothing, rs3)   # a dynamic term is escape-hatched
+    end
+
 end

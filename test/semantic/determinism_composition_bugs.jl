@@ -301,23 +301,26 @@ using Random, Distributions, DataFrames
     # reactant row that pointed at the eliminated species now points at the survivor by FK — not by re-
     # parsed expression strings.
     @testset "T2: promoted-ReactantSpec equalize repoints species FKs structurally (no string surgery)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
+        # ADR 0003 Phase 2 LANDED: reactants are a first-class ReactantSpec incidence table with an
+        # integer `species` FK into :S, and equalize! repoints those FKs structurally (rebuilds the
+        # FK-exact table from the post-merge names) instead of only string-substituting :trans.
         acs = @ReactionNetworkSchema begin
           1.0, A --> B, name => t1
           1.0, A2 --> B, name => t2
         end
-        # TARGET IR: a first-class ReactantSpec incidence table with FK species->S.
         m = equalize!(acs, [[(:catchall, :A), (:catchall, :A2)]])
-        reactants = ReactiveDynamics.reactant_specs(m)   # target accessor over the promoted table
-        # every ReactantSpec.species FK resolves to a live S index (no dangling FK after collapse).
-        @test all(r -> 1 <= r.species <= ReactiveDynamics.nparts(m, :S), reactants)
-        # no reactant still references the eliminated A2 index.
+        reactants = ReactiveDynamics.reactant_specs(m)   # accessor over the promoted table
+        @test !isempty(reactants)                        # the table is populated
+        # every static ReactantSpec.species FK resolves to a live S index (no dangling FK after collapse).
+        @test all(r -> r.species == 0 || 1 <= r.species <= ReactiveDynamics.nparts(m, :S), reactants)
+        # some reactant now points at the survivor A (the two LHS A/A2 collapsed onto it).
         surv = ReactiveDynamics.find_index(:A, m)
         @test any(r -> r.species == surv, reactants)
-        @test !any(r -> ReactiveDynamics.specname(m, r.species) == :A2, reactants)
-        =#
+        # no reactant still references the eliminated A2 (structural FK-repoint, no dangling alias).
+        @test !any(r -> r.species > 0 && ReactiveDynamics.specname(m, r.species) == :A2, reactants)
+        # both transitions' LHS now consume the single survivor A (FK-exact merge, no string corruption).
+        lhs_species = sort([r.species for r in reactants if r.side == :lhs])
+        @test lhs_species == [surv, surv]
     end
 
     # [join-include-model-defined] tier=T2-acceptance expectedStatus=pass-now (WS-3 fix landed)

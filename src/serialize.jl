@@ -931,3 +931,43 @@ modality_to_dict(s::Set{Symbol}) = Dict{String,Any}(
     "return" => (:conserved in s ? "conserved" : "consumed"),
     "blocking" => (:nonblock in s ? "nonblock" : "block"),
 )
+
+# ── ADR 0003 Phase 2: populate the promoted ReactantSpec incidence table from `:trans` ────────
+# Derive `acs.reactants` from the authoritative `:trans` column, reusing the SAME eval-free static
+# decomposition the JSON exporter uses (`_split_reaction_line` + `_static_reactants`, ~line 844/857),
+# so the table is exactly the reactant set the runtime/exporter see. Each FoldedReactant becomes one
+# ReactantSpec row: a plain species term gets an integer `species` FK (`find_index` into :S) and its
+# static stoich/modality; a DYNAMIC term (a @select predicate, an @advance/@move/@structured/@choose
+# macrocall, or a species not found in :S) gets `species = 0` and stashes its term Expr in `expr`
+# (the ADR escape-hatch). Idempotent: clears and rebuilds. Lines the static splitter cannot handle
+# (a raw @choose or bidirectional arrow at top level) are left un-promoted for that transition —
+# their reactants stay Expr-only in `:trans`, which is the escape-hatch at the whole-line grain.
+function populate_reactant_specs!(acs::ReactionNetworkSchema)
+    empty!(acs.reactants)
+    for t in parts(acs, :T)
+        line = acs[t, :trans]
+        lhs, rhs = try
+            _split_reaction_line(line)
+        catch
+            continue    # @choose / bidirectional / non-standard line: leave this transition Expr-only
+        end
+        for (arm, side) in ((lhs, :lhs), (rhs, :rhs))
+            for r in _static_reactants(arm)
+                if r.predicate !== nothing || (r.species isa Expr)
+                    # dynamic: a @select predicate or an @advance/@move/@structured macrocall term.
+                    push!(acs.reactants, ReactantSpec(t, 0, r.stoich, side, r.modality,
+                        r.species isa Union{Expr,Symbol} ? r.species : nothing))
+                else
+                    sp = r.species isa Symbol ? r.species : Symbol(r.species)
+                    j = find_index(sp, acs)
+                    if j === nothing
+                        push!(acs.reactants, ReactantSpec(t, 0, r.stoich, side, r.modality, sp))
+                    else
+                        push!(acs.reactants, ReactantSpec(t, j, r.stoich, side, r.modality, nothing))
+                    end
+                end
+            end
+        end
+    end
+    return acs.reactants
+end

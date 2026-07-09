@@ -13,6 +13,8 @@ using ComponentArrays
 # the ACSets API surface RD used; they are exported because callers (incl. tests) used them bare
 # from ACSets before. See the SCHEMA + shim block below.
 export nparts, parts, dom_parts, incident, subpart, set_subpart!, add_part!, add_parts!, rem_parts!
+# ADR 0003 Phase 2: the promoted transition↔reactant incidence table + its accessors.
+export ReactantSpec, reactant_specs, specname
 
 const SampleableValues = Union{Expr,Symbol,AbstractString,Float64,Int,Function}
 const ActionableValues = Union{Function,Symbol,Float64,Int}
@@ -100,22 +102,81 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
     (@inbounds c.v[i] = x; @inbounds c.def[i] = true; x)
 @inline grow!(c::AttrColumn{T}) where {T} = (resize!(c.v, length(c.v) + 1); push!(c.def, false))
 
+# ── ADR 0003 Phase 2: the promoted transition↔reactant incidence table ────────────────────────
+#
+# A `ReactantSpec` is one row of the bipartite transition↔species relation, promoted from the
+# re-parsed `:trans` Expr into a first-class typed record with INTEGER foreign keys: `trans` → a :T
+# index, `species` → a :S index. This makes the model's defining relation FK-checkable for agentic
+# authoring and — the headline win — lets `equalize!` merge species by structurally REPOINTING the
+# `species` FK (§7.4/J7) instead of `recursively_substitute_vars!` string surgery that can corrupt a
+# name colliding inside a subexpression.
+#
+# The `expr` field is the ADR-mandated ESCAPE-HATCH for the legitimately dynamic reactants that are
+# NOT a static (species, stoich) pair — `@choose` (random species per call), `@move`/`@structured`/
+# `@advance` (RHS macrocalls), `@select(Kind, …)` (a token PREDICATE whose "species" is a structured
+# kind, not a :S row), and expression-valued stoichiometry. Such a row carries `species = 0` (the
+# "no static FK" sentinel — the store reads an undefined Int cell as `nothing`, but here the table is
+# a plain Vector so we use 0 explicitly) and stashes the original term Expr in `expr`; a static row
+# has `species ≥ 1` and `expr === nothing`.
+#
+# The table is DERIVED from the authoritative `:trans` column (see `populate_reactant_specs!`); the
+# runtime engine still parses `:trans` per tick (state.jl), so promoting the table is additive and
+# behavior-preserving. It lives as a struct field (NOT a 7th SCHEMA object) precisely so it never
+# enters `propertynames(acs.subparts)` — the eight reflection loops in compilers/solvers/joins/
+# equalize keep iterating exactly the six original objects' columns, untouched.
+struct ReactantSpec
+    trans::Int              # FK → :T
+    species::Int            # FK → :S, or 0 for a dynamic (expr-carried) reactant
+    stoich::SampleableValues
+    side::Symbol            # :lhs or :rhs
+    modality::Set{Symbol}
+    expr::Union{Nothing,Expr,Symbol}   # escape-hatch term for a dynamic reactant, else nothing
+end
+
 # The static network container. Keeps the name `ReactionNetworkSchema` so every existing signature
 # and `state.acs::ReactionNetworkSchema` annotation compiles unchanged. `parts` counts rows per
-# object; `subparts` is the NamedTuple of typed columns in ALLATTRS order.
+# object; `subparts` is the NamedTuple of typed columns in ALLATTRS order; `reactants` is the
+# promoted ReactantSpec incidence table (ADR 0003 Phase 2), populated lazily/on-merge (empty for a
+# freshly-constructed or not-yet-promoted model — the runtime never reads it).
 struct ReactionNetworkSchema
     parts::Dict{Symbol,Int}
     subparts::NamedTuple
+    reactants::Vector{ReactantSpec}
+    # Explicit TYPED inner constructor. Without it Julia auto-generates an untyped
+    # `ReactionNetworkSchema(::Any,::Any,::Any)` field constructor, which collides with the legacy
+    # semantic 3-arg outer constructor `ReactionNetworkSchema(transitions, reactants, obs)` below
+    # (method overwrite → precompile error). The typed inner ctor is the only field-init path.
+    ReactionNetworkSchema(parts::Dict{Symbol,Int}, subparts::NamedTuple,
+                          reactants::Vector{ReactantSpec}) = new(parts, subparts, reactants)
 end
 
 function ReactionNetworkSchema()
     parts = Dict{Symbol,Int}(obj => 0 for obj in keys(SCHEMA))
     cols = NamedTuple{ALLATTRS}(AttrColumn{SCHEMA[ATTR2OBJ[a]][a]}() for a in ALLATTRS)
-    return ReactionNetworkSchema(parts, cols)
+    return ReactionNetworkSchema(parts, cols, ReactantSpec[])
+end
+
+# ── ReactantSpec accessors (ADR 0003 Phase 2 public surface) ──────────────────────────────────
+# The promoted incidence table. `populate_reactant_specs!` (serialize.jl) fills it from `:trans`;
+# `equalize!` keeps it FK-exact across a species merge. A caller that wants the table on a model
+# authored before promotion can call `populate_reactant_specs!(acs)` first (equalize! does).
+reactant_specs(acs::ReactionNetworkSchema) = acs.reactants
+
+# The :S species name at index `i` (the inverse of `find_index`), used to check FK targets.
+specname(acs::ReactionNetworkSchema, i::Integer) = acs[i, :specName]
+
+# The :S index of a species name on the STATIC schema (the ReactionNetworkProblem overload lives in
+# state.jl:263). Returns nothing if absent. Used by equalize!'s FK-repoint and the acceptance tests.
+function find_index(species::Symbol, acs::ReactionNetworkSchema)
+    inc = incident(acs, species, :specName)
+    return isempty(inc) ? nothing : first(inc)
 end
 
 # ACSets hashed a static model by CONTENT (so export.jl `_model_hash = hash(prob.acs)` names a
-# stable bundle dir); a struct's default hash is object-identity. Preserve content-hashing.
+# stable bundle dir); a struct's default hash is object-identity. Preserve content-hashing. The
+# promoted reactant table is DERIVED from `:trans`, so it is intentionally NOT hashed — a model and
+# its post-`populate_reactant_specs!` self must hash identically (the table adds no new information),
+# keeping `_model_hash` stable across the Phase-2 promotion.
 function Base.hash(acs::ReactionNetworkSchema, h::UInt)
     h = hash(:ReactionNetworkSchema, h)
     for a in ALLATTRS

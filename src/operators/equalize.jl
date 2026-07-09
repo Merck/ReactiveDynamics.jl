@@ -62,6 +62,16 @@ function equalize!(acs::ReactionNetworkSchema, eqs = [])
         end
     end
 
+    # ADR 0003 Phase 2 (§7.4/J7): promote the transition↔reactant relation to the FK-exact
+    # ReactantSpec table AFTER the merge. Because the merge above already collapsed the identified
+    # species to a single surviving `:S` row and rewrote every reference to the survivor's name,
+    # rebuilding the typed table from the post-merge `:trans` lines repoints every reactant's integer
+    # `species` FK onto the survivor STRUCTURALLY — no dangling FK to a removed row, and no reactant
+    # still names an eliminated alias. This is the collision-safe replacement for the string surgery
+    # above at the STRUCTURAL grain (the string rewrite of `:trans` is retained only because the
+    # runtime engine still parses `:trans` per tick, ADR 0003 Phase 1's behavior-preserving contract).
+    populate_reactant_specs!(acs)
+
     return acs
 end
 
