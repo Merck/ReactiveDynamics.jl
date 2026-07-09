@@ -184,7 +184,12 @@ using Random, Distributions, DataFrames
     # note: crediting q*stoich back) AND the non-return of plain consumed tokens. cycletime=0 means instant
     # note: completion so no rate scaling. Survives the rework since INV2 is a hard contract obligation.
     @testset "A :conserved token is held then returned in full; plain consumed token is not returned" begin
-        acs = @ReactionNetworkSchema begin; 1.0, 2*@conserved(scientist) + budget --> product, name => job, cycletime => 0.0; end; @prob_init acs scientist=10 budget=10 product=0; @prob_params acs; @prob_meta acs tspan=3 dt=1.0; prob = ReactionNetworkProblem(acs)
+        # seed=1: the rate-1.0 Poisson spawn is entropy-driven, and ~3% of unseeded runs draw zero
+        # spawns across all 3 ticks (Poisson(1) = 0 with prob e^-1 per tick), leaving product==0 and
+        # budget undrawn — which spuriously fails the two spawn-dependent assertions below (the
+        # conservation invariant itself never breaks). Seeding pins a trajectory that does spawn, so
+        # the test is deterministic. (Pre-existing fragility surfaced during the ADR-0003 store swap.)
+        acs = @ReactionNetworkSchema begin; 1.0, 2*@conserved(scientist) + budget --> product, name => job, cycletime => 0.0; end; @prob_init acs scientist=10 budget=10 product=0; @prob_params acs; @prob_meta acs tspan=3 dt=1.0; prob = ReactionNetworkProblem(acs; seed=1)
         simulate(prob)  # species order verified: [:scientist, :budget, :product]
         @test all(prob.sol.scientist .== 10.0)  # conserved pool held and returned every tick: never net-debited
         @test prob.sol.budget[end] < prob.sol.budget[1]  # plain consumed token IS permanently drawn down

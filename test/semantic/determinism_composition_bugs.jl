@@ -7,7 +7,8 @@
 
 using ReactiveDynamics, Test
 using Random, Distributions, DataFrames
-using ACSets  # nparts/incident for composition tests
+# nparts/incident/parts for composition tests now come from ReactiveDynamics itself (ADR 0003
+# Phase 1 dropped ACSets; RD's typed-struct store exports the shim verbs).
 
 @testset "Determinism & Seeding (§4), Composition (§7), and remaining bug-pins" begin
 

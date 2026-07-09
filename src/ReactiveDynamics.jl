@@ -1,11 +1,18 @@
 module ReactiveDynamics
 
-using ACSets
 using Reexport
 using MacroTools
 using ComponentArrays
 
 @reexport using GeneratedExpressions
+
+# ADR 0003 Phase 1: the static authoring/IR store is a dependency-free typed-struct-of-columns
+# (no ACSets). The store type keeps the name `ReactionNetworkSchema` and a public `.subparts`
+# NamedTuple of typed columns, so the ~70 indexing sites and the 8 `propertynames(acs.subparts)`
+# reflection loops compile unchanged. These verbs are the signature-preserving shim that replaces
+# the ACSets API surface RD used; they are exported because callers (incl. tests) used them bare
+# from ACSets before. See the SCHEMA + shim block below.
+export nparts, parts, dom_parts, incident, subpart, set_subpart!, add_part!, add_parts!, rem_parts!
 
 const SampleableValues = Union{Expr,Symbol,AbstractString,Float64,Int,Function}
 const ActionableValues = Union{Function,Symbol,Float64,Int}
@@ -27,65 +34,165 @@ Base.@kwdef mutable struct FoldedObservable
     on::Vector{SampleableValues} = SampleableValues[]
 end
 
-TheoryReactionNetwork = BasicSchema(
-    [:S, :T, :E, :obs, :P, :M], # species, transitions, events, processes (observables), model params, solver args
-    [], # no homs
-    [
-        :SymbolicAttributeT,
-        :DescriptiveAttributeT,
-        :SampleableAttributeT,
-        :ModalityAttributeT,
-        :PcsOptT,
-        :PrmAttributeT,
-        :BoolAttributeT,
-    ], # AttrTypes
-    [
-        # species
-        (:specName, :S, :SymbolicAttributeT),
-        (:specModality, :S, :ModalityAttributeT),
-        (:specInitVal, :S, :SampleableAttributeT),
-        (:specInitUncertainty, :S, :SampleableAttributeT),
-        (:specCost, :S, :SampleableAttributeT),
-        (:specReward, :S, :SampleableAttributeT),
-        (:specValuation, :S, :SampleableAttributeT),
-        (:specStructured, :S, :BoolAttributeT),
-        # transitions
-        (:trans, :T, :SampleableAttributeT),
-        (:transPriority, :T, :SampleableAttributeT),
-        (:transRate, :T, :SampleableAttributeT),
-        (:transCycleTime, :T, :SampleableAttributeT),
-        (:transProbOfSuccess, :T, :SampleableAttributeT),
-        (:transCapacity, :T, :SampleableAttributeT),
-        (:transMaxLifeTime, :T, :SampleableAttributeT),
-        (:transPreAction, :T, :SampleableAttributeT),
-        (:transPostAction, :T, :SampleableAttributeT),
-        (:transMultiplier, :T, :SampleableAttributeT),
-        (:transName, :T, :DescriptiveAttributeT),
-        # events
-        (:eventTrigger, :E, :SampleableAttributeT),
-        (:eventAction, :E, :SampleableAttributeT),
-        # observables
-        (:obsName, :obs, :SymbolicAttributeT),
-        (:obsOpts, :obs, :PcsOptT),
-        # params, args
-        (:prmName, :P, :SymbolicAttributeT),
-        (:prmVal, :P, :PrmAttributeT),
-        (:metaKeyword, :M, :SymbolicAttributeT),
-        (:metaVal, :M, :SampleableAttributeT),
-    ],
+# ── ADR 0003 Phase 1: the typed-struct-of-columns static store ────────────────────────────────
+#
+# `const SCHEMA` is the single source of truth for the object model — six objects (:S species,
+# :T transitions, :E events, :obs observables, :P params, :M meta), ZERO homs — replacing the old
+# ACSets `BasicSchema`. Each object maps to a NamedTuple of `column ⇒ element-type`. The declaration
+# ORDER (S-cols, then T, E, obs, P, M) is load-bearing: the store's `.subparts` NamedTuple is built
+# in this order, so `propertynames(acs.subparts)` reproduces the exact ACSets column order the eight
+# reflection loops (compilers.jl, solvers.jl, joins.jl, equalize.jl) filter over by substring.
+const SCHEMA = (
+    S = (
+        specName = Symbol,
+        specModality = Set{Symbol},
+        specInitVal = SampleableValues,
+        specInitUncertainty = SampleableValues,
+        specCost = SampleableValues,
+        specReward = SampleableValues,
+        specValuation = SampleableValues,
+        specStructured = Bool,
+    ),
+    T = (
+        trans = SampleableValues,
+        transPriority = SampleableValues,
+        transRate = SampleableValues,
+        transCycleTime = SampleableValues,
+        transProbOfSuccess = SampleableValues,
+        transCapacity = SampleableValues,
+        transMaxLifeTime = SampleableValues,
+        transPreAction = SampleableValues,
+        transPostAction = SampleableValues,
+        transMultiplier = SampleableValues,
+        transName = Union{String,Symbol,Missing},
+    ),
+    E = (eventTrigger = SampleableValues, eventAction = SampleableValues),
+    obs = (obsName = Symbol, obsOpts = FoldedObservable),
+    P = (prmName = Symbol, prmVal = Any),
+    M = (metaKeyword = Symbol, metaVal = SampleableValues),
 )
 
-@acset_type FoldedReactionNetworkType(TheoryReactionNetwork)
+# attr → owning object, and the flat ordered attr list (matches ACSets `propertynames(subparts)`).
+const ATTR2OBJ = Dict{Symbol,Symbol}(
+    a => obj for obj in keys(SCHEMA) for a in keys(SCHEMA[obj])
+)
+const ALLATTRS = Tuple(a for obj in keys(SCHEMA) for a in keys(SCHEMA[obj]))
 
-const ReactionNetworkSchema = FoldedReactionNetworkType{
-    Symbol,
-    Union{String,Symbol,Missing},
-    SampleableValues,
-    Set{Symbol},
-    FoldedObservable,
-    Any,
-    Bool,
-}
+# `columns(SCHEMA)` = all attrs (ordered); `columns(SCHEMA, obj)` = that object's attrs. These
+# replace the `propertynames(acs.subparts)` reflection where a schema-driven list is wanted; the
+# in-place `.subparts` loops keep using `propertynames` since `.subparts` IS a NamedTuple.
+columns(::typeof(SCHEMA)) = ALLATTRS
+columns(::typeof(SCHEMA), obj::Symbol) = keys(SCHEMA[obj])
+
+# A single typed column: values plus a `defined` bitmap. An unassigned cell reads back as `nothing`
+# (cloning ACSets' `get(col, i, default=nothing)`), so the `isnothing(acs[i,k])` guards in
+# assign_defaults!/solvers keep working, and `grow!` need not fabricate a typed default value.
+mutable struct AttrColumn{T}
+    v::Vector{T}
+    def::Vector{Bool}
+end
+AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
+
+@inline getcell(c::AttrColumn, i::Int) = @inbounds(c.def[i]) ? (@inbounds c.v[i]) : nothing
+# Assigning into a `Vector{T}` invokes `convert(T, x)` — this is what preserves the String→Symbol
+# (and String→SampleableValues, parse-not-eval) coercion the DSL/loader relied on (hooks below).
+@inline setcell!(c::AttrColumn{T}, i::Int, x) where {T} =
+    (@inbounds c.v[i] = x; @inbounds c.def[i] = true; x)
+@inline grow!(c::AttrColumn{T}) where {T} = (resize!(c.v, length(c.v) + 1); push!(c.def, false))
+
+# The static network container. Keeps the name `ReactionNetworkSchema` so every existing signature
+# and `state.acs::ReactionNetworkSchema` annotation compiles unchanged. `parts` counts rows per
+# object; `subparts` is the NamedTuple of typed columns in ALLATTRS order.
+struct ReactionNetworkSchema
+    parts::Dict{Symbol,Int}
+    subparts::NamedTuple
+end
+
+function ReactionNetworkSchema()
+    parts = Dict{Symbol,Int}(obj => 0 for obj in keys(SCHEMA))
+    cols = NamedTuple{ALLATTRS}(AttrColumn{SCHEMA[ATTR2OBJ[a]][a]}() for a in ALLATTRS)
+    return ReactionNetworkSchema(parts, cols)
+end
+
+# ACSets hashed a static model by CONTENT (so export.jl `_model_hash = hash(prob.acs)` names a
+# stable bundle dir); a struct's default hash is object-identity. Preserve content-hashing.
+function Base.hash(acs::ReactionNetworkSchema, h::UInt)
+    h = hash(:ReactionNetworkSchema, h)
+    for a in ALLATTRS
+        col = acs.subparts[a]
+        for i = 1:acs.parts[ATTR2OBJ[a]]
+            h = hash(getcell(col, i), h)
+        end
+    end
+    return h
+end
+
+# ── the signature-preserving shim (replaces the ACSets API surface RD used) ───────────────────
+@inline _col(acs::ReactionNetworkSchema, attr::Symbol) = getfield(acs, :subparts)[attr]
+
+nparts(acs::ReactionNetworkSchema, obj::Symbol) = acs.parts[obj]
+parts(acs::ReactionNetworkSchema, obj::Symbol) = Base.OneTo(acs.parts[obj])
+dom_parts(acs::ReactionNetworkSchema, attr::Symbol) = Base.OneTo(acs.parts[ATTR2OBJ[attr]])
+
+# scalar get/set
+Base.getindex(acs::ReactionNetworkSchema, i::Int, attr::Symbol) = getcell(_col(acs, attr), i)
+Base.setindex!(acs::ReactionNetworkSchema, v, i::Int, attr::Symbol) = setcell!(_col(acs, attr), i, v)
+# whole-column and row-subset reads return COPIES (matching ACSets `collect_column`/`map(identity)`);
+# `map(identity, …)` narrows e.g. `acs[:, :specName]` back to `Vector{Symbol}`.
+Base.getindex(acs::ReactionNetworkSchema, ::Colon, attr::Symbol) =
+    map(identity, [getcell(_col(acs, attr), i) for i = 1:acs.parts[ATTR2OBJ[attr]]])
+Base.getindex(acs::ReactionNetworkSchema, rows::AbstractVector, attr::Symbol) =
+    [getcell(_col(acs, attr), i) for i in rows]
+
+subpart(acs::ReactionNetworkSchema, attr::Symbol) = acs[:, attr]           # COPY (see note)
+subpart(acs::ReactionNetworkSchema, i::Int, attr::Symbol) = acs[i, attr]
+set_subpart!(acs::ReactionNetworkSchema, i::Int, attr::Symbol, v) = (acs[i, attr] = v)
+
+# `incident(acs, val, attr)` = findall over the attr column (never an FK follow — no homs). `isequal`
+# (not `==`) so `nothing`/`missing` cells compare `false`, never poison the result with `missing`.
+incident(acs::ReactionNetworkSchema, val, attr::Symbol) =
+    findall(i -> isequal(getcell(_col(acs, attr), i), val), 1:acs.parts[ATTR2OBJ[attr]])
+
+function add_part!(acs::ReactionNetworkSchema, obj::Symbol; kwargs...)
+    n = (acs.parts[obj] += 1)
+    for a in keys(SCHEMA[obj])
+        grow!(_col(acs, a))
+    end
+    for (k, v) in kwargs
+        setcell!(_col(acs, k), n, v)
+    end
+    return n
+end
+
+function add_parts!(acs::ReactionNetworkSchema, obj::Symbol, m::Int)
+    n0 = acs.parts[obj]
+    for _ = 1:m
+        add_part!(acs, obj)
+    end
+    return (n0+1):(n0+m)
+end
+
+# rem_parts! is SWAP-AND-POP (verified against ACSets 0.2.29: it moves the LAST row into each freed
+# slot and shrinks, iterating the sorted victims in REVERSE), NOT shift-down. equalize.jl:52 is the
+# sole reindexer and the surviving-row ORDER it produces feeds species→state.u indexing / the sol
+# DataFrame columns / valuation dot-products, so this must clone the swap-and-pop order exactly.
+function rem_parts!(acs::ReactionNetworkSchema, obj::Symbol, idxs)
+    idxs = issorted(idxs) ? idxs : sort(idxs)
+    for p in Iterators.reverse(idxs)
+        last = acs.parts[obj]
+        for a in keys(SCHEMA[obj])
+            c = _col(acs, a)
+            if p != last
+                c.v[p] = c.v[last]
+                c.def[p] = c.def[last]
+            end
+            resize!(c.v, last - 1)
+            pop!(c.def)
+        end
+        acs.parts[obj] -= 1
+    end
+    return acs
+end
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
 
@@ -141,8 +248,8 @@ defargs = Dict(
     :M => Dict{Symbol,Any}(:metaVal => missing),
 )
 
-compilable_attrs =
-    filter(attr -> eltype(attr) == SampleableValues, propertynames(ReactionNetworkSchema()))
+# (`compilable_attrs` removed with the ACSets swap — it was dead: `eltype(::Symbol)==SampleableValues`
+# is never true, so the filter was always empty, and it had zero references anywhere.)
 
 species_modalities = [:nonblock, :conserved, :rate]
 

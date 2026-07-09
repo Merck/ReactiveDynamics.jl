@@ -329,11 +329,13 @@ function as_state(u, t, state::ReactionNetworkProblem)
     return (state = deepcopy(state); state.u .= u; state.t = t; state)
 end
 
-function ACSets.ACSetInterface.nparts(state::ReactionNetworkProblem, obj::Symbol)
+# Extend RD's own nparts/parts generics (ADR 0003 Phase 1 — no longer ACSets') for the live state,
+# delegating to the static store. `nparts`/`parts` are defined and exported in ReactiveDynamics.jl.
+function nparts(state::ReactionNetworkProblem, obj::Symbol)
     return nparts(state.acs, obj)
 end
 
-function ACSets.ACSetInterface.parts(state::ReactionNetworkProblem, obj::Symbol)
+function parts(state::ReactionNetworkProblem, obj::Symbol)
     return parts(state.acs, obj)
 end
 
