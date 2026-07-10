@@ -1,10 +1,10 @@
 # ════════════════════════════════════════════════════════════════════════════════════════
-# build.jl — regenerate BOTH HTML forms of the wires_viz_tour from their literate sources.
+# build.jl — regenerate the wires_viz_tour HTML from its Literate source.
 #
-#   Form A  demo/wires_viz_tour/wires_viz_tour.jl   (Pluto notebook) → wires_viz_tour_pluto.html
-#   Form B  demo/wires_viz_tour/wires_literate.jl   (Literate script) → wires_literate.html
+#   demo/wires_viz_tour/wires_literate.jl  (Literate script) → wires_literate.html
 #
-# Both share wires_model.jl (the wired-hierarchy build + the two Graphviz renders + the data). Run:
+# The script shares wires_model.jl (the wired-hierarchy build + the two Graphviz renders + the
+# data). Run:
 #
 #     julia --project=demo/wires_viz_tour demo/wires_viz_tour/build.jl
 #
@@ -12,56 +12,23 @@
 #     julia --project=demo/wires_viz_tour -e 'using Pkg; Pkg.instantiate()'
 #
 # Long compiles buffer output; when driving this from a watchdog'd shell, launch in the background
-# and poll the log. Both renders execute the tutorial end-to-end (real Graphviz SVGs via `dot`).
+# and poll the log. The render executes the tutorial end-to-end (real Graphviz SVGs via `dot`).
 # ════════════════════════════════════════════════════════════════════════════════════════
 
 using Pkg
 Pkg.activate(@__DIR__)
 
-import Pluto
 import Literate
 import Markdown
 
 const HERE = @__DIR__
-const PLUTO_SRC = joinpath(HERE, "wires_viz_tour.jl")
 const LITERATE_SRC = joinpath(HERE, "wires_literate.jl")
-const PLUTO_HTML = joinpath(HERE, "wires_viz_tour_pluto.html")
 const LITERATE_HTML = joinpath(HERE, "wires_literate.html")
 
 banner(t) = (println(); println("="^80); println(t); println("="^80))
 
 # ────────────────────────────────────────────────────────────────────────────────────────
-# Form A — Pluto notebook → standalone HTML (headless, no interactive server)
-#
-# API (Pluto 0.20.28, verified against the resolved source): a `ServerSession` with
-# `run_notebook_on_load = true` so `SessionActions.open(session, path; run_async = false)` runs every
-# cell to completion, then `Pluto.generate_html(notebook)` bakes the executed state into a single
-# self-contained HTML string (the SVGs and the Plots chart embedded inline). The notebook itself
-# calls `Pkg.activate(@__DIR__)`, which is how Pluto detects manual package management and uses THIS
-# demo env instead of its own nbpkg.
-# ────────────────────────────────────────────────────────────────────────────────────────
-function build_pluto()
-    banner("Form A — Pluto notebook → $(basename(PLUTO_HTML))")
-    session = Pluto.ServerSession()
-    session.options.server.disable_writing_notebook_files = true
-    session.options.evaluation.run_notebook_on_load = true
-    notebook = Pluto.SessionActions.open(session, PLUTO_SRC; run_async = false)
-    # Surface any cell error rather than silently shipping a broken page.
-    errored = filter(c -> c.errored, notebook.cells)
-    if !isempty(errored)
-        for c in errored
-            @error "Pluto cell errored" code = c.code output = c.output.body
-        end
-        error("Pluto export: $(length(errored)) cell(s) errored — see above.")
-    end
-    html = Pluto.generate_html(notebook)
-    write(PLUTO_HTML, html)
-    Pluto.SessionActions.shutdown(session, notebook)
-    println("wrote $(PLUTO_HTML)  ($(filesize(PLUTO_HTML)) bytes)")
-end
-
-# ────────────────────────────────────────────────────────────────────────────────────────
-# Form B — Literate script → markdown → self-contained HTML
+# Literate script → markdown → self-contained HTML
 #
 # Literate.jl's native targets are markdown / notebook / script (no HTML target in this version), so
 # we render Literate → markdown WITH executed outputs (`execute = true`), which writes the Plots
@@ -70,7 +37,7 @@ end
 # SVG in place of its `<img>` tag, yielding ONE self-contained HTML file with the diagrams embedded.
 # ────────────────────────────────────────────────────────────────────────────────────────
 function build_literate()
-    banner("Form B — Literate script → $(basename(LITERATE_HTML))")
+    banner("Literate script → $(basename(LITERATE_HTML))")
 
     mddir = mktempdir()
     # Literate `cd`s into the output dir while executing, so `@__DIR__` inside the script would
@@ -133,10 +100,7 @@ $body
 """
 end
 
-# ── Run both (Form B first: it's faster and surfaces model errors before the heavier Pluto run) ──
 build_literate()
-build_pluto()
 
-banner("DONE — both HTML forms regenerated")
+banner("DONE — HTML regenerated")
 println("  $(basename(LITERATE_HTML))     $(filesize(LITERATE_HTML)) bytes")
-println("  $(basename(PLUTO_HTML))   $(filesize(PLUTO_HTML)) bytes")
