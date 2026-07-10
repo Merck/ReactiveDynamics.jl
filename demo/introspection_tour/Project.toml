@@ -10,13 +10,9 @@
 # Run any script with:   julia --project=demo/introspection_tour demo/introspection_tour/<script>.jl
 # First time:            julia --project=demo/introspection_tour -e 'using Pkg; Pkg.instantiate()'
 #
-# AlgebraicAgents is pinned to the published GitHub source so the demo tracks the same upstream the
-# ADR 0012/0013/0014 integration verifies against. We pin the exact TREE-SHA (v0.3.27) the main
-# project's Manifest already resolved, NOT the moving `rev = "main"`: upstream main has since advanced
-# to 0.4.x, which violates RD's `[compat] AlgebraicAgents = "0.3"`, so a fresh resolve against `main`
-# fails. Pinning the sha keeps the demo env reproducibly resolvable on a clean checkout. A `[sources]`
-# entry must also appear in `[deps]`, so AlgebraicAgents is listed there too (it is also a transitive
-# dep of ReactiveDynamics, which RD reexports).
+# AlgebraicAgents 0.4 (the ADR 0012/0013/0014 integration target) is registered in General, so the
+# demo resolves it as an ordinary registered dependency alongside path-dev'd ReactiveDynamics — no
+# GitHub `[sources]` pin needed (the earlier tree-sha pin predated the 0.4 registry release).
 
 [deps]
 AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
@@ -31,5 +27,4 @@ ReactiveDynamics = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
-AlgebraicAgents = {url = "https://github.com/Merck/AlgebraicAgents.jl.git", rev = "8d322a858a05034703faf8ee3dc355afe3b540f7"}
 ReactiveDynamics = {path = "../.."}

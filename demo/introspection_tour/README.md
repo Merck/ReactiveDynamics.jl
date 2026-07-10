@@ -18,7 +18,7 @@ The script is literate: every section opens with a block comment explaining the 
 
 ### Why a demo-local `Project.toml`
 
-The main ReactiveDynamics project is intentionally LEAN: `Plots` and `Arrow` are weakdeps (they back the `RDPlotsExt` / `RDArrowExt` extensions), so `julia --project=.` does not resolve them. This tour needs `Plots` (to render the exec map through AlgebraicAgents' Graphviz backend and for the §15.1 recipe types) and benefits from `Arrow` (the §14.3 export bundle then writes byte-faithful `.arrow` siblings). So this environment adds them on top of a path-dev'd ReactiveDynamics; loading them here also triggers the two extensions. `AlgebraicAgents` is pinned to the exact upstream tree-sha the main project's Manifest resolves (v0.3.27), not the moving `rev = "main"` (which has advanced to 0.4.x and violates RD's `[compat] AlgebraicAgents = "0.3"`), so a fresh resolve on a clean checkout stays reproducible.
+The main ReactiveDynamics project is intentionally LEAN: `Plots` and `Arrow` are weakdeps (they back the `RDPlotsExt` / `RDArrowExt` extensions), so `julia --project=.` does not resolve them. This tour needs `Plots` (to render the exec map through AlgebraicAgents' Graphviz backend and for the §15.1 recipe types) and benefits from `Arrow` (the §14.3 export bundle then writes byte-faithful `.arrow` siblings). So this environment adds them on top of a path-dev'd ReactiveDynamics; loading them here also triggers the two extensions. `AlgebraicAgents` (0.4, the ADR 0012/0013/0014 integration target) is resolved as an ordinary registered dependency.
 
 ## The model in one paragraph
 

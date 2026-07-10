@@ -25,12 +25,10 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
-# AlgebraicAgents is pulled directly from the published GitHub repo (Merck/AlgebraicAgents.jl)
-# rather than the registry release, so RD tracks the upstream source the ADR 0012/0013/0014
-# integration verifies against. Declarative `[sources]` (Julia 1.11+) keeps the pin in
-# Project.toml; `Pkg.resolve()`/`instantiate` writes the exact tree-sha into Manifest.toml.
-[sources]
-AlgebraicAgents = {url = "https://github.com/Merck/AlgebraicAgents.jl.git", rev = "main"}
+# AlgebraicAgents 0.4 (the ADR 0012/0013/0014 integration target) is now published to the General
+# registry, so RD resolves it as an ordinary registered dependency — no GitHub `[sources]` pin needed
+# (the earlier `rev = "main"` pin predated the 0.4 registry release). `[compat] AlgebraicAgents` below
+# tracks the supported major.
 
 # Optional, lazily-loaded backends (ADR 0013 §C / ADR 0014 §A2). Both extensions carry their
 # heavy dependency as a weakdep so the core package stays lean and loads with them absent:
@@ -52,7 +50,7 @@ CSV = "0.10"
 Plots = "1.40"
 Arrow = "2"
 StatsFuns = "1.5"
-AlgebraicAgents = "0.3"
+AlgebraicAgents = "0.4"
 Random = "1.11"
 DataFrames = "1.7"
 PlutoUI = "0.7"
