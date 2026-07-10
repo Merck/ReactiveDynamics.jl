@@ -1,0 +1,22 @@
+# Demo-local environment for the refinement & open-port composition tour.
+#
+# This tour exercises the AUTHORING-time refinement layer (ADR 0009 / CONTRACT §11) — @pipeline /
+# @process / @compose / refine / abstract / refinement_diagnostics. All of it lives in the core
+# ReactiveDynamics package, so this environment is deliberately thin: a path-dev'd ReactiveDynamics
+# plus AlgebraicAgents (from which `simulate` is re-exported) and Printf for the narrated output. It
+# needs NO Plots / Arrow — the tour is structural (it reads the promoted ReactantSpec incidence table
+# and the transition lists), not a results-visualization demo.
+#
+# Run any script with:   julia --project=demo/refinement_tour demo/refinement_tour/<script>.jl
+# First time:            julia --project=demo/refinement_tour -e 'using Pkg; Pkg.instantiate()'
+#
+# AlgebraicAgents 0.4 is registered in General, so the demo resolves it as an ordinary registered
+# dependency alongside path-dev'd ReactiveDynamics — no GitHub `[sources]` pin needed.
+
+[deps]
+AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+ReactiveDynamics = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
+
+[sources]
+ReactiveDynamics = {path = "../.."}

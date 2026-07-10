@@ -458,8 +458,12 @@ banner("§7. Composition: @join two submodels and @equalize species")
 # pool and rewrites every reference. Both operate at AUTHORING time (on a
 # schema), before construction.
 #
-# HONEST CAVEAT: `@join` currently merges species / transitions / params only —
-# it does NOT merge observables (:obs) or events (:E) of the joined submodels.
+# `@join` merges species / transitions / params AND (since WS-3) events (:E) and
+# observables (:obs) too — `union_acs!` walks all six objects and appends :E/:obs
+# structurally, so nothing is silently dropped on a join. `@join` / `@equalize` are
+# the MANUAL, no-declared-ports path (you name the species to identify); the
+# declared-port counterpart is `@compose`, which matches open input/output ports
+# automatically (see demo/refinement_tour).
 #
 # Here two reaction sub-systems each consume a shared resource A; we join them,
 # identifying the two A's as one pool, and count parts of the merged schema.
