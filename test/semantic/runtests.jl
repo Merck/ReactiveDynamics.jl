@@ -33,6 +33,9 @@ end
 @safetestset "Token filtration (@select / @advance)" begin
     include("token_filtration.jl")
 end
+@safetestset "Structured-token genesis (@structured RHS)" begin
+    include("structured_genesis.jl")
+end
 @safetestset "Declarative initial state + checkpoint" begin
     include("initial_state.jl")
 end
