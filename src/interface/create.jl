@@ -299,7 +299,21 @@ function recursively_find_reactants!(reactants, pcs, ex)
                 isexpr(ex.args[i], :tuple) ? ex.args[i].args[2] : ex.args[i],
             )
         end
-    elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:structured, :move, :advance]
+    elseif isexpr(ex, :macrocall) && macroname(ex) == :structured
+        # @structured(:Kind, field = value, …) — the named, registry-resolved genesis product is
+        # the ONLY supported form (ADR 0005 §39 / 0006 §C): args[3] is the quoted kind symbol, the
+        # rest are `field = value` pairs. The raw `@structured(Ctor(…))` form (an inline host
+        # constructor Expr) was REMOVED — it was the sole reactant construct that could not
+        # round-trip through the eval-free JSON IR, so forbidding it makes eval-free serialization a
+        # TOTAL invariant (every genesis product is data). Reject the raw form at construction time.
+        (length(ex.args) >= 3 && ex.args[3] isa QuoteNode) || error(
+            "@structured: expected the named form `@structured(:Kind, field = value, …)` — a " *
+            "quoted kind symbol whose constructor is resolved through the network registry by " *
+            "name. The raw `@structured(Ctor(…))` constructor form is not supported (it cannot " *
+            "serialize eval-free); register the kind's `(state, fields) -> token` constructor and " *
+            "reference it by name instead (ADR 0006 §C). Got: $(ex.args[3])")
+        return ex
+    elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:move, :advance]
         return ex
     elseif isexpr(ex, :macrocall) && macroname(ex) == :select
         # @select(Kind, clauses): register only the KIND as a species; the clause fields

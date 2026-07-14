@@ -575,30 +575,14 @@ function structured_rhs(expr::Expr, state, transition)
             token = ctor(state, fieldvals)
             entangle!(getagent(state, "structured"), token)
             return token, get_species(token)
-        elseif length(expr.args) == 3
-            expr = quote
-                return $(expr.args[end])
-            end
-
-            token = context_eval(state, transition, state.wrap_fun(expr))
-
-            entangle!(getagent(state, "structured"), token)
-
-            return token, get_species(token)
         else
-            expr = quote
-                token = $(expr.args[end-1])
-                species = $(expr.args[end])
-
-                return token, species
-            end
-
-            token, species = context_eval(state, transition, state.wrap_fun(expr))
-            set_species!(token, Symbol(species))
-
-            entangle!(getagent(state, "structured"), token)
-
-            return token, get_species(token)
+            # The raw `@structured(Ctor(…))` / `@structured(token, species)` forms were removed —
+            # the named, registry-resolved form above is the only supported genesis product (it is
+            # the sole one that serializes eval-free; ADR 0005 §39 / 0006 §C). Construction rejects
+            # a raw line (recursively_find_reactants!, create.jl), so reaching here means a
+            # hand-built :trans Expr bypassed that check — surface it rather than eval host code.
+            error("@structured: only the named form `@structured(:Kind, field = value, …)` is " *
+                  "supported; the raw constructor form was removed (see create.jl). Got: $expr")
         end
     elseif isexpr(expr, :macrocall) && macroname(expr) == :move
         expr = quote

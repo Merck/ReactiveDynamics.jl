@@ -30,8 +30,7 @@ using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!, add_structured_token!,
     Rule, Seq, SetSpecies, SetParams, SetTokens, AddToken, Activate, Deactivate, Log,
     get_species, inners, getagent, find_index, TokenPredicate, Clause, PopulationEntry,
-    from_json_model, to_json_model, unserializable_transitions, validate, dump_state, restore,
-    apply_action!, set_guard!
+    from_json_model, to_json_model, validate, dump_state, restore, apply_action!, set_guard!
 using Random, Distributions, DataFrames
 import JSON
 
@@ -322,30 +321,29 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
 # §3 added a token via an `AddToken` action buried inside a Rule's `Seq` — an imperative
 # side-effect on the decision channel. There is a second, more primitive way to BIRTH a token,
 # and it is first-class in the dynamics: a transition whose RHS PRODUCT is a token, written
-# `@structured(...)`. This is structurally parallel to a plain source reaction `∅ --> budget`
-# (which mints a scalar) — except the product is a full agentic token, entangled live into the
-# structured pool. Genesis is thus a transition PRODUCT, not a rule action.
 #
-# There are two authoring forms, and the choice is exactly the ADR-0006 §C eval-free boundary:
+#   ∅ --> @structured(:Project, phase = :Phase1, npv = rand(state.rng, …), born = @t())
 #
-#   NAMED (preferred):  ∅ --> @structured(:Project, phase = :Phase1, npv = rand(state.rng, …), born = @t())
-#   RAW (escape hatch): ∅ --> @structured(GenesisProjectToken(:Phase1, rand(state.rng, …), @t()))
+# This is structurally parallel to a plain source reaction `∅ --> budget` (which mints a scalar) —
+# except the product is a full agentic token, entangled live into the structured pool. Genesis is
+# thus a transition PRODUCT, not a rule action.
 #
-# The NAMED form is the RHS-product TWIN of §3's `AddToken`: the reaction line carries the registry
+# `@structured` is the RHS-product TWIN of §3's `AddToken`: the reaction line carries the registry
 # KIND (`:Project`) plus field-value expressions, and the host constructor is resolved BY NAME
-# through the registry at firing time — the document never carries the constructor. It shares
+# through the registry at firing time — the reaction line NEVER carries the constructor. It shares
 # AddToken's exact `(state, fields::Dict) -> token` contract, so BOTH genesis paths use one
 # registry. Because it carries only a name + typed field nodes, it ROUND-TRIPS through the
-# eval-free JSON IR (we prove that below, and again in §6). The RAW form inlines the host
-# constructor directly on the transition — maximally expressive, but the body is host Julia (an
-# Expr), so a model using it is NOT JSON-serializable (`to_json_model` raises rather than emit
-# un-loadable code). Pick named when the model must be author-as-JSON data; raw when you need an
-# arbitrary host expression on the RHS and serialization is not a requirement.
+# eval-free JSON IR (we prove that below, and again in §6) — genesis-as-product and
+# genesis-as-rule-action are the same operation in two positions. This is the ONLY @structured
+# form: an inline-constructor form `@structured(Ctor(…))` — the only reactant construct that could
+# not serialize eval-free — was removed, so eval-free serialization is now a TOTAL invariant (every
+# genesis product is data). A raw constructor on the RHS is rejected at construction (see the note
+# at the end of this section).
 #
-# Either way the field values are evaluated at firing time INSIDE the run's context, so they can
-# read live state — here `@t()` (the clock, stamped into `born`) and `state.rng` (the seeded RNG,
-# so a drawn `npv` is reproducible under the seed). We give the kind a `born` field to SEE the
-# clock captured at each birth.
+# The field values are evaluated at firing time INSIDE the run's context, so they can read live
+# state — here `@t()` (the clock, stamped into `born`) and `state.rng` (the seeded RNG, so a drawn
+# `npv` is reproducible under the seed). We give the kind a `born` field to SEE the clock captured
+# at each birth.
 @register begin
     @aagent BaseStructuredToken AbstractStructuredToken struct GenesisProjectToken
         phase::Symbol
@@ -408,26 +406,33 @@ simulate(pg2)
 println("Reproducible: same-seed npvs identical? ",
         sort([t.npv for t in gtoks]) ≈ sort([t.npv for t in livetokens(pg2)]))
 
-# The named form is DATA: because it carries only the kind name + typed field nodes (not the
+# Genesis is DATA: because @structured carries only the kind name + typed field nodes (not the
 # constructor), the genesis model exports to the eval-free JSON IR and reloads loss-free — the
-# same round-trip §6 makes for the whole pipeline, here exercised on a @structured RHS.
-# A non-throwing pre-flight — `unserializable_transitions(prob)` lists any transition that would
-# make `to_json_model` throw (today: a RAW @structured body). Empty here ⇒ the model is exportable;
-# on a raw-form model it would name the offending transition + the fix, WITHOUT attempting export.
-println("Pre-flight unserializable_transitions(pg): ", unserializable_transitions(pg),
-        " (empty ⇒ serializable — no raw @structured bodies)")
+# same round-trip §6 makes for the whole pipeline, here exercised on a @structured RHS. Because the
+# raw inline-constructor form was removed, THIS ALWAYS HOLDS: any model the engine accepts exports.
 gjson = to_json_model(pg)
 pg_rt = from_json_model(gjson; seed = 1, registry = GENESIS_REGISTRY); simulate(pg_rt)
-println("Named form round-trips: exported model validates clean? ",
+println("Genesis round-trips: exported model validates clean? ",
         isempty(validate(JSON.parse(gjson); registry = GENESIS_REGISTRY)),
         "; reload reproduces births? ",
         sort([t.born for t in gtoks]) == sort([t.born for t in livetokens(pg_rt)]))
 println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, decision channel); here")
 println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species —")
-println("and the NAMED form shares AddToken's registry, so it serializes as eval-free data too.")
-println("(The RAW `@structured(Ctor(…))` form inlines the constructor — more expressive, but not")
-println("JSON-serializable: `to_json_model` fails LOUDLY naming the transition, and the pre-flight")
-println("`unserializable_transitions` lists it beforehand. Use raw only when the model need not be data.)")
+println("sharing AddToken's registry, so it serializes as eval-free data too.")
+
+# A raw inline constructor on the RHS is REJECTED at construction — @structured is named-only, so
+# eval-free serialization is a total invariant. Show the rejection (caught, for the demo).
+raw_line = :(@structured(GenesisProjectToken(:Phase1, 100.0, 0.0)))
+try
+    @eval @ReactionNetworkSchema begin
+        @deterministic(1.0), ∅ --> $raw_line, name => genesis
+    end
+    println("Raw @structured(Ctor(…)): UNEXPECTEDLY accepted")
+catch e
+    msg = sprint(showerror, e)
+    println("Raw @structured(Ctor(…)) rejected at construction: ",
+            occursin("named form", msg) ? "✓ (points to the named form)" : msg)
+end
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §5. Population queries & writes — SetTokens with @field

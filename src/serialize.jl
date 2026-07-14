@@ -8,7 +8,7 @@
 import JSON
 
 export node_to_dict, node_from_dict, model_to_dict, build_acs_from_dict
-export from_json_model, to_json_model, unserializable_transitions
+export from_json_model, to_json_model
 
 # ── ExprNode ⟷ JSON dict (the recursive node-tagged union) ──────────────────────────────
 node_to_dict(n::Const) = Dict{String,Any}(
@@ -851,10 +851,10 @@ function _reactants_to_dict(acs)
         line = acs[i, :trans]
         lhs, rhs = _split_reaction_line(line)
         for r in _static_reactants(lhs)
-            push!(out, _reactant_to_dict(r, id, "lhs"; species, params, trans = id))
+            push!(out, _reactant_to_dict(r, id, "lhs"; species, params))
         end
         for r in _static_reactants(rhs)
-            push!(out, _reactant_to_dict(r, id, "rhs"; species, params, trans = id))
+            push!(out, _reactant_to_dict(r, id, "rhs"; species, params))
         end
     end
     return out
@@ -885,14 +885,14 @@ _static_reactants(arm) =
 #   • an @advance/@structured/@move RHS → {side, advance:{field, value}} / {side, structured/move:…}
 #     (FoldedReactant.species is a macrocall Expr)
 #   • a plain species → {side, species, stoich, modality}
-function _reactant_to_dict(r::FoldedReactant, id, side; species, params, trans = "?")
+function _reactant_to_dict(r::FoldedReactant, id, side; species, params)
     d = Dict{String,Any}("transition" => id, "side" => side)
     if r.predicate !== nothing
         # @select(Kind, clauses) — the inverse of _reactant_atom's predicate branch. pred_to_dict
         # emits {kind, clauses:[[field, op, value-node], …]} exactly as the loader's predicate{} reads.
         d["predicate"] = pred_to_dict(r.predicate)
     elseif r.species isa Expr && isexpr(r.species, :macrocall)
-        _emit_macro_reactant!(d, r.species; species, params, trans)
+        _emit_macro_reactant!(d, r.species; species, params)
     else
         # a plain species term: name, integer-or-Expr stoich (omit the default 1), 3-axis modality.
         d["species"] = string(r.species)
@@ -904,7 +904,7 @@ end
 
 # Decompose a structured RHS macrocall (@advance / @structured / @move) back to its JSON form —
 # the inverse of _reactant_atom's @advance branch and the structured_rhs (solvers.jl:352) shapes.
-function _emit_macro_reactant!(d, mc::Expr; species, params, trans = "?")
+function _emit_macro_reactant!(d, mc::Expr; species, params)
     name = macroname(mc)
     if name === :advance
         # @advance(field, value) — an RHS lifecycle field-write (ADR 0008 §D).
@@ -921,32 +921,21 @@ function _emit_macro_reactant!(d, mc::Expr; species, params, trans = "?")
             "to" => string(_macro_sym(mc.args[4])),
         )
     elseif name === :structured
-        if length(mc.args) >= 3 && mc.args[3] isa QuoteNode
-            # NAMED form `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
-            # product (ADR 0005 §39). Emit {kind, fields:[{name, value-node}, …]}, the inverse of
-            # _reactant_atom's structured branch; each field value lowers through from_expr exactly
-            # like an @advance value or an AddToken field.
-            d["structured"] = Dict{String,Any}(
-                "kind" => string(mc.args[3].value),
-                "fields" => [
-                    Dict{String,Any}(
-                        "name" => string(kw.args[1]),
-                        "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
-                    ) for kw in @view mc.args[4:end]
-                ],
-            )
-        else
-            # RAW form `@structured(Ctor(…))` / `@structured(token, species)` — the body is host
-            # Julia (an Expr carrying the constructor itself), not a typed node, so it cannot
-            # round-trip eval-free. This is the documented escape hatch; use the named
-            # `@structured(:Kind, field = …)` (or a typed AddToken rule) for a serializable model.
-            # The error names the offending transition (see also `unserializable_transitions`, a
-            # non-throwing pre-flight that lists ALL such transitions before an export is attempted).
-            error("to_json_model: transition `$trans` uses a RAW @structured($(_raw_structured_repr(mc))) " *
-                  "RHS — the body is host Julia (the constructor itself), so it is not JSON-" *
-                  "serializable. Rewrite it as the named, registry-resolved form " *
-                  "@structured(:Kind, field = …) (or a typed AddToken rule) to export this model.")
-        end
+        # NAMED form `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
+        # product (ADR 0005 §39), and the ONLY @structured form the engine accepts (the raw
+        # constructor form was removed and is rejected at construction, create.jl). Emit
+        # {kind, fields:[{name, value-node}, …]}, the inverse of _reactant_atom's structured branch;
+        # each field value lowers through from_expr exactly like an @advance value or an AddToken
+        # field. args[3] is always a QuoteNode here (construction guarantees it).
+        d["structured"] = Dict{String,Any}(
+            "kind" => string(mc.args[3].value),
+            "fields" => [
+                Dict{String,Any}(
+                    "name" => string(kw.args[1]),
+                    "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
+                ) for kw in @view mc.args[4:end]
+            ],
+        )
     else
         error("_reactants_to_dict: unsupported reactant macrocall @$(name)")
     end
@@ -954,51 +943,6 @@ function _emit_macro_reactant!(d, mc::Expr; species, params, trans = "?")
 end
 
 _macro_sym(x) = x isa QuoteNode ? x.value : x
-
-# A short, safe rendering of a RAW @structured body for an error/diagnostic message (the inline
-# host Expr — e.g. `MyType(…)`). Never eval'd; just shown so the author can find the call site.
-function _raw_structured_repr(mc::Expr)
-    body = length(mc.args) >= 3 ? mc.args[3] : nothing
-    body === nothing && return "…"
-    s = string(body)
-    return length(s) > 60 ? s[1:57] * "…" : s
-end
-
-# ── unserializable_transitions — a NON-throwing pre-flight for to_json_model ──────────────
-# Returns the list of `(transition_id, reason)` pairs that would make `to_json_model(prob)` throw,
-# WITHOUT attempting the export. Today the sole reason is a RAW `@structured(Ctor(…))` RHS whose
-# body is an inline host Expr (not the named, registry-resolved form). An empty result ⇒ the model
-# is serializable. This lets tooling (or a user, or an LLM authoring loop) check BEFORE exporting
-# and localize exactly which transitions to rewrite, rather than discovering it via an exception.
-# The hard `to_json_model` failure is deliberately RETAINED — dropping it would either silently
-# omit the genesis reactant (a correctness bug: the reloaded model mints nothing) or re-introduce
-# an eval-on-load path (a security regression, ADR 0005 §S4). This is the localized companion.
-function unserializable_transitions(prob::ReactionNetworkProblem)
-    acs = prob.acs
-    out = Tuple{String,String}[]
-    for i in parts(acs, :T)
-        name = acs[i, :transName]
-        id = string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name)
-        line = acs[i, :trans]
-        lhs, rhs = try
-            _split_reaction_line(line)
-        catch
-            push!(out, (id, "reaction line shape not supported by the export path (@choose / bidirectional)"))
-            continue
-        end
-        for arm in (lhs, rhs)
-            for r in _static_reactants(arm)
-                if r.species isa Expr && isexpr(r.species, :macrocall) &&
-                   macroname(r.species) === :structured &&
-                   !(length(r.species.args) >= 3 && r.species.args[3] isa QuoteNode)
-                    push!(out, (id, "RAW @structured($(_raw_structured_repr(r.species))) — " *
-                                    "rewrite as the named @structured(:Kind, field = …) form"))
-                end
-            end
-        end
-    end
-    return out
-end
 
 # Emit a stoich coefficient, omitting the default 1. The runtime parser carries stoich as a Float
 # multiplier (multiplex), so an integer authored as `2` comes back as `2.0`; coerce an integral
