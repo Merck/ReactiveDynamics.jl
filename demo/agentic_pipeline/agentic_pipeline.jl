@@ -320,23 +320,31 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
 #
 # §3 added a token via an `AddToken` action buried inside a Rule's `Seq` — an imperative
 # side-effect on the decision channel. There is a second, more primitive way to BIRTH a token,
-# and it is first-class in the dynamics: a transition whose RHS PRODUCT is a host constructor,
-# written `@structured(Ctor(...))`. This is structurally parallel to a plain source reaction
-# `∅ --> budget` (which mints a scalar) — except the product is a full agentic token, entangled
-# live into the structured pool. Genesis is thus a transition PRODUCT, not a rule action:
+# and it is first-class in the dynamics: a transition whose RHS PRODUCT is a token, written
+# `@structured(...)`. This is structurally parallel to a plain source reaction `∅ --> budget`
+# (which mints a scalar) — except the product is a full agentic token, entangled live into the
+# structured pool. Genesis is thus a transition PRODUCT, not a rule action.
 #
-#     @deterministic(1.0), ∅ --> @structured(GenesisProjectToken(:Phase1, rand(...), @t())), name => genesis
+# There are two authoring forms, and the choice is exactly the ADR-0006 §C eval-free boundary:
 #
-# The constructor is evaluated at firing time INSIDE the run's context, so it can read live state
-# — here `@t()` (the clock) and `state.rng` (the run's seeded RNG) — making each birth genuinely
-# on-the-fly yet reproducible under the seed. `@structured`/`@move`/`@advance` are the three
-# structured-token RHS ops the engine recognizes (reaction_parser.jl); this is the genesis one.
+#   NAMED (preferred):  ∅ --> @structured(:Project, phase = :Phase1, npv = rand(state.rng, …), born = @t())
+#   RAW (escape hatch): ∅ --> @structured(GenesisProjectToken(:Phase1, rand(state.rng, …), @t()))
 #
-# We need a kind whose constructor takes a `born` field so we can SEE the clock captured at birth.
-# (One caveat vs. the §6 JSON path: a `@structured` RHS body is host Julia — an Expr — so a model
-# that uses it cannot round-trip through the eval-free JSON IR (`to_json_model` raises rather than
-# emit un-loadable code). AddToken, a typed action, is the serializable path; @structured is the
-# in-dynamics path. Pick by whether the model must be author-as-JSON data.)
+# The NAMED form is the RHS-product TWIN of §3's `AddToken`: the reaction line carries the registry
+# KIND (`:Project`) plus field-value expressions, and the host constructor is resolved BY NAME
+# through the registry at firing time — the document never carries the constructor. It shares
+# AddToken's exact `(state, fields::Dict) -> token` contract, so BOTH genesis paths use one
+# registry. Because it carries only a name + typed field nodes, it ROUND-TRIPS through the
+# eval-free JSON IR (we prove that below, and again in §6). The RAW form inlines the host
+# constructor directly on the transition — maximally expressive, but the body is host Julia (an
+# Expr), so a model using it is NOT JSON-serializable (`to_json_model` raises rather than emit
+# un-loadable code). Pick named when the model must be author-as-JSON data; raw when you need an
+# arbitrary host expression on the RHS and serialization is not a requirement.
+#
+# Either way the field values are evaluated at firing time INSIDE the run's context, so they can
+# read live state — here `@t()` (the clock, stamped into `born`) and `state.rng` (the seeded RNG,
+# so a drawn `npv` is reproducible under the seed). We give the kind a `born` field to SEE the
+# clock captured at each birth.
 @register begin
     @aagent BaseStructuredToken AbstractStructuredToken struct GenesisProjectToken
         phase::Symbol
@@ -356,13 +364,21 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
     end
 end
 
+# The registry the NAMED @structured form resolves `:Project` through — the SAME `(state, fields)`
+# convention §3's AddToken uses, so the genesis product and the rule action share one host contract.
+const GENESIS_REGISTRY = Dict{Symbol,Any}(
+    :Project => (state, f) -> RDX.GenesisProjectToken(
+        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, state.t)),
+)
+
 # The pipeline: a genesis source that BIRTHS one Phase1 project per tick (npv drawn from the seeded
-# RNG, birth-time stamped from the clock), and a downstream @select/@advance leg the newborns flow
-# through. Birth → select → advance, all in the dynamics — no host loop, no rule action.
+# RNG, birth-time stamped from the clock) via the named, registry-resolved form, and a downstream
+# @select/@advance leg the newborns flow through. Birth → select → advance, all in the dynamics.
 function genesis_model()
     acs = @ReactionNetworkSchema begin
         @deterministic(1.0),
-        ∅ --> @structured(GenesisProjectToken(:Phase1, rand(state.rng, Normal(120.0, 20.0)), @t())),
+        ∅ --> @structured(:Project, phase = :Phase1,
+                          npv = rand(state.rng, Normal(120.0, 20.0)), born = @t()),
         name => genesis
         @deterministic(1.0),
         @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
@@ -373,11 +389,11 @@ function genesis_model()
 end
 
 banner("§4. Genesis as a transition product (@structured RHS — the agentic constructor)")
-pg = ReactionNetworkProblem(genesis_model(); tspan = 5, dt = 1.0, seed = 1)
+pg = ReactionNetworkProblem(genesis_model(); tspan = 5, dt = 1.0, seed = 1, registry = GENESIS_REGISTRY)
 println("t=0 live tokens: ", length(livetokens(pg)), " (the source has not fired yet).")
 simulate(pg)
 gtoks = livetokens(pg)
-println("RHS: ∅ --> @structured(GenesisProjectToken(:Phase1, rand(state.rng,·), @t()))")
+println("RHS: ∅ --> @structured(:Project, phase=:Phase1, npv=rand(state.rng,·), born=@t())")
 println("After the run the source minted ", length(gtoks), " tokens, each a distinct agent:")
 println("  born times (from @t() at construction): ", sort([t.born for t in gtoks]))
 println("  npv values (drawn from the seeded RNG): ", round.(sort([t.npv for t in gtoks]); digits = 1))
@@ -385,12 +401,26 @@ println("  every name unique (independent identity): ",
         length(unique(RDX.getname.(gtoks))) == length(gtoks))
 println("  phases now (newborns flowed through @select/@advance to Phase2): ",
         "Phase1=$(nphase(pg,:Phase1)) Phase2=$(nphase(pg,:Phase2))")
-# same seed ⇒ identical births (the ctor draws from the run's seeded rng)
-pg2 = ReactionNetworkProblem(genesis_model(); tspan = 5, dt = 1.0, seed = 1); simulate(pg2)
+# same seed ⇒ identical births (the field exprs draw from the run's seeded rng)
+pg2 = ReactionNetworkProblem(genesis_model(); tspan = 5, dt = 1.0, seed = 1, registry = GENESIS_REGISTRY)
+simulate(pg2)
 println("Reproducible: same-seed npvs identical? ",
         sort([t.npv for t in gtoks]) ≈ sort([t.npv for t in livetokens(pg2)]))
-println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, on the decision channel);")
-println("here it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species.")
+
+# The named form is DATA: because it carries only the kind name + typed field nodes (not the
+# constructor), the genesis model exports to the eval-free JSON IR and reloads loss-free — the
+# same round-trip §6 makes for the whole pipeline, here exercised on a @structured RHS.
+gjson = to_json_model(pg)
+pg_rt = from_json_model(gjson; seed = 1, registry = GENESIS_REGISTRY); simulate(pg_rt)
+println("Named form round-trips: exported model validates clean? ",
+        isempty(validate(JSON.parse(gjson); registry = GENESIS_REGISTRY)),
+        "; reload reproduces births? ",
+        sort([t.born for t in gtoks]) == sort([t.born for t in livetokens(pg_rt)]))
+println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, decision channel); here")
+println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species —")
+println("and the NAMED form shares AddToken's registry, so it serializes as eval-free data too.")
+println("(The RAW `@structured(Ctor(…))` form inlines the constructor — more expressive, but not")
+println("JSON-serializable; use it only when the model need not be author-as-data.)")
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §5. Population queries & writes — SetTokens with @field
@@ -618,7 +648,7 @@ We toured, on ONE small R&D portfolio, the engine's production & agentic machine
   §1  Phase-as-attribute + pop[]  one :Project kind, phase is a field; declarative input  ADR 0008/0007
   §2  Predicate selection         @select(npv > θ) binds a subset; deterministic ties     ADR 0008
   §3  In-model decision rule      a once-Rule lever: SetSpecies+SetParams+AddToken in Seq  ADR 0010
-  §4  Genesis as a product        ∅ --> @structured(Ctor(…)): a token BORN on the RHS      ADR 0006/0008
+  §4  Genesis as a product        ∅ --> @structured(:Kind, …): a token BORN on the RHS      ADR 0006/0008
   §5  Population write            SetTokens(@field) revalues a selected sub-population      ADR 0011
   §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
   §7  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007

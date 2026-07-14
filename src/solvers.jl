@@ -550,7 +550,32 @@ end
 
 function structured_rhs(expr::Expr, state, transition)
     if isexpr(expr, :macrocall) && macroname(expr) == :structured
-        if length(expr.args) == 3
+        if length(expr.args) >= 3 && expr.args[3] isa QuoteNode
+            # NAMED form: `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
+            # product (ADR 0005 §39: the structured escape-hatch promoted to a typed node). It is the
+            # RHS-product twin of the `AddToken` rule action (actions.jl:203) and shares its host
+            # contract EXACTLY: the document/reaction-line carries the registry KEY plus field-value
+            # nodes, never the constructor — the host `state.registry[:Kind]` (a `(state, fields::Dict)
+            # -> token` ctor, ADR 0006 §C) is resolved BY NAME at firing time. Field values evaluate
+            # through the same seeded closure as everywhere else (`_eval_value`), so `@t()` / a
+            # `rand(state.rng, …)` draw are reproducible under the run's seed. Discriminated from the
+            # raw forms below by `args[3] isa QuoteNode` — a bare quoted kind symbol is never a valid
+            # raw token body (a Symbol is not a token), so the two never collide.
+            kind = expr.args[3].value
+            haskey(state.registry, kind) ||
+                error("@structured: kind $kind not in the network registry (ADR 0006 §C)")
+            ctor = state.registry[kind]
+            fieldvals = Dict{Symbol,Any}()
+            for kw in @view expr.args[4:end]
+                (isexpr(kw, :(=)) && kw.args[1] isa Symbol) || error(
+                    "@structured($kind, …): each field must be `name = value`, got `$(kw)`",
+                )
+                fieldvals[kw.args[1]] = _eval_value(state, transition, kw.args[2])
+            end
+            token = ctor(state, fieldvals)
+            entangle!(getagent(state, "structured"), token)
+            return token, get_species(token)
+        elseif length(expr.args) == 3
             expr = quote
                 return $(expr.args[end])
             end

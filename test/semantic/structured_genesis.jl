@@ -1,19 +1,26 @@
 # Phase-1 semantic tests — structured-token genesis as a transition PRODUCT (`@structured` RHS).
 #
-# The `@structured(ctor(...))` RHS op is the "birth" leg of the structured-token lifecycle, the
-# counterpart to token_filtration.jl's @select (bind) and @advance (mutate) legs: a transition
-# whose PRODUCT is a freshly-constructed host token, entangled live into the structured pool by
-# `structured_rhs` (src/solvers.jl:551-562 — context_eval the ctor expr, then entangle!). It is
-# genesis-as-first-class-transition-product — structurally parallel to `∅ --> plain_species` — as
-# distinct from the imperative `AddToken`-in-a-Rule decision-channel path (ADR 0010, rules_decisions.jl).
+# The `@structured` RHS op is the "birth" leg of the structured-token lifecycle, the counterpart to
+# token_filtration.jl's @select (bind) and @advance (mutate) legs: a transition whose PRODUCT is a
+# freshly-constructed host token, entangled live into the structured pool by `structured_rhs`
+# (src/solvers.jl). It is genesis-as-first-class-transition-product — structurally parallel to
+# `∅ --> plain_species` — distinct from the imperative `AddToken`-in-a-Rule decision-channel path
+# (ADR 0010, rules_decisions.jl).
 #
-# Parsing: recognized as a RHS macrocall alongside @move/@advance (reaction_parser.jl:102,
-# create.jl:302). Serialization boundary: a `@structured` body is host Julia (an Expr), so it does
-# NOT round-trip through the eval-free JSON IR — to_json_model raises the documented error
-# (serialize.jl:901-905). All assertions run against the built engine (real @tests, not pins).
+# TWO authoring forms (ADR 0005 §39 promotion of the structured escape hatch to a typed node):
+#   • NAMED   `@structured(:Kind, field = value, …)` — registry-resolved (the RHS-product twin of
+#     AddToken, sharing its `(state, fields::Dict) -> token` contract). Eval-free-SERIALIZABLE: it
+#     round-trips through to_json_model / from_json_model / validate, carrying the kind name + field
+#     nodes but never the constructor. This is the preferred form.
+#   • RAW     `@structured(Ctor(…))` — the body is an inline host Expr (the constructor itself), so
+#     it is NOT JSON-serializable (to_json_model raises); a documented in-dynamics escape hatch.
+#
+# Both forms are recognized as RHS macrocalls by the parser (reaction_parser.jl, create.jl). All
+# assertions run against the built engine (real @tests, not pins).
 
 using ReactiveDynamics, Test
 using Random, Distributions, DataFrames
+import JSON
 
 const RDX = ReactiveDynamics
 
@@ -39,8 +46,17 @@ const RDX = ReactiveDynamics
     end
 end
 
+# Registry the NAMED @structured form (and AddToken) resolve the kind through, BY NAME (ADR 0006
+# §C): key => a `(state, fields::Dict) -> token` host constructor — the SAME convention AddToken
+# uses (actions.jl:203-211), so the named genesis product and the rule action share one contract.
+const GEN_REGISTRY = Dict{Symbol,Any}(
+    :Project => (state, f) -> RDX.GenProjectToken(
+        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, -1.0)),
+)
+
 livetokens(p) = collect(values(RDX.inners(RDX.getagent(p, "structured"))))
 nphase(p, ph) = count(t -> t.phase == ph, livetokens(p))
+phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
 @testset "Structured-token genesis as a transition product (@structured RHS)" begin
 
@@ -115,18 +131,99 @@ nphase(p, ph) = count(t -> t.phase == ph, livetokens(p))
         @test all(t -> t.phase in (:Phase1, :Phase2), livetokens(p))
     end
 
-    # ── serialization boundary: a @structured RHS body is host Julia, NOT eval-free JSON ───
-    @testset "to_json_model raises on a @structured RHS (host Expr body, not serializable)" begin
+    # ─────────────────────────────────────────────────────────────────────────────────────
+    # The NAMED, registry-resolved form `@structured(:Kind, field = value, …)` — ADR 0005 §39
+    # ─────────────────────────────────────────────────────────────────────────────────────
+
+    # ── the named form mints via the registry (BY NAME), no inline constructor ────────────
+    @testset "named @structured(:Kind, field = …) mints through the registry, reads @t()/rng" begin
+        function named_model(seed)
+            acs = @ReactionNetworkSchema begin
+                @deterministic(1.0),
+                ∅ --> @structured(:Project, phase = :Phase1,
+                                  npv = rand(state.rng, Normal(120.0, 20.0)), born = @t()),
+                name => genesis
+            end
+            RDX.register_structured_species!(acs, :Project)
+            @prob_meta acs tspan = 4 dt = 1.0
+            ReactionNetworkProblem(acs; seed = seed, registry = GEN_REGISTRY)
+        end
+        p = named_model(1); simulate(p)
+        toks = livetokens(p)
+        @test length(toks) == 5                                  # one per tick, t = 0..4
+        @test all(t -> RDX.get_species(t) == :Project, toks)
+        @test sort([t.born for t in toks]) == [0.0, 1.0, 2.0, 3.0, 4.0]   # @t() captured
+        @test length(unique(round.([t.npv for t in toks]; digits = 6))) > 1  # rng draws vary
+        npvs(pp) = sort([t.npv for t in livetokens(pp)])
+        @test npvs(p) ≈ npvs((q = named_model(1); simulate(q); q))   # same seed reproduces
+    end
+
+    # ── the named form round-trips through the eval-free JSON IR (the ADR 0005 §39 payoff) ─
+    @testset "named @structured round-trips: export → validate → reload is trajectory-identical" begin
+        function det_model()   # deterministic npv so DSL and JSON runs are bit-identical
+            acs = @ReactionNetworkSchema begin
+                @deterministic(1.0),
+                ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+                name => genesis
+                @deterministic(1.0),
+                @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+                name => adv12, cycletime => 1.0, probability => 1.0
+            end
+            RDX.register_structured_species!(acs, :Project)
+            @prob_meta acs tspan = 5 dt = 1.0
+            acs
+        end
+        p_dsl = ReactionNetworkProblem(det_model(); seed = 7, registry = GEN_REGISTRY)
+        simulate(p_dsl)
+
+        exported = RDX.to_json_model(p_dsl)                      # live model → eval-free JSON
+        doc = JSON.parse(exported)
+        # the genesis reactant emitted a typed structured{kind, fields} row (no host Expr)
+        srow = only(r for r in doc["reactants"] if haskey(r, "structured"))
+        @test srow["structured"]["kind"] == "Project"
+        @test Set(f["name"] for f in srow["structured"]["fields"]) == Set(["phase", "npv", "born"])
+
+        @test isempty(RDX.validate(doc; registry = GEN_REGISTRY))   # validates clean
+
+        p_json = RDX.from_json_model(exported; seed = 7, registry = GEN_REGISTRY)
+        simulate(p_json)
+        @test phases_of(p_json) == phases_of(p_dsl)              # identical trajectory
+        @test sort([t.born for t in livetokens(p_json)]) == sort([t.born for t in livetokens(p_dsl)])
+        # idempotent: re-exporting the reload reproduces the same document (round-trip fixed point)
+        @test JSON.parse(RDX.to_json_model(p_json)) == doc
+    end
+
+    # ── validate flags a genesis whose kind is not in the registry / not structured ───────
+    @testset "validate rejects a named @structured with an unknown kind" begin
         acs = @ReactionNetworkSchema begin
             @deterministic(1.0),
-            ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),
+            ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+            name => genesis
+        end
+        RDX.register_structured_species!(acs, :Project)
+        @prob_meta acs tspan = 2 dt = 1.0
+        p = ReactionNetworkProblem(acs; seed = 1, registry = GEN_REGISTRY)
+        doc = JSON.parse(RDX.to_json_model(p))
+        for r in doc["reactants"]
+            haskey(r, "structured") && (r["structured"]["kind"] = "Ghost")   # dangling kind
+        end
+        diags = RDX.validate(doc; registry = GEN_REGISTRY)
+        @test !isempty(diags)
+        @test any(d -> occursin("Ghost", string(d)), diags)
+    end
+
+    # ── the RAW form stays a NON-serializable escape hatch (host Expr body, not a typed node) ─
+    @testset "raw @structured(Ctor(…)) still raises on export (documented escape hatch)" begin
+        acs = @ReactionNetworkSchema begin
+            @deterministic(1.0),
+            ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),   # inline host constructor
             name => genesis
         end
         RDX.register_structured_species!(acs, :Project)
         @prob_meta acs tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(acs; seed = 1)
-        # the eval-free JSON IR covers @advance / a typed AddToken rule; a host-built @structured
-        # ctor cannot round-trip, and the exporter surfaces that explicitly rather than silently.
+        # the eval-free JSON IR covers @advance / the named @structured / a typed AddToken rule; a
+        # RAW host-built ctor cannot round-trip, and the exporter surfaces that rather than silently.
         @test_throws Exception RDX.to_json_model(p)
     end
 end

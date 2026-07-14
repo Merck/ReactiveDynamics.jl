@@ -326,6 +326,14 @@ function _reactant_atom(r::AbstractDict)
             Symbol(adv["field"]),
             to_expr(_attr_node(adv["value"])),
         )
+    elseif haskey(r, "structured")                  # @structured(:Kind, field = value, …) — RHS genesis
+        st = r["structured"]
+        # The named, eval-free genesis product (ADR 0005 §39): the JSON carries the registry KIND
+        # plus field-value nodes; the host constructor is resolved by name at firing time. Assemble
+        # the exact macrocall the runtime's named branch consumes (structured_rhs, solvers.jl) — a
+        # quoted kind symbol followed by `field = <lowered node>` kwargs, one per fields[] entry.
+        kwargs = [Expr(:(=), Symbol(f["name"]), to_expr(_attr_node(f["value"]))) for f in st["fields"]]
+        return Expr(:macrocall, Symbol("@structured"), _LN, QuoteNode(Symbol(st["kind"])), kwargs...)
     else
         return Symbol(r["species"])
     end
@@ -672,6 +680,20 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
                     _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, ports, allow_sample = false, allow_field = false)
             end
         end
+        if haskey(r, "structured")   # named @structured(:Kind, field = value, …) genesis product
+            st = r["structured"]
+            k = Symbol(get(st, "kind", ""))
+            k in regnames ||
+                push!(diags, Diagnostic(:error, "reactants[$i].structured.kind", "kind `$k` not in registry"))
+            k in structured ||
+                push!(diags, Diagnostic(:error, "reactants[$i].structured.kind", "kind `$k` is not a structured species"))
+            # field VALUES are genesis attributes: a Sample draw is legal (like an AddToken field),
+            # but a bound-token @field read is not (there is no bound token at a genesis product).
+            for (j, f) in enumerate(get(st, "fields", []))
+                haskey(f, "value") && f["value"] isa AbstractDict &&
+                    _validate_node!(diags, f["value"], "reactants[$i].structured.fields[$j].value"; species, params, obs, ports, allow_field = false)
+            end
+        end
     end
 
     # rules[] / events[]: guard nodes + action verb + AddToken.kind/Invoke.fn registry resolution
@@ -899,10 +921,29 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
             "to" => string(_macro_sym(mc.args[4])),
         )
     elseif name === :structured
-        # @structured(expr) / @structured(token, species) — a host-built RHS token. The body is
-        # host Julia (an Expr), not a typed node, so it cannot round-trip eval-free; surface that.
-        error("_reactants_to_dict: @structured RHS carries a host Expr body and is not " *
-              "JSON-serializable (use @advance / a typed AddToken rule instead)")
+        if length(mc.args) >= 3 && mc.args[3] isa QuoteNode
+            # NAMED form `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
+            # product (ADR 0005 §39). Emit {kind, fields:[{name, value-node}, …]}, the inverse of
+            # _reactant_atom's structured branch; each field value lowers through from_expr exactly
+            # like an @advance value or an AddToken field.
+            d["structured"] = Dict{String,Any}(
+                "kind" => string(mc.args[3].value),
+                "fields" => [
+                    Dict{String,Any}(
+                        "name" => string(kw.args[1]),
+                        "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
+                    ) for kw in @view mc.args[4:end]
+                ],
+            )
+        else
+            # RAW form `@structured(Ctor(…))` / `@structured(token, species)` — the body is host
+            # Julia (an Expr carrying the constructor itself), not a typed node, so it cannot
+            # round-trip eval-free. This is the documented escape hatch; use the named
+            # `@structured(:Kind, field = …)` (or a typed AddToken rule) for a serializable model.
+            error("_reactants_to_dict: a RAW @structured(Ctor(…)) RHS carries a host Expr body and " *
+                  "is not JSON-serializable; use the named @structured(:Kind, field = …) form " *
+                  "(registry-resolved, eval-free) or a typed AddToken rule instead")
+        end
     else
         error("_reactants_to_dict: unsupported reactant macrocall @$(name)")
     end
