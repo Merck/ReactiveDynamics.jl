@@ -213,17 +213,51 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     end
 
     # ── the RAW form stays a NON-serializable escape hatch (host Expr body, not a typed node) ─
-    @testset "raw @structured(Ctor(…)) still raises on export (documented escape hatch)" begin
+    @testset "raw @structured(Ctor(…)) still raises on export, naming the transition" begin
         acs = @ReactionNetworkSchema begin
             @deterministic(1.0),
             ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),   # inline host constructor
-            name => genesis
+            name => make_project
         end
         RDX.register_structured_species!(acs, :Project)
         @prob_meta acs tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(acs; seed = 1)
         # the eval-free JSON IR covers @advance / the named @structured / a typed AddToken rule; a
-        # RAW host-built ctor cannot round-trip, and the exporter surfaces that rather than silently.
+        # RAW host-built ctor cannot round-trip, and the exporter FAILS LOUDLY (never silently drops
+        # the genesis reactant, and never re-opens an eval-on-load path) — naming the transition.
         @test_throws Exception RDX.to_json_model(p)
+        err = try RDX.to_json_model(p); nothing catch e; sprint(showerror, e) end
+        @test occursin("make_project", err)          # the offending transition is localized
+        @test occursin("@structured(:Kind", err)      # the message points at the named fix
+    end
+
+    # ── unserializable_transitions: a non-throwing pre-flight that localizes raw genesis ──
+    @testset "unserializable_transitions lists raw @structured transitions (empty when serializable)" begin
+        # a NAMED-form model is serializable ⇒ the pre-flight is empty
+        named = @ReactionNetworkSchema begin
+            @deterministic(1.0),
+            ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+            name => genesis
+        end
+        RDX.register_structured_species!(named, :Project)
+        @prob_meta named tspan = 2 dt = 1.0
+        pn = ReactionNetworkProblem(named; seed = 1, registry = GEN_REGISTRY)
+        @test isempty(RDX.unserializable_transitions(pn))
+
+        # a RAW-form model ⇒ the pre-flight names the transition, and to_json_model then throws
+        rawacs = @ReactionNetworkSchema begin
+            @deterministic(1.0),
+            ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),
+            name => make_project
+        end
+        RDX.register_structured_species!(rawacs, :Project)
+        @prob_meta rawacs tspan = 2 dt = 1.0
+        pr = ReactionNetworkProblem(rawacs; seed = 1)
+        pf = RDX.unserializable_transitions(pr)
+        @test length(pf) == 1
+        @test pf[1][1] == "make_project"               # (transition_id, reason)
+        @test occursin("RAW @structured", pf[1][2])
+        # the pre-flight agrees with the actual export outcome
+        @test_throws Exception RDX.to_json_model(pr)
     end
 end

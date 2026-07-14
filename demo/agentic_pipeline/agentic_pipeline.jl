@@ -30,7 +30,8 @@ using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!, add_structured_token!,
     Rule, Seq, SetSpecies, SetParams, SetTokens, AddToken, Activate, Deactivate, Log,
     get_species, inners, getagent, find_index, TokenPredicate, Clause, PopulationEntry,
-    from_json_model, to_json_model, validate, dump_state, restore, apply_action!, set_guard!
+    from_json_model, to_json_model, unserializable_transitions, validate, dump_state, restore,
+    apply_action!, set_guard!
 using Random, Distributions, DataFrames
 import JSON
 
@@ -410,6 +411,11 @@ println("Reproducible: same-seed npvs identical? ",
 # The named form is DATA: because it carries only the kind name + typed field nodes (not the
 # constructor), the genesis model exports to the eval-free JSON IR and reloads loss-free — the
 # same round-trip §6 makes for the whole pipeline, here exercised on a @structured RHS.
+# A non-throwing pre-flight — `unserializable_transitions(prob)` lists any transition that would
+# make `to_json_model` throw (today: a RAW @structured body). Empty here ⇒ the model is exportable;
+# on a raw-form model it would name the offending transition + the fix, WITHOUT attempting export.
+println("Pre-flight unserializable_transitions(pg): ", unserializable_transitions(pg),
+        " (empty ⇒ serializable — no raw @structured bodies)")
 gjson = to_json_model(pg)
 pg_rt = from_json_model(gjson; seed = 1, registry = GENESIS_REGISTRY); simulate(pg_rt)
 println("Named form round-trips: exported model validates clean? ",
@@ -420,7 +426,8 @@ println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, decis
 println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species —")
 println("and the NAMED form shares AddToken's registry, so it serializes as eval-free data too.")
 println("(The RAW `@structured(Ctor(…))` form inlines the constructor — more expressive, but not")
-println("JSON-serializable; use it only when the model need not be author-as-data.)")
+println("JSON-serializable: `to_json_model` fails LOUDLY naming the transition, and the pre-flight")
+println("`unserializable_transitions` lists it beforehand. Use raw only when the model need not be data.)")
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §5. Population queries & writes — SetTokens with @field
