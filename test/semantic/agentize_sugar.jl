@@ -67,6 +67,25 @@ primed_net() = build_net()
         @test AlgebraicAgents.getname(p) == default_name
     end
 
+    # [agentize-kwarg-hygiene] a caller-LOCAL variable as a kwarg value must resolve in the CALLER's
+    # scope, not RD's module scope. Regression pin for the WS-B2 hygiene bug: `args_kwargs` esc's
+    # positional args but leaves kwarg VALUES unescaped, so `@agentize net seed = my_seed` used to
+    # `UndefVarError: my_seed not defined in ReactiveDynamics`. This is the concrete case the ensemble
+    # runner hits (it calls the constructor with `seed = <member_seed_variable>` in a loop). Literal
+    # kwarg values (`seed = 7`) masked it — hence this local-variable case.
+    @testset "caller-local variable as a kwarg value resolves (macro hygiene)" begin
+        my_seed = 123
+        net = primed_net()
+        p_macro = @agentize net seed = my_seed          # must NOT throw UndefVarError
+        p_ctor = ReactionNetworkProblem(primed_net(); seed = my_seed, name = "net")
+        @test p_macro.seed == my_seed
+        simulate(p_macro)
+        simulate(p_ctor)
+        @test p_macro.sol[!, "S"] == p_ctor.sol[!, "S"]   # matches the constructor with the same local
+        @test p_macro.sol[!, "I"] == p_ctor.sol[!, "I"]
+        @test AlgebraicAgents.getname(p_macro) == "net"   # auto-name still applies alongside esc'd kwargs
+    end
+
     # [agentize-positional-kwargs] positional u0/p and forwarded kwargs (seed=, tspan=) reach the
     # constructor; the run matches the equivalent explicit constructor call.
     @testset "positional u0/p + forwarded kwargs reach the constructor" begin

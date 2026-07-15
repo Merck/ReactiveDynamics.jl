@@ -43,10 +43,17 @@ prob = @agentize build_net()                  # non-symbol acs → constructor's
 ```
 """
 macro agentize(acsex, args...)
+    # `args_kwargs` esc's the POSITIONAL args (correct — u0/p are caller expressions) but leaves the
+    # kwarg VALUES unescaped in `Expr(:kw, key, value)`. Forwarded verbatim into the emitted call,
+    # such a value would resolve in RD's module scope, so a caller-local (`@agentize net seed = s`)
+    # would UndefVarError. Esc each kwarg value here — NOT in the shared helper (@problematize et al.
+    # rely on its current behavior) — remapping `Expr(:kw, k, v)` → `Expr(:kw, k, esc(v))`.
     args, kwargs = args_kwargs(args)
+    kwargs = [Expr(:kw, kw.args[1], esc(kw.args[2])) for kw in kwargs]
     # Auto-name only for a bare binding, and only when the author did not pass an explicit `name=`.
-    # `acsex isa Symbol` ⇒ inject a `String` literal, so the name is fixed at expansion time and no
-    # `esc`/hygiene question arises; anything else defers to the constructor's `name` default.
+    # `acsex isa Symbol` ⇒ inject a `String` literal, so the name is fixed at expansion time and needs
+    # no `esc` (leave it bare — it is a constant, not a caller binding); anything else defers to the
+    # constructor's `name` default. Appended AFTER the esc-remap so it stays an unescaped literal.
     if acsex isa Symbol && isnothing(findfirst(ex -> ex.args[1] == :name, kwargs))
         push!(kwargs, Expr(:kw, :name, string(acsex)))
     end
