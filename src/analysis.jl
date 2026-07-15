@@ -257,50 +257,105 @@ modifying AA. `getobservable(ens, name)` returns a cross-run reduction (see `get
     members::Vector{ReactionNetworkProblem}
     seeds::Vector{UInt64}
     root_seed::Int
-    mode::Symbol            # :rebuild (mode a, shipping) — :reinit (mode b) is gated on ADR 0007 §D
+    mode::Symbol            # :rebuild (mode a) or :reinit (mode b, reinit-reseed member reuse)
 end
 
 """
-    ensemble(build; nseed, root_seed = 2026, max_t = nothing, parallel = false) -> EnsembleProblem
+    ensemble(build; nseed, root_seed = 2026, max_t = nothing, parallel = false, mode = :rebuild) -> EnsembleProblem
 
 Run `nseed` INDEPENDENT members of a scenario. `build(seed) -> ReactionNetworkProblem` constructs ONE
 member; member `k ∈ 1:nseed` is seeded `hash((root_seed, k))` (§4 D8) and, if `max_t` is given, run
 to `max_t` (otherwise `build` is assumed to already simulate, as the demo's `run_scenario` does).
 Each member owns its own `state.rng` (no shared global RNG), so the result is order- and
 parallelism-independent (§4 D9) and `(root_seed, nseed, build)` fully determines the ensemble
-(Invariant 3). Members are produced by REBUILD-per-seed (mode a) — robust now because the structured
-token population is re-instantiated cleanly from the declarative `population[]` (ADR 0007 §B). The
-cheaper REINIT-and-reseed (mode b) is gated on ADR 0007 §D `_reinit!` (RNG/counter/population
-restore) and is NOT yet available; `ensemble` always runs mode a and records `mode = :rebuild`.
+(Invariant 3).
+
+Two member-production modes, recorded on the result as `ens.mode`:
+
+  - `mode = :rebuild` (mode a, the default): `build(seed)` constructs a FRESH problem per member —
+    robust because the structured token population is re-instantiated cleanly from the declarative
+    `population[]` (ADR 0007 §B). Pays `nseed ×` construction + closure-compilation cost.
+  - `mode = :reinit` (mode b, reinit-reseed member reuse): build ONE member, then reinit-reseed and
+    re-simulate that SAME problem for each subsequent seed (`AlgebraicAgents.reinit!(m; seed)`, ADR
+    0007 §D + the reseed path), reusing its compiled closures and allocated store — the cheaper Monte
+    Carlo path. After each member's run a faithful `deepcopy` SNAPSHOT of the finished problem is
+    retained (so `ens.members` still holds `nseed` independent `ReactionNetworkProblem`s the read
+    surface + any `metric(member)` see unchanged); the reused problem is reinit-reseeded onward.
+
+**Mode-(a) ≡ mode-(b) equivalence + its precondition.** Mode (b) is a legal substitute for mode (a)
+ONLY when members are structurally HOMOGENEOUS — same net, same `population[]` schema, differing only
+in the stochastic stream and the seed-sampled initial attributes. The reseed installs the new seed's
+stream BEFORE the t=0 marking is re-sampled (`_reinit!`), so a reseeded member is identical to a fresh
+`build(seed)` and the two modes produce the ensemble member-for-member. A `build` that BRANCHES
+STRUCTURALLY on its seed argument (a different net/population per seed) is out of contract for mode
+(b) and must use `mode = :rebuild`: mode (b) reseeds, it does NOT rebuild. This guard is documented,
+not auto-detected — `build(root_seed)` is called once for member 1 and reused thereafter.
 
 `parallel = true` is accepted (members are independent) but currently runs sequentially; a threaded
-backend is future work (the API is fixed so callers need not change). Subsumes
-`demo/bd_acquisition/analysis.jl`'s hand-rolled `ensemble`.
+backend is future work (the API is fixed so callers need not change) — and it is only meaningful for
+`:rebuild` (mode (b) serially reuses one object). Subsumes `demo/bd_acquisition/analysis.jl`'s
+hand-rolled `ensemble`.
 """
 function ensemble(build; nseed::Integer, root_seed::Integer = 2026,
-                  max_t = nothing, parallel::Bool = false, name = "ensemble")
+                  max_t = nothing, parallel::Bool = false, name = "ensemble",
+                  mode::Symbol = :rebuild)
+    mode in (:rebuild, :reinit) ||
+        error("ensemble: mode must be :rebuild (mode a) or :reinit (mode b), got $(repr(mode)).")
     seeds = UInt64[hash((root_seed, k)) for k in 1:nseed]
-    members = ReactionNetworkProblem[]
-    for s in seeds
-        m = build(s)
-        m isa ReactionNetworkProblem ||
-            error("ensemble: build(seed) must return a ReactionNetworkProblem (got $(typeof(m))); " *
-                  "for a coupled member, extract the RD child before returning (ADR 0013 open Q).")
-        max_t === nothing || simulate(m, max_t)
-        push!(members, m)
-    end
-    ens = EnsembleProblem(name, members, seeds, Int(root_seed), :rebuild)
+    members = _ensemble_members(build, seeds, max_t, mode)
+    ens = EnsembleProblem(name, members, seeds, Int(root_seed), mode)
     # Make each member a child so the ensemble is a genuine AA hierarchy node (drawable/walkable,
     # §14.2 Invariant 4 / ADR 0014 composition). `entangle!` keys `inners` by `getname`, and members
     # built by the same `build` closure all carry the default name "reaction_network" — so they MUST
     # be renamed to a unique `member_<k>` first, else each entangle! overwrites the previous key and
-    # the hierarchy collapses to one child. The per-run statistics read `ens.members` (the vector),
-    # so renaming is purely for the AA hierarchy view.
+    # the hierarchy collapses to one child (the drawable-node invariant `length(inners) == nseed`).
+    # The per-run statistics read `ens.members` (the vector), so renaming is purely for the AA view.
     for (k, m) in enumerate(members)
         m.name = "member_$k"
         entangle!(ens, m)
     end
     return ens
+end
+
+# Mode (a): REBUILD a fresh problem per seed (the closure re-runs construction + compilation each
+# time). `build` may already simulate; `max_t` runs it if given.
+function _ensemble_members(build, seeds, max_t, mode::Val{:rebuild})
+    members = ReactionNetworkProblem[]
+    for s in seeds
+        push!(members, _build_member(build, s, max_t))
+    end
+    return members
+end
+
+# Mode (b): build ONE member, then reinit-reseed the SAME problem for each subsequent seed and keep a
+# faithful deepcopy snapshot of each finished run. The retained snapshots are detached, fully-formed
+# `ReactionNetworkProblem`s — `sol`/`log`/`program_ledger`/`token_trajectory`/`observables` all read
+# off them exactly as off a rebuilt member — so `ens.members`, `summarize`, `treatment_effect`, and
+# any `metric(::ReactionNetworkProblem)` are contract-identical to mode (a). `build(seeds[1])` is
+# called ONCE (the reused object); a `build` that branches structurally on its seed is out of
+# contract here (see the `ensemble` docstring's equivalence precondition).
+function _ensemble_members(build, seeds, max_t, mode::Val{:reinit})
+    isempty(seeds) && return ReactionNetworkProblem[]
+    prob = _build_member(build, first(seeds), max_t)
+    members = ReactionNetworkProblem[deepcopy(prob)]
+    for s in seeds[2:end]
+        AlgebraicAgents.reinit!(prob; seed = s)
+        max_t === nothing ? simulate(prob) : simulate(prob, max_t)
+        push!(members, deepcopy(prob))
+    end
+    return members
+end
+
+_ensemble_members(build, seeds, max_t, mode::Symbol) =
+    _ensemble_members(build, seeds, max_t, Val(mode))
+
+function _build_member(build, s, max_t)
+    m = build(s)
+    m isa ReactionNetworkProblem ||
+        error("ensemble: build(seed) must return a ReactionNetworkProblem (got $(typeof(m))); " *
+              "for a coupled member, extract the RD child before returning (ADR 0013 open Q).")
+    max_t === nothing || simulate(m, max_t)
+    return m
 end
 
 """

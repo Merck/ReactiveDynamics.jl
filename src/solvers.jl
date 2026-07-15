@@ -961,15 +961,28 @@ function ReactionNetworkProblem(
     return network
 end
 
-function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
+function AlgebraicAgents._reinit!(state::ReactionNetworkProblem; seed = nothing)
     state.u .= isempty(state.sol) ? state.u : Vector(state.sol[1, 2:end])
     state.t = state.tspan[1]
     empty!(state.ongoing_transitions)
     empty!(state.log)
     state.observables = compile_observables(state.network)
     empty!(state.sol)
-    # Restore the RNG to its construction state so the second run reproduces the first (§4 D7).
-    state.rng = copy(state.initial_rng)
+    # RNG restore (§4 D7) — OR reseed (ensemble mode b, ADR 0013 §14.2). With NO `seed` (the default
+    # AA `reinit!(a)` path, byte-identical to before) restore the construction stream so the second
+    # run reproduces the first. With a `seed`, INSTALL that seed's stream as the NEW construction
+    # stream — mirroring the constructor (`:845-848`): `Xoshiro(seed)`, snapshot `initial_rng`, store
+    # the realized seed. This makes the reseeded state equivalent to a fresh `build(seed)`. CRITICAL
+    # ORDERING: it MUST precede `instantiate_population!` below — the t=0 marking's `count`+attribute
+    # draws are sampled through `state.rng`, so a reseeded member's initial attributes match what a
+    # fresh `build(seed)` samples (the mode-(a) ≡ mode-(b) equivalence contract, §14.2).
+    if seed === nothing
+        state.rng = copy(state.initial_rng)
+    else
+        state.rng = Random.Xoshiro(seed)
+        state.initial_rng = copy(state.rng)
+        state.seed = seed
+    end
     # Reset every `once` rule's latch so a re-run from the same seed reproduces the lever (§4 D7).
     for r in state.rules
         r.fire_mode === :once && (r.enabled = true)
@@ -1009,6 +1022,20 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     empty!(state.external_inputs)
     merge!(state.external_inputs, state.external_input_defaults)
 
+    return state
+end
+
+# The `reinit!` hierarchy walker (AA `interface.jl:256`) takes NO kwargs — it calls `_reinit!(a)`
+# positionally then recurses into `inners`. Ensemble mode (b) needs to forward a `seed` to the
+# top-level `_reinit!` (the reseed path above), so we override `reinit!` for our type with a `seed`
+# kwarg while otherwise reproducing AA's walk EXACTLY. The `seed = nothing` default makes the plain
+# `reinit!(prob)` call byte-identical to AA's (same ops, same order) — it backs the existing green
+# reproducibility test — so this override only ADDS the reseed capability, it changes nothing else.
+function AlgebraicAgents.reinit!(state::ReactionNetworkProblem; seed = nothing)
+    AlgebraicAgents._reinit!(state; seed = seed)
+    for a in values(AlgebraicAgents.inners(state))
+        AlgebraicAgents.reinit!(a)
+    end
     return state
 end
 

@@ -61,6 +61,20 @@ end
 build_traj_prob(seed; pop = [RD.TrajProjectToken(:Phase1, 1.0), RD.TrajProjectToken(:Phase1, 2.0)]) =
     ReactionNetworkProblem(traj_model(); seed = seed, population = pop)
 
+# A registry so the PopulationEntry authoring form can resolve `:Project` to a host constructor
+# (ADR 0006 §C). Used by the mode-(a)≡mode-(b) equivalence test to exercise the SEED-DEPENDENT
+# initial-attribute path: `value` is a seeded `rand` draw, so a member's t=0 attributes depend on
+# its seed — the reseed ordering (new stream installed BEFORE instantiate_population!) is what makes
+# a reinit-reseeded member's sampled attributes match a fresh build(seed) (§14.2 equivalence).
+const TRAJ_REGISTRY = Dict{Symbol,Any}(
+    :Project => (state, f) -> RD.TrajProjectToken(get(f, :phase, :Phase1), get(f, :value, 1.0)),
+)
+build_traj_prob_pe(seed) = ReactionNetworkProblem(
+    traj_model(); seed = seed, registry = TRAJ_REGISTRY,
+    population = [RD.PopulationEntry(:Project, :Project; count = 3,
+        attributes = Dict(:phase => QuoteNode(:Phase1), :value => :(rand(state.rng, Normal(5.0, 2.0)))))],
+)
+
 # Strip the random program names so two seeded runs are compared on field-value CONTENT (the demo's
 # token names are randstring-based and intentionally non-deterministic; §4 D4 is about field values).
 content(df) = select(df, Not(:program))
@@ -167,6 +181,86 @@ content(df) = select(df, Not(:program))
         # the hierarchy must hold ALL members as distinct children (members share the default name,
         # so they are renamed member_<k> before entangle! — else inners collapses to one).
         @test length(AlgebraicAgents.inners(e)) == 4
+    end
+
+    # ── §14.2 ensemble mode (b): reinit-reseed member reuse (ADR 0013 §14.2, WS-B1) ────────
+    @testset "§14.2 reinit-reseed reproduces a fresh build(seed) — single-member A/B (§4 D7/D8)" begin
+        # Reinit-reseeding member 1 to member 2's seed must reproduce EXACTLY what a fresh
+        # build(seed₂) produces: same final marking AND same seed-sampled initial attributes (the
+        # reseed installs the new stream BEFORE the t=0 marking is re-sampled). Uses the SEED-DEPENDENT
+        # PopulationEntry form so the initial `value` draws are part of what must match.
+        s1, s2 = hash((99, 1)), hash((99, 2))
+        reused = build_traj_prob_pe(s1); simulate(reused)
+        fresh = build_traj_prob_pe(s2); simulate(fresh)
+        AlgebraicAgents.reinit!(reused; seed = s2)
+        @test nrow(token_trajectory(reused)) == 0            # reinit clears the log
+        simulate(reused)
+        @test reused.seed == s2                              # the realized seed is updated (D6/D8)
+        @test content(token_trajectory(reused)) == content(token_trajectory(fresh))
+        @test last(reused.sol.budget) == last(fresh.sol.budget)
+        # the seed-sampled initial `value`s match too (the reseed-ordering guarantee)
+        v_reused = sort(collect(skipmissing(token_trajectory(reused).value)))
+        v_fresh = sort(collect(skipmissing(token_trajectory(fresh).value)))
+        @test v_reused == v_fresh
+    end
+
+    @testset "§14.2 the no-seed reinit! path is unchanged (byte-identical re-run, §4 D7)" begin
+        # WS-B1 must not perturb the plain reinit! contract (this backs the existing green reinit
+        # test): reinit!(p) with NO seed still restores the construction stream and reproduces.
+        p = build_traj_prob_pe(hash((99, 5))); simulate(p)
+        first_run = content(token_trajectory(p)); first_sol = copy(p.sol)
+        seed0 = p.seed
+        AlgebraicAgents.reinit!(p)
+        @test p.seed == seed0                                # seed unchanged on the no-seed path
+        simulate(p)
+        @test content(token_trajectory(p)) == first_run
+        @test p.sol == first_sol
+    end
+
+    @testset "§14.2 mode-(a) ≡ mode-(b) equivalence — member-for-member (THE headline gate)" begin
+        metric(m) = last(m.sol.budget)
+        # Verify the equivalence for BOTH population forms (handoff Risk note): the SEED-DEPENDENT
+        # PopulationEntry form (initial attrs re-sampled through the reseeded stream) AND the
+        # explicit host-token form (seed-INDEPENDENT initial marking via restore_token_snapshot!,
+        # only the simulation draws differ).
+        for build in (build_traj_prob_pe, build_traj_prob)
+            ea = ensemble(s -> (p = build(s); simulate(p); p); nseed = 6, root_seed = 7, mode = :rebuild)
+            eb = ensemble(s -> (p = build(s); simulate(p); p); nseed = 6, root_seed = 7, mode = :reinit)
+            @test ea.mode === :rebuild && eb.mode === :reinit
+            # drawable-node invariant holds for BOTH modes (snapshots entangle as child nodes)
+            @test length(AlgebraicAgents.inners(ea)) == 6
+            @test length(AlgebraicAgents.inners(eb)) == 6
+            @test length(eb.members) == 6
+            @test eb.seeds == ea.seeds
+            # member-for-member: same per-member metric, same summarize, same trajectory content
+            @test [metric(m) for m in ea.members] == [metric(m) for m in eb.members]
+            @test summarize(ea, metric) == summarize(eb, metric)
+            @test [content(token_trajectory(m)) for m in ea.members] ==
+                  [content(token_trajectory(m)) for m in eb.members]
+        end
+    end
+
+    @testset "§14.2 treatment_effect Δ is identical under mode (a) vs mode (b)" begin
+        # The BD A/B lever comparison: baseline (cost 1) vs deal (cost 0). The unpaired Δ must be
+        # the SAME whether the two arms are built by rebuild or by reinit-reseed.
+        base_pop() = [RD.TrajProjectToken(:Phase1, 1.0)]
+        base_build(cost) = s -> (p = ReactionNetworkProblem(traj_model(; cost = cost);
+            seed = s, population = base_pop()); simulate(p); p)
+        rnpv(m) = last(m.sol.budget)
+        te = Dict(mode => treatment_effect(
+            ensemble(base_build(1.0); nseed = 6, root_seed = 9, mode = mode),
+            ensemble(base_build(0.0); nseed = 6, root_seed = 9, mode = mode),
+            rnpv,
+        ) for mode in (:rebuild, :reinit))
+        @test te[:rebuild].delta == te[:reinit].delta
+        @test te[:rebuild].se == te[:reinit].se
+        @test te[:rebuild].baseline == te[:reinit].baseline
+        @test te[:rebuild].deal == te[:reinit].deal
+    end
+
+    @testset "§14.2 ensemble rejects an unknown mode" begin
+        @test_throws Exception ensemble(s -> (p = build_traj_prob(s); simulate(p); p);
+            nseed = 2, root_seed = 1, mode = :bogus)
     end
 
     # ── §14.3 export bundle ──────────────────────────────────────────────────────────────
