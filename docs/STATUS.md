@@ -14,7 +14,7 @@ Design/record documents (not normative, kept for provenance): **[PHASE0_REVIEW.m
 
 ## Overall state
 
-The modeling + analysis + visualization surface is BUILT and green. The full contract (§1–§15) and ADRs 0001–0015 are implemented and tested; the suite runs green under `test/semantic/` (the only non-passing tests are the deliberate `@test_skip` placeholders listed under "Remaining work" below — Julia's summary counts skips as "Broken"). There are NO live `@test_broken` pins remaining. AlgebraicAgents is the published registry release 0.4 (the earlier `Merck/AlgebraicAgents.jl@main` `[sources]` pin was dropped, `eb2ee10`).
+The modeling + analysis + visualization surface is BUILT and green. The full contract (§1–§15) and ADRs 0001–0015 are implemented and tested; the suite runs FULLY green under `test/semantic/` — **801 pass / 0 broken / 801 total**, no `@test_skip` placeholders and no `@test_broken` pins remaining (the last 3 — the CONTRACT §1.4 construction-time modality validators — landed in `53d1fac`). AlgebraicAgents is the published registry release 0.4 (the earlier `Merck/AlgebraicAgents.jl@main` `[sources]` pin was dropped, `eb2ee10`).
 
 ### Implemented (with implementing commit)
 
@@ -38,10 +38,13 @@ The modeling + analysis + visualization surface is BUILT and green. The full con
 | Visualization: result-plot recipes + three-layer network exec map | 0014 / §15 | `src/visualize.jl`, `ext/RDPlotsExt.jl` | `6174ebe` |
 | Post-ACSets naming rename + drop GeneratedExpressions | 0015 | `src/` (rename), deprecation shims `src/ReactiveDynamics.jl:427-435` | `bc6cc0a` |
 
-## Remaining work (all small; each with its gate)
+## Recently closed
 
-1. **Three construction-time modality-validation rules** are still `@test_skip` placeholders in `test/semantic/modality_genesis.jl:172,193,214` (nonblock+conserved, perstep+cycletime=0, perstep on a structured species). These encode CONTRACT §1.4 target behavior: a single construction-time validator in the `ReactionNetworkProblem` constructor that rejects the illegal modality rows. Today these misconfigurations either error deep in the step loop or run silently; the fix is a typed-`Modality` validator at construction. Genuinely open.
-2. **`dump_state` in-flight limitation (implemented WITH a documented constraint, not a gap).** ADR 0007 §C `dump_state`/`restore` shipped, but `dump_state` REFUSES to dump when any transition is mid-cycle — it errors unless `ongoing_transitions` is empty (`src/interface/checkpoint.jl:37-41`), i.e. dump is a clean-tick-boundary operation only (Milestone-1 scope). Serializing in-flight `ongoing` instances eval-free is the open ADR 0007 §C question; not a bug, an accurately-scoped limitation.
+- **Construction-time modality validation (CONTRACT §1.4) — DONE (`53d1fac`).** `validate_modalities` in `src/solvers.jl` runs in the `ReactionNetworkProblem` constructor (before any closure compiles or tick runs) and rejects the three illegal §1.4 configs with a clear `ArgumentError`: `{:nonblock, :conserved}`; `:rate` (perstep) with a concrete `cycletime == 0`; `:rate` on a structured species. It reuses the eval-free static reactant decomposition and mirrors the runtime modality union; Expr/param-valued cycletimes and `@choose`/bidirectional lines are left to run (not statically decidable / the documented escape hatch). The three former `@test_skip` acceptance placeholders in `test/semantic/modality_genesis.jl` are now live passing `@test_throws`, and two collateral test models that had built the now-forbidden `@rate`+ct=0 foot-gun were legalized. Suite is fully green with zero skips.
+
+## Remaining work (all deferred; each with its gate — nothing non-deferred is open)
+
+1. **`dump_state` in-flight limitation (implemented WITH a documented constraint, not a gap).** ADR 0007 §C `dump_state`/`restore` shipped, but `dump_state` REFUSES to dump when any transition is mid-cycle — it errors unless `ongoing_transitions` is empty (`src/interface/checkpoint.jl:37-41`), i.e. dump is a clean-tick-boundary operation only (Milestone-1 scope). Serializing in-flight `ongoing` instances eval-free is the open ADR 0007 §C question; not a bug, an accurately-scoped limitation.
 3. **Entity-level refinement (ADR 0009 §F) — deferred.** A structured token hosting its own sub-network. `refine`/`abstract`/`@compose`/`@pipeline`/`@process` (transition-level refinement + composition) all shipped; only the entity-hosts-a-subnetwork axis is deferred to a future ADR. §A of ADR 0009 was designed so as not to preclude it.
 4. **Threaded ensemble backend — deferred.** `ensemble(...; parallel = true)` is accepted but currently runs sequentially (`src/analysis.jl:294`); a real threaded backend is future work, orthogonal to mode (b) (members are independent, so it is a safe extension).
 5. **AA `Opera`-level implicit/fixed-point (algebraic-loop) coupling — deferred.** Current AA coupling is explicit one-tick-lag Jacobi (`src/interface/aa_coupling.jl:123`); a within-tick fixed point is a separate AA-level `Opera` design (noted in ADR 0012).
