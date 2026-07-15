@@ -398,8 +398,8 @@ function evolve!(state)
                     available_species = filter(
                         a ->
                             get_species(a) == type &&
-                                !isblocked(a) &&
-                                matches(pred, a, state, transition),
+                            !isblocked(a) &&
+                            matches(pred, a, state, transition),
                         structured_token,
                     )
 
@@ -408,7 +408,10 @@ function evolve!(state)
                     # order, which would make WHICH equal-priority token binds non-reproducible.
                     sort!(
                         available_species;
-                        by = a -> (-priority(a, state.network[i, :transName]), token_sortkey(state, a)),
+                        by = a -> (
+                            -priority(a, state.network[i, :transName]),
+                            token_sortkey(state, a),
+                        ),
                     )
 
                     ix = 1
@@ -430,7 +433,11 @@ function evolve!(state)
             # AFTER the bind loop, so `transition.bound_structured_agents` is populated.
             attribute_cost!(state, transition, @view spawn_allocs[:, i])
 
-            context_eval(state, transition, state.wrap_fun(state.network[i, :transPreAction]))
+            context_eval(
+                state,
+                transition,
+                state.wrap_fun(state.network[i, :transPreAction]),
+            )
         end
     end
 
@@ -489,8 +496,8 @@ function evolve!(state)
                     available_species = filter(
                         a ->
                             get_species(a) == type &&
-                                !isblocked(a) &&
-                                matches(pred, a, state, transition),
+                            !isblocked(a) &&
+                            matches(pred, a, state, transition),
                         structured_token,
                     )
 
@@ -502,7 +509,10 @@ function evolve!(state)
                     # the default 0.0 for all tokens; a per-transition priority override would hit it).
                     sort!(
                         available_species;
-                        by = a -> (-priority(a, state.network[transition.i, :transName]), token_sortkey(state, a)),
+                        by = a -> (
+                            -priority(a, state.network[transition.i, :transName]),
+                            token_sortkey(state, a),
+                        ),
                     )
 
                     ix = 1
@@ -581,8 +591,10 @@ function structured_rhs(expr::Expr, state, transition)
             # the sole one that serializes eval-free; ADR 0005 §39 / 0006 §C). Construction rejects
             # a raw line (recursively_find_reactants!, create.jl), so reaching here means a
             # hand-built :trans Expr bypassed that check — surface it rather than eval host code.
-            error("@structured: only the named form `@structured(:Kind, field = value, …)` is " *
-                  "supported; the raw constructor form was removed (see create.jl). Got: $expr")
+            error(
+                "@structured: only the named form `@structured(:Kind, field = value, …)` is " *
+                "supported; the raw constructor form was removed (see create.jl). Got: $expr",
+            )
         end
     elseif isexpr(expr, :macrocall) && macroname(expr) == :move
         expr = quote
@@ -626,7 +638,8 @@ function structured_rhs(expr::Expr, state, transition)
         # own current fields via @field(name), and MAY draw (§F). The advanced token is then
         # released. It is consumed from the first bound token of this transition.
         field = expr.args[3]
-        field isa Symbol || error("@advance: first argument must be a field name, got $field")
+        field isa Symbol ||
+            error("@advance: first argument must be a field name, got $field")
         valex = expr.args[4]
         # No bound token to advance (the @select predicate matched nothing this firing) — a
         # silent no-op: the instance produced no advance. finish! skips the nothing return.
@@ -756,7 +769,11 @@ function finish!(state)
             end
         end
 
-        context_eval(state, trans_, state.wrap_fun(state.network[trans_.i, :transPostAction]))
+        context_eval(
+            state,
+            trans_,
+            state.wrap_fun(state.network[trans_.i, :transPostAction]),
+        )
 
         for agent in trans_.bound_structured_agents
             set_species!(agent, :removed)
@@ -778,8 +795,7 @@ function finish!(state)
     # (state < cycleTime but age ≥ maxLifeTime) were retained and re-emitted/​re-credited every
     # subsequent tick (violating conservation + termination-completeness, §3.4 INV2/INV6).
     filter!(
-        s ->
-            ((state.t - s.t) < s[:transMaxLifeTime]) && (s.state < s[:transCycleTime]),
+        s -> ((state.t - s.t) < s[:transMaxLifeTime]) && (s.state < s[:transCycleTime]),
         state.ongoing_transitions,
     )
 
@@ -816,6 +832,82 @@ function get_tcontrol(tspan, args)
     return ((0.0, tspan), dt)
 end
 
+# ── CONTRACT §1.4 — construction-time modality validation ─────────────────────────────────────
+# The three orthogonal modality axes (§1.1) admit exactly five legal rows (§1.3); three cross-
+# products are illegal (§1.4) and, left unchecked, fail LATE or SILENTLY deep in the stepper. We
+# reject all three HERE — before any closure compiles or any tick runs — with a clear ArgumentError
+# naming the transition, the offending LHS token, and the §1.4 rule. The corresponding deep-path
+# errors are thereby UNREACHABLE for these cases (the construction check fires first) but are left in
+# place as defensive belt-and-suspenders:
+#   1. {:nonblock, :conserved}    — else errors in finish! (solvers.jl ~735) / crashes on `q` in
+#                                    free_blocked_species! on the 2nd tick.
+#   2. :rate (perstep) with C==0  — else constructs and runs SILENTLY (build_requirements! gates the
+#                                    per-step draw on C>0, ~117, so the token never meters).
+#   3. :rate (perstep) on a       — else errors deep in build_requirements! (~114).
+#      structured/agent species
+#
+# Reactants are read via the eval-free static decomposition (`_split_reaction_line` +
+# `_static_reactants`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
+# modality Set matches what the engine forms per tick. The effective per-token modality unions the
+# reactant's wrapper tags with the species' `:specModality` (the `@mode` channel), exactly as the
+# runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
+# are the escape hatch and are left un-validated (they are un-validatable statically).
+function validate_modalities(net::ReactionNetwork)
+    for t in row_ids(net, :T)
+        lhs = try
+            first(_split_reaction_line(net[t, :trans]))
+        catch
+            continue    # @choose / bidirectional / non-standard line: escape hatch — skip
+        end
+        tname = net[t, :transName]
+        tlabel = (tname === missing || tname === nothing) ? "t$t" : string(tname)
+        ct = net[t, :transCycleTime]
+        for r in _static_reactants(lhs)
+            sname = string(r.species)
+            i = r.species isa Symbol ? find_index(r.species, net) : nothing
+            mod = i === nothing ? r.modality : (r.modality ∪ net[i, :specModality])
+
+            # Rule 1 — blocking = nonblock requires return = consumed.
+            if in(:nonblock, mod) && in(:conserved, mod)
+                throw(
+                    ArgumentError(
+                        "Transition `$tlabel`, LHS token `$sname`: modality {:nonblock, :conserved} is " *
+                        "illegal (CONTRACT §1.4) — a resource cannot be both held-until-finish " *
+                        "(:conserved) and released-every-step (:nonblock). `blocking = nonblock` " *
+                        "requires `return = consumed`.",
+                    ),
+                )
+            end
+
+            # Rule 2 — allocation = perstep requires transCycleTime > 0. Only a concrete numeric
+            # cycletime is statically checkable; an Expr/param-valued cycletime is left to run.
+            if in(:rate, mod) && ct isa Real && iszero(ct)
+                throw(
+                    ArgumentError(
+                        "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) with " *
+                        "cycletime == 0 is illegal (CONTRACT §1.4) — a per-step reservation only fires " *
+                        "when cycletime > 0, so with cycletime == 0 it silently reserves nothing. " *
+                        "`allocation = perstep` requires `transCycleTime > 0`.",
+                    ),
+                )
+            end
+
+            # Rule 3 — allocation = perstep requires a non-structured (countable) species.
+            if in(:rate, mod) && i !== nothing && net[i, :specStructured] === true
+                throw(
+                    ArgumentError(
+                        "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) on a " *
+                        "structured/agent species is illegal (CONTRACT §1.4) — you cannot reserve a " *
+                        "fractional, dt-scaled slice of an indivisible agent. `allocation = perstep` " *
+                        "requires a non-structured (countable) species.",
+                    ),
+                )
+            end
+        end
+    end
+    return net
+end
+
 function ReactionNetworkProblem(
     net::ReactionNetwork,
     u0 = Dict(),
@@ -824,6 +916,10 @@ function ReactionNetworkProblem(
     kwargs...,
 )
     assign_defaults!(net)
+    # CONTRACT §1.4: reject the three illegal modality configurations up front, before any closure
+    # compiles or any tick runs (the T2 acceptance tests require the throw from the constructor
+    # itself, not deep in the stepper). Runs after assign_defaults! so :specModality is materialized.
+    validate_modalities(net)
     keywords = Dict{Symbol,Any}([
         net[i, :metaKeyword] => net[i, :metaVal] for i in row_ids(net, :M) if
         !isnothing(net[i, :metaKeyword]) && !isnothing(net[i, :metaVal])
@@ -903,7 +999,8 @@ function ReactionNetworkProblem(
     # delivers — or in a standalone wire-less run — has a well-defined fallback (§B3). The buffer is
     # re-derived every `_prestep!` (merged over a copy of the defaults); the defaults snapshot is
     # kept immutable so `_reinit!` can restore the pre-wire seed (§4 D7).
-    external_input_defaults = Dict{Symbol,Any}(get(keywords, :external_inputs, Dict{Symbol,Any}()))
+    external_input_defaults =
+        Dict{Symbol,Any}(get(keywords, :external_inputs, Dict{Symbol,Any}()))
     external_inputs = copy(external_input_defaults)
 
     network = ReactionNetworkProblem(

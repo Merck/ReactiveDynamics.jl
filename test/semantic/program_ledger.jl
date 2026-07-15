@@ -23,7 +23,7 @@ RD = ReactiveDynamics
     end
     function LedgerProjectToken(phase)
         return LedgerProjectToken(
-            "LP" * string(rand(1:10^9)),
+            "LP" * string(rand(1:(10^9))),
             :Project,
             nothing,
             Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
@@ -47,7 +47,9 @@ function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
     net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
-        name => adv, cycletime => 1.0, probability => 1.0
+        name => adv,
+        cycletime => 1.0,
+        probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
     bi = findfirst(==(:budget), net[:, :specName])
@@ -59,11 +61,13 @@ function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
     return net
 end
 
-build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
-    advance_cost_model(; kwargs...);
-    seed = seed,
-    population = [RD.LedgerProjectToken(:Phase1)],
-)
+function build_ledger_prob(seed; kwargs...)
+    return ReactionNetworkProblem(
+        advance_cost_model(; kwargs...);
+        seed = seed,
+        population = [RD.LedgerProjectToken(:Phase1)],
+    )
+end
 
 @testset "Per-program ledger (MVP finding D / D-bis, src/ledger.jl)" begin
 
@@ -114,10 +118,17 @@ build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
         # tick's spawned instances. Each instance binds one Project (token-gated genesis), so each
         # program is charged the burn of ITS own instance — i.e. each gets `burn*cost`. The even-split
         # rule is exercised; with one token per instance, even-split == full cost per program.
+        # NB `budget` is a PLAIN upfront-consumed LHS token here (not `@rate`): with the CONTRACT §1.4
+        # construction validator, `@rate` (perstep) with cycletime == 0 is now REJECTED at construction
+        # (it was the silent-nothing foot-gun — a per-step draw gated on C>0 never fires at C==0, so the
+        # old `@rate(budget)` burned 0 anyway). Plain consumption at spawn is the legal, meaningful form
+        # for this instant (ct=0) transition and gives a nonzero per-program cost to split.
         net = @reaction_network begin
             @deterministic(2.0),
-            @select(Project, phase == :Phase1) + 3 * @rate(budget) --> @advance(phase, :Phase2),
-            name => adv2, cycletime => 0.0, probability => 1.0
+            @select(Project, phase == :Phase1) + 3 * budget --> @advance(phase, :Phase2),
+            name => adv2,
+            cycletime => 0.0,
+            probability => 1.0
         end
         RD.register_structured_species!(net, :Project)
         @prob_init net budget = 100
@@ -132,8 +143,8 @@ build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 2
-        # cycletime 0 ⇒ @rate burn is 0 for an instant completion (no ticks held); both advanced.
-        # The invariant must still hold regardless of the exact numbers.
+        # each instant instance consumes 3*budget at spawn (cost 1.0 ⇒ 3.0 per bound program).
+        # The sum-consistency invariant must hold regardless of the exact numbers.
         @test isapprox(
             sum(df.cost_incurred) + p.unattributed_cost,
             agg_cost(p);
@@ -203,7 +214,11 @@ build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
         pi = findfirst(==(:Project), net[:, :specName])
         net[pi, :specValuation] = 50.0
         # Make the program NOT advance (select a phase it isn't in) so it stays live & unblocked.
-        p = ReactionNetworkProblem(net; seed = 9, population = [RD.LedgerProjectToken(:Phase3)])
+        p = ReactionNetworkProblem(
+            net;
+            seed = 9,
+            population = [RD.LedgerProjectToken(:Phase3)],
+        )
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 1

@@ -24,7 +24,8 @@ using Statistics
         @prob_params net
         @cost net material = 5.0
         prob = ReactionNetworkProblem(net, Dict(); tspan = 3, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         @test df.material[1] == 100.0
         # 2 material burned per tick, monotone non-increasing, never credited back
         @test df.material[2] == 98.0 && df.material[3] == 96.0 && df.material[4] == 94.0
@@ -48,9 +49,10 @@ using Statistics
         @prob_init net cash = 100 product = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 12, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         # cash is HELD (debited at spawn) but RETURNED at finish: it reaches a steady floor, never drains to 0
-        tail = df.cash[end-3:end]
+        tail = df.cash[(end-3):end]
         @test all(==(tail[1]), tail)            # constant in steady state
         @test tail[1] > 0                        # not consumed away (would hit 0 if raw-consumed)
         @test tail[1] == 94.0                    # observed steady floor: 100 - 2*3 (two cohorts mid-flight)
@@ -68,7 +70,8 @@ using Statistics
         @prob_init net fuel = 1000 trip = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 6, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         # one new in-flight instance per tick; each draws 1*1*dt=1 fuel/tick while alive (ct=3)
         # so per-tick fuel draw ramps 1,2,3,3,... as the in-flight population builds toward 3
         draws = -diff(df.fuel)
@@ -90,9 +93,10 @@ using Statistics
         @prob_init net fuel = 1000 out = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 8, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         # rented throughput: per-tick draws are exactly offset by q·s·C returns at finish, so the pool plateaus high
-        tail = df.fuel[end-3:end]
+        tail = df.fuel[(end-3):end]
         @test all(==(tail[1]), tail)        # steady state
         @test tail[1] == 998.0              # observed floor (one cohort's in-flight reservation)
         @test tail[1] > 990.0               # net hold is small vs raw consumption — characterizes 'rented'
@@ -113,7 +117,10 @@ using Statistics
         # cycletime>0 keeps a :nonblock instance in-flight across a tick boundary, so free_blocked_species!
         # (step 3 of _step!) iterates it; the freed :nonblock resource is credited back rather than crashing on `q`.
         net = @reaction_network begin
-            @deterministic(1.0), @nonblock(sensor) --> reading, name => measure, cycletime => 3.0
+            @deterministic(1.0),
+            @nonblock(sensor) --> reading,
+            name => measure,
+            cycletime => 3.0
         end
         @prob_init net sensor = 10 reading = 0
         @prob_params net
@@ -126,20 +133,21 @@ using Statistics
     end
 
     # [mod-perstep-ct0-footgun] tier=T1-characterization expectedStatus=pass-now
-    # contract: §1.4 illegal rule 'allocation = perstep requires transCycleTime > 0'; get_reqs_ongoing! gate solvers.jl:36; §2.4
-    # note: Verified live: fuel stays flat at 100 while out grows. Characterizes the silent-nothing foot-gun the
-    # note: §1.4 T2 rule (mod-construct-rejects-perstep-ct0) wants rejected at construction.
-    @testset "Illegal: perstep (@rate) with cycletime=0 silently reserves nothing" begin
+    # contract: §1.4 illegal rule 'allocation = perstep requires transCycleTime > 0'; validate_modalities (solvers.jl); §2.4
+    # note: PREVIOUSLY this foot-gun constructed and ran SILENTLY (fuel stayed flat at 100 while out grew,
+    # note: because the @rate draw is gated on C>0 at build_requirements! ~117 and C defaulted to 0). The
+    # note: §1.4 construction-time validator (validate_modalities) now REJECTS it up front, so the silent-
+    # note: nothing behavior is unreachable — the foot-gun is caught, not run. This T1 now characterizes the
+    # note: post-validator engine (construction throws); the T2 mod-construct-rejects-perstep-ct0 below is
+    # note: the acceptance spec for the same model.
+    @testset "Illegal: perstep (@rate) with cycletime=0 is rejected at construction (was a silent foot-gun)" begin
         net = @reaction_network begin
             @deterministic(1.0), @rate(fuel) --> out, name => r0
         end                                   # cycletime defaults to 0.0
         @prob_init net fuel = 100 out = 0
         @prob_params net
-        prob = ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)
-        simulate(prob); df = prob.sol
-        # foot-gun: @rate draw is gated on C>0 (solvers.jl:36); with C=0 fuel is NEVER touched
-        @test all(==(100.0), df.fuel)
-        @test df.out[end] > 0    # RHS still emitted — the token is silently a no-cost input
+        # validate_modalities fires in the constructor: `allocation = perstep` requires cycletime > 0.
+        @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)
     end
 
     # [mod-mode-macro-unions-modality] tier=T1-characterization expectedStatus=pass-now
@@ -168,18 +176,14 @@ using Statistics
     # note: Will pass once the typed Modality validation is added to the constructor.
     # action: construct the problem and expect a construction-time rejection
     @testset "TARGET: nonblock+conserved rejected at CONSTRUCTION (not deep in finish!)" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
-        # TARGET typed authoring: a single token cannot be both held-until-finish and freed-every-step.
+        # A single token cannot be both held-until-finish and freed-every-step.
         net = @reaction_network begin
             @deterministic(1.0), @nonblock(@conserved(x)) --> y, name => bad, cycletime => 2.0
         end
         @prob_init net x = 10 y = 0
         @prob_params net
-        # TARGET: validation fires in ReactionNetworkProblem(...) (solvers.jl:536), before any step runs
+        # validate_modalities fires in ReactionNetworkProblem(...) (solvers.jl), before any step runs
         @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 5, dt = 1.0)
-        =#
     end
 
     # [mod-construct-rejects-perstep-ct0] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -189,16 +193,12 @@ using Statistics
     # note: nothing behavior.
     # action: construct and expect rejection
     @testset "TARGET: perstep modality with cycletime=0 rejected at construction" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
         net = @reaction_network begin
             @deterministic(1.0), @rate(fuel) --> out, name => r0
         end                                  # cycletime defaults to 0.0
         @prob_init net fuel = 100 out = 0
         @prob_params net
         @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)
-        =#
     end
 
     # [mod-construct-rejects-perstep-structured] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -210,19 +210,17 @@ using Statistics
     # note: the helper and the validation.
     # action: construct and expect rejection
     @testset "TARGET: perstep (@rate) on a structured/agent species rejected at construction" begin
-        # TARGET API not yet implemented — guarded so the suite loads; build it, then unskip.
-        @test_skip false  # see the reference block below
-        #=
         # Mark a species structured, then try to draw it per-step. TARGET: construction-time rejection.
         net = @reaction_network begin
             @deterministic(1.0), @rate(robot) --> task, name => run, cycletime => 3.0
         end
         @prob_init net robot = 5 task = 0
         @prob_params net
-        # TARGET API: mark `robot` structured (today via specStructured column / @structured authoring)
-        set_structured!(net, :robot)    # target helper; today this is a schema flag specStructured
+        # Mark `robot` structured via the ACTUAL engine mechanism: register_structured_species!
+        # sets the `specStructured` schema flag (the reference block's `set_structured!` was a
+        # hypothetical target helper — this is the real API, per ADR 0006/0007 authoring).
+        register_structured_species!(net, :robot)
         @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)
-        =#
     end
 
     # [gen-poisson-source-dt-invariant] tier=T1-characterization expectedStatus=pass-now
@@ -233,7 +231,7 @@ using Statistics
     # note: because no per-state seeding exists yet (§4); a later D6 seed= kwarg should replace it.
     # action: ensemble of 200 runs at dt=1.0 and dt=0.5, compare means against rate·tspan = 100
     @testset "Genesis `poisson`: empty-LHS source is dt-invariant in expectation (ensemble mean ≈ rate·tspan)" begin
-        function total_spawned(dt; seed, rate=2.0, tspan=50.0)
+        function total_spawned(dt; seed, rate = 2.0, tspan = 50.0)
             Random.seed!(seed)            # NOTE: relies on GLOBAL rng today (no seeding API — §4 D2 unmet)
             net = @reaction_network begin
                 2.0, ∅ --> arrival, name => inflow
@@ -242,10 +240,10 @@ using Statistics
             @prob_params net
             prob = ReactionNetworkProblem(net, Dict(); tspan = tspan, dt = dt)
             simulate(prob)
-            prob.u[1]
+            return prob.u[1]
         end
-        m1 = mean(total_spawned(1.0; seed=s) for s in 1:200)
-        m2 = mean(total_spawned(0.5; seed=s) for s in 1:200)
+        m1 = mean(total_spawned(1.0; seed = s) for s = 1:200)
+        m2 = mean(total_spawned(0.5; seed = s) for s = 1:200)
         @test isapprox(m1, 100.0; atol = 8.0)     # E = rate*tspan = 2*50
         @test isapprox(m2, 100.0; atol = 8.0)
         @test isapprox(m1, m2; atol = 8.0)        # halving dt preserves the expected total
@@ -263,7 +261,7 @@ using Statistics
     # action: at dt=1.0 vs dt=0.5, the spawned total is now equal (both 0 for the fractional count).
     @testset "Genesis `floor` path: @deterministic count is dt-invariant (WS-3 fix)" begin
         # Fractional deterministic count: floor(0.3)=0 at BOTH dt=1.0 and dt=0.5 — no upward bias, invariant.
-        function frac_total(dt; tspan=10.0)
+        function frac_total(dt; tspan = 10.0)
             net = @reaction_network begin
                 @deterministic(0.3), ∅ --> a, name => src
             end
@@ -271,7 +269,7 @@ using Statistics
             @prob_params net
             prob = ReactionNetworkProblem(net, Dict(); tspan = tspan, dt = dt)
             simulate(prob)
-            prob.u[1]
+            return prob.u[1]
         end
         t1 = frac_total(1.0)
         t2 = frac_total(0.5)
@@ -281,7 +279,7 @@ using Statistics
         # (@deterministic is a bare per-tick count with no dt-scaling per §2.3, so its TOTAL is inherently
         # dt-dependent — finer dt ⇒ more ticks ⇒ larger total; that is correct, not the bug. We assert only
         # that integer counts still spawn, i.e. floor left them intact.)
-        function int_total(dt; tspan=10.0)
+        function int_total(dt; tspan = 10.0)
             net = @reaction_network begin
                 @deterministic(2), ∅ --> a, name => src
             end
@@ -289,7 +287,7 @@ using Statistics
             @prob_params net
             prob = ReactionNetworkProblem(net, Dict(); tspan = tspan, dt = dt)
             simulate(prob)
-            prob.u[1]
+            return prob.u[1]
         end
         i1 = int_total(1.0)
         i2 = int_total(0.5)
@@ -305,13 +303,14 @@ using Statistics
     # note: firing min(proposal, tokens) = tokens.
     @testset "Genesis `flow`: non-empty upfront LHS spawns ZERO when input empty, fires once upstream deposits tokens" begin
         net = @reaction_network begin
-            @deterministic(2.0),  ∅ --> feed,          name => upstream
-            @deterministic(100.0), feed --> product,   name => router
+            @deterministic(2.0), ∅ --> feed, name => upstream
+            @deterministic(100.0), feed --> product, name => router
         end
         @prob_init net feed = 0 product = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 5, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         # t=0: feed=0 ⇒ router (nominal rate 100) is TOKEN-GATED to 0; product stays 0 through the first interval
         @test df.product[1] == 0.0 && df.product[2] == 0.0
         # once feed accumulates, router fires bounded by available tokens (2/tick deposited, 2/tick routed)
@@ -335,14 +334,19 @@ using Statistics
         # proposal (3/tick) eventually exceeds capacity (5) while instances are in-flight (ct=10),
         # triggering the overflow-deferral path add_to_spawn!.
         net = @reaction_network begin
-            @deterministic(3.0), 1*@conserved(slot) --> job, name => start, cycletime => 10.0, capacity => 5
+            @deterministic(3.0),
+            1*@conserved(slot) --> job,
+            name => start,
+            cycletime => 10.0,
+            capacity => 5
         end
         @prob_init net slot = 100 job = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 8, dt = 1.0)
         @test simulate(prob) !== nothing   # FIXED: add_to_spawn! deferral no longer hits MethodError / Symbol +=
         # Invariant 3: live concurrent instances never exceed capacity; overflow is carried forward, not dropped.
-        @test count(t -> t[:transHash] == prob[1,:transHash], prob.ongoing_transitions) <= 5
+        @test count(t -> t[:transHash] == prob[1, :transHash], prob.ongoing_transitions) <=
+              5
     end
 
     # [gen-capacity-clamp-no-overflow] tier=T1-characterization expectedStatus=pass-now
@@ -354,7 +358,11 @@ using Statistics
     @testset "Genesis `capacity`: when proposal ≤ capacity, concurrent instances are bounded with no deferral" begin
         # proposal (1/tick) never exceeds capacity (3); live count rises to 3 (ct=3) and holds — no add_to_spawn! crash.
         net = @reaction_network begin
-            @deterministic(1.0), @rate(fuel) --> job, name => start, cycletime => 3.0, capacity => 3
+            @deterministic(1.0),
+            @rate(fuel) --> job,
+            name => start,
+            cycletime => 3.0,
+            capacity => 3
         end
         @prob_init net fuel = 1000 job = 0
         @prob_params net
@@ -364,7 +372,10 @@ using Statistics
         h = prob[1, :transHash]
         @test count(t -> t[:transHash] == h, prob.ongoing_transitions) <= 3   # capacity bound holds
         # each tick proposes exactly 1 (deterministic), within capacity, so no overflow is ever deferred
-        spawncounts = [v for r in prob.log if r[1] == :new_transitions for (hh, v) in r[3:end] if hh == h]
+        spawncounts = [
+            v for r in prob.log if r[1] == :new_transitions for
+            (hh, v) in r[3:end] if hh == h
+        ]
         @test all(c -> c <= 3, spawncounts)
     end
 
@@ -383,7 +394,8 @@ using Statistics
         @prob_init net cohort = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 7, dt = 1.0)
-        simulate(prob); df = prob.sol
+        simulate(prob);
+        df = prob.sol
         # spawns occur only at period boundaries (t=2,4,6): cohort steps up by 3 there, flat between
         deltas = diff(df.cohort)
         @test count(d -> d == 3.0, deltas) == 3        # exactly three boundary firings over tspan=7
