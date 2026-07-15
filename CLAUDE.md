@@ -39,7 +39,7 @@ julia --project=. -e 'using ReactiveDynamics'         # load the package
 
 Tests live in `test/semantic/*.jl` (entry `test/runtests.jl` → `test/semantic/runtests.jl`) under a two-tier scheme: **T1-characterization** (runs against the engine) and **T2-acceptance** (target behavior). The suite is green; the only non-passing tests are deliberate `@test_skip`s — 3 CONTRACT §1.4 modality-validation placeholders (`test/semantic/modality_genesis.jl:172,193,214`) plus a few weakdep environment guards (Plots/Arrow/Graphviz not loaded). There are NO live `@test_broken` pins. `test/Project.toml` declares the test-only deps (Plots, Arrow, DataFrames, Distributions, …) that the main project keeps as weakdeps. AlgebraicAgents is the registered 0.4 release (no `[sources]` pin). Julia ≥ 1.11.
 
-Run `julia -e 'using JuliaFormatter; format(".")'` before committing (config in `.JuliaFormatter.toml`). CI: `.github/workflows/` (Tests, Documenter, Formatter, CompatHelper, TagBot).
+Run `julia -e 'using JuliaFormatter; format(".")'` before committing (config in `.JuliaFormatter.toml`). No CI is configured in this repo (no `.github/workflows/`) — run the suite and formatter locally.
 
 ## Dev-loop gotchas
 
