@@ -57,6 +57,9 @@ end
 @safetestset "Exported symbols resolve (WS-4)" begin
     include("exports_resolve.jl")
 end
+@safetestset "@agentize authoring sugar (WS-B2)" begin
+    include("agentize_sugar.jl")
+end
 @safetestset "Refinement & open-port composition (§11 / ADR 0009)" begin
     include("refinement_composition.jl")
 end

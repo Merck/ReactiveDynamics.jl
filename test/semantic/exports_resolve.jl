@@ -62,4 +62,12 @@ _resolves(sym) = isdefined(RD, sym)
         startswith(string(sym), "@") || continue
         @test getproperty(RD, sym) isa Function   # macros are `Function`s (methods on `var"@foo"`)
     end
+
+    # WS-B2 regression pin: `@agentize` was the original WS-4 dangling export (exported, never
+    # defined → this very guard would have failed). Assert it is BOTH exported and resolvable now
+    # that it ships as thin constructor sugar (src/interface/solve.jl). This is a named guard so a
+    # future re-deletion of the macro without the export fails here, not silently at call time.
+    @test Symbol("@agentize") in rd_owned
+    @test _resolves(Symbol("@agentize"))
+    @test getproperty(RD, Symbol("@agentize")) isa Function
 end
