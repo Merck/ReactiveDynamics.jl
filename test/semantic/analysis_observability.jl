@@ -45,17 +45,17 @@ RD.log_token_fields(t::RD.TrajProjectToken) = (; phase = t.phase, value = t.valu
 # A coarse advance model identical in spirit to the program-ledger test: @select a Phase1 Project,
 # burn budget at rate, @advance to Phase2. Used to exercise the trajectory log over real ticks.
 function traj_model(; budget0 = 100, cost = 1.0)
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
         name => adv, cycletime => 1.0, probability => 1.0
     end
-    RD.register_structured_species!(acs, :Project)
-    bi = findfirst(==(:budget), acs[:, :specName])
-    acs[bi, :specInitVal] = Float64(budget0)
-    acs[bi, :specCost] = cost
-    @prob_meta acs tspan = 5 dt = 1.0
-    return acs
+    RD.register_structured_species!(net, :Project)
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specInitVal] = Float64(budget0)
+    net[bi, :specCost] = cost
+    @prob_meta net tspan = 5 dt = 1.0
+    return net
 end
 
 build_traj_prob(seed; pop = [RD.TrajProjectToken(:Phase1, 1.0), RD.TrajProjectToken(:Phase1, 2.0)]) =
@@ -84,8 +84,8 @@ content(df) = select(df, Not(:program))
 
     @testset "§14.1 opt-in is bounded: a non-logging kind contributes no rows (Invariant 2)" begin
         # A bare problem with NO opted-in tokens logs nothing.
-        acs = traj_model()
-        p = ReactionNetworkProblem(acs; seed = 2, population = [])
+        net = traj_model()
+        p = ReactionNetworkProblem(net; seed = 2, population = [])
         simulate(p)
         @test nrow(token_trajectory(p)) == 0
     end
@@ -181,7 +181,7 @@ content(df) = select(df, Not(:program))
         @test isfile(joinpath(dir, "run.json"))
         # manifest pins (model_hash, seed) — traceable to a replayable run (Invariant 5, §4 D6)
         man = JSON.parsefile(joinpath(dir, "run.json"))
-        @test man["model_hash"] == string(hash(p.acs))
+        @test man["model_hash"] == string(hash(p.network))
         @test man["seed"] == string(p.seed)
         # the JSON streams round-trip structurally
         ev = JSON.parsefile(joinpath(dir, "events.json"))

@@ -1,5 +1,8 @@
 # reaction network DSL: CREATE part; reaction line and event parsing 
 
+export @reaction_network
+# Deprecated compatibility alias (ADR 0015 Tier 1) — exported so existing caller code keeps
+# working (with a depwarn) for one release; removed in a follow-up.
 export @ReactionNetworkSchema
 export @append_transitions
 
@@ -37,7 +40,8 @@ end
 forbidden_symbols = [:t, :π, :pi, :ℯ, :im, :nothing, :∅]
 
 """
-Macro that takes an expression corresponding to a reaction network and outputs an instance of `TheoryReactionNetwork` that can be converted to a `DiscreteProblem` or solved directly.
+Macro that takes an expression corresponding to a reaction network and outputs a `ReactionNetwork`
+(the static struct-of-columns model), ready to pass to `ReactionNetworkProblem` for simulation.
 
 Most arrows accepted (both right, left, and bi-drectional arrows). Use 0 or ∅ for annihilation/creation to/from nothing.
 
@@ -46,40 +50,49 @@ Custom functions and sampleable objects can be used as numeric parameters. Note 
 # Examples
 
 ```julia
-acs = @ReactionNetworkSchema begin
+net = @reaction_network begin
     1.0, X ⟶ Y
     1.0, X ⟶ Y, priority => 6.0, prob => 0.7, capacity => 3.0
     1.0, ∅ --> (Poisson(0.3γ)X, Poisson(0.5)Y)
     (XY > 100) && (XY -= 1)
 end
-@push acs 1.0 X ⟶ Y
-@prob_init acs X = 1 Y = 2 XY = α
-@prob_params acs γ = 1 α = 4
-@solve_and_plot acs
+@push net 1.0 X ⟶ Y
+@prob_init net X = 1 Y = 2 XY = α
+@prob_params net γ = 1 α = 4
 ```
 """
-macro ReactionNetworkSchema end
+macro reaction_network end
 
-macro ReactionNetworkSchema()
+macro reaction_network()
     return make_ReactionNetwork(:())
 end
 
-macro ReactionNetworkSchema(ex)
+macro reaction_network(ex)
     return make_ReactionNetwork(ex; eval_module = __module__)
 end
 
-macro ReactionNetworkSchema(ex, args...)
-    return make_ReactionNetwork(
-        generate(Expr(:braces, ex, args...); eval_module = __module__);
-        eval_module = __module__,
+macro reaction_network(ex, args...)
+    # Multiple positional statements (a plain multi-statement authoring call): fold them into one
+    # block expression and parse. The GeneratedExpressions brace-comprehension pass was retired
+    # (ADR 0015 Tier 3) — the block is handed to the parser directly.
+    return make_ReactionNetwork(Expr(:block, ex, args...); eval_module = __module__)
+end
+
+# Deprecated compatibility shim (ADR 0015 Tier 1): the macro was renamed `@ReactionNetworkSchema`
+# → `@reaction_network`. Forward to the new macro after emitting a depwarn.
+macro ReactionNetworkSchema(args...)
+    Base.depwarn(
+        "`@ReactionNetworkSchema` is deprecated, use `@reaction_network` instead.",
+        Symbol("@ReactionNetworkSchema"),
     )
+    return esc(Expr(:macrocall, GlobalRef(ReactiveDynamics, Symbol("@reaction_network")),
+                    __source__, args...))
 end
 
 function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
-    blockex = generate(ex; eval_module)
-    blockex = unblock_shallow!(blockex)
+    blockex = unblock_shallow!(ex)
 
-    return :(ReactionNetworkSchema(get_data($(QuoteNode(blockex)))...))
+    return :(ReactionNetwork(get_data($(QuoteNode(blockex)))...))
 end
 
 ### Functions that process the input and rephrase it as a reaction system ###

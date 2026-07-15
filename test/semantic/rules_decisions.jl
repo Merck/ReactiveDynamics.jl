@@ -29,13 +29,13 @@ end
 # `@prob_meta` eval's its values in module scope, so tspan/dt are passed via the constructor
 # (the `tspan=`/`dt=` kwargs) rather than threaded through the macro.
 function lever_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0), input --> output, name => line
         0.0, cash --> cash, name => cash_holder
     end
-    @prob_init acs input = 1000 output = 0 cash = 0
-    @prob_params acs
-    acs
+    @prob_init net input = 1000 output = 0 cash = 0
+    @prob_params net
+    net
 end
 
 @testset "Endogenous decision channel (ADR 0010/0011, §12)" begin
@@ -116,9 +116,9 @@ end
 
     # ── (G) Seq + SetParams: the composite acquisition lever shape ──────────────────────
     @testset "Seq composes AddToken-free lever: SetSpecies + SetParams in one action" begin
-        acs = lever_model()
-        @prob_params acs synergy = 0
-        p = RDX.ReactionNetworkProblem(acs; tspan = 6, dt = 1.0, seed = 1,
+        net = lever_model()
+        @prob_params net synergy = 0
+        p = RDX.ReactionNetworkProblem(net; tspan = 6, dt = 1.0, seed = 1,
             rules = [RDX.Rule(:acq, :(@t() > 2.0),
                 RDX.Seq([RDX.SetSpecies(:cash, 300, :inc),
                          RDX.SetParams([:synergy => 1])]); fire_mode = :once)])
@@ -144,12 +144,12 @@ end
         # over a selected population, reading each token's OWN current field via @field. This must
         # use eval_with_token (the SetField value-eval), not the plain closure path (@field is a
         # syntactic marker that must be substituted to a literal before eval, else it errors).
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             0.0, A --> B, name => inert
         end
-        @prob_init acs A = 0 B = 0
-        RDX.register_structured_species!(acs, :Project)
-        p = RDX.ReactionNetworkProblem(acs; tspan = 3, dt = 1.0, seed = 1,
+        @prob_init net A = 0 B = 0
+        RDX.register_structured_species!(net, :Project)
+        p = RDX.ReactionNetworkProblem(net; tspan = 3, dt = 1.0, seed = 1,
             population = [RDX.RuleProjectToken(:Phase2, 100.0),
                          RDX.RuleProjectToken(:Phase2, 200.0),
                          RDX.RuleProjectToken(:Phase1, 50.0)])

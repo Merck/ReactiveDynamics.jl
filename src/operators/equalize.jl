@@ -21,44 +21,44 @@ function get_eqs_ff(eq)
     end
 end
 
-function equalize!(acs::ReactionNetworkSchema, eqs = [])
+function equalize!(net::ReactionNetwork, eqs = [])
     specmap = Dict()
     for block in eqs
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
         species_ixs = Int64[]
-        for e in block, i in parts(acs, :S)
+        for e in block, i in row_ids(net, :S)
             (
                 (i == e[2]) ||
                 (
                     e[1] == :catchall &&
-                    occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(acs[i, :specName]))
+                    occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(net[i, :specName]))
                 ) ||
-                (e[2] == acs[i, :specName])
+                (e[2] == net[i, :specName])
             ) && (
                 push!(species_ixs, i);
-                push!(specmap, acs[i, :specName] => (acs[i, :specName] = block_alias))
+                push!(specmap, net[i, :specName] => (net[i, :specName] = block_alias))
             )
         end
         isempty(species_ixs) && continue
         species_ixs = sort(unique!(species_ixs))
         lix = first(species_ixs)
-        for attr in propertynames(acs.subparts)
+        for attr in propertynames(net.columns)
             !occursin("spec", string(attr)) && continue
             for i in species_ixs
-                ismissing(acs[lix, attr]) && (acs[lix, attr] = acs[i, attr])
+                ismissing(net[lix, attr]) && (net[lix, attr] = net[i, attr])
             end
         end
-        rem_parts!(acs, :S, species_ixs[2:end])
+        rem_rows!(net, :S, species_ixs[2:end])
     end
 
-    for attr in propertynames(acs.subparts)
+    for attr in propertynames(net.columns)
         attr == :specName && continue
-        attr_ = acs[:, attr]
+        attr_ = net[:, attr]
         for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
-            acs[i, attr] = attr_[i]
+            net[i, attr] = attr_[i]
         end
     end
 
@@ -70,9 +70,9 @@ function equalize!(acs::ReactionNetworkSchema, eqs = [])
     # still names an eliminated alias. This is the collision-safe replacement for the string surgery
     # above at the STRUCTURAL grain (the string rewrite of `:trans` is retained only because the
     # runtime engine still parses `:trans` per tick, ADR 0003 Phase 1's behavior-preserving contract).
-    populate_reactant_specs!(acs)
+    populate_reactant_specs!(net)
 
-    return acs
+    return net
 end
 
 """
@@ -81,7 +81,7 @@ Identify (collapse) a set of species in a model.
 # Examples
 
 ```julia
-@join acs acs1.A = acs2.A B = C
+@join net acs1.A = acs2.A B = C
 ```
 """
 macro equalize(acsex, exs...)

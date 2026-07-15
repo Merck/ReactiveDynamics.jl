@@ -103,7 +103,7 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     # Each advance fires at most a few instances/tick (genesis is token-gated by @select, so a
     # modest rate suffices); resource demands and financing are calibrated so the organic pipeline
     # flows to launches under contention without gridlocking (later-phase priority wins scientists).
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         # Discovery -> Phase1
         @deterministic(2.0),
         @select(Project, phase == :Discovery) + 2 * @conserved(scientist) + 2 * @rate(budget) -->
@@ -140,13 +140,13 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
         @deterministic(16.0), ∅ --> budget, name => financing
     end
 
-    register_structured_species!(acs, :Project)
+    register_structured_species!(net, :Project)
     # Declare the resource pools and the synergy params. (@prob_params/@prob_meta eval their RHS
     # in module scope, so synergy values are set via set_params! with the function args, and
     # tspan/dt are passed to the constructor as kwargs.)
-    @prob_init acs scientist = 40 budget = 150
-    @prob_params acs synergy_pos = 0 synergy_eff = 0
-    ReactiveDynamics.set_params!(acs, Dict(:synergy_pos => synergy_pos, :synergy_eff => synergy_eff))
+    @prob_init net scientist = 40 budget = 150
+    @prob_params net synergy_pos = 0 synergy_eff = 0
+    ReactiveDynamics.set_params!(net, Dict(:synergy_pos => synergy_pos, :synergy_eff => synergy_eff))
 
     # Price the `budget` burn so the ENGINE-LEVEL per-program ledger (MVP finding D, src/ledger.jl)
     # captures each program's capital spend during the run: specCost is read ONLY by the ledger
@@ -157,9 +157,9 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     # rNPV roll-up — a launched program's value is its discounted npv_peak, not a per-tick specReward
     # — so the demo READS cost from the engine ledger and computes value itself; finding D's
     # documented boundary: cost is cleanly attributable per program, valuation stays a post-hoc roll-up.)
-    bi = findfirst(==(:budget), acs[:, :specName])
-    acs[bi, :specCost] = 1.0
-    return acs
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specCost] = 1.0
+    return net
 end
 
 # ── Initial portfolio — DECLARATIVE initial marking (ADR 0007 §B, the "list of structures" form) ──

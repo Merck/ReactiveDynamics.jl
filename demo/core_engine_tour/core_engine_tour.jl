@@ -30,7 +30,7 @@
 # from (model, seed). That is the whole tour.
 
 using ReactiveDynamics
-using ReactiveDynamics: nparts          # part-counting accessor for composed schemas
+using ReactiveDynamics: nrows           # row-counting store accessor for composed networks
 using Statistics                        # mean/std for the ensemble section
 
 banner(title) = (println(); println("="^74); println(title); println("="^74))
@@ -43,7 +43,7 @@ banner("§1. A first model: SIR — the metalanguage, simulate, and an invariant
 # The classic susceptible–infected–recovered epidemic. It introduces every part
 # of the authoring surface you will reuse for the rest of the tour:
 #
-#   * @ReactionNetworkSchema begin ... end  — the model DSL. Each line is
+#   * @reaction_network begin ... end  — the model DSL. Each line is
 #       `rate, LHS --> RHS, name => ...`. Here both rates are mass-action
 #       expressions in the species and parameters (α·S·I, β·I): a bare numeric
 #       expression is a STOCHASTIC (Poisson) rate.
@@ -60,7 +60,7 @@ banner("§1. A first model: SIR — the metalanguage, simulate, and an invariant
 # one R. No species is created or destroyed outright, so S+I+R is a structural
 # INVARIANT — a sanity check the engine should preserve exactly.
 
-sir = @ReactionNetworkSchema begin
+sir = @reaction_network begin
     α * S * I, S + I --> 2I, name => I2R
     β * I, I --> R, name => R2S
 end
@@ -114,7 +114,7 @@ banner("§2. Stateful transitions & lifecycle: cycletime, probability, capacity,
 # ticks, succeeding 60% of the time, with at most 4 running concurrently.
 # Because cycletime = 3 and dt = 1, the FIRST product cannot appear before t = 3.
 
-pipeline = @ReactionNetworkSchema begin
+pipeline = @reaction_network begin
     @deterministic(1.0), budget --> product,
     name => job, cycletime => 3.0, probability => 0.6, capacity => 4
 end
@@ -162,7 +162,7 @@ banner("§3. Resource modalities — the engine's signature feature (a truth-tab
 # plateaus above zero; rate keeps draining (gated on ct); rented plateaus high.
 
 # --- 3a. RAW CONSUMED: 2 material per firing, never returned -----------------
-raw = @ReactionNetworkSchema begin
+raw = @reaction_network begin
     @deterministic(1.0), 2 * material --> widget, name => build
 end
 @prob_init raw material = 100 widget = 0
@@ -177,7 +177,7 @@ println("3a. raw  `2*material --> widget`    : material ",
 # One holder spawns per tick; each ties up 3 cash for its 3-tick cycle, then
 # returns it. The in-flight backlog is bounded, so the pool settles to a steady
 # FLOOR strictly above zero — proof the resource was held, not consumed.
-cons = @ReactionNetworkSchema begin
+cons = @reaction_network begin
     @deterministic(1.0), 3 * @conserved(cash) --> product, name => hold, cycletime => 3.0
 end
 @prob_init cons cash = 100 product = 0
@@ -192,7 +192,7 @@ println("3b. @conserved(cash)                : cash steady floor ", cash_tail[en
 # One instance starts per tick and lives 3 ticks, each drawing 1 fuel/tick. As
 # the in-flight population builds to 3, the per-tick draw ramps 1, 2, 3, then
 # saturates — a continuously consumed FLOW, not a one-shot debit.
-rate = @ReactionNetworkSchema begin
+rate = @reaction_network begin
     @deterministic(1.0), @rate(fuel) --> trip, name => drive, cycletime => 3.0
 end
 @prob_init rate fuel = 1000 trip = 0
@@ -208,7 +208,7 @@ println("3c. @rate(fuel) (ct=3)               : per-tick draws ", Int.(draws[1:4
 # an instance never persists across a tick boundary, so the @rate resource is
 # NEVER touched — the token becomes a silent free input. A real trap worth
 # seeing explicitly: `out` still grows while `fuel` never moves.
-footgun = @ReactionNetworkSchema begin
+footgun = @reaction_network begin
     @deterministic(1.0), @rate(fuel) --> out, name => r0
 end
 @prob_init footgun fuel = 100 out = 0
@@ -223,7 +223,7 @@ println("3d. @rate FOOT-GUN (ct defaults 0)  : fuel ",
 # --- 3e. @nonblock: held but freed every step --------------------------------
 # A soft hold: the sensor is reserved while the instance runs but credited back
 # each step, so the pool stays non-negative and finite (it does not drain away).
-nb = @ReactionNetworkSchema begin
+nb = @reaction_network begin
     @deterministic(1.0), @nonblock(sensor) --> reading, name => measure, cycletime => 3.0
 end
 @prob_init nb sensor = 10 reading = 0
@@ -239,7 +239,7 @@ println("3e. @nonblock(sensor) (ct=3)        : sensor ",
 # per-tick integral is credited back at finish like @conserved. Net effect: a
 # rented throughput whose pool plateaus HIGH — only one cohort's reservation is
 # ever outstanding.
-rented = @ReactionNetworkSchema begin
+rented = @reaction_network begin
     @deterministic(1.0), 2 * @rate(@conserved(fuel)) --> made, name => rc, cycletime => 2.0
 end
 @prob_init rented fuel = 1000 made = 0
@@ -294,7 +294,7 @@ println("  allocation          : ", allocs_slack, "  (granted in full; priority 
 # financing calibrated to keep cash genuinely scarce, the higher-priority
 # transition should win more instances — visible in the product counts.
 
-contend = @ReactionNetworkSchema begin
+contend = @reaction_network begin
     @deterministic(3.0), 4 * @conserved(cash) --> lowprod,
     name => low,  cycletime => 2.0, priority => 1.0
     @deterministic(3.0), 4 * @conserved(cash) --> highprod,
@@ -337,7 +337,7 @@ banner("§5. Genesis modes: source (∅), flow/routing, and scheduled (@periodic
 
 # --- 5a. Poisson source: empty LHS, dt-invariant in expectation --------------
 function source_total(dt; seed)
-    src = @ReactionNetworkSchema begin
+    src = @reaction_network begin
         2.0, ∅ --> arrival, name => inflow
     end
     @prob_init src arrival = 0
@@ -357,7 +357,7 @@ println("    ensemble mean total @ dt=0.5 : ", round(m_dt2; digits = 1),
 # `upstream` deposits 2 feed/tick; `router` has nominal rate 100 but can only
 # route what feed actually holds, so realized routing tracks the 2/tick deposit
 # — NOT the nominal 100.
-flow = @ReactionNetworkSchema begin
+flow = @reaction_network begin
     @deterministic(2.0),   ∅ --> feed,        name => upstream
     @deterministic(100.0), feed --> product,  name => router
 end
@@ -372,7 +372,7 @@ println("    max routed/tick  : ", maximum(diff(flow_prob.sol[!, "product"])),
         "  ⇒ token-gated to the 2/tick supply, NOT the nominal 100")
 
 # --- 5c. Scheduled: @periodic fires N at each calendar boundary --------------
-sched = @ReactionNetworkSchema begin
+sched = @reaction_network begin
     @deterministic(3 * @periodic(2.0)), ∅ --> cohort, name => intake
 end
 @prob_init sched cohort = 0
@@ -411,7 +411,7 @@ end
     return n1 + exp(-n2)
 end
 
-toy = @ReactionNetworkSchema begin
+toy = @reaction_network begin
     α(candidate_compound, marketed_drug, κ),
     3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
     name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -459,7 +459,7 @@ banner("§7. Composition: @join two submodels and @equalize species")
 # schema), before construction.
 #
 # `@join` merges species / transitions / params AND (since WS-3) events (:E) and
-# observables (:obs) too — `union_acs!` walks all six objects and appends :E/:obs
+# observables (:obs) too — `merge_networks!` walks all six objects and appends :E/:obs
 # structurally, so nothing is silently dropped on a join. `@join` / `@equalize` are
 # the MANUAL, no-declared-ports path (you name the species to identify); the
 # declared-port counterpart is `@compose`, which matches open input/output ports
@@ -468,29 +468,29 @@ banner("§7. Composition: @join two submodels and @equalize species")
 # Here two reaction sub-systems each consume a shared resource A; we join them,
 # identifying the two A's as one pool, and count parts of the merged schema.
 
-acs1 = @ReactionNetworkSchema begin
+acs1 = @reaction_network begin
     1.0, A --> B, name => t1
 end
-acs2 = @ReactionNetworkSchema begin
+acs2 = @reaction_network begin
     1.0, A --> C, name => t2
 end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
 println("@join acs1 acs2 (identifying the shared species A)")
-println("  species in join : ", nparts(joined, :S),
+println("  species in join : ", nrows(joined, :S),
         "  (union {A,B,C} ⇒ 3; the two A's merged into one)")
-println("  transitions     : ", nparts(joined, :T), "  (1 + 1, none lost)")
+println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
 # @equalize: two conceptually-identical species A and A2 collapse to one.
-eqacs = @ReactionNetworkSchema begin
+eqacs = @reaction_network begin
     1.0, A  --> B, name => t1
     1.0, A2 --> B, name => t2
 end
-before_S = nparts(eqacs, :S)
+before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
-println("  species before  : ", before_S, "  → after : ", nparts(equalized, :S),
+println("  species before  : ", before_S, "  → after : ", nrows(equalized, :S),
         "  (dropped by exactly 1; references rewritten)")
-println("  transitions     : ", nparts(equalized, :T), "  (preserved; only :S was touched)")
+println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
 
 
 # =============================================================================
@@ -512,13 +512,13 @@ banner("§8. Determinism & seeded ensembles")
 # for stable Monte-Carlo statistics.
 
 function build_birth()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
     end
-    @prob_init acs A = 100 B = 0
-    @prob_params acs
-    @prob_meta acs tspan = 20 dt = 1.0
-    return acs
+    @prob_init net A = 100 B = 0
+    @prob_params net
+    @prob_meta net tspan = 20 dt = 1.0
+    return net
 end
 
 a = (p = ReactionNetworkProblem(build_birth(); seed = 42); simulate(p); p.sol[!, "B"])
@@ -549,7 +549,7 @@ println("  member 3 in-ensemble vs standalone equal : ", ens_member_3 == solo,
 banner("§9. Recap — what this tour exercised")
 # =============================================================================
 println("""
-  §1  The metalanguage: @ReactionNetworkSchema / @prob_init / @prob_params /
+  §1  The metalanguage: @reaction_network / @prob_init / @prob_params /
       @prob_meta, mass-action rates, simulate, reading prob.sol by name, and a
       conserved-population invariant on an SIR epidemic.
   §2  Stateful lifecycle: cycletime (in-flight delay), Binomial `probability`,

@@ -7,8 +7,10 @@
 
 using ReactiveDynamics, Test
 using Random, Distributions, DataFrames
-# nparts/incident/parts for composition tests now come from ReactiveDynamics itself (ADR 0003
-# Phase 1 dropped ACSets; RD's typed-struct store exports the shim verbs).
+# The store accessors for composition tests come from ReactiveDynamics itself (ADR 0003 Phase 1
+# dropped ACSets). ADR 0015 renamed the shim verbs to store vocabulary AND unexported them, so we
+# import the ones used here explicitly (nrows = old nparts, row_ids = old parts).
+using ReactiveDynamics: nrows, row_ids
 
 @testset "Determinism & Seeding (§4), Composition (§7), and remaining bug-pins" begin
 
@@ -26,13 +28,13 @@ using Random, Distributions, DataFrames
     @testset "T1 characterization: two unseeded runs diverge (entropy-seeded), and the state now owns an rng" begin
         # Poisson genesis + Binomial PoS => genuinely stochastic; each unseeded run draws a fresh entropy seed.
         mk() = begin
-          acs = @ReactionNetworkSchema begin
+          net = @reaction_network begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
           end
-          @prob_init acs A = 100 B = 0
-          @prob_params acs
-          @prob_meta acs tspan = 30 dt = 1.0
-          acs
+          @prob_init net A = 100 B = 0
+          @prob_params net
+          @prob_meta net tspan = 30 dt = 1.0
+          net
         end
         prob1 = ReactionNetworkProblem(mk()); simulate(prob1)
         prob2 = ReactionNetworkProblem(mk()); simulate(prob2)
@@ -54,13 +56,13 @@ using Random, Distributions, DataFrames
     # the full trajectory and the entire log are equal.
     @testset "T1 D1: same (model, seed) => identical prob.sol AND prob.log" begin
         mk() = begin
-          acs = @ReactionNetworkSchema begin
+          net = @reaction_network begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
           end
-          @prob_init acs A = 100 B = 0
-          @prob_params acs
-          @prob_meta acs tspan = 30 dt = 1.0
-          acs
+          @prob_init net A = 100 B = 0
+          @prob_params net
+          @prob_meta net tspan = 30 dt = 1.0
+          net
         end
         p1 = ReactionNetworkProblem(mk(); seed = 42); simulate(p1)
         p2 = ReactionNetworkProblem(mk(); seed = 42); simulate(p2)
@@ -82,13 +84,13 @@ using Random, Distributions, DataFrames
     # RNG), and the global RNG state must be untouched by the run.
     @testset "T1 D2: a run neither reads nor perturbs the global RNG (external rand() does not affect it)" begin
         mk() = begin
-          acs = @ReactionNetworkSchema begin
+          net = @reaction_network begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
           end
-          @prob_init acs A = 100 B = 0
-          @prob_params acs
-          @prob_meta acs tspan = 30 dt = 1.0
-          acs
+          @prob_init net A = 100 B = 0
+          @prob_params net
+          @prob_meta net tspan = 30 dt = 1.0
+          net
         end
         pa = ReactionNetworkProblem(mk(); seed = 99); simulate(pa)
         # Perturb the global stream, then re-run with the same seed.
@@ -112,13 +114,13 @@ using Random, Distributions, DataFrames
     @testset "T1 D7: init -> step* -> reinit! -> step* reproduces the first trajectory" begin
         # import AlgebraicAgents: _reinit!
         mk() = begin
-          acs = @ReactionNetworkSchema begin
+          net = @reaction_network begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
           end
-          @prob_init acs A = 100 B = 0
-          @prob_params acs
-          @prob_meta acs tspan = 30 dt = 1.0
-          acs
+          @prob_init net A = 100 B = 0
+          @prob_params net
+          @prob_meta net tspan = 30 dt = 1.0
+          net
         end
         p = ReactionNetworkProblem(mk(); seed = 321)
         simulate(p)
@@ -140,13 +142,13 @@ using Random, Distributions, DataFrames
     # is identical; assert two distinct members differ.
     @testset "T1 D8/D9: ensemble member k reproducible from (root_seed,k), independent of N and order, own RNG per member" begin
         mk() = begin
-          acs = @ReactionNetworkSchema begin
+          net = @reaction_network begin
             3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
           end
-          @prob_init acs A = 100 B = 0
-          @prob_params acs
-          @prob_meta acs tspan = 20 dt = 1.0
-          acs
+          @prob_init net A = 100 B = 0
+          @prob_params net
+          @prob_meta net tspan = 20 dt = 1.0
+          net
         end
         # Derive a per-member seed from a single root seed + member index.
         member_seed(root, k) = hash((root, k))
@@ -163,57 +165,57 @@ using Random, Distributions, DataFrames
     end
 
     # [join-species-count-union] tier=T1-characterization expectedStatus=pass-now
-    # contract: CONTRACT_DRAFT.md Pending §Composition; union_acs! operators/joins.jl:14-44 (S merge by name) and :30-36 (T append)
-    # note: Locks in present union_acs! behavior: S-merge loop (joins.jl:14-28) dedups by specName via incident;
-    # note: T-append (joins.jl:30-36) copies every trans-attr for nparts(acs2,:T) new rows, then renames
+    # contract: CONTRACT_DRAFT.md Pending §Composition; merge_networks! operators/joins.jl:14-44 (S merge by name) and :30-36 (T append)
+    # note: Locks in present merge_networks! behavior: S-merge loop (joins.jl:14-28) dedups by specName via incident;
+    # note: T-append (joins.jl:30-36) copies every trans-attr for nrows(acs2,:T) new rows, then renames
     # note: (joins.jl:38-44). The transition-count assertion pins that the historic mid-loop early-return is
     # note: gone on ref-agents (the loop runs to completion). If alias resolution differs and A is NOT merged, S
     # note: would be 4 — that failure would itself be informative. Uses @alias per tutorial/example.jl:89.
     # action: `@join` the two models identifying the shared species A, then count S and T parts of the
     # merged schema.
     @testset "T1 lock-in: @join merged species count = |union of names|, transition count = sum (no transitions lost)" begin
-        acs1 = @ReactionNetworkSchema begin
+        acs1 = @reaction_network begin
           1.0, A --> B, name => t1
         end
-        acs2 = @ReactionNetworkSchema begin
+        acs2 = @reaction_network begin
           1.0, A --> C, name => t2
         end
         # acs1 species: {A,B}; acs2 species: {A,C}. Identify the two A's via the join eqs.
         m = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
         # union of names {A, B, C} => 3 species (A merged; B, C distinct after prefixing).
-        @test nparts(m, :S) == 3
+        @test nrows(m, :S) == 3
         @test Symbol("A") in m[:, :specName]
         # transitions are appended, never dropped: 1 + 1 = 2 (pins the historic mid-loop-return bug is FIXED).
-        @test nparts(m, :T) == 2
+        @test nrows(m, :T) == 2
         # both transition bodies survive the merge (the :trans column is fully populated).
         @test count(!isnothing, m[:, :trans]) == 2
     end
 
     # [join-obs-events-merged] tier=T1-characterization expectedStatus=pass-now (WS-3 fix landed)
-    # contract: CONTRACT_DRAFT.md §7/J4 (compose merges :E/:obs uniformly); union_acs! now walks S/T/P/M/E/obs
-    # note: WS-3 closed the §Composition gap: union_acs! (joins.jl) previously iterated parts(acs2,:S),:T,:P,:M
-    # note: only — there was no parts(acs2,:E)/parts(acs2,:obs) loop, so events and observables of the joined
+    # contract: CONTRACT_DRAFT.md §7/J4 (compose merges :E/:obs uniformly); merge_networks! now walks S/T/P/M/E/obs
+    # note: WS-3 closed the §Composition gap: merge_networks! (joins.jl) previously iterated row_ids(acs2,:S),:T,:P,:M
+    # note: only — there was no row_ids(acs2,:E)/row_ids(acs2,:obs) loop, so events and observables of the joined
     # note: submodel were silently LOST. It now appends both structurally (events/obs are never deduplicated,
     # note: §7/J2), and prepend_obs! namespaces the species referenced inside each observable's option-Exprs so
     # note: they resolve to the namespaced pool. Event syntax (`cond && action`) per get_events! (create.jl:130-147).
     # action: Join models carrying events/observables and assert the :E / :obs parts survive into the merge.
-    @testset "union_acs! merges observables (:obs) and events (:E) (WS-3 fix)" begin
-        acs1 = @ReactionNetworkSchema begin
+    @testset "merge_networks! merges observables (:obs) and events (:E) (WS-3 fix)" begin
+        acs1 = @reaction_network begin
           1.0, A --> B, name => t1
         end
         @valuation acs1 B = 0.1
         # give acs2 an event so we can check it survives the merge
-        acs2_ev = @ReactionNetworkSchema begin
+        acs2_ev = @reaction_network begin
           1.0, C --> D, name => t2
           (D > 5) && (D -= 1)
         end
-        n_ev = nparts(acs2_ev, :E)
+        n_ev = nrows(acs2_ev, :E)
         @test n_ev >= 1                              # sanity: acs2_ev actually declares an event
         m = @join acs1 acs2_ev
         # WS-3: events now merge — the joined submodel's :E rows survive.
-        @test nparts(m, :E) == n_ev                  # was the @test_broken pin
+        @test nrows(m, :E) == n_ev                  # was the @test_broken pin
         # transitions still append (no regression to the §7/J2 structural-append behavior).
-        @test nparts(m, :T) == 2
+        @test nrows(m, :T) == 2
     end
 
     # [join-observables-merged-namespaced] tier=T1-characterization expectedStatus=pass-now (WS-3 fix)
@@ -221,26 +223,26 @@ using Random, Distributions, DataFrames
     # note: Companion to the :E/:obs merge above — checks the OBSERVABLE path specifically: an observable of the
     # note: joined submodel survives the merge, and the species it samples is namespaced (m__X) inside its
     # note: FoldedObservable options so it reads the right pool. The observable is attached via the low-level
-    # note: add_part!(:obs, obsName, obsOpts) (the unambiguous structural path) so the test exercises exactly
-    # note: what union_acs!/prepend_obs! touch, independent of the observable-authoring DSL surface.
-    @testset "union_acs! merges observables and namespaces their referenced species (WS-3 fix)" begin
-        acs2 = @ReactionNetworkSchema begin
+    # note: add_row!(:obs, obsName, obsOpts) (the unambiguous structural path) so the test exercises exactly
+    # note: what merge_networks!/prepend_obs! touch, independent of the observable-authoring DSL surface.
+    @testset "merge_networks! merges observables and namespaces their referenced species (WS-3 fix)" begin
+        acs2 = @reaction_network begin
           1.0, C --> D, name => t2
         end
         # attach an observable that samples species D (as a bare-Symbol trigger in `on`).
-        ReactiveDynamics.add_part!(
+        ReactiveDynamics.add_row!(
             acs2, :obs;
             obsName = :watchD,
             obsOpts = ReactiveDynamics.FoldedObservable(; on = Any[:D], every = 1.0),
         )
-        @test nparts(acs2, :obs) == 1                # sanity
-        acs1 = @ReactionNetworkSchema begin
+        @test nrows(acs2, :obs) == 1                # sanity
+        acs1 = @reaction_network begin
           1.0, A --> B, name => t1
         end
         m = @join acs1 acs2
-        @test nparts(m, :obs) == 1                   # observable survives the merge (was silently dropped)
+        @test nrows(m, :obs) == 1                   # observable survives the merge (was silently dropped)
         # the observable's sampled species was namespaced to the joined pool (D → <name>__D).
-        opts = m[first(parts(m, :obs)), :obsOpts]
+        opts = m[first(row_ids(m, :obs)), :obsOpts]
         refd = string.(opts.on)
         @test any(s -> occursin("__D", s), refd)
     end
@@ -248,7 +250,7 @@ using Random, Distributions, DataFrames
     # [equalize-collapse-and-rewrite] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md Pending §Composition; equalize! operators/equalize.jl:24-66 (specmap + rem_parts! at :52 + recursively_substitute_vars! at :60)
     # note: Locks in current equalize! (equalize.jl:24-66): builds specmap, keeps the lowest index,
-    # note: rem_parts!(acs,:S,species_ixs[2:end]) at :52, then recursively_substitute_vars! rewrites every spec-
+    # note: rem_rows!(net,:S,species_ixs[2:end]) at :52, then recursively_substitute_vars! rewrites every spec-
     # note: referencing attr (:55-63). Pins string-surgery semantics that ADR 0003's promoted ReactantSpec will
     # note: replace structurally (see next test). Uses bare `name = name` eq form per @equalize docstring
     # note: (equalize.jl:73). If get_eqs_ff parsing of the bare `A = A2` form differs, the count assertion
@@ -256,19 +258,19 @@ using Random, Distributions, DataFrames
     # action: Call `@equalize` to collapse A and A2 into a single species and assert the species count
     # drops by one and references are rewritten.
     @testset "T1 lock-in: equalize! collapses two identified species into one and rewrites refs" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           1.0, A --> B, name => t1
           1.0, A2 --> B, name => t2
         end
         # A and A2 are conceptually the same pool; identify them.
-        before_S = nparts(acs, :S)
-        m = @equalize acs A = A2
+        before_S = nrows(net, :S)
+        m = @equalize net A = A2
         # A and A2 collapse to one => species count drops by exactly 1.
-        @test nparts(m, :S) == before_S - 1
+        @test nrows(m, :S) == before_S - 1
         # the surviving merged name is present; the eliminated alias is gone.
         @test count(n -> n in (:A, :A2), m[:, :specName]) == 1
         # transitions are preserved (rem_parts! only touched :S).
-        @test nparts(m, :T) == 2
+        @test nrows(m, :T) == 2
     end
 
     # [store-rem_parts-swap-pop-undef-nonbits] tier=T1-characterization expectedStatus=pass-now (WS-1 store)
@@ -279,14 +281,14 @@ using Random, Distributions, DataFrames
     # note: the swap on the source cell's `def` flag. Exercised directly (add species without modality, then
     # note: rem_parts! a middle row so the undefined last row is swapped in) and via equalize! below.
     @testset "store: rem_parts! swap-and-pop is exact and safe with undefined non-bits cells" begin
-        acs = ReactiveDynamics.ReactionNetworkSchema()
+        net = ReactiveDynamics.ReactionNetwork()
         for s in (:A, :B, :C, :D, :E, :F)
-            ReactiveDynamics.add_part!(acs, :S; specName = s)   # NO modality ⇒ specModality cell #undef
+            ReactiveDynamics.add_row!(net, :S; specName = s)   # NO modality ⇒ specModality cell #undef
         end
         # swap-and-pop order (victims [2,4] reversed): remove 4 → F fills slot4; remove 2 → E fills slot2.
-        ReactiveDynamics.rem_parts!(acs, :S, [2, 4])            # must NOT throw on the #undef Set column
-        @test acs[:, :specName] == [:A, :E, :C, :F]            # exact ACSets swap-and-pop surviving order
-        @test nparts(acs, :S) == 4
+        ReactiveDynamics.rem_rows!(net, :S, [2, 4])            # must NOT throw on the #undef Set column
+        @test net[:, :specName] == [:A, :E, :C, :F]            # exact ACSets swap-and-pop surviving order
+        @test nrows(net, :S) == 4
     end
 
     # [equalize-reactant-fk-repoint] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -304,15 +306,15 @@ using Random, Distributions, DataFrames
         # ADR 0003 Phase 2 LANDED: reactants are a first-class ReactantSpec incidence table with an
         # integer `species` FK into :S, and equalize! repoints those FKs structurally (rebuilds the
         # FK-exact table from the post-merge names) instead of only string-substituting :trans.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           1.0, A --> B, name => t1
           1.0, A2 --> B, name => t2
         end
-        m = equalize!(acs, [[(:catchall, :A), (:catchall, :A2)]])
+        m = equalize!(net, [[(:catchall, :A), (:catchall, :A2)]])
         reactants = ReactiveDynamics.reactant_specs(m)   # accessor over the promoted table
         @test !isempty(reactants)                        # the table is populated
         # every static ReactantSpec.species FK resolves to a live S index (no dangling FK after collapse).
-        @test all(r -> r.species == 0 || 1 <= r.species <= ReactiveDynamics.nparts(m, :S), reactants)
+        @test all(r -> r.species == 0 || 1 <= r.species <= ReactiveDynamics.nrows(m, :S), reactants)
         # some reactant now points at the survivor A (the two LHS A/A2 collapsed onto it).
         surv = ReactiveDynamics.find_index(:A, m)
         @test any(r -> r.species == surv, reactants)
@@ -328,13 +330,13 @@ using Random, Distributions, DataFrames
     # note: The @join macro, when given a string/macrocall arg (e.g. @join "m.rdj.json"), expands to
     # note: :(include_model(str)). include_model was previously defined NOWHERE in src/ (the J9 bug). WS-3
     # note: added it to serialize.jl: it reads a .rdj.json fragment through the eval-free typed-IR loader
-    # note: (validate + build_acs_from_dict) and returns a ReactionNetworkSchema (a fragment, so meta.tspan is
+    # note: (validate + build_network_from_dict) and returns a ReactionNetwork (a fragment, so meta.tspan is
     # note: NOT required — the composed whole supplies the horizon). No RCE: the file is never eval'd.
     # action: Confirm include_model exists, loads a fragment from a JSON file, and the @join file branch works.
     @testset "@join file-include branch: include_model loads a JSON fragment (WS-3 fix)" begin
         @test isdefined(ReactiveDynamics, :include_model)   # was the @test_broken pin
         # Round-trip: export a small model to JSON, then include_model it back to a schema.
-        base = @ReactionNetworkSchema begin
+        base = @reaction_network begin
           1.0, C --> D, name => t2
         end
         @prob_params base
@@ -342,14 +344,14 @@ using Random, Distributions, DataFrames
         path = joinpath(mktempdir(), "fragment.rdj.json")
         write(path, json)
         loaded = ReactiveDynamics.include_model(path)
-        @test loaded isa ReactiveDynamics.ReactionNetworkSchema
-        @test nparts(loaded, :T) == 1
+        @test loaded isa ReactiveDynamics.ReactionNetwork
+        @test nrows(loaded, :T) == 1
         # a file-loaded fragment composes with an in-memory model via the normal @join symbol path.
-        host = @ReactionNetworkSchema begin
+        host = @reaction_network begin
           1.0, A --> B, name => t1
         end
         m = @join host loaded
-        @test nparts(m, :T) == 2                            # both transitions present after the join
+        @test nrows(m, :T) == 2                            # both transitions present after the join
         # NOTE on the @join macro-level file-include branch (joins.jl ~255): it references include_model
         # (no longer an undefined symbol — the J9 pin is closed), but it is currently UNREACHABLE via the
         # macro because the eqs-detection loop (joins.jl:246, `isexpr(_, :macrocall, :(=))`) consumes ANY
@@ -367,24 +369,24 @@ using Random, Distributions, DataFrames
     # note: reindexes the :S table via rem_parts! (equalize.jl:52), which would invalidate the construction-
     # note: frozen, position-indexed compiled closures (compilers.jl varmap, sample_transitions! positional
     # note: loop). Identify species at AUTHORING time, before construction. The authoring-phase
-    # note: equalize!(::ReactionNetworkSchema, …) stays unrestricted (the §7 path).
+    # note: equalize!(::ReactionNetwork, …) stays unrestricted (the §7 path).
     # action: Construct + step the live problem, then attempt to equalize species on the LIVE state; the
     # reindexing rem_parts! must be refused, and the species indexing must be unchanged after the refusal.
     @testset "equalize!'s rem_parts! refuses on a live/stepping model (ADR 0004 INV-2 / ADR 0007 §A)" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           1.0, A --> B, name => t1
           1.0, A2 --> B, name => t2
         end
-        @prob_init acs A = 10 A2 = 10 B = 0
-        @prob_params acs
-        @prob_meta acs tspan = 10 dt = 1.0
-        prob = ReactionNetworkProblem(acs)
+        @prob_init net A = 10 A2 = 10 B = 0
+        @prob_params net
+        @prob_meta net tspan = 10 dt = 1.0
+        prob = ReactionNetworkProblem(net)
         @test prob.live == true
         simulate(prob, 1)   # advance to a tick boundary; model is live
-        # the live-guard refuses, rather than silently rem_parts!-ing the acs out from under the closures
+        # the live-guard refuses, rather than silently rem_parts!-ing the net out from under the closures
         @test_throws Exception equalize!(prob, [[(:catchall, :A), (:catchall, :A2)]])
         # the model's species indexing is unchanged after the refusal
-        @test ReactiveDynamics.nparts(prob, :S) == 3
+        @test ReactiveDynamics.nrows(prob, :S) == 3
     end
 
     # [event-channel-repaired] tier=T1-characterization expectedStatus=pass-now
@@ -393,19 +395,19 @@ using Random, Distributions, DataFrames
     # note: every :E row (trigger && action) is lifted to a Rule{guard=trigger, action=RawExpr(action),
     # note: every_tick}, and fire_rules! (src/actions.jl, _step! step 10) evaluates the guard and RUNS the
     # note: action. So a triggered event now takes effect (Invariant 7 met). NB: a bare-`true` trigger still
-    # note: fails at @ReactionNetworkSchema parse (Event(::Bool,::Expr) cannot convert a Bool into the
+    # note: fails at @reaction_network parse (Event(::Bool,::Expr) cannot convert a Bool into the
     # note: SampleableValues trigger union — a separate, pre-existing authoring limitation), so we use an
     # note: Expr trigger `@t() >= 0.0` which is always-true and parses cleanly.
     # action: Build a model whose event bumps B every tick; simulate; B must rise (the action ran).
     @testset "Event channel repaired: a triggered event runs its action each tick (Invariant 7 met)" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           0.0, A --> B, name => inert        # no spawning; isolates the event effect
           (@t() >= 0.0) && (B += 100)        # event: always-true Expr trigger, action sets B
         end
-        @prob_init acs A = 0 B = 0
-        @prob_params acs
-        @prob_meta acs tspan = 5 dt = 1.0
-        prob = ReactionNetworkProblem(acs; seed = 1)
+        @prob_init net A = 0 B = 0
+        @prob_params net
+        @prob_meta net tspan = 5 dt = 1.0
+        prob = ReactionNetworkProblem(net; seed = 1)
         # The :E row was lifted to a Rule.
         @test length(prob.rules) == 1
         simulate(prob)
@@ -428,13 +430,13 @@ using Random, Distributions, DataFrames
     @testset "T1 lock-in: add_to_spawn! defers capacity overflow into transToSpawn (INV3)" begin
         # Sustained over-demand against a hard capacity: rate forces 5 desired/ tick,
         # but capacity caps concurrent instances; overflow must be DEFERRED to transToSpawn.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           @deterministic(5), A --> B, name => capped, capacity => 2.0, cycletime => 3.0
         end
-        @prob_init acs A = 1000 B = 0
-        @prob_params acs
-        @prob_meta acs tspan = 4 dt = 1.0
-        prob = ReactionNetworkProblem(acs)
+        @prob_init net A = 1000 B = 0
+        @prob_params net
+        @prob_meta net tspan = 4 dt = 1.0
+        prob = ReactionNetworkProblem(net)
         ReactiveDynamics.sample_transitions!(prob)
         ReactiveDynamics.evolve!(prob)
         # Invariant 3: overflow (desired 5 - capacity 2 = 3) is carried forward in transToSpawn.
@@ -453,13 +455,13 @@ using Random, Distributions, DataFrames
     # on the correct `.sampled` field.
     @testset "T1 lock-in: resample! on a range-less observable yields missing on .sampled (no throw)" begin
         # Build a problem and a range-less Observable directly, then resample it.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           1.0, A --> B, name => t1
         end
-        @prob_init acs A = 10 B = 0
-        @prob_params acs
-        @prob_meta acs tspan = 5 dt = 1.0
-        prob = ReactionNetworkProblem(acs)
+        @prob_init net A = 10 B = 0
+        @prob_params net
+        @prob_meta net tspan = 5 dt = 1.0
+        prob = ReactionNetworkProblem(net)
         # An observable whose `range` is empty triggers the isempty(o.range) branch.
         obs = ReactiveDynamics.Observable("o", -Inf, ReactiveDynamics.SampleableValues[], Inf, ReactiveDynamics.ActionableValues[], missing)
         # The range-less path now resamples to `missing` on `.sampled` (no throw).

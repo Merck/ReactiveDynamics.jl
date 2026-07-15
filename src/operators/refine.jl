@@ -7,7 +7,7 @@
 # ModelSpec that constructs/serializes/simulates exactly as a hand-written flat model. The enabling
 # mechanism is the ADR-0003 Phase-2 ReactantSpec FK-repoint: species identification is repointing an
 # integer `species` FK, not string surgery. All of §11 is FORBIDDEN on a live/stepping model (it
-# reindexes) — these operate on a static ReactionNetworkSchema, never a ReactionNetworkProblem.
+# reindexes) — these operate on a static ReactionNetwork, never a ReactionNetworkProblem.
 
 export refine!, refine, abstract!, abstract_transitions, set_port_role!, @port, @compose,
     @pipeline, @process, compose, refinement_diagnostics, port_role
@@ -15,25 +15,25 @@ export refine!, refine, abstract!, abstract_transitions, set_port_role!, @port, 
 # ── §A: port-role authoring ───────────────────────────────────────────────────────────────────
 
 """
-    set_port_role!(acs, name => role, …)
+    set_port_role!(net, name => role, …)
 
 Set the open-port `role ∈ (:private, :input, :output, :shared)` (CONTRACT §11.1) of one or more
 species by name. `:private` (default) auto-namespaces on compose; `:input`/`:output` are open ports
 matched by `@compose`; `:shared` is identified by bare name (first-class `@catchall`).
 """
-function set_port_role!(acs::ReactionNetworkSchema, pairs::Pair{Symbol,Symbol}...)
+function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol,Symbol}...)
     for (name, role) in pairs
         role in PORT_ROLES ||
             error("set_port_role!: role must be one of $(PORT_ROLES), got $(repr(role))")
-        i = find_index(name, acs)
+        i = find_index(name, net)
         i === nothing && error("set_port_role!: no species named $(repr(name))")
-        acs[i, :specRole] = role
+        net[i, :specRole] = role
     end
-    return acs
+    return net
 end
 
 """
-    @port acs A => input  B => input  C => output  clock => shared
+    @port net A => input  B => input  C => output  clock => shared
 
 Declarative sugar for `set_port_role!`: tag species with a port role via `species => role` pairs
 (role ∈ input/output/shared; anything unlisted keeps its default :private). Each pair is written with
@@ -56,11 +56,11 @@ end
 
 # ── §E: @compose — port-connected composition (the §7 join, with a declared boundary) ─────────
 #
-# `compose(f1, f2, …)` is `union_acs!`/@join PLUS automatic port matching: each fragment's `output`
+# `compose(f1, f2, …)` is `merge_networks!`/@join PLUS automatic port matching: each fragment's `output`
 # ports are identified with same-named `input` ports of the other fragments by the §7.4/J7 FK-repoint
 # (via equalize!, which now repoints ReactantSpec FKs — ADR 0003 Phase 2), `private` species are
 # namespaced (m__X), and `shared` species are identified by bare name (prepend! skips them). Because
-# it composes already-parsed ModelSpecs it CLOSES the §7/J4 (:E/:obs dropped — union_acs! now merges
+# it composes already-parsed ModelSpecs it CLOSES the §7/J4 (:E/:obs dropped — merge_networks! now merges
 # them) and J9 (undefined include_model — never taken) bugs en route.
 
 """
@@ -68,35 +68,35 @@ end
 
 Compose model fragments by matching open ports. `output` ports are identified with same-named
 `input` ports across fragments (FK-repoint), `shared` species by bare name, `private` species are
-namespaced per fragment. Returns a new `ReactionNetworkSchema`. `@compose f1 f2 …` is the macro form.
+namespaced per fragment. Returns a new `ReactionNetwork`. `@compose f1 f2 …` is the macro form.
 """
-function compose(fragments::ReactionNetworkSchema...)
-    isempty(fragments) && return ReactionNetworkSchema()
+function compose(fragments::ReactionNetwork...)
+    isempty(fragments) && return ReactionNetwork()
     # Collect, per fragment, its open-port species names (input/output) and shared names BEFORE any
     # namespacing, so we know which bare names to re-identify after the namespaced union.
     portnames = Set{Symbol}()
     for f in fragments
-        for i in parts(f, :S)
+        for i in row_ids(f, :S)
             r = port_role(f, i)
             (is_open_port(r) || r === :shared) && push!(portnames, f[i, :specName])
         end
     end
 
-    acs_new = ReactionNetworkSchema()
+    acs_new = ReactionNetwork()
     # union each fragment under its own namespace. prepend! leaves `shared` species bare; open ports
     # (input/output) are namespaced here, then re-identified below by matching the ORIGINAL name.
     portmap = Dict{Symbol,Vector{Symbol}}()   # original port name → its namespaced aliases in acs_new
     for (k, f) in enumerate(fragments)
         name = Symbol("f", k)
         # remember each fragment's open-port original names → their namespaced form
-        for i in parts(f, :S)
+        for i in row_ids(f, :S)
             r = port_role(f, i)
             if is_open_port(r)
                 orig = f[i, :specName]
                 push!(get!(portmap, orig, Symbol[]), normalize_name(orig, name))
             end
         end
-        union_acs!(acs_new, f, name)
+        merge_networks!(acs_new, f, name)
     end
 
     # Identify open ports that appear (as the same original name) in ≥2 fragments: their namespaced
@@ -121,7 +121,7 @@ end
     @compose f1 f2 …
 
 Macro form of [`compose`](@ref): compose declared-port model fragments (each an expression evaluating
-to a `ReactionNetworkSchema`). The explicit-boundary counterpart of `@join`; `@join`/`@equalize`
+to a `ReactionNetwork`). The explicit-boundary counterpart of `@join`; `@join`/`@equalize`
 remain the manual no-declared-ports path.
 """
 macro compose(exs...)
@@ -146,10 +146,10 @@ Splice `submodel` into the coarse `transition` (named `Symbol`) of `spec`, ident
 submodel's open ports (`sub_port`) with the parent boundary species (`boundary_species`) given in
 `ports`. Mutates and returns `spec`. Authoring-time only.
 """
-function refine!(spec::ReactionNetworkSchema, transition::Symbol, submodel::ReactionNetworkSchema;
+function refine!(spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork;
     ports::AbstractDict = Dict{Symbol,Symbol}())
     # locate the coarse transition row by name
-    ti = findfirst(i -> spec[i, :transName] === transition, collect(parts(spec, :T)))
+    ti = findfirst(i -> spec[i, :transName] === transition, collect(row_ids(spec, :T)))
     ti === nothing && error("refine!: no transition named $(repr(transition)) in the parent spec")
 
     name = Symbol(transition, :__sub)
@@ -162,10 +162,10 @@ function refine!(spec::ReactionNetworkSchema, transition::Symbol, submodel::Reac
             error("refine!: port species $(repr(subport)) not found in submodel")
     end
 
-    # Moves 1+2 are delegated to union_acs!'s own namespacing + equation-alias mechanism (§7.4/J7):
+    # Moves 1+2 are delegated to merge_networks!'s own namespacing + equation-alias mechanism (§7.4/J7):
     # build one eqs block PER port that aliases the sub's port species to the parent boundary name, so
     # `prepend!`/`normalize_name` rename the port to the boundary name (bare) while every PRIVATE
-    # species is namespaced `<name>__X`. union_acs! then merges the boundary-named port onto the
+    # species is namespaced `<name>__X`. merge_networks! then merges the boundary-named port onto the
     # existing parent row (incident by specName) — the structural FK-repoint — and appends the rest.
     # `shared`-role sub species are left bare by prepend! (§A) and merge onto any same-named parent row.
     eqs = Any[]
@@ -173,20 +173,20 @@ function refine!(spec::ReactionNetworkSchema, transition::Symbol, submodel::Reac
         push!(eqs, Any[(:alias, boundary), (:catchall, subport)])
     end
 
-    # Move 3: append the sub into the parent by namespaced name-merge with the port aliases. union_acs!
+    # Move 3: append the sub into the parent by namespaced name-merge with the port aliases. merge_networks!
     # merges :E/:obs uniformly (WS-3), so the sub's events/observables come along.
-    union_acs!(spec, submodel, name, eqs)
+    merge_networks!(spec, submodel, name, eqs)
 
     # Move 4: remove the coarse transition T (drop its :T row). Its reactant relation lived only in
     # its :trans Expr, so dropping the row removes it; the sub's transitions now carry the dynamics.
-    rem_parts!(spec, :T, [ti])
+    rem_rows!(spec, :T, [ti])
 
     populate_reactant_specs!(spec)
     return spec
 end
 
 # non-mutating convenience
-refine(spec::ReactionNetworkSchema, transition::Symbol, submodel::ReactionNetworkSchema; kwargs...) =
+refine(spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork; kwargs...) =
     refine!(deepcopy(spec), transition, submodel; kwargs...)
 
 """
@@ -197,13 +197,13 @@ transition named `into`, whose boundary reaction line consumes/produces the give
 species. A structural convenience for round-tripping the granularity ladder; the collapsed coarse
 transition's attributes (cycletime/pos/cost) are the caller's to summarize (§C advises on drift).
 """
-function abstract_transitions(spec::ReactionNetworkSchema, transitions::Vector{Symbol}, into::Symbol;
+function abstract_transitions(spec::ReactionNetwork, transitions::Vector{Symbol}, into::Symbol;
     lhs::Vector{Symbol} = Symbol[], rhs::Vector{Symbol} = Symbol[],
     attrs::AbstractDict = Dict{Symbol,Any}())
     spec = deepcopy(spec)
     tis = Int[]
     for tn in transitions
-        i = findfirst(j -> spec[j, :transName] === tn, collect(parts(spec, :T)))
+        i = findfirst(j -> spec[j, :transName] === tn, collect(row_ids(spec, :T)))
         i === nothing && error("abstract_transitions: no transition named $(repr(tn))")
         push!(tis, i)
     end
@@ -211,12 +211,12 @@ function abstract_transitions(spec::ReactionNetworkSchema, transitions::Vector{S
     lhs_ex = isempty(lhs) ? :∅ : foldl((a, b) -> :($a + $b), lhs)
     rhs_ex = isempty(rhs) ? :∅ : foldl((a, b) -> :($a + $b), rhs)
     line = :($lhs_ex --> $rhs_ex)
-    ni = add_part!(spec, :T; trans = line, transName = into)
+    ni = add_row!(spec, :T; trans = line, transName = into)
     for (k, v) in attrs
         spec[ni, k] = v
     end
     assign_defaults!(spec)
-    rem_parts!(spec, :T, sort(tis))
+    rem_rows!(spec, :T, sort(tis))
     populate_reactant_specs!(spec)
     return spec
 end
@@ -239,7 +239,7 @@ const abstract! = abstract_transitions
 Advisory §11.3 diagnostics for splicing `submodel` into a coarse transition described by
 `coarse_attrs` (a Dict of e.g. `:transCycleTime`, `:transProbOfSuccess`). Warnings only.
 """
-function refinement_diagnostics(submodel::ReactionNetworkSchema, coarse_attrs::AbstractDict;
+function refinement_diagnostics(submodel::ReactionNetwork, coarse_attrs::AbstractDict;
     ports::AbstractDict = Dict{Symbol,Symbol}(), tol = 0.25)
     warns = String[]
 
@@ -249,7 +249,7 @@ function refinement_diagnostics(submodel::ReactionNetworkSchema, coarse_attrs::A
     populate_reactant_specs!(sub)
     lhs_species = Set(r.species for r in reactant_specs(sub) if r.side === :lhs && r.species > 0)
     rhs_species = Set(r.species for r in reactant_specs(sub) if r.side === :rhs && r.species > 0)
-    for i in parts(sub, :S)
+    for i in row_ids(sub, :S)
         role = port_role(sub, i)
         nm = sub[i, :specName]
         if role === :input && !(i in lhs_species)
@@ -263,7 +263,7 @@ function refinement_diagnostics(submodel::ReactionNetworkSchema, coarse_attrs::A
     cts = Float64[]
     poss = Float64[]
     ok = true
-    for i in parts(sub, :T)
+    for i in row_ids(sub, :T)
         ct = sub[i, :transCycleTime]
         ps = sub[i, :transProbOfSuccess]
         (ct isa Number && ps isa Number) || (ok = false; break)
@@ -305,11 +305,11 @@ end
 
 Expand a phase chain into `flow` routing transitions (§2.8). Each `From => To : (ct, pos, res)` edge
 becomes a transition consuming `From` (+ optional `res` resources) and producing `To`, carrying the
-per-edge cycletime/prob_of_success. Returns a `ReactionNetworkSchema`.
+per-edge cycletime/prob_of_success. Returns a `ReactionNetwork`.
 """
 macro pipeline(nameex, block)
     Meta.isexpr(block, :block) || error("@pipeline: expected a begin…end block of `From => To : opts`")
-    # Build a standard @ReactionNetworkSchema authoring block, one reaction line per edge, and reuse
+    # Build a standard @reaction_network authoring block, one reaction line per edge, and reuse
     # the full parse pipeline (rate expansion, species extraction, attr handling) via get_data.
     lines = Expr(:block)
     for stmt in block.args
@@ -340,7 +340,7 @@ macro pipeline(nameex, block)
         # gate (not a Poisson draw) bound firing. Optional `res` resources add to the LHS.
         lhs = haskey(optd, :res) ? :($(optd[:res]) + $from) : from
         # Build the reaction-line tuple exactly as the DSL author would WRITE it, so get_data parses
-        # it identically to a hand-authored `@ReactionNetworkSchema` line: `@deterministic(1e6), From
+        # it identically to a hand-authored `@reaction_network` line: `@deterministic(1e6), From
         # --> To, name => <tname>, cycletime => ct, probability => pos`. `name`'s value must be a BARE
         # identifier Symbol (get_transitions! reads `exs[ix].args[3]`), NOT a QuoteNode — matching the
         # parser's `transName => :flow_…` output. `-->` is the reaction arrow the DSL normalizes.
@@ -353,18 +353,18 @@ macro pipeline(nameex, block)
         )
         push!(lines.args, line)
     end
-    # Delegate to the create.jl parse pipeline exactly as @ReactionNetworkSchema does. The reaction
+    # Delegate to the create.jl parse pipeline exactly as @reaction_network does. The reaction
     # lines are built from literal phase symbols (no caller-scope variables), so nothing needs esc;
-    # reference RD's own ReactionNetworkSchema/get_data by module-qualified name.
-    return :(ReactiveDynamics.ReactionNetworkSchema(ReactiveDynamics.get_data($(QuoteNode(lines)))...))
+    # reference RD's own ReactionNetwork/get_data by module-qualified name.
+    return :(ReactiveDynamics.ReactionNetwork(ReactiveDynamics.get_data($(QuoteNode(lines)))...))
 end
 
 """
     @process name(params…) = begin <reaction lines> end
 
 Define a reusable parameterized model-fragment factory. Expands to a function `name(params…)` that
-returns a `ReactionNetworkSchema`. Inside the body, write ordinary reaction lines (as in
-`@ReactionNetworkSchema`); each occurrence of a PARAMETER name is substituted by its call-time value
+returns a `ReactionNetwork`. Inside the body, write ordinary reaction lines (as in
+`@reaction_network`); each occurrence of a PARAMETER name is substituted by its call-time value
 (a species symbol, a number, …) into the reaction-line AST BEFORE parsing — eval-free
 (`replace_in_expr`), sidestepping the DSL's lack of `\$`-interpolation. Compose instances by ports
 with `@compose` (§E).
@@ -397,13 +397,13 @@ macro process(defex)
             push!(pnames, a.args[1])
         end
     end
-    # Emit: name(params…) = ReactionNetworkSchema(get_data(<block with params replaced>)…). The
+    # Emit: name(params…) = ReactionNetwork(get_data(<block with params replaced>)…). The
     # block is quoted, then each param symbol is replaced by its runtime value via replace_in_expr
     # (create.jl) — a structural substitution, no eval.
     blockq = QuoteNode(body)
     subs = Expr(:vect, (Expr(:call, :(=>), QuoteNode(p), p) for p in pnames)...)
     newfn = Expr(:function, esc(sig),
-        :(ReactiveDynamics.ReactionNetworkSchema(
+        :(ReactiveDynamics.ReactionNetwork(
             ReactiveDynamics.get_data(
                 ReactiveDynamics.replace_in_expr($blockq, $(esc(subs))...))...)))
     return newfn

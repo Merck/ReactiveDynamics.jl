@@ -34,13 +34,13 @@ end
 
 # A coarse phase-advance model: select Phase2 projects, advance them to Phase3 on completion.
 function advance_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
         name => p2_to_p3, cycletime => 1.0, probability => 1.0
     end
-    RDX.register_structured_species!(acs, :Project)
-    acs
+    RDX.register_structured_species!(net, :Project)
+    net
 end
 
 phases(p) =
@@ -50,9 +50,9 @@ phases(p) =
 
     # ── matches(): the 𝓕ₜ-measurable predicate evaluator ────────────────────────────────
     @testset "matches() selects by attribute clause (==, >), kind-gated" begin
-        acs = advance_model()
-        @prob_meta acs tspan = 3 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1)
+        net = advance_model()
+        @prob_meta net tspan = 3 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1)
         t2 = RDX.FiltProjectToken(:Phase2, 100.0); add_structured_token!(p, t2)
         t1 = RDX.FiltProjectToken(:Phase1, 50.0); add_structured_token!(p, t1)
         pred_eq = RDX.TokenPredicate(:Project, [RDX.Clause(:phase, :(==), :(:Phase2))])
@@ -68,9 +68,9 @@ phases(p) =
 
     # ── @select binds only matching tokens; @advance writes the phase field ─────────────
     @testset "phase-as-attribute pipeline: @select(Phase2) --> @advance(phase,:Phase3)" begin
-        acs = advance_model()
-        @prob_meta acs tspan = 5 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1)
+        net = advance_model()
+        @prob_meta net tspan = 5 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1)
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 100.0))
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 200.0))
         add_structured_token!(p, RDX.FiltProjectToken(:Phase1, 50.0))
@@ -82,9 +82,9 @@ phases(p) =
 
     # ── @advance preserves token identity (uuid/kind/creation_index/past_bonds) ──────────
     @testset "@advance keeps token identity — only the field changes (not a new token)" begin
-        acs = advance_model()
-        @prob_meta acs tspan = 4 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1)
+        net = advance_model()
+        @prob_meta net tspan = 4 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1)
         tok = RDX.FiltProjectToken(:Phase2, 100.0)
         add_structured_token!(p, tok)
         name_before = AlgebraicAgents.getname(tok)
@@ -98,14 +98,14 @@ phases(p) =
 
     # ── continuous predicate selects a subset ───────────────────────────────────────────
     @testset "@select with a continuous clause (npv > θ) advances only the qualifying subset" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(1.0),
             @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
             name => high_npv_advance, cycletime => 1.0, probability => 1.0
         end
-        RDX.register_structured_species!(acs, :Project)
-        @prob_meta acs tspan = 5 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1)
+        RDX.register_structured_species!(net, :Project)
+        @prob_meta net tspan = 5 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1)
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 100.0))   # below θ, stays
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 200.0))   # above θ, advances
         simulate(p)
@@ -116,9 +116,9 @@ phases(p) =
     # ── determinism: predicate-selected pipeline reproduces under (model, seed) ──────────
     @testset "predicate selection is deterministic under (model, seed)" begin
         function run_pipeline(seed)
-            acs = advance_model()
-            @prob_meta acs tspan = 5 dt = 1.0
-            p = ReactionNetworkProblem(acs; seed = seed)
+            net = advance_model()
+            @prob_meta net tspan = 5 dt = 1.0
+            p = ReactionNetworkProblem(net; seed = seed)
             for ph in (:Phase2, :Phase2, :Phase1, :Phase2)
                 add_structured_token!(p, RDX.FiltProjectToken(ph, 100.0))
             end
@@ -135,14 +135,14 @@ phases(p) =
         # advances per tick, so WHICH one advances first must be reproducible across runs — it is
         # the lower creation_index (the first added), regardless of the tokens' random names.
         function which_advances_first(seed)
-            acs = @ReactionNetworkSchema begin
+            net = @reaction_network begin
                 @deterministic(1.0),
                 @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
                 name => adv, cycletime => 1.0, probability => 1.0
             end
-            RDX.register_structured_species!(acs, :Project)
-            @prob_meta acs tspan = 2 dt = 1.0
-            p = ReactionNetworkProblem(acs; seed = seed)
+            RDX.register_structured_species!(net, :Project)
+            @prob_meta net tspan = 2 dt = 1.0
+            p = ReactionNetworkProblem(net; seed = seed)
             a = RDX.FiltProjectToken(:Phase2, 111.0); add_structured_token!(p, a)  # creation_index 1
             b = RDX.FiltProjectToken(:Phase2, 222.0); add_structured_token!(p, b)  # creation_index 2
             simulate(p, 1)   # one tick: exactly one Phase2 advances
@@ -161,14 +161,14 @@ phases(p) =
         # rate 2 (two instances/tick) + cycletime 0 (instant completion) so both distinct
         # Project tokens are bound and advanced — @advance picks bound tokens in the
         # (species, creation_index) order, one per firing instance.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(2.0),
             @select(Project) --> @advance(phase, :Done),
             name => any_advance, cycletime => 0.0, probability => 1.0
         end
-        RDX.register_structured_species!(acs, :Project)
-        @prob_meta acs tspan = 4 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1)
+        RDX.register_structured_species!(net, :Project)
+        @prob_meta net tspan = 4 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1)
         add_structured_token!(p, RDX.FiltProjectToken(:Phase1, 10.0))
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 20.0))
         simulate(p)

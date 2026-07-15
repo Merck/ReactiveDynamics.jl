@@ -306,11 +306,11 @@ function evolve!(state)
     actual_allocs = zero(state.u)
 
     ## schedule new transitions
-    qs = zeros(nparts(state, :T))
+    qs = zeros(nrows(state, :T))
 
     foreach(
         i -> qs[i] = state[i, :transRate] * state[i, :transMultiplier],
-        parts(state, :T),
+        row_ids(state, :T),
     )
     # Integerize the spawn-count proposal by FLOORING, not `ceil` (CONTRACT §2.3, §2.8). On the
     # Poisson genesis path `transRate` is already a whole `rand(Poisson(dt·rate))` draw (create.jl:153),
@@ -324,9 +324,9 @@ function evolve!(state)
     qs .= floor.(Ref(Int), qs)
     # A transition gated off this tick (deactivated or guard false, ADR 0010 §B) proposes no
     # new instances — zero its genesis quantity so it never competes for resources.
-    foreach(i -> state.transitions[:transFiring][i] || (qs[i] = 0), parts(state, :T))
+    foreach(i -> state.transitions[:transFiring][i] || (qs[i] = 0), row_ids(state, :T))
 
-    for i in parts(state, :T)
+    for i in row_ids(state, :T)
         new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
@@ -340,8 +340,8 @@ function evolve!(state)
     # fill is one instance, then `spawn_integer!` returns whole instance counts under priority-
     # weighted progressive filling + a deterministic integer top-up. `allocs[s,t]` is the realized
     # demand (per-instance req × granted count) consumed below and read by the structured bind loop.
-    ws = AllocWorkspace(nparts(state, :S), nparts(state, :T))
-    build_requirements!(ws, state, ones(nparts(state, :T)); ongoing = false)
+    ws = AllocWorkspace(nrows(state, :S), nrows(state, :T))
+    build_requirements!(ws, state, ones(nrows(state, :T)); ongoing = false)
     n = spawn_integer!(ws, state.u, state[:, :transPriority], qs)
     allocs = ws.req .* reshape(Float64.(n), 1, :)
     qs .= n
@@ -366,7 +366,7 @@ function evolve!(state)
     structured_token = collect(values(inners(getagent(state, "structured"))))
 
     # add spawned transitions to the heap
-    for i in parts(state, :T)
+    for i in row_ids(state, :T)
         if qs[i] != 0
             transition = Transition(
                 string(state[i, :transName]) * "_@$(state.t)",
@@ -384,7 +384,7 @@ function evolve!(state)
             bound = transition.bound_structured_agents
             structured_to_agents = transition.structured_to_agents
 
-            for (j, type) in enumerate(state.acs[:, :specName])
+            for (j, type) in enumerate(state.network[:, :specName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
@@ -408,7 +408,7 @@ function evolve!(state)
                     # order, which would make WHICH equal-priority token binds non-reproducible.
                     sort!(
                         available_species;
-                        by = a -> (-priority(a, state.acs[i, :transName]), token_sortkey(state, a)),
+                        by = a -> (-priority(a, state.network[i, :transName]), token_sortkey(state, a)),
                     )
 
                     ix = 1
@@ -430,7 +430,7 @@ function evolve!(state)
             # AFTER the bind loop, so `transition.bound_structured_agents` is populated.
             attribute_cost!(state, transition, @view spawn_allocs[:, i])
 
-            context_eval(state, transition, state.wrap_fun(state.acs[i, :transPreAction]))
+            context_eval(state, transition, state.wrap_fun(state.network[i, :transPreAction]))
         end
     end
 
@@ -443,7 +443,7 @@ function evolve!(state)
     # (`state[t.i, :transPriority]` → per-tick context_eval), NOT the spawn-time snapshot — so a
     # time-varying transPriority applies to in-flight instances too (ADR 0002 "fresh per tick").
     nong = length(state.ongoing_transitions)
-    ws = AllocWorkspace(nparts(state, :S), nong)
+    ws = AllocWorkspace(nrows(state, :S), nong)
     qs = map(t -> t.q, state.ongoing_transitions)
     build_requirements!(ws, state, qs; ongoing = true, dt_scale = state.dt)
     w = [state[t.i, :transPriority] for t in state.ongoing_transitions]
@@ -476,7 +476,7 @@ function evolve!(state)
             bound = transition.nonblock_structured_agents
             structured_to_agents = transition.structured_to_agents
 
-            for (j, type) in enumerate(state.acs[:, :specName])
+            for (j, type) in enumerate(state.network[:, :specName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
@@ -497,12 +497,12 @@ function evolve!(state)
                     # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
                     # deterministic (species, creation_index) key. NB use `transition.i` (the recipe
                     # index stored at spawn), NOT the loop var `i` — here `i` indexes the
-                    # ongoing_transitions array, not the :T schema row, so `state.acs[i, …]` would
+                    # ongoing_transitions array, not the :T schema row, so `state.network[i, …]` would
                     # read the wrong transition's priority (latent: harmless only while priority is
                     # the default 0.0 for all tokens; a per-transition priority override would hit it).
                     sort!(
                         available_species;
-                        by = a -> (-priority(a, state.acs[transition.i, :transName]), token_sortkey(state, a)),
+                        by = a -> (-priority(a, state.network[transition.i, :transName]), token_sortkey(state, a)),
                     )
 
                     ix = 1
@@ -533,7 +533,7 @@ function evolve!(state)
         (
             :valuation_cost,
             state.t,
-            actual_allocs' * [state[i, :specCost] for i in parts(state, :S)],
+            actual_allocs' * [state[i, :specCost] for i in row_ids(state, :S)],
         ),
     )
 end
@@ -756,7 +756,7 @@ function finish!(state)
             end
         end
 
-        context_eval(state, trans_, state.wrap_fun(state.acs[trans_.i, :transPostAction]))
+        context_eval(state, trans_, state.wrap_fun(state.network[trans_.i, :transPostAction]))
 
         for agent in trans_.bound_structured_agents
             set_species!(agent, :removed)
@@ -817,16 +817,16 @@ function get_tcontrol(tspan, args)
 end
 
 function ReactionNetworkProblem(
-    acs::ReactionNetworkSchema,
+    net::ReactionNetwork,
     u0 = Dict(),
     p = Dict();
     name = "reaction_network",
     kwargs...,
 )
-    assign_defaults!(acs)
+    assign_defaults!(net)
     keywords = Dict{Symbol,Any}([
-        acs[i, :metaKeyword] => acs[i, :metaVal] for i in parts(acs, :M) if
-        !isnothing(acs[i, :metaKeyword]) && !isnothing(acs[i, :metaVal])
+        net[i, :metaKeyword] => net[i, :metaVal] for i in row_ids(net, :M) if
+        !isnothing(net[i, :metaKeyword]) && !isnothing(net[i, :metaVal])
     ])
 
     merge!(keywords, Dict(collect(kwargs)))
@@ -847,43 +847,43 @@ function ReactionNetworkProblem(
     rng = Random.Xoshiro(seed)
     initial_rng = copy(rng)
 
-    acs = remove_choose(acs)
+    net = remove_choose(net)
 
     structured_token_names =
-        acs[filter(i -> acs[i, :specStructured], 1:nparts(acs, :S)), :specName]
+        net[filter(i -> net[i, :specStructured], 1:nrows(net, :S)), :specName]
 
-    attrs, transitions, wrap_fun = compile_attrs(acs, structured_token_names)
+    attrs, transitions, wrap_fun = compile_attrs(net, structured_token_names)
     transition_recipes = transitions
-    u0_init = zeros(nparts(acs, :S))
+    u0_init = zeros(nrows(net, :S))
 
-    for i in parts(acs, :S)
-        if !isnothing(acs[i, :specName]) && haskey(u0, acs[i, :specName])
-            u0_init[i] = u0[acs[i, :specName]]
+    for i in row_ids(net, :S)
+        if !isnothing(net[i, :specName]) && haskey(u0, net[i, :specName])
+            u0_init[i] = u0[net[i, :specName]]
         else
-            u0_init[i] = acs[i, :specInitVal]
+            u0_init[i] = net[i, :specInitVal]
         end
     end
 
     prms = Dict{Symbol,Any}((
-        acs[i, :prmName] => acs[i, :prmVal] for
-        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), 1:nparts(acs, :P))
+        net[i, :prmName] => net[i, :prmVal] for
+        i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), 1:nrows(net, :P))
     ))
 
     merge!(p, prms)
 
     ongoing_transitions = Transition[]
     log = NamedTuple[]
-    observables = compile_observables(acs)
+    observables = compile_observables(net)
     transitions_attrs =
         setdiff(
-            filter(a -> contains(string(a), "trans"), propertynames(acs.subparts)),
+            filter(a -> contains(string(a), "trans"), propertynames(net.columns)),
             (:trans,),
         ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash, :transFiring]
     transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
 
     sol = DataFrame(
         "t" => Float64[],
-        (string(name) => Float64[] for name in acs[:, :specName])...,
+        (string(name) => Float64[] for name in net[:, :specName])...,
     )
 
     # Endogenous decision channel (ADR 0010 §12). Per-network host registry for AddToken/Invoke
@@ -892,9 +892,9 @@ function ReactionNetworkProblem(
     # Typed Rules can also be supplied directly via the `rules=` kwarg / @rule authoring.
     registry = Dict{Symbol,Any}(get(keywords, :registry, Dict{Symbol,Any}()))
     rules = Any[
-        Rule(Symbol("rule_", i), acs[i, :eventTrigger], RawExpr(acs[i, :eventAction]))
-        for i in parts(acs, :E) if
-        !isnothing(acs[i, :eventTrigger]) && !isnothing(acs[i, :eventAction])
+        Rule(Symbol("rule_", i), net[i, :eventTrigger], RawExpr(net[i, :eventAction]))
+        for i in row_ids(net, :E) if
+        !isnothing(net[i, :eventTrigger]) && !isnothing(net[i, :eventAction])
     ]
     append!(rules, get(keywords, :rules, Any[]))
 
@@ -908,7 +908,7 @@ function ReactionNetworkProblem(
 
     network = ReactionNetworkProblem(
         name,
-        acs,
+        net,
         attrs,
         transition_recipes,
         u0_init,
@@ -966,7 +966,7 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem)
     state.t = state.tspan[1]
     empty!(state.ongoing_transitions)
     empty!(state.log)
-    state.observables = compile_observables(state.acs)
+    state.observables = compile_observables(state.network)
     empty!(state.sol)
     # Restore the RNG to its construction state so the second run reproduces the first (§4 D7).
     state.rng = copy(state.initial_rng)
@@ -1014,8 +1014,8 @@ end
 
 function update_u_structured!(state)
     structured_tokens = collect(values(inners(getagent(state, "structured"))))
-    for (i, species) in enumerate(state.acs[:, :specName])
-        if state.acs[i, :specStructured]
+    for (i, species) in enumerate(state.network[:, :specName])
+        if state.network[i, :specStructured]
             state.u[i] =
                 count(a -> get_species(a) == species && !isblocked(a), structured_tokens)
         end
@@ -1050,7 +1050,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         (
             :valuation,
             state.t,
-            state.u' * [state[i, :specValuation] for i in parts(state, :S)],
+            state.u' * [state[i, :specValuation] for i in row_ids(state, :S)],
         ),
     )
 
@@ -1077,9 +1077,9 @@ function AlgebraicAgents._projected_to(state::ReactionNetworkProblem)
     return state.t > state.tspan[2] ? true : state.t
 end
 
-function fetch_params(acs::ReactionNetworkSchema)
+function fetch_params(net::ReactionNetwork)
     return Dict{Symbol,Any}((
-        acs[i, :prmName] => acs[i, :prmVal] for
-        i in Iterators.filter(i -> !isnothing(acs[i, :prmVal]), parts(acs, :P))
+        net[i, :prmName] => net[i, :prmVal] for
+        i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), row_ids(net, :P))
     ))
 end

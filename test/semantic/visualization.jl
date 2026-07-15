@@ -22,12 +22,12 @@ RD = ReactiveDynamics
 # A small SIR model (the reference acceptance model) — plain species, no structured tokens, so
 # network_graph works with no population.
 function sir_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         0.5 / 1000, S + I --> 2 * I, name => infection
         0.05, I --> R, name => recovery
     end
-    @prob_meta acs tspan = 10 dt = 1.0
-    return acs
+    @prob_meta net tspan = 10 dt = 1.0
+    return net
 end
 
 # A structured advance model (toy-pharma-like) with a phase attribute, to test highlighting.
@@ -42,17 +42,17 @@ end
 end
 
 function pharma_model(; budget0 = 100)
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
         name => adv, cycletime => 1.0, probability => 1.0
     end
-    RD.register_structured_species!(acs, :Project)
-    bi = findfirst(==(:budget), acs[:, :specName])
-    acs[bi, :specInitVal] = Float64(budget0)
-    acs[bi, :specCost] = 1.0
-    @prob_meta acs tspan = 5 dt = 1.0
-    return acs
+    RD.register_structured_species!(net, :Project)
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specInitVal] = Float64(budget0)
+    net[bi, :specCost] = 1.0
+    @prob_meta net tspan = 5 dt = 1.0
+    return net
 end
 
 # Does a string look like a single well-formed DOT digraph? (envelope + balanced braces)
@@ -156,7 +156,7 @@ end
         hi = Tuple{Symbol,Symbol}[]
         for tok in RD.select_tokens(p, pred)
             for (sp, _t, tr) in tok.past_bonds
-                push!(hi, (sp, RD._transition_node_name(p.acs, tr.i)))
+                push!(hi, (sp, RD._transition_node_name(p.network, tr.i)))
             end
         end
         if !isempty(hi)

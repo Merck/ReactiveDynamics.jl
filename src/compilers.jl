@@ -116,8 +116,8 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     )
     push!(letex.args[2].args, fex)
 
-    # the function shall be a function of the dynamic ReactionNetworkSchema structure: letex -> :(state -> $letex)
-    # eval the expression to a Julia function, save that function into the "compiled" acset
+    # the function shall be a function of the dynamic ReactionNetwork structure: letex -> :(state -> $letex)
+    # eval the expression to a Julia function, save that function into the "compiled" network
 
     return eval(quote
         function (state, transition)
@@ -126,9 +126,9 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     end)
 end
 
-function get_wrap_fun(acs::ReactionNetworkSchema)
-    species_names = collect(acs[:, :specName])
-    prm_names = collect(acs[:, :prmName])
+function get_wrap_fun(net::ReactionNetwork)
+    species_names = collect(net[:, :specName])
+    prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
     for name in prm_names
         push!(varmap, name => :(state.p[$(QuoteNode(name))]))
@@ -143,10 +143,10 @@ function skip_compile(attr)
            (attr === :specRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
 end
 
-function compile_attrs(acs::ReactionNetworkSchema, structured_token)
-    species_names = collect(acs[:, :specName])#setdiff(collect(acs[:, :specName]), structured_token)
+function compile_attrs(net::ReactionNetwork, structured_token)
+    species_names = collect(net[:, :specName])#setdiff(collect(net[:, :specName]), structured_token)
 
-    prm_names = collect(acs[:, :prmName])
+    prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
     for name in prm_names
         push!(varmap, name => :(state.p[$(QuoteNode(name))]))
@@ -154,8 +154,8 @@ function compile_attrs(acs::ReactionNetworkSchema, structured_token)
     wrap_fun = ex -> wrap_expr(ex, species_names, prm_names, varmap)
     attrs = Dict{Symbol,Vector}()
     transitions = Dict{Symbol,Vector}()
-    for attr in propertynames(acs.subparts)
-        attrs_ = subpart(acs, attr)
+    for attr in propertynames(net.columns)
+        attrs_ = column(net, attr)
         if !contains(string(attr), "trans")
             (
                 attrs[attr] = map(
@@ -172,23 +172,23 @@ function compile_attrs(acs::ReactionNetworkSchema, structured_token)
             )
         end
     end
-    transitions[:transActivated] = fill(true, nparts(acs, :T))
-    transitions[:transToSpawn] = zeros(nparts(acs, :T))
+    transitions[:transActivated] = fill(true, nrows(net, :T))
+    transitions[:transToSpawn] = zeros(nrows(net, :T))
     transitions[:transHash] =
-        [coalesce(acs[i, :transName], gensym()) for i in parts(acs, :T)]
+        [coalesce(net[i, :transName], gensym()) for i in row_ids(net, :T)]
     # Stateless per-tick guard (ADR 0010 §B): default `true` (compiled away). AND-ed with the
     # latching transActivated gate in sample_transitions!. Authored via @conditional / the
     # `guard =>` transition attr; carried as a compiled closure like the other trans attrs.
-    transitions[:transGuard] = Any[true for _ in parts(acs, :T)]
+    transitions[:transGuard] = Any[true for _ in row_ids(net, :T)]
 
     return attrs, transitions, wrap_fun
 end
 
-function remove_choose(acs::ReactionNetworkSchema)
-    acs = deepcopy(acs)
+function remove_choose(net::ReactionNetwork)
+    net = deepcopy(net)
     pcs = []
-    for attr in propertynames(acs.subparts)
-        attrs_ = subpart(acs, attr)
+    for attr in propertynames(net.columns)
+        attrs_ = column(net, attr)
         foreach(
             i ->
                 !isnothing(attrs_[i]) &&
@@ -198,6 +198,6 @@ function remove_choose(acs::ReactionNetworkSchema)
         )
     end
 
-    add_obs!(acs, pcs)
-    return acs
+    add_obs!(net, pcs)
+    return net
 end

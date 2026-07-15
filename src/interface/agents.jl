@@ -17,10 +17,10 @@ end
 # We use this to let the network know that the type is structured.
 function register_structured_species!(reaction_network, type)
     if !(type ∈ reaction_network[:, :specName])
-        add_part!(reaction_network, :S; specName = type)
+        add_row!(reaction_network, :S; specName = type)
     end
 
-    i = first(incident(reaction_network, type, :specName))
+    i = first(find_rows(reaction_network, type, :specName))
     reaction_network[i, :specStructured] = true
 
     return nothing

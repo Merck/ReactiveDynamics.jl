@@ -18,7 +18,7 @@ A model is a set of TRANSITIONS. Each transition has a RATE (how often it tries 
 
 | § | Section | Engine capability exercised |
 |---|---|---|
-| 1 | A first model: SIR | The metalanguage (`@ReactionNetworkSchema`, `@prob_init` / `@prob_params` / `@prob_meta`), mass-action stochastic rates, `simulate`, reading `prob.sol` by column name, `prob.u` / `find_index`, and a conserved-population invariant |
+| 1 | A first model: SIR | The metalanguage (`@reaction_network`, `@prob_init` / `@prob_params` / `@prob_meta`), mass-action stochastic rates, `simulate`, reading `prob.sol` by column name, `prob.u` / `find_index`, and a conserved-population invariant |
 | 2 | Stateful transitions & lifecycle | `cycletime` (in-flight completion delay), Binomial `probability` of success, `capacity` bound on concurrent instances, `maxlifetime` timeout |
 | 3 | Resource modalities truth-table | Raw-consumed (bare) vs `@conserved` (held, returned) vs `@rate` (metered per tick) vs `@nonblock` (freed each step) vs stacked `@rate(@conserved(...))` (rented hold) — including the `@rate`-with-`cycletime=0` foot-gun that silently reserves nothing |
 | 4 | Priority allocator under contention | `progressive_fill!` (priority-weighted progressive filling) called directly in both the contended and the slack (no-scaling) regime, then genuine in-model contention for a scarce shared pool where the higher-`priority` transition wins more (ADR 0002) |

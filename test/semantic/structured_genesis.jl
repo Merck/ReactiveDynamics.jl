@@ -63,14 +63,14 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
     # ── an empty-LHS source mints one token per tick; identity is fresh each time ─────────
     @testset "∅ --> @structured(:Kind, …) mints a fresh token per firing, tracked in state.u" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(1.0),
             ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
             name => genesis
         end
-        RDX.register_structured_species!(acs, :Project)
-        @prob_meta acs tspan = 5 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1, registry = GEN_REGISTRY)
+        RDX.register_structured_species!(net, :Project)
+        @prob_meta net tspan = 5 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         @test isempty(livetokens(p))                       # nothing at t=0
         simulate(p)
         toks = livetokens(p)
@@ -88,15 +88,15 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     # ── field exprs see LIVE state (@t()) and may DRAW from the seeded RNG ─────────────────
     @testset "genesis field exprs read @t() and draw from state.rng; reproducible under seed" begin
         function genesis_dynamic(seed)
-            acs = @ReactionNetworkSchema begin
+            net = @reaction_network begin
                 @deterministic(1.0),
                 ∅ --> @structured(:Project, phase = :Phase1,
                                   npv = rand(state.rng, Normal(100.0, 10.0)), born = @t()),
                 name => genesis
             end
-            RDX.register_structured_species!(acs, :Project)
-            @prob_meta acs tspan = 4 dt = 1.0
-            p = ReactionNetworkProblem(acs; seed = seed, registry = GEN_REGISTRY)
+            RDX.register_structured_species!(net, :Project)
+            @prob_meta net tspan = 4 dt = 1.0
+            p = ReactionNetworkProblem(net; seed = seed, registry = GEN_REGISTRY)
             simulate(p)
             p
         end
@@ -114,7 +114,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
     # ── a minted token then FLOWS through a downstream @select/@advance pipeline ───────────
     @testset "genesis feeds a downstream @select/@advance leg (birth → select → advance)" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(1.0),
             ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
             name => genesis
@@ -122,9 +122,9 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
             @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
             name => adv12, cycletime => 1.0, probability => 1.0
         end
-        RDX.register_structured_species!(acs, :Project)
-        @prob_meta acs tspan = 5 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1, registry = GEN_REGISTRY)
+        RDX.register_structured_species!(net, :Project)
+        @prob_meta net tspan = 5 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         simulate(p)
         # every minted Phase1 token is bindable by the downstream leg and advances to Phase2;
         # the pipeline keeps only the most-recently-born token in Phase1 (steady one-per-tick flow).
@@ -136,7 +136,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     # ── genesis round-trips through the eval-free JSON IR (the ADR 0005 §39 payoff) ────────
     @testset "@structured round-trips: export → validate → reload is trajectory-identical" begin
         function det_model()   # deterministic npv so DSL and JSON runs are bit-identical
-            acs = @ReactionNetworkSchema begin
+            net = @reaction_network begin
                 @deterministic(1.0),
                 ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
                 name => genesis
@@ -144,9 +144,9 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                 @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
                 name => adv12, cycletime => 1.0, probability => 1.0
             end
-            RDX.register_structured_species!(acs, :Project)
-            @prob_meta acs tspan = 5 dt = 1.0
-            acs
+            RDX.register_structured_species!(net, :Project)
+            @prob_meta net tspan = 5 dt = 1.0
+            net
         end
         p_dsl = ReactionNetworkProblem(det_model(); seed = 7, registry = GEN_REGISTRY)
         simulate(p_dsl)
@@ -170,14 +170,14 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
     # ── validate flags a genesis whose kind is not in the registry / not structured ───────
     @testset "validate rejects a named @structured with an unknown kind" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(1.0),
             ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
             name => genesis
         end
-        RDX.register_structured_species!(acs, :Project)
-        @prob_meta acs tspan = 2 dt = 1.0
-        p = ReactionNetworkProblem(acs; seed = 1, registry = GEN_REGISTRY)
+        RDX.register_structured_species!(net, :Project)
+        @prob_meta net tspan = 2 dt = 1.0
+        p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         doc = JSON.parse(RDX.to_json_model(p))
         for r in doc["reactants"]
             haskey(r, "structured") && (r["structured"]["kind"] = "Ghost")   # dangling kind
@@ -194,7 +194,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         # is at CONSTRUCTION (recursively_find_reactants!, create.jl) — fail fast at model build,
         # not deep in a simulation — and the message points at the named replacement.
         err = try
-            @ReactionNetworkSchema begin
+            @reaction_network begin
                 @deterministic(1.0),
                 ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),   # inline host ctor
                 name => genesis
@@ -211,7 +211,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     # ── the two-arg raw form `@structured(token, species)` is likewise rejected ────────────
     @testset "raw @structured(token, species) two-arg form is also rejected at construction" begin
         err = try
-            @ReactionNetworkSchema begin
+            @reaction_network begin
                 @deterministic(1.0),
                 ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t()), :Project),
                 name => genesis

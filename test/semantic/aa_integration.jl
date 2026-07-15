@@ -121,12 +121,12 @@ const _COUPLED_JSON = """
         @test ps[:beta] == 0.4 && ps[:gamma] == 2.0
 
         # a param-only patch merges into state.p; structure (species count) is untouched.
-        nS_before = RD.nparts(p, :S)
+        nS_before = RD.nrows(p, :S)
         AlgebraicAgents._setparameters!(p, Dict(:beta => 0.9, :delta => 3.0))
         @test p.p[:beta] == 0.9                            # existing param overwritten
         @test p.p[:delta] == 3.0                           # new param added
         @test p.p[:gamma] == 2.0                           # untouched param preserved
-        @test RD.nparts(p, :S) == nS_before                # no structural change (Invariant 5)
+        @test RD.nrows(p, :S) == nS_before                # no structural change (Invariant 5)
     end
 
     # ── (B) INBOUND — ExternalRef leaf round-trips ──────────────────────────────────────

@@ -61,7 +61,7 @@ Base.setindex!(state::Transition, val, key) = state.trans[key] = val
 end
 
 @aagent struct ReactionNetworkProblem
-    acs::ReactionNetworkSchema
+    network::ReactionNetwork
 
     attrs::Dict{Symbol,Vector}
     transition_recipes::Dict{Symbol,Vector}
@@ -161,7 +161,7 @@ end
 
 function Base.getindex(state::ReactionNetworkProblem, keys...)
     if any(occursin.(["transPreAction", "transPostAction"], Ref(string(keys[2]))))
-        return state.acs[keys[1], keys[2]]
+        return state.network[keys[1], keys[2]]
     else
         return context_eval(
             state,
@@ -173,20 +173,20 @@ end
 
 function init_u!(state::ReactionNetworkProblem)
     return (
-        u = fill(0.0, nparts(state, :S));
-        foreach(i -> u[i] = state[i, :specInitVal], parts(state, :S));
+        u = fill(0.0, nrows(state, :S));
+        foreach(i -> u[i] = state[i, :specInitVal], row_ids(state, :S));
         state.u = u
     )
 end
 save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
 
-function compile_observables(acs::ReactionNetworkSchema)
+function compile_observables(net::ReactionNetwork)
     observables = Dict{Symbol,Observable}()
-    species_names = collect(acs[:, :specName])
-    prm_names = collect(acs[:, :prmName])
+    species_names = collect(net[:, :specName])
+    prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
 
-    for (name, opts) in Iterators.zip(acs[:, :obsName], acs[:, :obsOpts])
+    for (name, opts) in Iterators.zip(net[:, :obsName], net[:, :obsOpts])
         on = map(on -> wrap_expr(on, species_names, prm_names, varmap), opts.on)
         range = map(
             r -> begin
@@ -261,7 +261,7 @@ function prune_r_line(r_line)
 end
 
 function find_index(species::Symbol, state::ReactionNetworkProblem)
-    return findfirst(i -> state[i, :specName] == species, parts(state, :S))
+    return findfirst(i -> state[i, :specName] == species, row_ids(state, :S))
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
@@ -329,14 +329,14 @@ function as_state(u, t, state::ReactionNetworkProblem)
     return (state = deepcopy(state); state.u .= u; state.t = t; state)
 end
 
-# Extend RD's own nparts/parts generics (ADR 0003 Phase 1 — no longer ACSets') for the live state,
-# delegating to the static store. `nparts`/`parts` are defined and exported in ReactiveDynamics.jl.
-function nparts(state::ReactionNetworkProblem, obj::Symbol)
-    return nparts(state.acs, obj)
+# Extend RD's own nrows/row_ids store generics (ADR 0003 Phase 1 — no longer ACSets'; renamed in
+# ADR 0015) for the live state, delegating to the static store. Defined in ReactiveDynamics.jl.
+function nrows(state::ReactionNetworkProblem, obj::Symbol)
+    return nrows(state.network, obj)
 end
 
-function parts(state::ReactionNetworkProblem, obj::Symbol)
-    return parts(state.acs, obj)
+function row_ids(state::ReactionNetworkProblem, obj::Symbol)
+    return row_ids(state.network, obj)
 end
 
 ## query the state

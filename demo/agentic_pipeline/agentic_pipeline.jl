@@ -131,7 +131,7 @@ println("advances — so we can select projects by attribute and follow each one
 # code. Two authoring forms exist; we use both here.
 
 function pipeline_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         # Phase1 -> Phase2 : a sure step (probability 1) for didactic clarity.
         @deterministic(1.0),
         @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
@@ -145,8 +145,8 @@ function pipeline_model()
         @select(Project, phase == :Phase3) --> @advance(phase, :Launched),
         name => adv3L, cycletime => 1.0, probability => 0.9
     end
-    register_structured_species!(acs, :Project)
-    return acs
+    register_structured_species!(net, :Project)
+    return net
 end
 
 # Form A — an explicit host-token list (the maintainer's "instantiate as a list of structures"):
@@ -209,13 +209,13 @@ println("  sampled Phase1 NPVs (seeded, reproducible): ",
 # predicate-selected pipeline reproduces exactly under `(model, seed)`.
 
 function fasttrack_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
         name => fasttrack, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(acs, :Project)
-    return acs
+    register_structured_species!(net, :Project)
+    return net
 end
 
 banner("§2. Predicate selection (a continuous npv > θ clause)")
@@ -267,7 +267,7 @@ println("wins), so this selection reproduces exactly under the same (model, seed
 # Phase2->Phase3 pipeline step so AddToken has somewhere to land.
 
 function lever_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         # a spendable line, gated below on cash >= 50 (genesis withheld until funded)
         @deterministic(1.0), cash --> report, name => fund
         # the pipeline step the injected project will flow through
@@ -275,10 +275,10 @@ function lever_model()
         @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
         name => adv23, cycletime => 1.0, probability => 1.0
     end
-    @prob_init acs cash = 0 report = 0
-    @prob_params acs synergy = 0
-    register_structured_species!(acs, :Project)
-    return acs
+    @prob_init net cash = 0 report = 0
+    @prob_params net synergy = 0
+    register_structured_species!(net, :Project)
+    return net
 end
 
 # The lever: a once-rule firing at t > 2 that raises capital, flips synergy, and adds a project.
@@ -374,7 +374,7 @@ const GENESIS_REGISTRY = Dict{Symbol,Any}(
 # RNG, birth-time stamped from the clock) via the named, registry-resolved form, and a downstream
 # @select/@advance leg the newborns flow through. Birth → select → advance, all in the dynamics.
 function genesis_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         ∅ --> @structured(:Project, phase = :Phase1,
                           npv = rand(state.rng, Normal(120.0, 20.0)), born = @t()),
@@ -383,8 +383,8 @@ function genesis_model()
         @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
         name => adv12, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(acs, :Project)
-    return acs
+    register_structured_species!(net, :Project)
+    return net
 end
 
 banner("§4. Genesis as a transition product (@structured RHS — the agentic constructor)")
@@ -424,7 +424,7 @@ println("sharing AddToken's registry, so it serializes as eval-free data too.")
 # eval-free serialization is a total invariant. Show the rejection (caught, for the demo).
 raw_line = :(@structured(GenesisProjectToken(:Phase1, 100.0, 0.0)))
 try
-    @eval @ReactionNetworkSchema begin
+    @eval @reaction_network begin
         @deterministic(1.0), ∅ --> $raw_line, name => genesis
     end
     println("Raw @structured(Ctor(…)): UNEXPECTEDLY accepted")
@@ -610,7 +610,7 @@ println("(h) solution trajectory exported as a ", size(soltable, 1), "×", size(
 # and re-arms once-rules, so re-running from the same seed reproduces the first trajectory.
 
 function instant_pipeline()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
         name => adv12, cycletime => 0.0, probability => 1.0   # ct=0 ⇒ clean boundary every tick
@@ -618,8 +618,8 @@ function instant_pipeline()
         @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
         name => adv23, cycletime => 0.0, probability => 1.0
     end
-    register_structured_species!(acs, :Project)
-    return acs
+    register_structured_species!(net, :Project)
+    return net
 end
 
 banner("§7. Checkpoint & replay (dump_state / restore + reinit determinism)")

@@ -96,19 +96,19 @@ RD.log_token_fields(t::RD.TrajProjectToken) = (; phase = t.phase, value = t.valu
 # The model. Macro arguments are literal (evaluated in module scope), so cost /
 # reward / budget are set on the ACSet directly via index assignment.
 function project_model(; budget0 = 8, cost = 1.0, reward = 10.0)
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
         name => adv, cycletime => 1.0, probability => 0.6
     end
-    RD.register_structured_species!(acs, :Project)
-    bi = findfirst(==(:budget), acs[:, :specName])
-    acs[bi, :specInitVal] = Float64(budget0)
-    acs[bi, :specCost] = cost
-    pi = findfirst(==(:Project), acs[:, :specName])
-    acs[pi, :specReward] = reward
-    @prob_meta acs tspan = 5 dt = 1.0
-    return acs
+    RD.register_structured_species!(net, :Project)
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specInitVal] = Float64(budget0)
+    net[bi, :specCost] = cost
+    pi = findfirst(==(:Project), net[:, :specName])
+    net[pi, :specReward] = reward
+    @prob_meta net tspan = 5 dt = 1.0
+    return net
 end
 
 # Build + simulate one member under a seed. The starting portfolio is a handful of
@@ -435,7 +435,7 @@ println("  starved species (pool trough ≤ 0) : ", isempty(starved) ? "none" : 
 hi_arcs = Tuple{Symbol,Symbol}[]
 for tok in RD.select_tokens(prob, adv_pred)
     for (sp, _t, tr) in tok.past_bonds
-        push!(hi_arcs, (sp, RD._transition_node_name(prob.acs, tr.i)))
+        push!(hi_arcs, (sp, RD._transition_node_name(prob.network, tr.i)))
     end
 end
 println("  @select(Phase2) token-path arcs   : ", isempty(hi_arcs) ? "none (no cohort bonds)" : unique(hi_arcs))

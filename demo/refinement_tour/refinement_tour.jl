@@ -22,13 +22,13 @@
 # machinery) so the refinement mechanics are the star and the demo runs fast.
 #
 # The whole layer is AUTHORING-time and additive: every operation here produces a
-# plain ReactionNetworkSchema that constructs / serializes / simulates exactly like
+# plain ReactionNetwork that constructs / serializes / simulates exactly like
 # a hand-written flat model (it is FORBIDDEN on a live/stepping model — it
 # reindexes). The enabling mechanism is the ADR-0003 Phase-2 ReactantSpec FK-repoint:
 # species identification is repointing an integer FK, not string surgery.
 
 using ReactiveDynamics
-using ReactiveDynamics: nparts, parts, specname, find_index, reactant_specs, port_role
+using ReactiveDynamics: nrows, row_ids, specname, find_index, reactant_specs, port_role
 using Printf
 
 const RD = ReactiveDynamics
@@ -40,7 +40,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 # signatures are structurally identical. Keying by transition NAME (not index) makes
 # the comparison robust to the row-reordering that refinement performs.
 function trans_signature(m, tname)
-    ti = findfirst(i -> m[i, :transName] === tname, collect(parts(m, :T)))
+    ti = findfirst(i -> m[i, :transName] === tname, collect(row_ids(m, :T)))
     ti === nothing && return nothing
     rows = sort([(string(specname(m, r.species)), r.side, r.stoich)
                  for r in reactant_specs(m) if r.trans == ti && r.species > 0])
@@ -72,13 +72,13 @@ end
 portfolio = build_portfolio()
 RD.populate_reactant_specs!(portfolio)   # promote the incidence table so we can read it
 
-println("@pipeline expanded the phase chain into a flat ReactionNetworkSchema:")
+println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
 println("  species (phases)   : ", portfolio[:, :specName])
-println("  transitions        : ", [portfolio[i, :transName] for i in parts(portfolio, :T)])
-println("  parts              : ", nparts(portfolio, :S), " species, ",
-        nparts(portfolio, :T), " transitions")
+println("  transitions        : ", [portfolio[i, :transName] for i in row_ids(portfolio, :T)])
+println("  parts              : ", nrows(portfolio, :S), " species, ",
+        nrows(portfolio, :T), " transitions")
 println("  per-edge (ct, pos) :")
-for i in parts(portfolio, :T)
+for i in row_ids(portfolio, :T)
     @printf("    %-24s ct=%.1f  pos=%.2f\n",
             portfolio[i, :transName], portfolio[i, :transCycleTime],
             portfolio[i, :transProbOfSuccess])
@@ -103,7 +103,7 @@ banner("§2. Reusable fragments + open ports: @process / @port / @compose (§A,�
 # Fragments compose by DECLARED PORTS instead of "remember which names to @equalize".
 # A port is a boundary species tagged with a role (§A): :input (consumed-from
 # boundary), :output (produced-into boundary), :shared (identified by bare name),
-# or the default :private (auto-namespaced). `@port acs A => input  B => output`
+# or the default :private (auto-namespaced). `@port net A => input  B => output`
 # tags them (note the `=>` pairs). `@compose f1 f2 …` is `@join` PLUS automatic port
 # matching: an :output port of one fragment is identified with a same-named :input
 # port of another by the FK-repoint (not string surgery), :private species are
@@ -117,7 +117,7 @@ end
 screening = phase_gate(:Screen, :Lead;      ct = 0.5, pos = 0.85)
 lead_opt  = phase_gate(:Lead,   :Candidate;  ct = 0.7, pos = 0.80)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  species   : ", screening[:, :specName], "   transitions: ", nparts(screening, :T))
+println("  species   : ", screening[:, :specName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # Tag the boundary: `Lead` is the output of screening and the input of lead_opt — the
@@ -139,12 +139,12 @@ println("  shared port `Lead` collapsed to ONE species? ",
         count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)")
 println("  private species namespaced per fragment (f1__Screen, f2__Candidate)? ",
         (:f1__Screen in names_chain) && (:f2__Candidate in names_chain))
-println("  transitions preserved : ", nparts(chain, :T), " (1 + 1, none lost)")
+println("  transitions preserved : ", nrows(chain, :T), " (1 + 1, none lost)")
 # The promoted incidence table is FK-EXACT: every static FK resolves, and both
 # transitions route through the single shared `Lead` index.
 leadix = find_index(:Lead, chain)
 through_lead = count(r -> r.species == leadix, reactant_specs(chain))
-all_fk_ok = all(r -> r.species == 0 || 1 <= r.species <= nparts(chain, :S), reactant_specs(chain))
+all_fk_ok = all(r -> r.species == 0 || 1 <= r.species <= nrows(chain, :S), reactant_specs(chain))
 println("  every reactant FK in range?  ", all_fk_ok)
 println("  rows routed through `Lead`:  ", through_lead, "  (produced by screening, consumed by lead_opt)")
 
@@ -168,7 +168,7 @@ banner("§3. REFINE one transition — the multifidelity payoff (§B)  ★ headl
 # (Phase2, Phase3) at their same indices/names, coarse and refined are PLUG-
 # COMPATIBLE (Invariant 1): every OTHER transition is structurally untouched.
 
-phase2_detail = @ReactionNetworkSchema begin
+phase2_detail = @reaction_network begin
     1.0, p2_in  --> screen,  name => screening,   cycletime => 0.5, probability => 0.85
     1.0, screen --> leadopt, name => lead_opt,    cycletime => 0.7, probability => 0.80
     1.0, leadopt --> tox,    name => tox_study,   cycletime => 0.5, probability => 0.85
@@ -185,8 +185,8 @@ phase3_ix_before = find_index(:Phase3, portfolio)
 refined = refine(portfolio, :flow_Phase2_Phase3, phase2_detail;
                  ports = Dict(:Phase2 => :p2_in, :Phase3 => :p2_out))
 
-tnames_before = [portfolio[i, :transName] for i in parts(portfolio, :T)]
-tnames_after  = [refined[i, :transName]   for i in parts(refined, :T)]
+tnames_before = [portfolio[i, :transName] for i in row_ids(portfolio, :T)]
+tnames_after  = [refined[i, :transName]   for i in row_ids(refined, :T)]
 println("transitions BEFORE refine : ", tnames_before)
 println("transitions AFTER  refine : ", tnames_after)
 println("  coarse `flow_Phase2_Phase3` removed?      ", !(:flow_Phase2_Phase3 in tnames_after))
@@ -250,7 +250,7 @@ println("  warnings: ", isempty(warns_ok) ? "none — well-matched, SILENT" : wa
 
 # Now a DELIBERATELY DRIFTED refinement: cycletimes summing to 6.0 and PoS 0.81,
 # both far from the coarse (2.0, 0.40) → both aggregate checks fire.
-drifted = @ReactionNetworkSchema begin
+drifted = @reaction_network begin
     1.0, p2_in --> mid,    name => slow_a, cycletime => 3.0, probability => 0.90
     1.0, mid   --> p2_out, name => slow_b, cycletime => 3.0, probability => 0.90
 end
@@ -263,7 +263,7 @@ end
 
 # And a DANGLING PORT: a species declared :input but only ever PRODUCED (RHS) —
 # a common wiring mistake the port-balance check catches.
-dangling = @ReactionNetworkSchema begin
+dangling = @reaction_network begin
     1.0, feed --> shelf, name => stock
 end
 RD.set_port_role!(dangling, :shelf => :input)   # declared :input but only ever produced
@@ -291,20 +291,20 @@ collapsed = RD.abstract_transitions(refined, sub_transitions, :flow_Phase2_Phase
     attrs = Dict(:transCycleTime => 2.0, :transProbOfSuccess => 0.40))
 println("abstract_transitions collapsed the ", length(sub_transitions),
         " sub-steps back into one coarse `flow_Phase2_Phase3`:")
-println("  transitions : ", [collapsed[i, :transName] for i in parts(collapsed, :T)])
+println("  transitions : ", [collapsed[i, :transName] for i in row_ids(collapsed, :T)])
 println("  coarse `flow_Phase2_Phase3` restored? ",
-        :flow_Phase2_Phase3 in [collapsed[i, :transName] for i in parts(collapsed, :T)],
-        " ; T count back to ", nparts(collapsed, :T),
-        " (coarse was ", nparts(portfolio, :T), ")")
+        :flow_Phase2_Phase3 in [collapsed[i, :transName] for i in row_ids(collapsed, :T)],
+        " ; T count back to ", nrows(collapsed, :T),
+        " (coarse was ", nrows(portfolio, :T), ")")
 
 # Invariant 5 — a refined spec serializes / reloads as a FLAT model: refinement left
 # no runtime trace, it is a plain ModelSpec.
 @prob_params refined
 json = RD.to_json_model(refined; meta = Dict{String,Any}("tspan" => 5.0))
-reloaded = RD.build_acs_from_dict(RD.JSON.parse(json))
+reloaded = RD.build_network_from_dict(RD.JSON.parse(json))
 println("JSON round-trip of the refined model (Invariant 5 — no runtime trace):")
-println("  species : ", nparts(refined, :S), " → reload ", nparts(reloaded, :S),
-        "   transitions : ", nparts(refined, :T), " → reload ", nparts(reloaded, :T))
+println("  species : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
+        "   transitions : ", nrows(refined, :T), " → reload ", nrows(reloaded, :T))
 println("  same species set after reload? ",
         Set(reloaded[:, :specName]) == Set(refined[:, :specName]))
 
@@ -314,7 +314,7 @@ banner("§6. It's just a ModelSpec: construct + simulate the refined pipeline")
 # =============================================================================
 #
 # The whole point of Invariant 4 (closure) + additivity: the refined model is an
-# ordinary ReactionNetworkSchema, so it constructs and simulates exactly like a
+# ordinary ReactionNetwork, so it constructs and simulates exactly like a
 # hand-authored flat model — no special runtime for the refined structure. We seed a
 # batch of Discovery projects and run the multifidelity pipeline to the horizon,
 # reproducibly from (model, seed). (Macro args are LITERAL — evaluated in module
@@ -373,5 +373,5 @@ println("""
   dynamics possibly substituted" — realized as cheap, collision-safe, authoring-time
   structural operations over the ADR-0003 ReactantSpec FK table. All of §11 is
   FORBIDDEN on a live/stepping model (it reindexes); it operates on a static
-  ReactionNetworkSchema only.
+  ReactionNetwork only.
 """)

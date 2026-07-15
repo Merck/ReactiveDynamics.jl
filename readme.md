@@ -28,11 +28,11 @@ In particular, a resource can be allocated to an instance either for the instanc
 
 <img src="docs/src/assets/diagram3.png" align="left" alt="attributes diagram"></a>
 
-The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is represented as an <a href=https://algebraicjulia.github.io/Catlab.jl/dev/generated/wiring_diagrams/wd_cset/><b>attributed C-set</b></a>. 
+The transitions are <b>parametric</b>. That is, it is possible to set the period over which an instance of a transition acts in the system (as well as the maximal period of this action), the total number of transition's instances allowed to exist in the system, etc. An annotated transition takes the form `rate, a*A + b*B + ... --> c*C + ..., prm => val, ...`, where the numerical values can be given by a function which depends on the system's state. Internally, the reaction network is stored as a dependency-free typed struct-of-columns (see [ADR 0003](docs/adr/0003-data-store.md)).
 
 For an overview of accepted attributes for both transitions and species classes, read the [docs](https://merck.github.io/ReactiveDynamics.jl/#Update-model-objects)
 
-A network's dynamics is specified using a compact **modeling metalanguage**. Moreover, we have integrated another expression comprehension metalanguage which makes it easy to generate arbitrarily complex dynamics from a single template transition!
+A network's dynamics is specified using a compact **modeling metalanguage**.
 
 Taking **unions** of reaction networks is fully supported, and it is possible to identify the resource classes as appropriate.
 
@@ -46,9 +46,7 @@ The package is an integral part of the **Dynamics of Value Evolution (DyVE)** co
  
 As the framework evolves, multiple functionalities have matured enough to become standalone packages.
  
-This includes **[GeneratedExpressions.jl](https://github.com/Merck/GeneratedExpressions.jl)**, a metalanguage to support code-less expression comprehensions. In the present context, expression comprehensions are used to generate complex dynamics from user-specified template transitions.
- 
-Another package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
+One such package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package to enable hierarchical, heterogeneous dynamical systems co-integration. It implements a highly scalable, fully customizable interface featuring sums and compositions of dynamical systems. In present context, we note it can be used to co-integrate a reaction network problem with, e.g., a stochastic ordinary differential problem!
 
 ## Four Sketches
 
@@ -68,31 +66,27 @@ Follow the SIR model's reactions:
 using ReactiveDynamics
 
 # model dynamics
-sir_acs = @ReactionNetworkSchema begin
+sir_net = @reaction_network begin
         α*S*I, S+I --> 2I, name=>I2R
         β*I, I --> R, name=>R2S 
 end
 
 # simulation parameters
 ## initial values
-@prob_init sir_acs S=999 I=10 R=0
+@prob_init sir_net S=999 I=10 R=0
 ## uncertainty in initial values (Gaussian)
-@prob_uncertainty sir_acs S=10. I=5.
+@prob_uncertainty sir_net S=10. I=5.
 ## parameters
-@prob_params sir_acs α=0.0001 β=0.01
+@prob_params sir_net α=0.0001 β=0.01
 ## other arguments passed to the solver
-@prob_meta sir_acs tspan=250 dt=.1
+@prob_meta sir_net tspan=250 dt=.1
 ```
-
-The resulting reaction network is represented as an attributed C-set:
-
-![sir acs](docs/src/assets/sir_acs.png)
 
 Next we solve the problem.
 
 ```
 # turn model into a problem
-prob = @problematize sir_acs
+prob = @problematize sir_net
 
 # solve the problem over multiple trajectories
 sol = @solve prob trajectories=20
@@ -112,7 +106,7 @@ sol = @solve prob trajectories=20
 Before we move on to more intricate examples demonstrating generative capabilities of the package, let's sketch a toy pharma model with as little as three transitions.
 
 ```julia
-toy_pharma_model = @ReactionNetwork
+toy_pharma_model = @reaction_network
 ```
 
 First, a **"discovery" transition** will take a team of scientist and a portion of a company's budget at the input (say, for experimental resources), and it will **output candidate compounds**.
@@ -177,103 +171,6 @@ sol = @solve prob trajectories=20
 
 ![plot](docs/src/assets/toy_pharma.png)
 
-
-### Sparse Interactions
-
-We introduce a complex reaction network as a union of $n_{\text{models}}$ reaction networks, where the off-diagonal interactions are sparse.
-
-To harness the capabilities of **GeneratedExpressions.jl**, let us first declare a template atomic model.
-
-```julia
-# submodel.jl
-# substitute $r as the global number of resources, $i as the submodel identifier
-@register begin 
-        push!(ns, rand(1:5)); ϵ = 10e-2
-        push!(M, rand(ns[$i], ns[$i])); foreach(i -> M[$i][i, i] += ϵ, 1:ns[$i])
-        foreach(i -> M[$i][i, :] /= sum(M[$i][i, :]), 1:ns[$i])
-        push!(cycle_times, rand(1:5, ns[$i], ns[$i]))
-        push!(demand, rand(1:10, ns[$i], ns[$i], $r)); push!(production, rand(1:10, ns[$i], ns[$i], $r))
-end
-    
-# generate submodel dynamics
-push!(rd_models, @ReactionNetworkSchema begin
-                M[$i][$m, $n], state[$m] + {demand[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+} --> state[$n] + 
-                        {production[$i][$m, $n, $l]*resource[$l], l=1:$r, dlm=+}, cycle_time=>cycle_times[$i][$m, $n], probability_of_success=>$m*$n/(n[$i])^2
-        end m=1:ReactiveDynamics.ns[$i] n=1:ReactiveDynamics.ns[$i]
-)
-```
-
-The next step is to instantiate the atomic models (submodels).
-
-```julia
-using ReactiveDynamics
-## setup the environment
-rd_models = ReactiveDynamics.ReactionNetwork[] # submodels
-
-# needs to live within ReactiveDynamics's scope
-# the arrays will contain the submodel
-@register begin
-    ns = Int[] # size of submodels
-    M = Array[] # transition intensities of submodels
-    cycle_times = Array[] # cycle times of transitions in submodels
-    demand = Array[]; production = Array[] # resource production / generation for transitions in submodels
-end
-```
-
-Load $n_{\text{models}}$ the atomic models (substituting into `submodel.jl`):
-
-```julia
-n_models = 5; r = 2 # number of submodels, resources
-
-# submodels: dense interactions
-@generate {@fileval(submodel.jl, i=$i, r=r), i=1:n_models}
-```
-
-We take union of the atomic models, and we identify common resources.
-
-```julia
-# batch join over the submodels
-rd_model = @generate "@join {rd_models[\$i], i=1:n_models, dlm=' '}"
-
-# identify resources
-@generate {@equalize(rd_model, @alias(resource[$j])={rd_models[$i].resource[$j], i=1:n_models, dlm=:(=)}), j=1:r}
-```
-
-Next step is to add some off-diagonal interactions.
-
-```julia
-# sparse off-diagonal interactions, sparse declaration
-# again, we use GeneratedExpressions.jl
-sparse_off_diagonal = zeros(sum(ReactiveDynamics.ns), sum(ReactiveDynamics.ns))
-for i in 1:n_models
-    j = rand(setdiff(1:n_models, (i, )))
-    i_ix = rand(1:ReactiveDynamics.ns[i]); j_ix = rand(1:ReactiveDynamics.ns[j])
-    sparse_off_diagonal[i_ix+sum(ReactiveDynamics.ns[1:i-1]), j_ix+sum(ReactiveDynamics.ns[1:j-1])] += 1
-    interaction_ex = """@push rd_model begin 1., var"rd_models[$i].state[$i_ix]" --> var"rd_models[$j]__state[$j_ix]" end"""
-    eval(Meta.parseall(interaction_ex))
-end
-```
-
-Let's plot the interactions:
-
-![interactions](docs/src/assets/interactions.png)
-
-The resulting model can then be conveniently simulated using the modeling metalanguage.
-
-```julia
-using ReactiveDynamics: nparts
-u0 = rand(1:1000, nparts(rd_model, :S))
-@prob_init rd_model u0
-
-@prob_meta rd_model tspan=10
-
-prob = @problematize rd_model
-sol = @solve prob trajectories=2
-
-# plot "state" species only
-@plot sol plot_type=summary show=r"state"
-```
-
 ### Universal Differential Equations: Fitting Unknown Dynamics
 
 We demonstrate how to fit unknown part of dynamics to empirical data.
@@ -292,22 +189,22 @@ end
 Next we set up a simple dynamics and supply initial parameters.
 
 ```julia
-acs = @ReactionNetworkSchema begin
+net = @reaction_network begin
     function_to_learn(A, B, C, params), A --> B+C
     1., B --> C
     2., C --> B
 end
 
 # initial values, check params
-@prob_init acs A=60. B=10. C=150.
-@prob_params acs params=[.01, .01, .01]
-@prob_meta acs tspan=100.
+@prob_init net A=60. B=10. C=150.
+@prob_params net params=[.01, .01, .01]
+@prob_meta net tspan=100.
 ```
 
 Let's next see the numerical results for the initial guess.
 
 ```julia
-sol = @solve acs
+sol = @solve net
 @plot sol
 ```
 
@@ -319,7 +216,7 @@ Next we supply empirical data and fit `params`.
 time_points = [1, 50, 100]
 data = [60 30 5]
 
-@fit_and_plot acs data time_points vars=[A] params α maxeval=200 lower_bounds=0 upper_bounds=.01
+@fit_and_plot net data time_points vars=[A] params α maxeval=200 lower_bounds=0 upper_bounds=.01
 ```
 
 ![plot](docs/src/assets/optim2.png)

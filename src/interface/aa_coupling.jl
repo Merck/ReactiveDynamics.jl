@@ -29,7 +29,7 @@
     observables(rd::ReactionNetworkProblem)
 
 The ordered list of names this network exports to the AlgebraicAgents hierarchy (ADR 0012 §A,
-Invariant 1): every SPECIES name (`acs[:,:specName]`) followed by every NAMED observable
+Invariant 1): every SPECIES name (`net[:,:specName]`) followed by every NAMED observable
 (`keys(state.observables)`, §9.4). This is the canonical order `getobservable(rd, i::Int)` indexes.
 
 Token aggregates are surfaced the LEAN-EXPLICIT way the ADR open question settles on: an author
@@ -38,7 +38,7 @@ count of Phase-2 tokens), which then appear here automatically — rather than a
 combinatorial `nactive × kind × phase` set. Returns `Vector{Symbol}`.
 """
 function AlgebraicAgents.observables(rd::ReactionNetworkProblem)
-    return Symbol[collect(rd.acs[:, :specName]); collect(keys(rd.observables))]
+    return Symbol[collect(rd.network[:, :specName]); collect(keys(rd.observables))]
 end
 
 """
@@ -90,7 +90,7 @@ AlgebraicAgents._getparameters(rd::ReactionNetworkProblem) = rd.p
     _setparameters!(rd::ReactionNetworkProblem, parameters)
 
 Patch the network's parameters from a `Symbol=>value` dict (ADR 0012 §A, Invariant 5). Writes are
-PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (species/transitions/the acset
+PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (species/transitions/the network
 index), so they are ADR-0004 index-safe — structural change stays on the append-only mutation API.
 
 Caveat (ADR 0012 open question / §5 A3): a param feeding an attribute FROZEN at spawn (a token's

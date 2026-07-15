@@ -4,15 +4,13 @@ using Reexport
 using MacroTools
 using ComponentArrays
 
-@reexport using GeneratedExpressions
-
 # ADR 0003 Phase 1: the static authoring/IR store is a dependency-free typed-struct-of-columns
-# (no ACSets). The store type keeps the name `ReactionNetworkSchema` and a public `.subparts`
-# NamedTuple of typed columns, so the ~70 indexing sites and the 8 `propertynames(acs.subparts)`
-# reflection loops compile unchanged. These verbs are the signature-preserving shim that replaces
-# the ACSets API surface RD used; they are exported because callers (incl. tests) used them bare
-# from ACSets before. See the SCHEMA + shim block below.
-export nparts, parts, dom_parts, incident, subpart, set_subpart!, add_part!, add_parts!, rem_parts!
+# (no ACSets). The store type is `ReactionNetwork` (ADR 0015) with a public `.columns` NamedTuple of
+# typed columns, so the ~70 indexing sites and the 8 `propertynames(net.columns)` reflection loops
+# work uniformly. The store verbs (`nrows`/`row_ids`/`column`/`cell`/`find_rows`/`add_row!`/… — see
+# the SCHEMA + shim block below) are an INTERNAL store shim, NOT exported (ADR 0015 Tier 2 retired
+# the old exported ACSets vocabulary `nparts`/`subpart`/`incident`/…; deprecated aliases live at the
+# bottom of this file for one release).
 # ADR 0003 Phase 2: the promoted transition↔reactant incidence table + its accessors.
 export ReactantSpec, reactant_specs, specname
 
@@ -41,8 +39,8 @@ end
 # `const SCHEMA` is the single source of truth for the object model — six objects (:S species,
 # :T transitions, :E events, :obs observables, :P params, :M meta), ZERO homs — replacing the old
 # ACSets `BasicSchema`. Each object maps to a NamedTuple of `column ⇒ element-type`. The declaration
-# ORDER (S-cols, then T, E, obs, P, M) is load-bearing: the store's `.subparts` NamedTuple is built
-# in this order, so `propertynames(acs.subparts)` reproduces the exact ACSets column order the eight
+# ORDER (S-cols, then T, E, obs, P, M) is load-bearing: the store's `.columns` NamedTuple is built
+# in this order, so `propertynames(net.columns)` reproduces the exact ACSets column order the eight
 # reflection loops (compilers.jl, solvers.jl, joins.jl, equalize.jl) filter over by substring.
 const SCHEMA = (
     S = (
@@ -86,13 +84,13 @@ const ATTR2OBJ = Dict{Symbol,Symbol}(
 const ALLATTRS = Tuple(a for obj in keys(SCHEMA) for a in keys(SCHEMA[obj]))
 
 # `columns(SCHEMA)` = all attrs (ordered); `columns(SCHEMA, obj)` = that object's attrs. These
-# replace the `propertynames(acs.subparts)` reflection where a schema-driven list is wanted; the
-# in-place `.subparts` loops keep using `propertynames` since `.subparts` IS a NamedTuple.
+# replace the `propertynames(net.columns)` reflection where a schema-driven list is wanted; the
+# in-place `.columns` loops keep using `propertynames` since `.columns` IS a NamedTuple.
 columns(::typeof(SCHEMA)) = ALLATTRS
 columns(::typeof(SCHEMA), obj::Symbol) = keys(SCHEMA[obj])
 
 # A single typed column: values plus a `defined` bitmap. An unassigned cell reads back as `nothing`
-# (cloning ACSets' `get(col, i, default=nothing)`), so the `isnothing(acs[i,k])` guards in
+# (cloning ACSets' `get(col, i, default=nothing)`), so the `isnothing(net[i,k])` guards in
 # assign_defaults!/solvers keep working, and `grow!` need not fabricate a typed default value.
 mutable struct AttrColumn{T}
     v::Vector{T}
@@ -127,7 +125,7 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 # The table is DERIVED from the authoritative `:trans` column (see `populate_reactant_specs!`); the
 # runtime engine still parses `:trans` per tick (state.jl), so promoting the table is additive and
 # behavior-preserving. It lives as a struct field (NOT a 7th SCHEMA object) precisely so it never
-# enters `propertynames(acs.subparts)` — the eight reflection loops in compilers/solvers/joins/
+# enters `propertynames(net.columns)` — the eight reflection loops in compilers/solvers/joins/
 # equalize keep iterating exactly the six original objects' columns, untouched.
 struct ReactantSpec
     trans::Int              # FK → :T
@@ -138,42 +136,48 @@ struct ReactantSpec
     expr::Union{Nothing,Expr,Symbol}   # escape-hatch term for a dynamic reactant, else nothing
 end
 
-# The static network container. Keeps the name `ReactionNetworkSchema` so every existing signature
-# and `state.acs::ReactionNetworkSchema` annotation compiles unchanged. `parts` counts rows per
-# object; `subparts` is the NamedTuple of typed columns in ALLATTRS order; `reactants` is the
-# promoted ReactantSpec incidence table (ADR 0003 Phase 2), populated lazily/on-merge (empty for a
-# freshly-constructed or not-yet-promoted model — the runtime never reads it).
-struct ReactionNetworkSchema
-    parts::Dict{Symbol,Int}
-    subparts::NamedTuple
+# The static network container `ReactionNetwork` (ADR 0015: renamed from the ACSets-lineage
+# `ReactionNetworkSchema` — it is a populated network INSTANCE, not the schema; the type-level
+# object model is `const SCHEMA`). `counts` counts rows per object; `columns` is the NamedTuple of
+# typed columns in ALLATTRS order; `reactants` is the promoted ReactantSpec incidence table (ADR
+# 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted
+# model — the runtime never reads it).
+struct ReactionNetwork
+    counts::Dict{Symbol,Int}
+    columns::NamedTuple
     reactants::Vector{ReactantSpec}
     # Explicit TYPED inner constructor. Without it Julia auto-generates an untyped
-    # `ReactionNetworkSchema(::Any,::Any,::Any)` field constructor, which collides with the legacy
-    # semantic 3-arg outer constructor `ReactionNetworkSchema(transitions, reactants, obs)` below
+    # `ReactionNetwork(::Any,::Any,::Any)` field constructor, which collides with the legacy
+    # semantic 3-arg outer constructor `ReactionNetwork(transitions, reactants, obs)` below
     # (method overwrite → precompile error). The typed inner ctor is the only field-init path.
-    ReactionNetworkSchema(parts::Dict{Symbol,Int}, subparts::NamedTuple,
-                          reactants::Vector{ReactantSpec}) = new(parts, subparts, reactants)
+    ReactionNetwork(counts::Dict{Symbol,Int}, columns::NamedTuple,
+                          reactants::Vector{ReactantSpec}) = new(counts, columns, reactants)
 end
 
-function ReactionNetworkSchema()
-    parts = Dict{Symbol,Int}(obj => 0 for obj in keys(SCHEMA))
+function ReactionNetwork()
+    counts = Dict{Symbol,Int}(obj => 0 for obj in keys(SCHEMA))
     cols = NamedTuple{ALLATTRS}(AttrColumn{SCHEMA[ATTR2OBJ[a]][a]}() for a in ALLATTRS)
-    return ReactionNetworkSchema(parts, cols, ReactantSpec[])
+    return ReactionNetwork(counts, cols, ReactantSpec[])
 end
+
+# Deprecated compatibility alias (ADR 0015 Tier 1): the store type was renamed
+# `ReactionNetworkSchema` → `ReactionNetwork`. Old caller code / annotations keep working (with a
+# depwarn) for one release; removed in a follow-up.
+Base.@deprecate_binding ReactionNetworkSchema ReactionNetwork
 
 # ── ReactantSpec accessors (ADR 0003 Phase 2 public surface) ──────────────────────────────────
 # The promoted incidence table. `populate_reactant_specs!` (serialize.jl) fills it from `:trans`;
 # `equalize!` keeps it FK-exact across a species merge. A caller that wants the table on a model
-# authored before promotion can call `populate_reactant_specs!(acs)` first (equalize! does).
-reactant_specs(acs::ReactionNetworkSchema) = acs.reactants
+# authored before promotion can call `populate_reactant_specs!(net)` first (equalize! does).
+reactant_specs(net::ReactionNetwork) = net.reactants
 
 # The :S species name at index `i` (the inverse of `find_index`), used to check FK targets.
-specname(acs::ReactionNetworkSchema, i::Integer) = acs[i, :specName]
+specname(net::ReactionNetwork, i::Integer) = net[i, :specName]
 
 # The :S index of a species name on the STATIC schema (the ReactionNetworkProblem overload lives in
 # state.jl:263). Returns nothing if absent. Used by equalize!'s FK-repoint and the acceptance tests.
-function find_index(species::Symbol, acs::ReactionNetworkSchema)
-    inc = incident(acs, species, :specName)
+function find_index(species::Symbol, net::ReactionNetwork)
+    inc = find_rows(net, species, :specName)
     return isempty(inc) ? nothing : first(inc)
 end
 
@@ -183,25 +187,25 @@ const PORT_ROLES = (:private, :input, :output, :shared)
 # The role of species `i`, defaulting to :private (a species authored before roles existed, or one
 # whose specRole cell is unset, is internal/namespaced). Assign-defaults seeds :private, but read
 # defensively so `port_role` is correct on a not-yet-defaulted schema too.
-function port_role(acs::ReactionNetworkSchema, i::Integer)
-    r = acs[i, :specRole]
+function port_role(net::ReactionNetwork, i::Integer)
+    r = net[i, :specRole]
     return (r === nothing || r === missing) ? :private : r
 end
-port_role(acs::ReactionNetworkSchema, name::Symbol) =
-    (i = find_index(name, acs); i === nothing ? nothing : port_role(acs, i))
+port_role(net::ReactionNetwork, name::Symbol) =
+    (i = find_index(name, net); i === nothing ? nothing : port_role(net, i))
 
 is_open_port(role::Symbol) = role === :input || role === :output
 
-# ACSets hashed a static model by CONTENT (so export.jl `_model_hash = hash(prob.acs)` names a
+# ACSets hashed a static model by CONTENT (so export.jl `_model_hash = hash(prob.network)` names a
 # stable bundle dir); a struct's default hash is object-identity. Preserve content-hashing. The
 # promoted reactant table is DERIVED from `:trans`, so it is intentionally NOT hashed — a model and
 # its post-`populate_reactant_specs!` self must hash identically (the table adds no new information),
 # keeping `_model_hash` stable across the Phase-2 promotion.
-function Base.hash(acs::ReactionNetworkSchema, h::UInt)
-    h = hash(:ReactionNetworkSchema, h)
+function Base.hash(net::ReactionNetwork, h::UInt)
+    h = hash(:ReactionNetwork, h)
     for a in ALLATTRS
-        col = acs.subparts[a]
-        for i = 1:acs.parts[ATTR2OBJ[a]]
+        col = net.columns[a]
+        for i = 1:net.counts[ATTR2OBJ[a]]
             h = hash(getcell(col, i), h)
         end
     end
@@ -209,60 +213,60 @@ function Base.hash(acs::ReactionNetworkSchema, h::UInt)
 end
 
 # ── the signature-preserving shim (replaces the ACSets API surface RD used) ───────────────────
-@inline _col(acs::ReactionNetworkSchema, attr::Symbol) = getfield(acs, :subparts)[attr]
+@inline _col(net::ReactionNetwork, attr::Symbol) = getfield(net, :columns)[attr]
 
-nparts(acs::ReactionNetworkSchema, obj::Symbol) = acs.parts[obj]
-parts(acs::ReactionNetworkSchema, obj::Symbol) = Base.OneTo(acs.parts[obj])
-dom_parts(acs::ReactionNetworkSchema, attr::Symbol) = Base.OneTo(acs.parts[ATTR2OBJ[attr]])
+nrows(net::ReactionNetwork, obj::Symbol) = net.counts[obj]
+row_ids(net::ReactionNetwork, obj::Symbol) = Base.OneTo(net.counts[obj])
+col_row_ids(net::ReactionNetwork, attr::Symbol) = Base.OneTo(net.counts[ATTR2OBJ[attr]])
 
 # scalar get/set
-Base.getindex(acs::ReactionNetworkSchema, i::Int, attr::Symbol) = getcell(_col(acs, attr), i)
-Base.setindex!(acs::ReactionNetworkSchema, v, i::Int, attr::Symbol) = setcell!(_col(acs, attr), i, v)
+Base.getindex(net::ReactionNetwork, i::Int, attr::Symbol) = getcell(_col(net, attr), i)
+Base.setindex!(net::ReactionNetwork, v, i::Int, attr::Symbol) = setcell!(_col(net, attr), i, v)
 # whole-column and row-subset reads return COPIES (matching ACSets `collect_column`/`map(identity)`);
-# `map(identity, …)` narrows e.g. `acs[:, :specName]` back to `Vector{Symbol}`.
-Base.getindex(acs::ReactionNetworkSchema, ::Colon, attr::Symbol) =
-    map(identity, [getcell(_col(acs, attr), i) for i = 1:acs.parts[ATTR2OBJ[attr]]])
-Base.getindex(acs::ReactionNetworkSchema, rows::AbstractVector, attr::Symbol) =
-    [getcell(_col(acs, attr), i) for i in rows]
+# `map(identity, …)` narrows e.g. `net[:, :specName]` back to `Vector{Symbol}`.
+Base.getindex(net::ReactionNetwork, ::Colon, attr::Symbol) =
+    map(identity, [getcell(_col(net, attr), i) for i = 1:net.counts[ATTR2OBJ[attr]]])
+Base.getindex(net::ReactionNetwork, rows::AbstractVector, attr::Symbol) =
+    [getcell(_col(net, attr), i) for i in rows]
 
-subpart(acs::ReactionNetworkSchema, attr::Symbol) = acs[:, attr]           # COPY (see note)
-subpart(acs::ReactionNetworkSchema, i::Int, attr::Symbol) = acs[i, attr]
-set_subpart!(acs::ReactionNetworkSchema, i::Int, attr::Symbol, v) = (acs[i, attr] = v)
+column(net::ReactionNetwork, attr::Symbol) = net[:, attr]           # COPY (see note)
+cell(net::ReactionNetwork, i::Int, attr::Symbol) = net[i, attr]
+set_cell!(net::ReactionNetwork, i::Int, attr::Symbol, v) = (net[i, attr] = v)
 
-# `incident(acs, val, attr)` = findall over the attr column (never an FK follow — no homs). `isequal`
+# `find_rows(net, val, attr)` = findall over the attr column (never an FK follow — no homs). `isequal`
 # (not `==`) so `nothing`/`missing` cells compare `false`, never poison the result with `missing`.
-incident(acs::ReactionNetworkSchema, val, attr::Symbol) =
-    findall(i -> isequal(getcell(_col(acs, attr), i), val), 1:acs.parts[ATTR2OBJ[attr]])
+find_rows(net::ReactionNetwork, val, attr::Symbol) =
+    findall(i -> isequal(getcell(_col(net, attr), i), val), 1:net.counts[ATTR2OBJ[attr]])
 
-function add_part!(acs::ReactionNetworkSchema, obj::Symbol; kwargs...)
-    n = (acs.parts[obj] += 1)
+function add_row!(net::ReactionNetwork, obj::Symbol; kwargs...)
+    n = (net.counts[obj] += 1)
     for a in keys(SCHEMA[obj])
-        grow!(_col(acs, a))
+        grow!(_col(net, a))
     end
     for (k, v) in kwargs
-        setcell!(_col(acs, k), n, v)
+        setcell!(_col(net, k), n, v)
     end
     return n
 end
 
-function add_parts!(acs::ReactionNetworkSchema, obj::Symbol, m::Int)
-    n0 = acs.parts[obj]
+function add_rows!(net::ReactionNetwork, obj::Symbol, m::Int)
+    n0 = net.counts[obj]
     for _ = 1:m
-        add_part!(acs, obj)
+        add_row!(net, obj)
     end
     return (n0+1):(n0+m)
 end
 
-# rem_parts! is SWAP-AND-POP (verified against ACSets 0.2.29: it moves the LAST row into each freed
+# rem_rows! is SWAP-AND-POP (verified against ACSets 0.2.29: it moves the LAST row into each freed
 # slot and shrinks, iterating the sorted victims in REVERSE), NOT shift-down. equalize.jl:52 is the
 # sole reindexer and the surviving-row ORDER it produces feeds species→state.u indexing / the sol
 # DataFrame columns / valuation dot-products, so this must clone the swap-and-pop order exactly.
-function rem_parts!(acs::ReactionNetworkSchema, obj::Symbol, idxs)
+function rem_rows!(net::ReactionNetwork, obj::Symbol, idxs)
     idxs = issorted(idxs) ? idxs : sort(idxs)
     for p in Iterators.reverse(idxs)
-        last = acs.parts[obj]
+        last = net.counts[obj]
         for a in keys(SCHEMA[obj])
-            c = _col(acs, a)
+            c = _col(net, a)
             if p != last
                 # Move the last row into the freed slot. Guard on `def[last]`: for a non-bits column
                 # (e.g. Vector{Set{Symbol}}, Vector{FoldedObservable}) an UNDEFINED last cell is a
@@ -276,9 +280,9 @@ function rem_parts!(acs::ReactionNetworkSchema, obj::Symbol, idxs)
             resize!(c.v, last - 1)
             pop!(c.def)
         end
-        acs.parts[obj] -= 1
+        net.counts[obj] -= 1
     end
-    return acs
+    return net
 end
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
@@ -341,77 +345,97 @@ defargs = Dict(
 
 species_modalities = [:nonblock, :conserved, :rate]
 
-function assign_defaults!(acs::ReactionNetworkSchema)
+function assign_defaults!(net::ReactionNetwork)
     for (_, v_) in defargs, (k, v) in v_
-        for i in dom_parts(acs, k)
-            isnothing(acs[i, k]) && (acs[i, k] = v)
+        for i in col_row_ids(net, k)
+            isnothing(net[i, k]) && (net[i, k] = v)
         end
     end
 
     foreach(
-        i -> !isnothing(acs[i, :specModality]) || (acs[i, :specModality] = Set{Symbol}()),
-        parts(acs, :S),
+        i -> !isnothing(net[i, :specModality]) || (net[i, :specModality] = Set{Symbol}()),
+        row_ids(net, :S),
     )
     k = [:specCost, :specReward, :specValuation]
     foreach(
-        k -> foreach(i -> !isnothing(acs[i, k]) || (acs[i, k] = 0.0), parts(acs, :S)),
+        k -> foreach(i -> !isnothing(net[i, k]) || (net[i, k] = 0.0), row_ids(net, :S)),
         k,
     )
 
-    return acs
+    return net
 end
 
-function ReactionNetworkSchema(transitions, reactants, obs, events)
-    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, events)
+function ReactionNetwork(transitions, reactants, obs, events)
+    return merge_network!(ReactionNetwork(), transitions, reactants, obs, events)
 end
 
-function ReactionNetworkSchema(transitions, reactants, obs)
-    return merge_acs!(ReactionNetworkSchema(), transitions, reactants, obs, [])
+function ReactionNetwork(transitions, reactants, obs)
+    return merge_network!(ReactionNetwork(), transitions, reactants, obs, [])
 end
 
-function add_obs!(acs, obs)
+function add_obs!(net, obs)
     for p in obs
         sym = p.args[3].value
-        i = incident(acs, sym, :obsName)
-        i = if isempty(incident(acs, sym, :obsName))
-            add_part!(acs, :obs; obsName = sym, obsOpts = FoldedObservable())
+        i = find_rows(net, sym, :obsName)
+        i = if isempty(find_rows(net, sym, :obsName))
+            add_row!(net, :obs; obsName = sym, obsOpts = FoldedObservable())
         else
             i[1]
         end
         for opt in p.args[4:end]
             if isexpr(opt, :(=)) && (opt.args[1] ∈ fieldnames(FoldedObservable))
                 opt.args[1] == :every &&
-                    (acs[i, :obsOpts].every = min(acs[i, :obsOpts].every, opt.args[2]))
-                opt.args[1] == :on && union!(acs[i, :obsOpts].on, [opt.args[2]])
+                    (net[i, :obsOpts].every = min(net[i, :obsOpts].every, opt.args[2]))
+                opt.args[1] == :on && union!(net[i, :obsOpts].on, [opt.args[2]])
             elseif isexpr(opt, :tuple) || opt isa SampleableValues
                 push!(
-                    acs[i, :obsOpts].range,
+                    net[i, :obsOpts].range,
                     isexpr(opt, :tuple) ? tuple(opt.args...) : opt,
                 )
             end
         end
     end
 
-    return acs
+    return net
 end
 
-function merge_acs!(acs::ReactionNetworkSchema, transitions, reactants, obs, events)
+function merge_network!(net::ReactionNetwork, transitions, reactants, obs, events)
     foreach(
-        t -> add_part!(acs, :T; trans = t[1][2], transRate = t[1][1], t[2]...),
+        t -> add_row!(net, :T; trans = t[1][2], transRate = t[1][1], t[2]...),
         transitions,
     )
-    add_obs!(acs, obs)
+    add_obs!(net, obs)
     unique!(reactants)
     foreach(
-        ev -> add_part!(acs, :E; eventTrigger = ev.trigger, eventAction = ev.action),
+        ev -> add_row!(net, :E; eventTrigger = ev.trigger, eventAction = ev.action),
         events,
     )
     foreach(
-        r -> isempty(incident(acs, r, :specName)) && add_part!(acs, :S; specName = r),
+        r -> isempty(find_rows(net, r, :specName)) && add_row!(net, :S; specName = r),
         reactants,
     )
 
-    return assign_defaults!(acs)
+    return assign_defaults!(net)
+end
+
+# ── Deprecated ACSets-vocabulary aliases (ADR 0015 Tier 2) ────────────────────────────────────
+# The store verbs were renamed to store vocabulary AND unexported (they are an internal store shim).
+# These thin, UN-exported aliases keep prior `RD.nparts(...)`-style calls working for one release
+# with a depwarn; removed in a follow-up. They forward to the new names, which dispatch on
+# ReactionNetwork / ReactionNetworkProblem (the RNP overloads live in state.jl). `add_part!` is
+# written by hand because `@deprecate` cannot express its `kwargs`.
+@deprecate nparts(x, obj) nrows(x, obj) false
+@deprecate parts(x, obj) row_ids(x, obj) false
+@deprecate dom_parts(x, attr) col_row_ids(x, attr) false
+@deprecate incident(x, val, attr) find_rows(x, val, attr) false
+@deprecate subpart(x, attr) column(x, attr) false
+@deprecate subpart(x, i::Int, attr) cell(x, i, attr) false
+@deprecate set_subpart!(x, i, attr, v) set_cell!(x, i, attr, v) false
+@deprecate add_parts!(x, obj, m) add_rows!(x, obj, m) false
+@deprecate rem_parts!(x, obj, idxs) rem_rows!(x, obj, idxs) false
+function add_part!(x, obj::Symbol; kwargs...)
+    Base.depwarn("`add_part!` is deprecated (ADR 0015); use `ReactiveDynamics.add_row!`.", :add_part!)
+    return add_row!(x, obj; kwargs...)
 end
 
 include("state.jl")

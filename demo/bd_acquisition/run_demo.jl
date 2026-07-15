@@ -24,11 +24,11 @@ build_pipeline_from_json() = ReactiveDynamics.from_json_model(read(MODEL_JSON, S
 # Build + run one scenario to completion under a given seed. A scenario is a choice of which
 # synergies the acquisition rule arms (MVP §2.1); S0 arms no rule at all (no deal).
 function run_scenario(scenario::Symbol, seed; tspan = 40.0, T_acq = 8.0)
-    acs = build_pipeline_model()
+    net = build_pipeline_model()
     # The starting portfolio is the declarative initial marking (ADR 0007 §B) — passed to the
     # constructor, instantiated before t=0, reproducible as part of (model, population, seed).
     prob = ReactionNetworkProblem(
-        acs;
+        net;
         tspan = tspan,
         dt = 1.0,
         seed = seed,

@@ -70,15 +70,15 @@ _species_sym(s) = Symbol(string(s))
 # this is NOT the per-instance name `past_bonds` carries (`"<transName>_@<t>"`, solvers.jl) — the
 # instance suffix must be dropped, which is why highlighting maps through the transition INDEX
 # (`Transition.i`) rather than the bond's instance name.
-function _transition_node_name(acs, i)
-    tname = acs[i, :transName]
+function _transition_node_name(net, i)
+    tname = net[i, :transName]
     return (tname === nothing || tname === missing) ? Symbol("transition_$i") : Symbol(tname)
 end
 
-# Display label for a transition node — its rate/priority/cycletime, read off the acs recipe columns
+# Display label for a transition node — its rate/priority/cycletime, read off the net recipe columns
 # as strings (no eval). Falls back gracefully when a column is unset.
-function _transition_label(acs, i)
-    name = acs[i, :transName]
+function _transition_label(net, i)
+    name = net[i, :transName]
     base = (name === nothing || name === missing) ? "transition_$i" : string(name)
     parts = String[base]
     return join(parts, "\n")
@@ -96,9 +96,9 @@ pure (no simulation, Invariant 1). The extraction simplifies (typed FKs, no reac
 the ADR 0003 `ReactantSpec` table lands; this is the `transLHS`/`transRHS` form noted in §15.2.
 """
 function network_graph(prob::ReactionNetworkProblem)
-    acs = prob.acs
+    net = prob.network
     species = SpeciesNode[
-        SpeciesNode(acs[i, :specName], acs[i, :specStructured] === true) for i in parts(acs, :S)
+        SpeciesNode(net[i, :specName], net[i, :specStructured] === true) for i in row_ids(net, :S)
     ]
 
     # Realize the incidence on a copy so the original RNG is untouched.
@@ -109,10 +109,10 @@ function network_graph(prob::ReactionNetworkProblem)
     arcs = Arc[]
     lhs = work.transitions[:transLHS]
     rhs = work.transitions[:transRHS]
-    known_species = Set(acs[i, :specName] for i in parts(acs, :S))
+    known_species = Set(net[i, :specName] for i in row_ids(net, :S))
     for i in eachindex(lhs)
-        tnode_name = _transition_node_name(acs, i)
-        push!(transitions, TransitionNode(tnode_name, i, _transition_label(acs, i)))
+        tnode_name = _transition_node_name(net, i)
+        push!(transitions, TransitionNode(tnode_name, i, _transition_label(net, i)))
 
         # LHS reactants → transition (consumed/blocking/nonblock arcs). The structured LHS species of
         # this transition (if any) is the @advance/@move target's true place — the produced token IS
@@ -120,7 +120,7 @@ function network_graph(prob::ReactionNetworkProblem)
         struct_lhs = nothing
         for r in lhs[i]
             sp = _species_sym(r.species)
-            (sp in known_species && acs[find_index(sp, work), :specStructured] === true) && (struct_lhs = sp)
+            (sp in known_species && net[find_index(sp, work), :specStructured] === true) && (struct_lhs = sp)
             push!(arcs, Arc(sp, tnode_name, :in,
                 r.stoich isa Real ? Float64(r.stoich) : 1.0, r.modality))
         end
@@ -231,7 +231,7 @@ end
 # Pool trough (lowest level reached) per species over a run — the starvation signal.
 function _pool_troughs(prob::ReactionNetworkProblem)
     troughs = Dict{Symbol,Float64}()
-    for s in prob.acs[:, :specName]
+    for s in prob.network[:, :specName]
         col = string(s)
         if col in names(prob.sol)
             troughs[s] = minimum(prob.sol[!, col])
@@ -268,7 +268,7 @@ function exec_map(prob::ReactionNetworkProblem; highlight = nothing,
     if highlight isa TokenPredicate
         for tok in select_tokens(prob, highlight)
             for (species, _t, transition) in tok.past_bonds
-                push!(hi_arcs, (species, _transition_node_name(prob.acs, transition.i)))
+                push!(hi_arcs, (species, _transition_node_name(prob.network, transition.i)))
             end
         end
     end

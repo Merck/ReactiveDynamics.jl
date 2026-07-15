@@ -90,7 +90,7 @@ end
         simulate(p)
         @test p.sol.B[end] > 0.0                       # the A --> B transition fired
         # the assembled reaction line is the expected Expr
-        @test p.acs[1, :trans] == :(A → B)
+        @test p.network[1, :trans] == :(A → B)
     end
 
     # ── E3: Sample / TimeRef / Choose + rate_mode Poisson wrapping/unwrapping ──────────
@@ -176,7 +176,7 @@ end
         p = RDX.from_json_model(json; seed = 1, registry = REG, population = toks())
         # structural match ignoring LineNumberNodes (macrocalls carry source-line metadata)
         import MacroTools
-        @test MacroTools.striplines(p.acs[1, :trans]) ==
+        @test MacroTools.striplines(p.network[1, :trans]) ==
             MacroTools.striplines(:((@select(Project, phase == :Phase2)) → @advance(phase, :Phase3)))
         simulate(p)
         ph = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(p, "structured")))]))
@@ -410,9 +410,9 @@ end
         """
         import JSON
         d = JSON.parse(json)
-        acs = RDX.build_acs_from_dict(d)
+        net = RDX.build_network_from_dict(d)
         # params + species survive the round-trip through the acset
-        back = RDX.model_to_dict(acs)
+        back = RDX.model_to_dict(net)
         @test any(pr -> pr["name"] == "k" && pr["value"] == 0.5, back["params"])
         @test Set(sp["name"] for sp in back["species"]) == Set(["A", "B"])
     end
@@ -502,7 +502,7 @@ end
 
         # re-imported :trans is the SAME reaction-line Expr (striplines: macrocalls carry line meta)
         p2 = RDX.from_json_model(JSON.json(back); seed = 1, registry = REG, population = toks())
-        @test MacroTools.striplines(p.acs[1, :trans]) == MacroTools.striplines(p2.acs[1, :trans])
+        @test MacroTools.striplines(p.network[1, :trans]) == MacroTools.striplines(p2.network[1, :trans])
         # and the two Phase2 projects advance to Phase3 identically
         simulate(p); simulate(p2)
         ph(q) = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(q, "structured")))]))
@@ -534,19 +534,19 @@ end
         @test p2.u[RDX.find_index(:cash, p2)] == 500.0
     end
 
-    @testset "E10: a DSL-built model (@ReactionNetworkSchema) exports to a re-importable JSON" begin
+    @testset "E10: a DSL-built model (@reaction_network) exports to a re-importable JSON" begin
         import MacroTools, JSON
         # build directly with the authoring DSL (NOT from JSON), then export → re-import.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             1.0, A --> B, name => grow, probability => 0.5, cycletime => 2.0
             @deterministic(3.0), 2 * B --> C, name => merge
         end
-        json = RDX.to_json_model(acs; meta = Dict("tspan" => 5.0, "dt" => 1.0))
+        json = RDX.to_json_model(net; meta = Dict("tspan" => 5.0, "dt" => 1.0))
         p = RDX.from_json_model(json; seed = 1)
         # the assembled reaction lines re-parse to the same FoldedReactant decomposition: a grow
         # transition A→B and a merge transition 2B→C.
-        @test MacroTools.striplines(p.acs[1, :trans]) == MacroTools.striplines(:(A → B))
-        @test MacroTools.striplines(p.acs[2, :trans]) == MacroTools.striplines(:(2B → C))
+        @test MacroTools.striplines(p.network[1, :trans]) == MacroTools.striplines(:(A → B))
+        @test MacroTools.striplines(p.network[2, :trans]) == MacroTools.striplines(:(2B → C))
         # the rate modes are recovered: grow poisson-wrapped, merge bare (@deterministic)
         back = JSON.parse(json)
         grow = first(filter(t -> t["id"] == "grow", back["transitions"]))
@@ -606,7 +606,7 @@ end
     # The integration seam between ADR-0012 inputs[] IMPORT (inputs_from_dict) and the completed
     # JSON EXPORT (model_to_dict): a model that declares external read ports must round-trip them.
     # The ports + pre-wire defaults live on the ReactionNetworkProblem (external_input_defaults),
-    # not the acs, so to_json_model(::ReactionNetworkProblem) threads them through model_to_dict's
+    # not the net, so to_json_model(::ReactionNetworkProblem) threads them through model_to_dict's
     # inputs[] kwarg — the inverse of inputs_from_dict. Closes the round-trip-symmetry gap.
     @testset "E10: declared inputs[] ports survive load → export → reload (ADR 0012 ⟷ export)" begin
         import JSON
@@ -631,34 +631,34 @@ end
 
     # ── ADR 0003 Phase 2: the promoted ReactantSpec incidence table ─────────────────────────────
     @testset "ReactantSpec table: population, FK exactness, escape-hatch, and JSON round-trip" begin
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
           1.0, 2 * A + @conserved(B) --> C, name => rx
         end
-        RDX.populate_reactant_specs!(acs)
-        rs = RDX.reactant_specs(acs)
+        RDX.populate_reactant_specs!(net)
+        rs = RDX.reactant_specs(net)
         # every static reactant carries an in-range integer FK and no escape-hatch expr.
         static = filter(r -> r.species != 0, rs)
         @test !isempty(static)
-        @test all(r -> 1 <= r.species <= RDX.nparts(acs, :S), static)
+        @test all(r -> 1 <= r.species <= RDX.nrows(net, :S), static)
         @test all(r -> r.expr === nothing, static)
         # FK targets match the species names / sides / stoich the reaction line declares.
-        byname = Dict(RDX.specname(acs, r.species) => r for r in static)
+        byname = Dict(RDX.specname(net, r.species) => r for r in static)
         @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].stoich == 2.0
         @test haskey(byname, :B) && byname[:B].side == :lhs && :conserved in byname[:B].modality
         @test haskey(byname, :C) && byname[:C].side == :rhs
         # JSON round-trip: the table is DERIVED from :trans, which round-trips, so re-populating the
         # reloaded model reproduces the same FK rows (species-name → side → stoich).
-        @prob_params acs
-        json = RDX.to_json_model(acs; meta = Dict{String,Any}("tspan" => 5.0))
-        acs2 = RDX.build_acs_from_dict(RDX.JSON.parse(json))
+        @prob_params net
+        json = RDX.to_json_model(net; meta = Dict{String,Any}("tspan" => 5.0))
+        acs2 = RDX.build_network_from_dict(RDX.JSON.parse(json))
         RDX.populate_reactant_specs!(acs2)
         rt(m) = sort([(string(RDX.specname(m, r.species)), r.side, Float64(r.stoich))
                       for r in RDX.reactant_specs(m) if r.species != 0])
-        @test rt(acs2) == rt(acs)
+        @test rt(acs2) == rt(net)
 
         # Escape-hatch: a dynamic RHS (@advance field write, ADR 0008) is a species=0 / expr-carried
         # row, NOT a static FK — the table records it without inventing a bogus FK.
-        acs3 = @ReactionNetworkSchema begin
+        acs3 = @reaction_network begin
           1.0, @select(Project, phase == :Phase2) --> @advance(phase, :Phase3), name => adv
         end
         RDX.populate_reactant_specs!(acs3)

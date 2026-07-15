@@ -16,7 +16,7 @@ using Statistics
     # note: Verified: simulate(p,5) => 6 sol rows, prob.t==5.0. Locks in the single-clock dt-stepping contract
     # note: (solvers.jl:668) and n-tick semantics of the AA-reexported simulate. No bug.
     @testset "simulate(prob, n) advances exactly n ticks on the single clock" begin
-        m = @ReactionNetworkSchema begin
+        m = @reaction_network begin
             α * S * I, S + I --> 2I, name => I2R
         end
         @prob_init m S = 100 I = 5
@@ -38,7 +38,7 @@ using Statistics
     # note: nonblock). Post Stage A: reproducibility comes from the seed= construction kwarg (state-owned rng),
     # note: NOT Random.seed!; conservation here is structural so it holds for any seed.
     @testset "SIR conserves total population S+I+R across the run" begin
-        sir = @ReactionNetworkSchema begin
+        sir = @reaction_network begin
             α * S * I, S + I --> 2I, name => I2R
             β * I, I --> R, name => R2S
         end
@@ -60,7 +60,7 @@ using Statistics
     # note: holds. Stochastic: pin with the seed= construction kwarg (Stage A state-owned rng) so the
     # note: peak/monotonicity assertions are reproducible; assertions are robust invariants, not exact values.
     @testset "SIR shows an epidemic peak and monotone non-decreasing recovered" begin
-        sir = @ReactionNetworkSchema begin
+        sir = @reaction_network begin
             α * S * I, S + I --> 2I, name => I2R
             β * I, I --> R, name => R2S
         end
@@ -87,7 +87,7 @@ using Statistics
     # note: Post Stage A: reproducibility via the seed= construction kwarg (state-owned rng); under seed=1 at
     # note: tspan=2000 I_end=0.0 (verified), so the long-horizon burn-out criterion holds.
     @testset "SIR infection eventually decays toward zero (long horizon)" begin
-        sir = @ReactionNetworkSchema begin
+        sir = @reaction_network begin
             α * S * I, S + I --> 2I, name => I2R
             β * I, I --> R, name => R2S
         end
@@ -109,7 +109,7 @@ using Statistics
     # note: makes it reproducible — that idiom is retired. This is the proper D1/D2/D6 statement.
     @testset "SIR trajectory is reproducible under a fixed CONSTRUCTION seed" begin
         function build_sir()
-            sir = @ReactionNetworkSchema begin
+            sir = @reaction_network begin
                 α * S * I, S + I --> 2I, name => I2R
                 β * I, I --> R, name => R2S
             end
@@ -134,7 +134,7 @@ using Statistics
     # note: failure mode is now fixed.) Reproducibility requires the seed= kwarg — see sir-seeded-reproducible-construction.
     @testset "Two unseeded SIR runs diverge (each gets a fresh entropy seed)" begin
         function build_sir()
-            sir = @ReactionNetworkSchema begin
+            sir = @reaction_network begin
                 α * S * I, S + I --> 2I, name => I2R
                 β * I, I --> R, name => R2S
             end
@@ -156,7 +156,7 @@ using Statistics
     # note: flipped from @test_skip to live @test now the RNG-threading rework has landed.
     @testset "seed= kwarg gives RNG-isolated reproducibility independent of global state" begin
         function build_sir()
-            sir = @ReactionNetworkSchema begin
+            sir = @reaction_network begin
                 α * S * I, S + I --> 2I, name => I2R
                 β * I, I --> R, name => R2S
             end
@@ -179,7 +179,7 @@ using Statistics
     @testset "Toy-pharma pipeline runs end to end and flows candidate_compound to market" begin
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
-        toy = @ReactionNetworkSchema begin
+        toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
             3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
             name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -210,7 +210,7 @@ using Statistics
     @testset "Toy-pharma conserved (scientist) and rate (budget) pools stay non-negative" begin
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
-        toy = @ReactionNetworkSchema begin
+        toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
             3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
             name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -240,7 +240,7 @@ using Statistics
     @testset "Toy-pharma ledger has cost/reward/valuation rows once valuation attrs are set" begin
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
-        toy = @ReactionNetworkSchema begin
+        toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
             3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
             name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -278,7 +278,7 @@ using Statistics
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
         function build_pharma(pos)
-            toy = @ReactionNetworkSchema begin
+            toy = @reaction_network begin
                 α(candidate_compound, marketed_drug, κ),
                 3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
                 name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -292,7 +292,7 @@ using Statistics
             @cost toy budget = 1.0 scientist = 2.0
             @reward toy marketed_drug = 50.0
             @prob_meta toy tspan = 50 dt = 0.1
-            for i in 1:ReactiveDynamics.nparts(toy, :T)
+            for i in 1:ReactiveDynamics.nrows(toy, :T)
                 string(toy[i, :transName]) == "dx2market" && (toy[i, :transProbOfSuccess] = pos)
             end
             return toy
@@ -320,7 +320,7 @@ using Statistics
         @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
         @register function β(n1, n2); return n1 + exp(-n2); end
         function build_pharma(pos)
-            toy = @ReactionNetworkSchema begin
+            toy = @reaction_network begin
                 α(candidate_compound, marketed_drug, κ),
                 3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
                 name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
@@ -334,7 +334,7 @@ using Statistics
             @cost toy budget = 1.0 scientist = 2.0
             @reward toy marketed_drug = 50.0
             @prob_meta toy tspan = 50 dt = 0.1
-            for i in 1:ReactiveDynamics.nparts(toy, :T)
+            for i in 1:ReactiveDynamics.nrows(toy, :T)
                 string(toy[i, :transName]) == "dx2market" && (toy[i, :transProbOfSuccess] = pos)
             end
             return toy
@@ -362,7 +362,7 @@ using Statistics
     # note: non-negative (100 -> 94) and finite, B grows (0 -> 7). Was a @test_throws pin of the crash; flipped
     # note: to positive behavior + the Invariant 1 non-negativity/finiteness check now the bug is fixed.
     @testset "In-flight @nonblock token frees and credits its resource without crashing" begin
-        m = @ReactionNetworkSchema begin
+        m = @reaction_network begin
             1.0, @nonblock(A) --> B, cycletime => 5.0, name => t1
         end
         @prob_init m A = 100 B = 0
@@ -383,7 +383,7 @@ using Statistics
     @testset "Lifetime-timeout instance is pruned and conserved tokens stay bounded (INV2/INV6)" begin
         # Instance times out (maxlifetime=2) before completing (cycletime=100); the prune fix removes it, so its
         # held @conserved cash is NOT re-credited every subsequent tick.
-        m = @ReactionNetworkSchema begin
+        m = @reaction_network begin
             @deterministic(1.0), 2 * @conserved(cash) + raw --> product, cycletime => 100.0, maxlifetime => 2.0, name => t1
         end
         @prob_init m cash = 10 raw = 1 product = 0

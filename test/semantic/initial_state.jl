@@ -37,13 +37,13 @@ const INIT_REGISTRY = Dict{Symbol,Any}(
 
 # A phase-advance model used across the tests.
 function init_model()
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
         name => adv, cycletime => 1.0, probability => 1.0
     end
-    RDX.register_structured_species!(acs, :Project)
-    acs
+    RDX.register_structured_species!(net, :Project)
+    net
 end
 
 phases(p) = sort(string.([t.phase for t in values(RDX.inners(RDX.getagent(p, "structured")))]))
@@ -139,7 +139,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
 
     # ── (C) dump_state / restore round-trip + resume (the checkpoint, §10.5) ────────────
     @testset "dump_state at a tick boundary restores to an identical state and resumes equally" begin
-        spec = @ReactionNetworkSchema begin
+        spec = @reaction_network begin
             @deterministic(1.0),
             @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
             name => adv, cycletime => 0.0, probability => 1.0
@@ -161,7 +161,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
 
     # ── dump_state refuses mid-cycle (Milestone-1 scope: clean tick boundary only) ──────
     @testset "dump_state refuses when an in-flight transition is mid-cycle (documented M1 scope)" begin
-        spec = @ReactionNetworkSchema begin
+        spec = @reaction_network begin
             @deterministic(1.0),
             @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
             name => adv, cycletime => 5.0, probability => 1.0    # long cycle ⇒ in-flight mid-run

@@ -1,7 +1,7 @@
 # NOTE (WS-4 housekeeping): the `export @agentize` that used to head this file was DELETED — the
 # macro was never defined anywhere (a dangling export; the export was the only `agentize` token in
 # the repo). Agentization is implicit in the `ReactionNetworkProblem` constructor — the real public
-# contract is `prob = ReactionNetworkProblem(acs[, u0, p]; …)` then `simulate(prob[, n])` (ADR 0001).
+# contract is `prob = ReactionNetworkProblem(net[, u0, p]; …)` then `simulate(prob[, n])` (ADR 0001).
 # AA `@agentize` sugar over the constructor remains explicitly-deferred future work per ADR 0012.
 #
 # NOTE (ADR 0014 §A1 / CONTRACT §15.1): this file previously carried ~195 lines of dead SciML

@@ -40,23 +40,23 @@ agg_reward(p) = sum(r[3] for r in p.log if r[1] == :valuation_reward; init = 0.0
 # cycletime 1, and @advance(phase,:Phase2) on success. `budget` carries specCost so the burn is a
 # real ledger cost; the advanced Project species carries specReward so a successful advance realizes
 # reward — the minimal model where BOTH sides of the per-program ledger are non-trivial. (Macro
-# arguments are literal: @prob_init/@ReactionNetworkSchema eval their RHS in MODULE scope, so a
+# arguments are literal: @prob_init/@reaction_network eval their RHS in MODULE scope, so a
 # parameterized burn/budget would be undefined there — we set cost/reward/budget on the ACSet
 # directly via index assignment instead, which is what the kwargs control.)
 function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
-    acs = @ReactionNetworkSchema begin
+    net = @reaction_network begin
         @deterministic(1.0),
         @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
         name => adv, cycletime => 1.0, probability => 1.0
     end
-    RD.register_structured_species!(acs, :Project)
-    bi = findfirst(==(:budget), acs[:, :specName])
-    acs[bi, :specInitVal] = Float64(budget0)
-    acs[bi, :specCost] = cost
-    pi = findfirst(==(:Project), acs[:, :specName])
-    acs[pi, :specReward] = reward
-    @prob_meta acs tspan = 4 dt = 1.0
-    return acs
+    RD.register_structured_species!(net, :Project)
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specInitVal] = Float64(budget0)
+    net[bi, :specCost] = cost
+    pi = findfirst(==(:Project), net[:, :specName])
+    net[pi, :specReward] = reward
+    @prob_meta net tspan = 4 dt = 1.0
+    return net
 end
 
 build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
@@ -114,18 +114,18 @@ build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
         # tick's spawned instances. Each instance binds one Project (token-gated genesis), so each
         # program is charged the burn of ITS own instance — i.e. each gets `burn*cost`. The even-split
         # rule is exercised; with one token per instance, even-split == full cost per program.
-        acs = @ReactionNetworkSchema begin
+        net = @reaction_network begin
             @deterministic(2.0),
             @select(Project, phase == :Phase1) + 3 * @rate(budget) --> @advance(phase, :Phase2),
             name => adv2, cycletime => 0.0, probability => 1.0
         end
-        RD.register_structured_species!(acs, :Project)
-        @prob_init acs budget = 100
-        bi = findfirst(==(:budget), acs[:, :specName])
-        acs[bi, :specCost] = 1.0
-        @prob_meta acs tspan = 2 dt = 1.0
+        RD.register_structured_species!(net, :Project)
+        @prob_init net budget = 100
+        bi = findfirst(==(:budget), net[:, :specName])
+        net[bi, :specCost] = 1.0
+        @prob_meta net tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(
-            acs;
+            net;
             seed = 5,
             population = [RD.LedgerProjectToken(:Phase1), RD.LedgerProjectToken(:Phase1)],
         )
@@ -199,11 +199,11 @@ build_ledger_prob(seed; kwargs...) = ReactionNetworkProblem(
     @testset "live programs are marked to market by their species' specValuation" begin
         # Give the Project species a specValuation; a live (unblocked) program then carries that
         # mark in the ledger's `valuation` column (a stock, recomputed each tick — not a flow).
-        acs = advance_cost_model(; reward = 0.0)
-        pi = findfirst(==(:Project), acs[:, :specName])
-        acs[pi, :specValuation] = 50.0
+        net = advance_cost_model(; reward = 0.0)
+        pi = findfirst(==(:Project), net[:, :specName])
+        net[pi, :specValuation] = 50.0
         # Make the program NOT advance (select a phase it isn't in) so it stays live & unblocked.
-        p = ReactionNetworkProblem(acs; seed = 9, population = [RD.LedgerProjectToken(:Phase3)])
+        p = ReactionNetworkProblem(net; seed = 9, population = [RD.LedgerProjectToken(:Phase3)])
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 1

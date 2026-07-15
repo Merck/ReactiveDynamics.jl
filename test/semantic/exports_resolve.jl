@@ -9,23 +9,23 @@
 # iterates `names(ReactiveDynamics)` and asserts each RD-OWNED export is `isdefined` and resolvable.
 #
 # Scope note: `names(ReactiveDynamics)` also surfaces symbols pulled in by `@reexport using
-# AlgebraicAgents` / `GeneratedExpressions` (state.jl:1, ReactiveDynamics.jl:9). Some of those are
-# themselves dangling *upstream* (e.g. AA's `@derived`, `@integration`, `AgentCall`) — not RD's bug
-# to fix and not RD's export to police. So we test only the symbols RD itself defines-or-exports,
-# identified as: the symbol is exported by RD AND (it is defined in a source file owned by the
-# ReactiveDynamics module, i.e. `parentmodule` of the binding is `ReactiveDynamics`, OR it is NOT
-# exported by either reexported upstream module). This isolates the invariant WS-4 established.
+# AlgebraicAgents` (state.jl:1). Some of those are themselves dangling *upstream* (e.g. AA's
+# `@derived`, `@integration`, `AgentCall`) — not RD's bug to fix and not RD's export to police. So we
+# test only the symbols RD itself defines-or-exports, identified as: the symbol is exported by RD AND
+# (it is defined in a source file owned by the ReactiveDynamics module, i.e. `parentmodule` of the
+# binding is `ReactiveDynamics`, OR it is NOT exported by the reexported upstream module). This
+# isolates the invariant WS-4 established.
 
 using ReactiveDynamics, Test
 
 RD = ReactiveDynamics
 
-# Upstream reexport surfaces we do NOT police (their danglers are upstream's concern). We reach
-# them THROUGH RD (`@reexport using AlgebraicAgents` at state.jl:1; `@reexport using
-# GeneratedExpressions` at ReactiveDynamics.jl:9) rather than `import`ing them directly, so the
-# test needs no extra test/Project.toml deps — both are RD-visible submodules.
+# Upstream reexport surface we do NOT police (its danglers are upstream's concern). We reach it
+# THROUGH RD (`@reexport using AlgebraicAgents` at state.jl:1) rather than `import`ing it directly, so
+# the test needs no extra test/Project.toml deps — it is an RD-visible submodule. (ADR 0015 dropped
+# the GeneratedExpressions reexport, so AlgebraicAgents is now the sole upstream surface here.)
 const _REEXPORT_MODULES =
-    filter(m -> m isa Module, (getproperty(RD, :AlgebraicAgents), getproperty(RD, :GeneratedExpressions)))
+    filter(m -> m isa Module, (getproperty(RD, :AlgebraicAgents),))
 
 "Is `sym` merely reexported into RD from an upstream package (not authored by RD)?"
 function _is_upstream_reexport(sym)

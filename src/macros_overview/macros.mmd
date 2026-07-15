@@ -1,25 +1,25 @@
 flowchart TD
-    o["∅"] -->|"@ReactionNetwork"| acs["ReactiveDynamics.ReactionNetwork (aka ACS)"]
-    acs --> |"@add_species, @aka, @cost, @equalize, @jump, @mode,
+    o["∅"] -->|"@ReactionNetwork"| net["ReactiveDynamics.ReactionNetwork (aka ACS)"]
+    net --> |"@add_species, @aka, @cost, @equalize, @jump, @mode,
                 @name_transition, @optimize, @periodic, @prob_check_verbose,
                 @prob_init, @prob_meta, @prob_params, @prob_uncertainty,
-                @push, @reward, @valuation"| acs
+                @push, @reward, @valuation"| net
     sol --> |"@export_solution_as_table"| table["table"]
     sol --> |"@export_solution_as_csv"| csvsol["sol.csv"]
-    acs --> |"@import_network"| mod["model.toml"]
+    net --> |"@import_network"| mod["model.toml"]
     sol--> |"@export_solution"| solex["sol.jld2"]
     joinsol --> |"@fit_and_plot"| plot
-    mod --> |"@export_network"| acs
+    mod --> |"@export_network"| net
     solex --> |"@import_solution"| sol["solution"]
     acs1["ACS1\n~ReactiveDynamics.ReactionNetwork"] --- join[ ]
     acs2["ACS2\n~ReactiveDynamics.ReactionNetwork"] --- join[ ]
-    join --> |"@join"| acs
+    join --> |"@join"| net
     sol --> |"@plot,
                 @plot_new_transitions,
                 @plot_terminated_transitions,
                 @plot_valuations"| plot["plot"]
-    acs --> |"@problematize"| DP["DiscreteProblem"]
-    acs --> |"@solve"| sol
+    net --> |"@problematize"| DP["DiscreteProblem"]
+    net --> |"@solve"| sol
     DP --> |"@solve"| sol
     sol2["model"] --- joinsol
         data["empirical data"] --- joinsol[ ]
@@ -34,7 +34,7 @@ flowchart TD
     end
 
     classDef ReactiveDynamics fill:#B0F5F4,stroke:#3585CC;
-    class acs,acs1,acs2,mod,join,solex,joinsol,acsClass,sol,sol2,table ReactiveDynamics;
+    class net,acs1,acs2,mod,join,solex,joinsol,acsClass,sol,sol2,table ReactiveDynamics;
 
     classDef DPcl fill:#F0BC93,stroke:#F0453D;
     class DP,DPcl DPcl;

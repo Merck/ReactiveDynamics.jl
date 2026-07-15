@@ -28,7 +28,7 @@ The whole tour runs on ONE small self-contained model — a two-phase "project a
 
 | § | Section | Capability exercised |
 |---|---|---|
-| 0 | The model | A structured-token `@register`ed kind with `log_token_fields` opt-in; `@ReactionNetworkSchema` + index-assigned cost / reward / budget; `ReactionNetworkProblem(...; seed=, population=)` + `simulate` |
+| 0 | The model | A structured-token `@register`ed kind with `log_token_fields` opt-in; `@reaction_network` + index-assigned cost / reward / budget; `ReactionNetworkProblem(...; seed=, population=)` + `simulate` |
 | 1 | Raw run artifacts | `prob.sol` (the marking DataFrame, read by column name), `prob.log` (the tagged event stream, reduced by tag to aggregate cost / reward), and `program_ledger(prob)` + `program_ledger_entries` (the per-program attribution DataFrame + append-only audit trail) |
 | 2 | Per-token trajectory log | `token_trajectory(prob)` (long form: `t, program, species, <field>…`), one token's life by name, and predicate-scoped rows via a `@select` `TokenPredicate` / `Clause` (the same selection machinery the dynamics use) |
 | 3 | "Typical" helpers | `representative_token(prob)` (the MEDOID program — closest to the cohort mean path) and `trajectory_envelope(prob)` (per-tick median + IQR band over each numeric logged field) |

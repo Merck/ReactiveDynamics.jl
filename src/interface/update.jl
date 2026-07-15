@@ -10,7 +10,7 @@ export @register
 # `@list_by_role`, `@list_roles` (a legacy roles/actors ontology that was never implemented: no
 # macro definitions, no `specRole` schema attribute), and `@prob_check_verbose` (see below). The
 # role concept was dropped; ADR 0009's `PortRole` is an unrelated per-Species `role` field authored
-# inside `@ReactionNetworkSchema`, not a `@prob_role`-style config macro, so nothing is repurposed.
+# inside `@reaction_network`, not a `@prob_role`-style config macro, so nothing is repurposed.
 
 using DataFrames
 using MacroTools: striplines
@@ -30,12 +30,12 @@ function push_to_acs!(acsex, exs...)
 
     return quote
         ex = blockize($(QuoteNode(ex)))
-        merge_acs!($(esc(acsex)), get_data(ex)...)
+        merge_network!($(esc(acsex)), get_data(ex)...)
     end
 end
 
 """
-Add reactions to an acset.
+Add reactions to an network.
 
 # Examples
 
@@ -57,9 +57,9 @@ Set name of a transition in the model.
 # Examples
 
 ```julia
-@name_transition acs 1 = "name"
-@name_transition acs name = "transition_name"
-@name_transition acs "name" = "transition_name"
+@name_transition net 1 = "name"
+@name_transition net name = "transition_name"
+@name_transition net "name" = "transition_name"
 ```
 """
 macro name_transition(acsex, exs...)
@@ -71,12 +71,12 @@ macro name_transition(acsex, exs...)
             :($(esc(acsex))[$(ex.args[1]), :transName] = $(QuoteNode(ex.args[2])))
         else
             quote
-                acs = $(esc(acsex))
+                net = $(esc(acsex))
                 ixs = findall(
-                    i -> string(acs[i, :transName]) == $(string(ex.args[1])),
-                    parts(acs, :T),
+                    i -> string(net[i, :transName]) == $(string(ex.args[1])),
+                    row_ids(net, :T),
                 )
-                foreach(i -> acs[i, :transName] = $(string(ex.args[2])), ixs)
+                foreach(i -> net[i, :transName] = $(string(ex.args[2])), ixs)
             end
         end
 
@@ -100,17 +100,17 @@ function incident_pattern(pattern, attr)
     return ix
 end
 
-function mode!(acs, dict)
+function mode!(net, dict)
     for (spex, mods) in dict
         i = if spex isa Regex
-            incident_pattern(spex, acs[:, :specName])
+            incident_pattern(spex, net[:, :specName])
         else
-            incident(acs, Symbol(spex), :specName)
+            find_rows(net, Symbol(spex), :specName)
         end
 
         for ix in i
-            isnothing(acs[ix, :specModality]) && (acs[ix, :specModality] = Set{Symbol}())
-            union!(acs[ix, :specModality], mods)
+            isnothing(net[ix, :specModality]) && (net[ix, :specModality] = Set{Symbol}())
+            union!(net[ix, :specModality], mods)
         end
     end
 end
@@ -127,9 +127,9 @@ Set species modality.
 # Examples
 
 ```julia
-@mode acs (r"proj\\w+", r"experimental\\w+") conserved
-@mode acs (S, I) conserved
-@mode acs S conserved
+@mode net (r"proj\\w+", r"experimental\\w+") conserved
+@mode net (S, I) conserved
+@mode net S conserved
 ```
 """
 macro mode(acsex, spexs, mexs)
@@ -152,17 +152,17 @@ macro mode(acsex, spexs, mexs)
     end
 end
 
-function set_valuation!(acs, dict, valuation_type)
+function set_valuation!(net, dict, valuation_type)
     for (spex, val) in dict
         i = if spex isa Regex
-            incident_pattern(spex, subpart(acs, :specName))
+            incident_pattern(spex, column(net, :specName))
         else
-            incident(acs, Symbol(spex), :specName)
+            find_rows(net, Symbol(spex), :specName)
         end
 
         foreach(
             ix ->
-                acs[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] =
+                net[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] =
                     eval(val),
             i,
         )
@@ -211,7 +211,7 @@ Add new species to a model.
 # Examples
 
 ```julia
-@add_species acs S I R
+@add_species net S I R
 ```
 """
 macro add_species(acsex, exs...)
@@ -222,7 +222,7 @@ macro add_species(acsex, exs...)
     foreach(s -> push!(spexs_, s), exs)
 
     for ex in recursively_expand_dots.(spexs_)
-        push!(call.args, :(add_part!($(esc(acsex)), :S; specName = $(QuoteNode(ex)))))
+        push!(call.args, :(add_row!($(esc(acsex)), :S; specName = $(QuoteNode(ex)))))
     end
 
     push!(call.args, :(assign_defaults!($(esc(acsex)))))
@@ -232,13 +232,13 @@ end
 get_pattern(ex) = ex isa Expr && (macroname(ex) == :r_str) ? eval(ex) : ex
 
 """
-Set initial values of species in an acset.
+Set initial values of species in an network.
 
 # Examples
 
 ```julia
-@prob_init acs X = 1 Y = 2 Z = h(α)
-@prob_init acs [1.0, 2.0, 3.0]
+@prob_init net X = 1 Y = 2 Z = h(α)
+@prob_init net [1.0, 2.0, 3.0]
 ```
 """
 macro prob_init(acsex, exs...)
@@ -271,37 +271,37 @@ macro prob_init_from_vec(acsex, vecex)
     return :(init!($(esc(acsex)), $(esc(vecex))))
 end
 
-function init!(acs, inits)
-    if inits isa AbstractVector && length(inits) == nparts(acs, :S)
-        subpart(acs, :specInitVal) .= inits
+function init!(net, inits)
+    if inits isa AbstractVector && length(inits) == nrows(net, :S)
+        column(net, :specInitVal) .= inits
     elseif inits isa AbstractDict
         for (k, init_val) in inits
             if k isa Number
-                acs[k, :specInitVal] = init_val
+                net[k, :specInitVal] = init_val
             else
                 begin
                     i = if k isa Regex
-                        incident_pattern(k, subpart(acs, :specName))
+                        incident_pattern(k, column(net, :specName))
                     else
-                        incident(acs, k, :specName)
+                        find_rows(net, k, :specName)
                     end
-                    foreach(ix -> (acs[ix, :specInitVal] = init_val), i)
+                    foreach(ix -> (net[ix, :specInitVal] = init_val), i)
                 end
             end
         end
     end
 
-    return acs
+    return net
 end
 
 """
-Set uncertainty in initial values of species in an acset (stderr).
+Set uncertainty in initial values of species in an network (stderr).
 
 # Examples
 
 ```julia
-@prob_uncertainty acs X = 0.1 Y = 0.2
-@prob_uncertainty acs [0.1, 0.2]
+@prob_uncertainty net X = 0.1 Y = 0.2
+@prob_uncertainty net [0.1, 0.2]
 ```
 """
 macro prob_uncertainty(acsex, exs...)
@@ -329,49 +329,49 @@ macro prob_uncertainty(acsex, exs...)
     end
 end
 
-function uncinit!(acs, inits)
+function uncinit!(net, inits)
     inits isa AbstractVector &&
-        length(inits) == nparts(acs, :S) &&
-        (subpart(acs, :specInitUncertainty) .= inits; return)
+        length(inits) == nrows(net, :S) &&
+        (column(net, :specInitUncertainty) .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
         if k isa Number
-            acs[k, :specInitUncertainty] = init_val
+            net[k, :specInitUncertainty] = init_val
         else
             begin
                 i = if k isa Regex
-                    incident_pattern(k, subpart(acs, :specName))
+                    incident_pattern(k, column(net, :specName))
                 else
-                    incident(acs, k, :specName)
+                    find_rows(net, k, :specName)
                 end
-                foreach(ix -> (acs[ix, :specInitUncertainty] = init_val), i)
+                foreach(ix -> (net[ix, :specInitUncertainty] = init_val), i)
             end
         end
     end
 
-    return acs
+    return net
 end
 
-function set_params!(acs, params)
+function set_params!(net, params)
     return params isa AbstractDict && for (k, init_val) in params
         k = get_pattern(k)
         if k isa Regex
-            i = incident_pattern(k, subpart(acs, :prmName))
+            i = incident_pattern(k, column(net, :prmName))
         else
-            i = incident(acs, k, :prmName)
-            isempty(i) && (i = add_part!(acs, :P; prmName = k))
+            i = find_rows(net, k, :prmName)
+            isempty(i) && (i = add_row!(net, :P; prmName = k))
         end
 
-        foreach(ix -> acs[ix, :prmVal] = eval(init_val), i)
+        foreach(ix -> net[ix, :prmVal] = eval(init_val), i)
     end
 end
 
 """
-Set parameter values in an acset.
+Set parameter values in an network.
 
 # Examples
 
 ```julia
-@prob_params acs α = 1.0 β = 2.0
+@prob_params net α = 1.0 β = 2.0
 ```
 """
 macro prob_params(acsex, exs...)
@@ -395,11 +395,11 @@ macro prob_params(acsex, exs...)
     end
 end
 
-meta!(acs, metas) =
+meta!(net, metas) =
     for (k, metaval) in metas
-        i = incident(acs, k, :metaKeyword)
-        isempty(i) && (i = add_part!(acs, :M; metaKeyword = k))
-        set_subpart!(acs, first(i), :metaVal, metaval)
+        i = find_rows(net, k, :metaKeyword)
+        isempty(i) && (i = add_row!(net, :M; metaKeyword = k))
+        set_cell!(net, first(i), :metaVal, metaval)
     end
 
 """
@@ -408,7 +408,7 @@ Set model metadata (e.g. solver arguments)
 # Examples
 
 ```julia
-@prob_meta acs tspan = (0, 100.0) schedule = schedule_weighted!
+@prob_meta net tspan = (0, 100.0) schedule = schedule_weighted!
 @prob_meta sir_acs tspan = 250 tstep = 1
 ```
 """
@@ -420,7 +420,7 @@ macro prob_meta(acsex, exs...)
 end
 
 """
-Alias object name in an acs.
+Alias object name in an net.
 
 # Default names
 
@@ -436,7 +436,7 @@ Alias object name in an acs.
 # Examples
 
 ```julia
-@aka acs species = resource transition = reaction
+@aka net species = resource transition = reaction
 ```
 """
 macro aka(acsex, exs...)
@@ -460,10 +460,10 @@ alias_default = Dict(
     :M => :meta,
 )
 
-function get_alias(acs, ob)
+function get_alias(net, ob)
     return (
-        i = incident(acs, Symbol(:alias_, ob), :metaKeyword);
-        !isempty(i) ? acs[first(i), :metaVal] : alias_default[ob]
+        i = find_rows(net, Symbol(:alias_, ob), :metaKeyword);
+        !isempty(i) ? net[first(i), :metaVal] : alias_default[ob]
     )
 end
 
@@ -478,7 +478,7 @@ Add a periodic callback to a model.
 # Examples
 
 ```julia
-@periodic acs 1.0 X += 1
+@periodic net 1.0 X += 1
 ```
 """
 macro periodic(acsex, pex, acex)
@@ -491,7 +491,7 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 # Examples
 
 ```julia
-@jump acs λ Z += rand(state.rng, Poisson(1.0))
+@jump net λ Z += rand(state.rng, Poisson(1.0))
 ```
 """
 macro jump(acsex, inex, acex)

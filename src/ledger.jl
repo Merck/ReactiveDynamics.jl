@@ -80,7 +80,7 @@ end
 # aggregate `actual_allocs' · specCost` the `:valuation_cost` row sums.
 function _transition_cost(state::ReactionNetworkProblem, consumed::AbstractVector)
     c = 0.0
-    for s in parts(state, :S)
+    for s in row_ids(state, :S)
         @inbounds c += consumed[s] * state[s, :specCost]
     end
     return c

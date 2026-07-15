@@ -1,5 +1,5 @@
 # model joins
-export union_acs!, @join
+export merge_networks!, @join
 
 using MacroTools
 using MacroTools: prewalk
@@ -7,28 +7,28 @@ using MacroTools: prewalk
 """
 Merge `acs2` into `acs1`, the attributes in `acs2` taking precedence. Identify respective species given `eqs`, renaming species in `acs2`.
 """
-function union_acs!(acs1, acs2, name = gensym("acs"), eqs = [])
+function merge_networks!(acs1, acs2, name = gensym("net"), eqs = [])
     acs2 = deepcopy(acs2)
     prepend!(acs2, name, eqs)
 
-    for i in parts(acs2, :S)
-        inc = incident(acs1, acs2[i, :specName], :specName)
+    for i in row_ids(acs2, :S)
+        inc = find_rows(acs1, acs2[i, :specName], :specName)
 
         if isempty(inc)
-            inc = add_part!(acs1, :S; specName = acs2[i, :specName])
+            inc = add_row!(acs1, :S; specName = acs2[i, :specName])
             assign_defaults!(acs1)
         end
 
         union!(acs1[first(inc), :specModality], acs2[i, :specModality])
 
-        for attr in propertynames(acs1.subparts)
+        for attr in propertynames(acs1.columns)
             !occursin("spec", string(attr)) && continue
             !ismissing(acs2[i, attr]) && (acs1[first(inc), attr] = acs2[i, attr])
         end
     end
 
-    new_trans_ix = add_parts!(acs1, :T, nparts(acs2, :T))
-    for attr in propertynames(acs2.subparts)
+    new_trans_ix = add_rows!(acs1, :T, nrows(acs2, :T))
+    for attr in propertynames(acs2.columns)
         !occursin("trans", string(attr)) && continue
         for (ix1, ix2) in enumerate(new_trans_ix)
             acs1[ix2, attr] = acs2[ix1, attr]
@@ -43,26 +43,26 @@ function union_acs!(acs1, acs2, name = gensym("acs"), eqs = [])
         new_trans_ix,
     )
 
-    for i in parts(acs2, :P)
-        inc = incident(acs1, acs2[i, :prmName], :prmName)
-        isempty(inc) && (inc = add_part!(acs1, :P; prmName = acs2[i, :prmName]))
+    for i in row_ids(acs2, :P)
+        inc = find_rows(acs1, acs2[i, :prmName], :prmName)
+        isempty(inc) && (inc = add_row!(acs1, :P; prmName = acs2[i, :prmName]))
         !ismissing(acs2[i, :prmVal]) && (acs1[first(inc), :prmVal] = acs2[i, :prmVal])
     end
 
-    for i in parts(acs2, :M)
-        inc = incident(acs1, acs2[i, :metaKeyword], :metaKeyword)
-        isempty(inc) && (inc = add_part!(acs1, :M; metaKeyword = acs2[i, :metaKeyword]))
+    for i in row_ids(acs2, :M)
+        inc = find_rows(acs1, acs2[i, :metaKeyword], :metaKeyword)
+        isempty(inc) && (inc = add_row!(acs1, :M; metaKeyword = acs2[i, :metaKeyword]))
         !ismissing(acs2[i, :metaVal]) && (acs1[first(inc), :metaVal] = acs2[i, :metaVal])
     end
 
     # Events (:E) and observables (:obs) are STRUCTURAL — appended, never deduplicated (like :T,
-    # §7/J2). The historic gap (union_acs! walked only :S/:T/:P/:M) silently DROPPED both on join
-    # (determinism_composition_bugs.jl §"union_acs! does NOT merge observables/events"). `prepend!`
+    # §7/J2). The historic gap (merge_networks! walked only :S/:T/:P/:M) silently DROPPED both on join
+    # (determinism_composition_bugs.jl §"merge_networks! does NOT merge observables/events"). `prepend!`
     # (above) already namespaced the species referenced inside each event's trigger/action Expr and
     # inside each observable's option-Exprs (via prepend_obs), so both merges are pure structural
     # copies of already-namespaced rows.
-    for i in parts(acs2, :E)
-        add_part!(
+    for i in row_ids(acs2, :E)
+        add_row!(
             acs1,
             :E;
             eventTrigger = acs2[i, :eventTrigger],
@@ -70,49 +70,52 @@ function union_acs!(acs1, acs2, name = gensym("acs"), eqs = [])
         )
     end
 
-    for i in parts(acs2, :obs)
-        add_part!(acs1, :obs; obsName = acs2[i, :obsName], obsOpts = acs2[i, :obsOpts])
+    for i in row_ids(acs2, :obs)
+        add_row!(acs1, :obs; obsName = acs2[i, :obsName], obsOpts = acs2[i, :obsOpts])
     end
 
     return acs1
 end
 
+# Deprecated ACSets-vocabulary alias (ADR 0015 Tier 2): `union_acs!` → `merge_networks!`.
+@deprecate union_acs!(net1, net2, name = gensym("net"), eqs = []) merge_networks!(net1, net2, name, eqs)
+
 """
 Prepend species names with a model identifier (unless a global species name).
 """
-function prepend!(acs::ReactionNetworkSchema, name = gensym("acs"), eqs = [])
+function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
     specmap = Dict()
-    for i in parts(acs, :S)
+    for i in row_ids(net, :S)
         # ADR 0009 §A / CONTRACT §11.1: a `shared`-role species is identified by BARE name across all
         # fragments (the first-class @catchall) — it is NOT namespaced. `private` (default) and the
         # open `input`/`output` ports namespace as usual here; @compose (§E) re-identifies the open
         # ports afterwards by FK-repoint. (A species carrying no role reads :private via port_role.)
-        if port_role(acs, i) === :shared
+        if port_role(net, i) === :shared
             continue
         end
-        new_name = normalize_name(name, i, acs[i, :specName], eqs)
-        push!(specmap, acs[i, :specName] => (acs[i, :specName] = new_name))
+        new_name = normalize_name(name, i, net[i, :specName], eqs)
+        push!(specmap, net[i, :specName] => (net[i, :specName] = new_name))
     end
 
-    for attr in propertynames(acs.subparts)
+    for attr in propertynames(net.columns)
         attr == :specName && continue
         # Observable options live inside a FoldedObservable struct (the :obsOpts column), not as a
         # bare Expr the loop below rewrites — handle them structurally via prepend_obs! so species
         # referenced inside `on`/`range` exprs are namespaced consistently with every other attr.
         attr == :obsOpts && continue
-        attr_ = acs[:, attr]
+        attr_ = net[:, attr]
         for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
             attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
-            acs[i, attr] = attr_[i]
+            net[i, attr] = attr_[i]
         end
     end
 
-    for i in parts(acs, :obs)
-        prepend_obs!(acs[i, :obsOpts], specmap)
+    for i in row_ids(net, :obs)
+        prepend_obs!(net[i, :obsOpts], specmap)
     end
 
-    return acs
+    return net
 end
 
 """
@@ -242,7 +245,7 @@ Model variables / parameter values and metadata are propagated; the last model t
 macro join(exs...)
     callex = :(
         begin
-            acs_new = ReactionNetworkSchema()
+            acs_new = ReactionNetwork()
         end
     )
     exs = collect(exs)
@@ -266,12 +269,12 @@ macro join(exs...)
             if isexpr(acsex.args[3], :(=))
                 (:(include_model($str_inc)), acsex.args[3].args[1])
             else
-                (:(include_model($str_inc)), gensym(:acs))
+                (:(include_model($str_inc)), gensym(:net))
             end
         else
             (acsex, acsex)
         end
-        push!(callex.args, :(union_acs!(acs_new, $(esc(acsex)), $(QuoteNode(symex)), $eqs)))
+        push!(callex.args, :(merge_networks!(acs_new, $(esc(acsex)), $(QuoteNode(symex)), $eqs)))
     end
     push!(callex.args, :(acs_new))
 

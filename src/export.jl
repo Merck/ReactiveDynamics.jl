@@ -39,9 +39,9 @@ function _write_rectangular(stem::AbstractString, df::DataFrame)
     return stem
 end
 
-# The model hash that names the bundle directory (the same `hash(acs)` the checkpoint manifest uses,
+# The model hash that names the bundle directory (the same `hash(net)` the checkpoint manifest uses,
 # interface/checkpoint.jl) — pins the bundle to a replayable (model, seed) pair (§4 D6, Invariant 5).
-_model_hash(prob::ReactionNetworkProblem) = hash(prob.acs)
+_model_hash(prob::ReactionNetworkProblem) = hash(prob.network)
 
 # Encode the heterogeneous `prob.log` event stream as JSON-friendly records. Each row is a tuple
 # `(tag::Symbol, t, payload…)`; we emit `{"event": tag, "t": t, "data": [payload…]}` with the
@@ -130,7 +130,7 @@ function export_run(prob::ReactionNetworkProblem, dir::AbstractString; with_mode
         "seed" => prob.seed === nothing ? nothing : string(prob.seed),
         "tspan" => collect(prob.tspan),
         "dt" => prob.dt,
-        "species" => string.(prob.acs[:, :specName]),
+        "species" => string.(prob.network[:, :specName]),
         "artifacts" => artifacts,
     )
     with_model && (manifest["model"] = JSON.parse(to_json_model(prob)))

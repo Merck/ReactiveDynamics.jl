@@ -29,7 +29,7 @@ The same pharma R&D pipeline the other demos use — `Discovery → Phase1 → P
 | § | Section | Capability exercised |
 |---|---------|----------------------|
 | 1 | The coarse portfolio | `@pipeline Name begin From => To : (ct=…, pos=…) … end` — expands a phase chain into N `flow`-genesis routing transitions (`flow_<From>_<To>`), each consuming its upstream phase as an upfront LHS (§2.8 token-flow) and carrying the per-edge (ct, pos) |
-| 2 | Reusable fragments + ports | `@process name(params…) = begin … end` (a parameterized fragment factory, eval-free param substitution), `@port acs A => input B => output` (tag open-port roles via `=>` pairs), `@compose f1 f2` (`@join` + automatic output↔input port matching by FK-repoint: shared port collapses to ONE species, private species namespaced) |
+| 2 | Reusable fragments + ports | `@process name(params…) = begin … end` (a parameterized fragment factory, eval-free param substitution), `@port net A => input B => output` (tag open-port roles via `=>` pairs), `@compose f1 f2` (`@join` + automatic output↔input port matching by FK-repoint: shared port collapses to ONE species, private species namespaced) |
 | 3 | ★ refine | `refine(spec, transition, submodel; ports=Dict(boundary => sub_port, …))` — non-mutating splice of a finer sub-model into a coarse transition. Demonstrates PLUG-COMPATIBILITY (Invariant 1): boundary species keep their indices/names and every OTHER transition is structurally identical before/after |
 | 4 | Advisory boundary check | `refinement_diagnostics(submodel, coarse_attrs; ports, tol)` — a `Vector{String}` of ADVISORY warnings: silent on a well-matched refinement, firing on Σ-cycletime / Π-PoS drift and on a dangling port (an `:input` never consumed) |
 | 5 | Round-tripping the ladder | `abstract_transitions(spec, [subs…], :into; lhs, rhs, attrs)` — the inverse collapse back to one coarse transition; and `to_json_model` / `build_acs_from_dict` proving a refined spec reloads as a FLAT model (Invariant 5) |
@@ -44,12 +44,12 @@ The same pharma R&D pipeline the other demos use — `Discovery → Phase1 → P
 
 These are surfaced in the script so a reader does not trip over them:
 
-- **`@port` uses `=>` pairs, space-separated** (`@port acs A => input B => output`), NOT `=` (which macro-call syntax would parse as a keyword argument). The default role is `:private` (auto-namespaced); `:input`/`:output` are open ports matched by `@compose`; `:shared` is identified by bare name.
+- **`@port` uses `=>` pairs, space-separated** (`@port net A => input B => output`), NOT `=` (which macro-call syntax would parse as a keyword argument). The default role is `:private` (auto-namespaced); `:input`/`:output` are open ports matched by `@compose`; `:shared` is identified by bare name.
 - **`@compose` identifies open ports by FK-repoint**, so a shared output→input port collapses to ONE species (the demo asserts `count(==(:Lead), names) == 1`), not two pools that happen to share a name — and it cannot corrupt a species name colliding inside a subexpression the way the old `recursively_substitute_vars!` path could.
 - **`refine` is non-mutating** (`refine = refine!` on a `deepcopy`); the demo shows the coarse model is still intact after the splice. Sub-transitions come out namespaced `<coarse>__sub__<name>`; the sub's private species come out `<coarse>__sub__<species>`, so a bare private name never leaks.
 - **`refinement_diagnostics` are ADVISORY (Invariant 6)** — warnings the author may override, not an equivalence proof. The linear-chain aggregate checks (Σct, ΠPoS) are best-effort and skipped if any needed attribute is non-numeric.
 - **Macro arguments are LITERAL** — `@prob_init` / `@prob_meta` evaluate their right-hand sides in module scope, so a simulation config uses literal counts (a loop-local variable there fails with an `UndefVarError`); this matches the other demos' idiom. Reproducibility comes from the `seed=` construction kwarg alone.
-- **The whole layer is AUTHORING-time and FORBIDDEN on a live/stepping model** — `refine`/`abstract`/`@compose` reindex (they drop the coarse `:T` and port `:S` rows), so they operate on a static `ReactionNetworkSchema`, never a stepping `ReactionNetworkProblem` (Invariant 3).
+- **The whole layer is AUTHORING-time and FORBIDDEN on a live/stepping model** — `refine`/`abstract`/`@compose` reindex (they drop the coarse `:T` and port `:S` rows), so they operate on a static `ReactionNetwork`, never a stepping `ReactionNetworkProblem` (Invariant 3).
 
 ## Honest scope
 

@@ -156,7 +156,7 @@ using Random, Distributions, DataFrames
     # note: live: a == b == [979.0, 12.0] under seed=42. The contract-grade global-RNG isolation guarantee is the
     # note: D2 testset above.
     @testset "Allocation/trajectory is reproducible under the same construction seed (current engine lock-in)" begin
-        function run_once(); acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs; seed=42); simulate(prob); copy(prob.u); end
+        function run_once(); net = @reaction_network begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init net budget=1000 product=0; @prob_params net; @prob_meta net tspan=20 dt=1.0; prob = ReactionNetworkProblem(net; seed=42); simulate(prob); copy(prob.u); end
         a = run_once(); b = run_once()
         @test a == b  # identical trajectory when the run is constructed with the same seed
     end
@@ -170,9 +170,9 @@ using Random, Distributions, DataFrames
     # note: target API now EXISTS, so these run as real @tests.
     @testset "seed= kwarg isolates the run from the global RNG (D2): state owns an :rng, seeded runs are reproducible under global-RNG perturbation" begin
         RD = ReactiveDynamics
-        function run_seeded(); acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=20 dt=1.0; prob = ReactionNetworkProblem(acs; seed=7); simulate(prob); copy(prob.u); end
+        function run_seeded(); net = @reaction_network begin; 1.0, budget --> product, name => job, cycletime => 0.0, probability => 0.5; end; @prob_init net budget=1000 product=0; @prob_params net; @prob_meta net tspan=20 dt=1.0; prob = ReactionNetworkProblem(net; seed=7); simulate(prob); copy(prob.u); end
         Random.seed!(1); rand(10); a = run_seeded(); Random.seed!(2); rand(3); b = run_seeded()
-        rng_acs = @ReactionNetworkSchema begin; 1.0, budget --> product, name => job; end; @prob_init rng_acs budget=10 product=0; @prob_params rng_acs; @prob_meta rng_acs tspan=2 dt=1.0; rng_prob = ReactionNetworkProblem(rng_acs; seed=1)
+        rng_acs = @reaction_network begin; 1.0, budget --> product, name => job; end; @prob_init rng_acs budget=10 product=0; @prob_params rng_acs; @prob_meta rng_acs tspan=2 dt=1.0; rng_prob = ReactionNetworkProblem(rng_acs; seed=1)
         @test :rng in propertynames(rng_prob)  # state owns an AbstractRNG
         @test a == b  # perturbing the global RNG does NOT change a seeded run
     end
@@ -189,7 +189,7 @@ using Random, Distributions, DataFrames
         # budget undrawn — which spuriously fails the two spawn-dependent assertions below (the
         # conservation invariant itself never breaks). Seeding pins a trajectory that does spawn, so
         # the test is deterministic. (Pre-existing fragility surfaced during the ADR-0003 store swap.)
-        acs = @ReactionNetworkSchema begin; 1.0, 2*@conserved(scientist) + budget --> product, name => job, cycletime => 0.0; end; @prob_init acs scientist=10 budget=10 product=0; @prob_params acs; @prob_meta acs tspan=3 dt=1.0; prob = ReactionNetworkProblem(acs; seed=1)
+        net = @reaction_network begin; 1.0, 2*@conserved(scientist) + budget --> product, name => job, cycletime => 0.0; end; @prob_init net scientist=10 budget=10 product=0; @prob_params net; @prob_meta net tspan=3 dt=1.0; prob = ReactionNetworkProblem(net; seed=1)
         simulate(prob)  # species order verified: [:scientist, :budget, :product]
         @test all(prob.sol.scientist .== 10.0)  # conserved pool held and returned every tick: never net-debited
         @test prob.sol.budget[end] < prob.sol.budget[1]  # plain consumed token IS permanently drawn down
@@ -205,7 +205,7 @@ using Random, Distributions, DataFrames
     # note: instance — distinguishing it from the lifetime-timeout blow-up pinned below. NOTE: must keep
     # note: maxlifetime=Inf (default) so the solvers.jl:501 prune bug does not fire here.
     @testset "Closed-system conserved mass is invariant across spawn->return over a multi-tick run; u stays >=0" begin
-        acs = @ReactionNetworkSchema begin; 1.0, 3*@conserved(scientist) + budget --> product, name => job, cycletime => 2.0, probability => 1.0; end; @prob_init acs scientist=30 budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=10 dt=1.0; prob = ReactionNetworkProblem(acs)
+        net = @reaction_network begin; 1.0, 3*@conserved(scientist) + budget --> product, name => job, cycletime => 2.0, probability => 1.0; end; @prob_init net scientist=30 budget=1000 product=0; @prob_params net; @prob_meta net tspan=10 dt=1.0; prob = ReactionNetworkProblem(net)
         simulate(prob)  # cycletime>0 so scientists are genuinely held in-flight for ~2 ticks before return
         @test all(prob.sol.scientist .>= 0.0)  # INV1 non-negativity throughout
         @test all(prob.sol.budget .>= 0.0)
@@ -224,7 +224,7 @@ using Random, Distributions, DataFrames
     # note: statement is therefore 'no completed-but-retained instance survives', i.e. every ongoing instance
     # note: still has state < cycleTime (verified). Positive acceptance test for INV2/INV6.
     @testset "Lifetime-timed-out instances are pruned: conserved tokens are not re-returned and the pool stays within closed-system mass" begin
-        acs = @ReactionNetworkSchema begin; @deterministic(1.0), 2*@conserved(scientist) --> product, name => job, cycletime => 10.0, maxlifetime => 2.0, probability => 1.0; end; @prob_init acs scientist=10 product=0; @prob_params acs; @prob_meta acs tspan=6 dt=1.0; prob = ReactionNetworkProblem(acs)
+        net = @reaction_network begin; @deterministic(1.0), 2*@conserved(scientist) --> product, name => job, cycletime => 10.0, maxlifetime => 2.0, probability => 1.0; end; @prob_init net scientist=10 product=0; @prob_params net; @prob_meta net tspan=6 dt=1.0; prob = ReactionNetworkProblem(net)
         simulate(prob)  # each tick spawns 1 instance; cycletime=10 never reached before maxlifetime=2 forces timeout
         @test prob.u[1] <= 10.0 + 1e-9  # INV2: conserved mass NEVER exceeds closed-system total now that timed-out instances are pruned (verified u[1] == 6.0, max == 10.0)
         @test all(tr -> tr.state < tr[:transCycleTime], prob.ongoing_transitions)  # INV6: no completed-but-retained zombie; every surviving instance is genuinely in-flight (verified)
@@ -237,7 +237,7 @@ using Random, Distributions, DataFrames
     # note: (transition.state += qs*dt at solvers.jl:261; finish gated on state>=cycleTime at
     # note: solvers.jl:409,412). probability=1 removes Binomial noise so the completion tick is deterministic.
     @testset "Instance with cycletime>0 completes after ceil(cycletime/dt) ticks under full allocation" begin
-        acs = @ReactionNetworkSchema begin; @deterministic(1.0), budget --> product, name => job, cycletime => 3.0, probability => 1.0; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=8 dt=1.0; prob = ReactionNetworkProblem(acs)
+        net = @reaction_network begin; @deterministic(1.0), budget --> product, name => job, cycletime => 3.0, probability => 1.0; end; @prob_init net budget=1000 product=0; @prob_params net; @prob_meta net tspan=8 dt=1.0; prob = ReactionNetworkProblem(net)
         simulate(prob)  # ample budget => full allocation (qs==1) => progress advances by exactly dt per tick
         @test all(prob.sol.product[prob.sol.t .< 3.0] .== 0.0)  # no completion before ceil(3/1)=3 ticks
         @test prob.sol.product[findfirst(==(3.0), prob.sol.t)] == 1.0  # first instance (born t=0) completes exactly at t=3
@@ -252,7 +252,7 @@ using Random, Distributions, DataFrames
     # note: inflates the conserved/RHS-on-success quantities — here pos applies to a non-conserved consumed
     # note: token with q=0, so RHS is genuinely 0). Companion to the conserve bug pin.
     @testset "Lifetime timeout before cycletime yields q=0 successes (no RHS products emitted)" begin
-        acs = @ReactionNetworkSchema begin; @deterministic(1.0), budget --> product, name => job, cycletime => 10.0, maxlifetime => 2.0, probability => 1.0; end; @prob_init acs budget=1000 product=0; @prob_params acs; @prob_meta acs tspan=6 dt=1.0; prob = ReactionNetworkProblem(acs)
+        net = @reaction_network begin; @deterministic(1.0), budget --> product, name => job, cycletime => 10.0, maxlifetime => 2.0, probability => 1.0; end; @prob_init net budget=1000 product=0; @prob_params net; @prob_meta net tspan=6 dt=1.0; prob = ReactionNetworkProblem(net)
         simulate(prob)  # instances age out at age>=2 with state<10 (cycletime never reached)
         @test all(prob.sol.product .== 0.0)  # success draw gated on state>=cycleTime (solvers.jl:412); timeout => q=0 => zero products even with pos=1
     end
@@ -274,13 +274,13 @@ using Random, Distributions, DataFrames
             # products, fraction ~0.0016) — the block's own "completes ~200 instances" premise is
             # then unsatisfiable. @conserved(budget) (held at spawn, returned at completion) is the
             # faithful model: 1 unit funds 1 instance/tick, ~200 complete, success fraction → pos.
-            acs = @ReactionNetworkSchema begin
+            net = @reaction_network begin
                 @deterministic(1.0), @conserved(budget) --> product, name => job, cycletime => 0.0, probability => 0.3
             end
-            @prob_init acs budget = 1 product = 0
-            @prob_params acs
-            @prob_meta acs tspan = 200 dt = 1.0
-            prob = ReactionNetworkProblem(acs; seed = hash((42, k)))
+            @prob_init net budget = 1 product = 0
+            @prob_params net
+            @prob_meta net tspan = 200 dt = 1.0
+            prob = ReactionNetworkProblem(net; seed = hash((42, k)))
             simulate(prob)
             prob.sol.product[end]
         end
@@ -303,13 +303,13 @@ using Random, Distributions, DataFrames
     # count is identically 0 regardless of pos
     @testset "Lifetime timeout before cycletime gives 0 successes across a seeded ensemble (q=0 deterministically)" begin
         function member(k)
-            acs = @ReactionNetworkSchema begin
+            net = @reaction_network begin
                 @deterministic(1.0), budget --> product, name => job, cycletime => 100.0, maxlifetime => 1.0, probability => 0.9
             end
-            @prob_init acs budget = 10000 product = 0
-            @prob_params acs
-            @prob_meta acs tspan = 20 dt = 1.0
-            prob = ReactionNetworkProblem(acs; seed = hash((7, k)))
+            @prob_init net budget = 10000 product = 0
+            @prob_params net
+            @prob_meta net tspan = 20 dt = 1.0
+            prob = ReactionNetworkProblem(net; seed = hash((7, k)))
             simulate(prob)
             prob.sol.product[end]
         end

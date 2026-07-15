@@ -55,7 +55,7 @@ function dump_state(problem::ReactionNetworkProblem)
     end
     rng = problem.rng
     return StateDump(
-        hash(problem.acs),
+        hash(problem.network),
         problem.t,
         problem.tspan,
         problem.dt,
