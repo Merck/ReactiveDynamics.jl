@@ -8,6 +8,7 @@
 - **[adr/](adr/)** — one Architecture Decision Record per real decision (0001–0015), append-only, with a status table in [adr/README.md](adr/README.md). ADRs record context/decision/consequences/rejected-options; the CONTRACT records the resulting semantics.
 - **[../INVENTORY.md](../INVENTORY.md)** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints). Verified against the `ref-agents` tree.
 - **[../readme.md](../readme.md)** — the user-facing package README (about, four sketches, demos).
+- **[../CLAUDE.md](../CLAUDE.md)** — the agent-facing guide (what the project is, current post-ADR-0015 architecture, build/test commands, dev-loop gotchas). `REVIEW.md` at the repo root is a HISTORICAL 2026-06-15 review snapshot, not a current guide.
 
 Design/record documents (not normative, kept for provenance): **[PHASE0_REVIEW.md](PHASE0_REVIEW.md)** (the Phase-0 sign-off + Phase-0.6 work-package record) and **[MVP_BD_DEMO.md](MVP_BD_DEMO.md)** (the Business-Development acquisition-impact demo design doc that drove §12 and catalogued findings A–I). Superseded planning docs are archived under **[history/](history/)**.
 

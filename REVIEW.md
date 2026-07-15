@@ -1,6 +1,12 @@
-# ReactiveDynamics.jl — Review & Development Guide
+# ReactiveDynamics.jl — Review & Development Guide (HISTORICAL, 2026-06-15)
 
-> **Note**: this content was intended for `CLAUDE.md`, but a project guardrail ("ARS scope guard") blocks agents from writing `CLAUDE.md`. It lives here instead; copy it into `CLAUDE.md` manually (or lift the guard) if you want it loaded as agent context. It is a working guide for agents and humans developing ReactiveDynamics.jl — architecture, conventions, the **confirmed** defect catalog, the ontology/macro assessment, the AlgebraicAgents.jl synergy, and the phased refactor roadmap. Produced from a full read of `src/` plus a multi-agent review (175 raw findings → **151 adversarially-confirmed**, 24 refuted) on 2026-06-15. Re-verify any `file:line` before acting, since they drift.
+> **⚠️ HISTORICAL SNAPSHOT — do NOT use as a current guide.** This document is the original 2026-06-15 multi-agent review of the PRE-rework codebase (RD v0.2.7, still on Catlab ACSets + a SciML `DiscreteProblem`, an assertion-free tutorial test suite, and the 30-item confirmed-defect catalog below). The `ref-agents` branch has since advanced far past all of it — ACSets/SciML dropped, the native `ReactionNetworkProblem` engine, the eval-free typed IR, structured tokens, the full §1–§15 contract, and ADRs 0001–0015 are all implemented and green, and essentially every defect catalogued here has been fixed. The architecture map, build/test section, conventions, and defect list below are OBSOLETE.
+>
+> **Current agent-facing guide: `CLAUDE.md` (repo root).** Current status + remaining work: `docs/STATUS.md`. Durable spec: `docs/CONTRACT_DRAFT.md` + `docs/adr/`. Current source map: `INVENTORY.md`. This file is retained only as a record of the review that motivated the rework.
+>
+> **Historical note (now resolved):** an earlier session recorded that a project guardrail blocked writing `CLAUDE.md`, which is why this review lived here as a stand-in. That is no longer the case — `CLAUDE.md` was authored at the repo root on 2026-07-15, and it (not this file) is the live guide.
+>
+> _Original 2026-06-15 header:_ A working guide for agents and humans developing ReactiveDynamics.jl — architecture, conventions, the **confirmed** defect catalog, the ontology/macro assessment, the AlgebraicAgents.jl synergy, and the phased refactor roadmap. Produced from a full read of `src/` plus a multi-agent review (175 raw findings → **151 adversarially-confirmed**, 24 refuted) on 2026-06-15. Re-verify any `file:line` before acting, since they drift.
 
 ## What this package is
 
