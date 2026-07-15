@@ -331,7 +331,7 @@ end
 
     # ── E8: the BD pipeline as model.rdj.json — JSON ≡ DSL trajectory (the north-star) ──
     @testset "E8: BD pipeline loaded from model.rdj.json matches the DSL model byte-for-byte" begin
-        demodir = normpath(joinpath(homedir(), "ReactiveDynamics-review", "demo", "bd_acquisition"))
+        demodir = joinpath(pkgdir(RDX), "demo", "bd_acquisition")
         include(joinpath(demodir, "host.jl"))   # ProjectToken kind + PROJECT_REGISTRY + DSL builder
         mpath = joinpath(demodir, "model.rdj.json")
         # DSL-built
@@ -358,7 +358,7 @@ end
         # lines first — the doc-comments legitimately mention "eval"/"Meta.parse" in prose).
         code_lines(path) = join(
             filter(l -> !startswith(strip(l), "#"),
-                split(read(normpath(joinpath(homedir(), "ReactiveDynamics-review", path)), String), '\n')),
+                split(read(joinpath(pkgdir(RDX), path), String), '\n')),
             '\n',
         )
         for f in ("src/serialize.jl", "src/loadsave.jl")
@@ -558,7 +558,7 @@ end
     # ── E10: the BD model.rdj.json fixture — load → export → reload → trajectory-equal ──
     @testset "E10: BD model.rdj.json survives load→export→reload trajectory-equal (the fixture)" begin
         import JSON
-        demodir = normpath(joinpath(homedir(), "ReactiveDynamics-review", "demo", "bd_acquisition"))
+        demodir = joinpath(pkgdir(RDX), "demo", "bd_acquisition")
         include(joinpath(demodir, "host.jl"))
         mpath = joinpath(demodir, "model.rdj.json")
         meta = Dict("tspan" => 40.0, "dt" => 1.0, "alloc_strategy" => "weighted")
