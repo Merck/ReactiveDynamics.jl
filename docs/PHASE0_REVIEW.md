@@ -88,7 +88,7 @@ These survive on `ref-agents`; the contract documents them and the tests pin the
 The maintainer approved the contract (§1–§9) and ADRs 0001–0006 as the Phase-0 baseline, and accepted all four remaining scoping calls (5b). **Phase 0 is signed off; Phase 1 implementation may begin.** No `src/` changes were made during Phase 0.
 
 ### 5b. Scoping calls — RESOLVED 2026-06-20
-- **ADR 0003 — Phase 3 interop adapter → DROPPED/deferred.** No `to_acset` weakdep view shipped; interop is off-roadmap and impossible for the running engine. Reversible later.
+- **ADR 0003 — Phase 3 interop adapter → REJECTED / will-not-do (maintainer, 2026-07-15).** No `to_acset` weakdep view shipped or planned; interop is off-roadmap and impossible for the running engine. This supersedes the earlier "dropped/deferred, reversible" call — Phase 3 is definitively out of scope; any future interop would be a new ADR, not a revival. The migration is two phases (both landed), no Phase 3.
 - **Structured-token determinism source (ADR 0006) → per-species creation counter.** The k-th token of a species gets a monotonic creation index; sort-key = `(species, creation_index)`. The uuid stays as identity; no RNG-threaded uuid generation. Counter is reset by `_reinit!`.
 - **Retired-token growth (ADR 0006) → accept for Milestone 1 + escape hatch.** Soft-`:removed` is the default (preserves `past_bonds`); `disentangle!` is the opt-out; periodic archival only if a real run shows the O(#tokens) cost bites.
 - **Genesis default (CONTRACT §2.8) → engine default `poisson`, template/authoring default `flow`.** Keeps existing models stable while steering BD/pipeline routing transitions to the correct semantics.
