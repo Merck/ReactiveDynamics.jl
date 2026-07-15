@@ -1,6 +1,6 @@
 # ADR 0005: Single JSON serialization + typed ExprNode IR (agentic artifact)
 
-Status: Accepted — pending Phase-0/Phase-1 implementation
+Status: Implemented (accepted 2026-06-18). The single-JSON eval-free serializer + typed `ExprNode` IR shipped as `src/serialize.jl` (`from_json_model`/`to_json_model` at `:167`/`:255`, node-tagged (de)serialization + `validate`) and `src/exprnode.jl` (the closed tagged-union `ExprNode` tree + `OP_WHITELIST`/`DIST_WHITELIST`). Round-trips under `test/semantic/serialization_ir.jl`. Named `@structured(:Kind, field=…)` RHS genesis round-trips as a `reactants[]` row; the raw `@structured(Ctor(…))` form was removed so eval-free serialization is total (see §21).
 
 Date: 2026-06-18
 

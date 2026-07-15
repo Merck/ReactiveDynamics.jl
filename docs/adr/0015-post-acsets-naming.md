@@ -1,6 +1,6 @@
 # ADR 0015: Post-ACSets naming — retire the categorical vocabulary and the GeneratedExpressions dependency
 
-Status: Proposed — 2026-07-15
+Status: Accepted + Implemented — 2026-07-15 (commit `bc6cc0a` on `ref-agents`). The rename landed in one coordinated pass: `@ReactionNetworkSchema`→`@reaction_network`, `struct ReactionNetworkSchema`→`ReactionNetwork`, `.acs`→`.network`, the store verbs renamed AND unexported (`nparts`→`nrows`, `parts`→`row_ids`, `subpart`→`column`/`cell`, `set_subpart!`→`set_cell!`, `add_part(s)!`→`add_row(s)!`, `rem_parts!`→`rem_rows!`, `incident`→`find_rows`, `union_acs!`→`merge_networks!`, `build_acs_from_dict`→`build_network_from_dict`), and the GeneratedExpressions dependency dropped. Old names survive ONE release as `@deprecate`/`@deprecate_binding` shims (`src/ReactiveDynamics.jl:166,427-435`; the deprecated `@ReactionNetworkSchema` macro alias at `src/interface/create.jl:83`). Suite green.
 
 Date: 2026-07-15
 
