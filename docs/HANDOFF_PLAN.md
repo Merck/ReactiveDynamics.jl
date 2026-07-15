@@ -27,11 +27,10 @@ WS-5 (introspection ──┘  independent — everything it needs already ships
        tutorial)
 
 WS-1 Phase 1 (store swap) ──► WS-1 Phase 2 (ReactantSpec promotion) ──► WS-2 (refinement/0009)
-                                                    └──► WS-1 Phase 3 (optional acset adapter)
 WS-4 (housekeeping) — independent, low-risk, fold in opportunistically
 ```
 
-**Critical path is WS-1 Phase 2 → WS-2.** ADR 0009 refinement is explicitly gated on the promoted `ReactantSpec` incidence table (the FK-repoint substrate it splices on). Everything else parallelizes. Recommended order for a single agent: WS-3 → WS-5 (quick wins, build context) → WS-1 Phase 1 → WS-1 Phase 2 → WS-2, folding WS-4 in as touched, WS-1 Phase 3 optional.
+**Critical path is WS-1 Phase 2 → WS-2.** ADR 0009 refinement is explicitly gated on the promoted `ReactantSpec` incidence table (the FK-repoint substrate it splices on). Everything else parallelizes. Recommended order for a single agent: WS-3 → WS-5 (quick wins, build context) → WS-1 Phase 1 → WS-1 Phase 2 → WS-2, folding WS-4 in as touched.
 
 ---
 
@@ -43,9 +42,7 @@ WS-4 (housekeeping) — independent, low-risk, fold in opportunistically
 
 - **Phase 1 — behavior-preserving store swap.** A struct of typed columns per object; a single `const SCHEMA` as the source of truth replacing the `propertynames(acs.subparts)` reflection sites; a signature-preserving shim implementing `getindex`/`setindex!`/`nparts`/`parts`/`add_part!`/`add_parts!`/`incident`/`subpart`/`set_subpart!`/`rem_parts!`. Runtime untouched (`state.jl` already bypasses the store via its own indexing). Guarded by the existing Phase-0 characterization tests — nothing should change behaviorally. If the maintainer stops here, this is a defensible terminal state.
 - **Phase 2 — promote the reactant relation** to a first-class typed `ReactantSpec` incidence table with integer FKs (`reactant_trans → :T`, `reactant_species → :S`, plus `stoich`/`side`/modality), WITH an `Expr` escape-hatch for the legitimately dynamic reactants (`@choose`/`@move`/expression-valued stoichiometry). This makes specs FK-checkable for agentic authoring, round-trippable in JSON, and makes `equalize!` species-merge structurally exact (FK-repoint) instead of `recursively_substitute_vars!` string surgery. (`@structured` is no longer in this escape-hatch set — its genesis form is now a typed, registry-resolved `structured{kind, fields}` reactant that round-trips through the JSON IR; the raw inline-constructor form was removed. See ADR 0005 §21.)
-- **Phase 3 (optional) — a tested `to_acset`/`from_acset` adapter** behind a weakdep package extension, preserving an optional AlgebraicPetri/Catlab static-spec view at near-zero core cost. Off the critical path; ship only if an interop consumer materializes.
-
-**Files (re-verify lines):** `src/ReactiveDynamics.jl` (schema, `merge_acs!`, `assign_defaults!`, `add_obs!`, `Base.convert` coercions), `src/state.jl` (indexing pass-throughs), `src/compilers.jl` (reactant/attr reads), `src/operators/joins.jl` + `src/operators/equalize.jl` (the string-surgery merge that Phase 2 makes structural), `src/interface/create.jl` + `reaction_parser.jl` (where LHS/RHS get folded — the Phase-2 population point for `ReactantSpec`), `src/visualize.jl` (the `network_graph` Layer-A incidence walk simplifies onto `ReactantSpec` when it lands). `Project.toml`/`Manifest.toml` (drop `ACSets`/`Catlab` from `[deps]` after Phase 1; add the weakdep in Phase 3).
+**Files (re-verify lines):** `src/ReactiveDynamics.jl` (schema, `merge_acs!`, `assign_defaults!`, `add_obs!`, `Base.convert` coercions), `src/state.jl` (indexing pass-throughs), `src/compilers.jl` (reactant/attr reads), `src/operators/joins.jl` + `src/operators/equalize.jl` (the string-surgery merge that Phase 2 makes structural), `src/interface/create.jl` + `reaction_parser.jl` (where LHS/RHS get folded — the Phase-2 population point for `ReactantSpec`), `src/visualize.jl` (the `network_graph` Layer-A incidence walk simplifies onto `ReactantSpec` when it lands). `Project.toml`/`Manifest.toml` (drop `ACSets`/`Catlab` from `[deps]` after Phase 1).
 
 **Acceptance:**
 - Phase 1: the full existing suite stays green with ACSets removed from `[deps]` (behavior-preserving). Add a shim-parity test if one is not already implied by the characterization layer.
@@ -116,4 +113,4 @@ Also on the engine-bug list from the audit (verify still present, add tests if f
 
 ## 4. Definition of done for this handoff
 
-WS-3 pins all flipped or consciously superseded; WS-5 introspection tour runnable and documented; WS-1 Phase 1 landed (ACSets out of `[deps]`, suite green) and Phase 2 landed (`ReactantSpec` FK table, exact species-merge, JSON round-trip); WS-2 refinement/composition (A)–(E) landed with its semantic tests green and CONTRACT §11 filled in; WS-4 export list authoritative and `INVENTORY.md` refreshed. Phase 3 acset adapter and all §3 items remain explicitly deferred with their gates recorded.
+WS-3 pins all flipped or consciously superseded; WS-5 introspection tour runnable and documented; WS-1 Phase 1 landed (ACSets out of `[deps]`, suite green) and Phase 2 landed (`ReactantSpec` FK table, exact species-merge, JSON round-trip); WS-2 refinement/composition (A)–(E) landed with its semantic tests green and CONTRACT §11 filled in; WS-4 export list authoritative and `INVENTORY.md` refreshed. All §3 items remain explicitly deferred with their gates recorded.
