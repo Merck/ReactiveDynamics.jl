@@ -48,9 +48,11 @@ end
     xguide --> "time"
     yguide --> "value"
     title --> "valuation"
-    for (tag, lbl) in ((:valuation, "portfolio valuation"),
-                       (:valuation_cost, "cost"),
-                       (:valuation_reward, "reward"))
+    for (tag, lbl) in (
+            (:valuation, "portfolio valuation"),
+            (:valuation_cost, "cost"),
+            (:valuation_reward, "reward"),
+        )
         t, y = log_scalar_series(v.prob, tag)
         isempty(t) && continue
         @series begin
@@ -145,9 +147,11 @@ end
     xguide --> "time"
     yguide --> "instances / tick"
     title --> "throughput"
-    for (tag, lbl) in ((:new_transitions, "firings"),
-                       (:terminated_all, "terminations"),
-                       (:terminated_success, "successful terminations"))
+    for (tag, lbl) in (
+            (:new_transitions, "firings"),
+            (:terminated_all, "terminations"),
+            (:terminated_success, "successful terminations"),
+        )
         t, y = log_count_series(tp.prob, tag)
         isempty(t) && continue
         @series begin
@@ -160,14 +164,16 @@ end
 # ── The live generic `_draw` reduction, relocated from src/interface/plots.jl ────────────
 # Species trajectories from `prob.sol` (generalized by recipe 1, kept as the AA `draw(prob)` entry).
 function ReactiveDynamics.AlgebraicAgents._draw(
-    prob::ReactionNetworkProblem,
-    vars = string.(prob.acs[:, :specName]);
-    kwargs...,
-)
+        prob::ReactionNetworkProblem,
+        vars = string.(prob.acs[:, :specName]);
+        kwargs...,
+    )
     p = Plots.plot()
     for var in vars
-        p = Plots.plot!(p, prob.sol[!, "t"], prob.sol[!, var];
-            label = "$var", xlabel = "time", ylabel = "quantity", kwargs...)
+        p = Plots.plot!(
+            p, prob.sol[!, "t"], prob.sol[!, var];
+            label = "$var", xlabel = "time", ylabel = "quantity", kwargs...
+        )
     end
     return p
 end

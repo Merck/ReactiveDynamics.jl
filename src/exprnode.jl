@@ -10,7 +10,7 @@ abstract type ExprNode end
 
 # Scalar leaves and the arithmetic/comparison core.
 struct Const <: ExprNode
-    value::Union{Float64,Int,Bool,Symbol}   # Symbol ⇒ a literal like :Phase2 (lowers to a QuoteNode)
+    value::Union{Float64, Int, Bool, Symbol}   # Symbol ⇒ a literal like :Phase2 (lowers to a QuoteNode)
 end
 struct NodeRef <: ExprNode
     kind::Symbol   # ∈ REF_KINDS — what `name` refers to
@@ -28,7 +28,7 @@ struct Sample <: ExprNode
 end
 struct TimeRef <: ExprNode end
 struct Choose <: ExprNode
-    alts::Vector{Tuple{Float64,ExprNode}}   # (weight, value) alternatives
+    alts::Vector{Tuple{Float64, ExprNode}}   # (weight, value) alternatives
 end
 
 # Bound-token field read (ADR 0008 §D) — resolved against the firing instance's bound token at
@@ -115,7 +115,7 @@ to_expr(n::ExternalRef) = :(state.external_inputs[$(QuoteNode(n.port))])
 function from_expr(ex; species::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} = Set{Symbol}())
     if ex isa Bool
         return Const(ex)
-    elseif ex isa Union{Int,Float64}
+    elseif ex isa Union{Int, Float64}
         return Const(ex)
     elseif ex isa QuoteNode
         return Const(ex.value)   # a literal symbol
@@ -136,7 +136,7 @@ function _is_external_input_ref(ex::Expr)
     ex.head === :ref && length(ex.args) == 2 || return false
     dot = ex.args[1]
     return dot isa Expr && dot.head === :. && dot.args[1] === :state &&
-           dot.args[2] isa QuoteNode && dot.args[2].value === :external_inputs
+        dot.args[2] isa QuoteNode && dot.args[2].value === :external_inputs
 end
 
 function _from_expr_compound(ex::Expr; species, params)
@@ -166,7 +166,7 @@ function _from_expr_compound(ex::Expr; species, params)
             nm = ex.args[end]
             return Field(nm isa QuoteNode ? nm.value : Symbol(nm))
         elseif m == Symbol("@choose")
-            alts = Tuple{Float64,ExprNode}[]
+            alts = Tuple{Float64, ExprNode}[]
             for a in ex.args[3:end]
                 a isa Expr && a.head == :tuple ||
                     error("from_expr: @choose alt must be a (weight, value) tuple")

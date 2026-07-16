@@ -27,7 +27,7 @@ SetSpecies(name, value) = SetSpecies(name, value, :set)
 
 # Write one or more model params.
 struct SetParams <: ActionStmt
-    assigns::Vector{Pair{Symbol,Any}}   # name => value-expr
+    assigns::Vector{Pair{Symbol, Any}}   # name => value-expr
 end
 
 # Write a field on the FIRING transition instance's bound token(s) (ADR 0008 §D).
@@ -42,13 +42,13 @@ end
 # lands it may also be a (kind, clauses) tuple — `apply_action!` dispatches on what is present.
 struct SetTokens <: ActionStmt
     predicate::Any
-    assigns::Vector{Pair{Symbol,Any}}
+    assigns::Vector{Pair{Symbol, Any}}
 end
 
 # Create a structured token of a registered kind (ADR 0006 §C); the acquisition lever.
 struct AddToken <: ActionStmt
     kind::Symbol
-    fields::Vector{Pair{Symbol,Any}}
+    fields::Vector{Pair{Symbol, Any}}
 end
 
 # Toggle a transition line (ADR 0004 soft gate). `transition` is matched by transName/hash.
@@ -139,8 +139,8 @@ end
 function equalize!(state::ReactionNetworkProblem, args...)
     return error(
         "equalize! reindexes the species table (rem_parts!) and is illegal on a live, constructed " *
-        "model (ADR 0004 INV-2 / ADR 0007 §A): the position-indexed compiled closures are frozen " *
-        "at construction. Identify species at AUTHORING time, before ReactionNetworkProblem(...).",
+            "model (ADR 0004 INV-2 / ADR 0007 §A): the position-indexed compiled closures are frozen " *
+            "at construction. Identify species at AUTHORING time, before ReactionNetworkProblem(...).",
     )
 end
 
@@ -224,7 +224,7 @@ function apply_action!(state::ReactionNetworkProblem, transition, a::Invoke)
 end
 
 apply_action!(state::ReactionNetworkProblem, transition, a::Log) =
-    log(state, a.msg isa Union{Expr,Symbol} ? _eval_value(state, transition, a.msg) : a.msg)
+    log(state, a.msg isa Union{Expr, Symbol} ? _eval_value(state, transition, a.msg) : a.msg)
 
 function apply_action!(state::ReactionNetworkProblem, transition, a::Seq)
     for s in a.stmts
@@ -243,7 +243,7 @@ function fire_rules!(state::ReactionNetworkProblem)
         r.enabled || continue
         v = _eval_value(state, nothing, r.guard)
         q = v isa Bool ? (v ? 1 : 0) : (v isa Number ? rand(state.rng, Poisson(v)) : 0)
-        for _ = 1:q
+        for _ in 1:q
             apply_action!(state, nothing, r.action)
         end
         # `once` rules latch off after they first fire (run-state, reset by _reinit!, §4 D7).

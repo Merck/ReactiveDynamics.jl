@@ -14,8 +14,8 @@ using ComponentArrays
 # ADR 0003 Phase 2: the promoted transition↔reactant incidence table + its accessors.
 export ReactantSpec, reactant_specs, specname
 
-const SampleableValues = Union{Expr,Symbol,AbstractString,Float64,Int,Function}
-const ActionableValues = Union{Function,Symbol,Float64,Int}
+const SampleableValues = Union{Expr, Symbol, AbstractString, Float64, Int, Function}
+const ActionableValues = Union{Function, Symbol, Float64, Int}
 
 const SampleableRange = Union{
     Float64,
@@ -23,7 +23,7 @@ const SampleableRange = Union{
     AbstractString,
     Expr,
     Symbol,
-    Tuple{Float64,Union{Float64,Int64,AbstractString,Expr,Symbol}},
+    Tuple{Float64, Union{Float64, Int64, AbstractString, Expr, Symbol}},
 }
 
 Base.convert(::Type{SampleableRange}, x::Tuple) = (Float64(x[1]), x[2])
@@ -69,7 +69,7 @@ const SCHEMA = (
         transPreAction = SampleableValues,
         transPostAction = SampleableValues,
         transMultiplier = SampleableValues,
-        transName = Union{String,Symbol,Missing},
+        transName = Union{String, Symbol, Missing},
     ),
     E = (eventTrigger = SampleableValues, eventAction = SampleableValues),
     obs = (obsName = Symbol, obsOpts = FoldedObservable),
@@ -78,7 +78,7 @@ const SCHEMA = (
 )
 
 # attr → owning object, and the flat ordered attr list (matches ACSets `propertynames(subparts)`).
-const ATTR2OBJ = Dict{Symbol,Symbol}(
+const ATTR2OBJ = Dict{Symbol, Symbol}(
     a => obj for obj in keys(SCHEMA) for a in keys(SCHEMA[obj])
 )
 const ALLATTRS = Tuple(a for obj in keys(SCHEMA) for a in keys(SCHEMA[obj]))
@@ -133,7 +133,7 @@ struct ReactantSpec
     stoich::SampleableValues
     side::Symbol            # :lhs or :rhs
     modality::Set{Symbol}
-    expr::Union{Nothing,Expr,Symbol}   # escape-hatch term for a dynamic reactant, else nothing
+    expr::Union{Nothing, Expr, Symbol}   # escape-hatch term for a dynamic reactant, else nothing
 end
 
 # The static network container `ReactionNetwork` (ADR 0015: renamed from the ACSets-lineage
@@ -143,19 +143,21 @@ end
 # 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted
 # model — the runtime never reads it).
 struct ReactionNetwork
-    counts::Dict{Symbol,Int}
+    counts::Dict{Symbol, Int}
     columns::NamedTuple
     reactants::Vector{ReactantSpec}
     # Explicit TYPED inner constructor. Without it Julia auto-generates an untyped
     # `ReactionNetwork(::Any,::Any,::Any)` field constructor, which collides with the legacy
     # semantic 3-arg outer constructor `ReactionNetwork(transitions, reactants, obs)` below
     # (method overwrite → precompile error). The typed inner ctor is the only field-init path.
-    ReactionNetwork(counts::Dict{Symbol,Int}, columns::NamedTuple,
-                          reactants::Vector{ReactantSpec}) = new(counts, columns, reactants)
+    ReactionNetwork(
+        counts::Dict{Symbol, Int}, columns::NamedTuple,
+        reactants::Vector{ReactantSpec}
+    ) = new(counts, columns, reactants)
 end
 
 function ReactionNetwork()
-    counts = Dict{Symbol,Int}(obj => 0 for obj in keys(SCHEMA))
+    counts = Dict{Symbol, Int}(obj => 0 for obj in keys(SCHEMA))
     cols = NamedTuple{ALLATTRS}(AttrColumn{SCHEMA[ATTR2OBJ[a]][a]}() for a in ALLATTRS)
     return ReactionNetwork(counts, cols, ReactantSpec[])
 end
@@ -205,7 +207,7 @@ function Base.hash(net::ReactionNetwork, h::UInt)
     h = hash(:ReactionNetwork, h)
     for a in ALLATTRS
         col = net.columns[a]
-        for i = 1:net.counts[ATTR2OBJ[a]]
+        for i in 1:net.counts[ATTR2OBJ[a]]
             h = hash(getcell(col, i), h)
         end
     end
@@ -225,7 +227,7 @@ Base.setindex!(net::ReactionNetwork, v, i::Int, attr::Symbol) = setcell!(_col(ne
 # whole-column and row-subset reads return COPIES (matching ACSets `collect_column`/`map(identity)`);
 # `map(identity, …)` narrows e.g. `net[:, :specName]` back to `Vector{Symbol}`.
 Base.getindex(net::ReactionNetwork, ::Colon, attr::Symbol) =
-    map(identity, [getcell(_col(net, attr), i) for i = 1:net.counts[ATTR2OBJ[attr]]])
+    map(identity, [getcell(_col(net, attr), i) for i in 1:net.counts[ATTR2OBJ[attr]]])
 Base.getindex(net::ReactionNetwork, rows::AbstractVector, attr::Symbol) =
     [getcell(_col(net, attr), i) for i in rows]
 
@@ -251,10 +253,10 @@ end
 
 function add_rows!(net::ReactionNetwork, obj::Symbol, m::Int)
     n0 = net.counts[obj]
-    for _ = 1:m
+    for _ in 1:m
         add_row!(net, obj)
     end
-    return (n0+1):(n0+m)
+    return (n0 + 1):(n0 + m)
 end
 
 # rem_rows! is SWAP-AND-POP (verified against ACSets 0.2.29: it moves the LAST row into each freed
@@ -287,12 +289,12 @@ end
 
 Base.convert(::Type{Symbol}, ex::String) = Symbol(ex)
 
-Base.convert(::Type{Union{String,Symbol,Missing}}, ex::String) =
-    try
-        Symbol(ex)
-    catch
-        string(ex)
-    end
+Base.convert(::Type{Union{String, Symbol, Missing}}, ex::String) =
+try
+    Symbol(ex)
+catch
+    string(ex)
+end
 
 Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.parse(ex))
 
@@ -316,7 +318,7 @@ prettynames = Dict(
 )
 
 defargs = Dict(
-    :T => Dict{Symbol,Any}(
+    :T => Dict{Symbol, Any}(
         :transPriority => 1,
         :transProbOfSuccess => 1,
         :transCapacity => Inf,
@@ -327,7 +329,7 @@ defargs = Dict(
         :transPostAction => :(),
         :transName => missing,
     ),
-    :S => Dict{Symbol,Any}(
+    :S => Dict{Symbol, Any}(
         :specInitUncertainty => 0.0,
         :specInitVal => 0.0,
         :specCost => 0.0,
@@ -336,8 +338,8 @@ defargs = Dict(
         :specStructured => false,
         :specRole => :private,          # ADR 0009 §A — default port role (internal, namespaced)
     ),
-    :P => Dict{Symbol,Any}(:prmVal => missing),
-    :M => Dict{Symbol,Any}(:metaVal => missing),
+    :P => Dict{Symbol, Any}(:prmVal => missing),
+    :M => Dict{Symbol, Any}(:metaVal => missing),
 )
 
 # (`compilable_attrs` removed with the ACSets swap — it was dead: `eltype(::Symbol)==SampleableValues`

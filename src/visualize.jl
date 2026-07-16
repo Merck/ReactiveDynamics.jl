@@ -121,8 +121,12 @@ function network_graph(prob::ReactionNetworkProblem)
         for r in lhs[i]
             sp = _species_sym(r.species)
             (sp in known_species && net[find_index(sp, work), :specStructured] === true) && (struct_lhs = sp)
-            push!(arcs, Arc(sp, tnode_name, :in,
-                r.stoich isa Real ? Float64(r.stoich) : 1.0, r.modality))
+            push!(
+                arcs, Arc(
+                    sp, tnode_name, :in,
+                    r.stoich isa Real ? Float64(r.stoich) : 1.0, r.modality
+                )
+            )
         end
         # transition → RHS products. The RHS expr is parsed by extract_reactants on the copy.
         rprods = try
@@ -170,9 +174,11 @@ stoichiometry labels and color by §1 modality. `highlight_species`/`highlight_a
 (via AA's `run_graphviz`), so emitting the structure needs no Graphviz backend (Invariant 2). Valid
 DOT for any model; the smoke tests check `dot` accepts it for SIR/toy-pharma.
 """
-function to_graphviz(g::NetworkGraph;
-                     highlight_species::AbstractVector = Symbol[],
-                     highlight_arcs::AbstractVector = Tuple{Symbol,Symbol}[])
+function to_graphviz(
+        g::NetworkGraph;
+        highlight_species::AbstractVector = Symbol[],
+        highlight_arcs::AbstractVector = Tuple{Symbol, Symbol}[]
+    )
     hs = Set(Symbol.(highlight_species))
     ha = Set(highlight_arcs)
     io = IOBuffer()
@@ -211,8 +217,10 @@ there and returns the path; otherwise returns the rendered bytes as a `String`. 
 not reinvention — no new graph library (Invariant 2). If no Graphviz backend is available the DOT
 string is still obtainable via `to_graphviz(network_graph(prob))`.
 """
-function draw_network(prob::ReactionNetworkProblem; format::AbstractString = "svg",
-                      prog::Symbol = :dot, path = nothing, kwargs...)
+function draw_network(
+        prob::ReactionNetworkProblem; format::AbstractString = "svg",
+        prog::Symbol = :dot, path = nothing, kwargs...
+    )
     dot = to_graphviz(network_graph(prob); kwargs...)
     if path === nothing
         io = IOBuffer()
@@ -230,7 +238,7 @@ end
 
 # Pool trough (lowest level reached) per species over a run — the starvation signal.
 function _pool_troughs(prob::ReactionNetworkProblem)
-    troughs = Dict{Symbol,Float64}()
+    troughs = Dict{Symbol, Float64}()
     for s in prob.network[:, :specName]
         col = string(s)
         if col in names(prob.sol)
@@ -251,8 +259,10 @@ Decorates Layer A with finished-run statistics ONLY — it never mutates state o
 (Invariant 3). Returns the rendered output (or the `path` written to); the underlying DOT is always
 available via `to_graphviz`. The overlay is a styling pass over §14 data, not a new computation.
 """
-function exec_map(prob::ReactionNetworkProblem; highlight = nothing,
-                  format::AbstractString = "svg", path = nothing, prog::Symbol = :dot)
+function exec_map(
+        prob::ReactionNetworkProblem; highlight = nothing,
+        format::AbstractString = "svg", path = nothing, prog::Symbol = :dot
+    )
     g = network_graph(prob)
 
     # Starvation: species whose pool hit (near) zero at its trough.
@@ -264,7 +274,7 @@ function exec_map(prob::ReactionNetworkProblem; highlight = nothing,
     # the graph uses — derived from the transition's INDEX (`Transition.i`), NOT the bond's per-instance
     # name `"<transName>_@<t>"` (which would never match a graph node). Each bond highlights the
     # species→transition arc the token traversed.
-    hi_arcs = Tuple{Symbol,Symbol}[]
+    hi_arcs = Tuple{Symbol, Symbol}[]
     if highlight isa TokenPredicate
         for tok in select_tokens(prob, highlight)
             for (species, _t, transition) in tok.past_bonds

@@ -28,10 +28,10 @@ RD = ReactiveDynamics
     end
     function TrajProjectToken(phase, value)
         return TrajProjectToken(
-            "TP" * string(rand(1:10^9)),
+            "TP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             value,
         )
@@ -47,8 +47,8 @@ RD.log_token_fields(t::RD.TrajProjectToken) = (; phase = t.phase, value = t.valu
 function traj_model(; budget0 = 100, cost = 1.0)
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
-        name => adv, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
+            name => adv, cycletime => 1.0, probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
     bi = findfirst(==(:budget), net[:, :specName])
@@ -66,13 +66,17 @@ build_traj_prob(seed; pop = [RD.TrajProjectToken(:Phase1, 1.0), RD.TrajProjectTo
 # initial-attribute path: `value` is a seeded `rand` draw, so a member's t=0 attributes depend on
 # its seed — the reseed ordering (new stream installed BEFORE instantiate_population!) is what makes
 # a reinit-reseeded member's sampled attributes match a fresh build(seed) (§14.2 equivalence).
-const TRAJ_REGISTRY = Dict{Symbol,Any}(
+const TRAJ_REGISTRY = Dict{Symbol, Any}(
     :Project => (state, f) -> RD.TrajProjectToken(get(f, :phase, :Phase1), get(f, :value, 1.0)),
 )
 build_traj_prob_pe(seed) = ReactionNetworkProblem(
     traj_model(); seed = seed, registry = TRAJ_REGISTRY,
-    population = [RD.PopulationEntry(:Project, :Project; count = 3,
-        attributes = Dict(:phase => QuoteNode(:Phase1), :value => :(rand(state.rng, Normal(5.0, 2.0)))))],
+    population = [
+        RD.PopulationEntry(
+            :Project, :Project; count = 3,
+            attributes = Dict(:phase => QuoteNode(:Phase1), :value => :(rand(state.rng, Normal(5.0, 2.0))))
+        ),
+    ],
 )
 
 # Strip the random program names so two seeded runs are compared on field-value CONTENT (the demo's
@@ -160,15 +164,27 @@ content(df) = select(df, Not(:program))
 
     @testset "§14.2 treatment_effect is the unpaired Δ with se=√(var_b/n_b+var_d/n_d)" begin
         # baseline: cost 1; deal: cost 0 (no burn). Final budget differs → a real treatment effect.
-        base = ensemble(s -> (p = ReactionNetworkProblem(traj_model(; cost = 1.0); seed = s,
-            population = [RD.TrajProjectToken(:Phase1, 1.0)]); simulate(p); p); nseed = 6, root_seed = 9)
-        deal = ensemble(s -> (p = ReactionNetworkProblem(traj_model(; cost = 0.0); seed = s,
-            population = [RD.TrajProjectToken(:Phase1, 1.0)]); simulate(p); p); nseed = 6, root_seed = 9)
+        base = ensemble(
+            s -> (
+                p = ReactionNetworkProblem(
+                    traj_model(; cost = 1.0); seed = s,
+                    population = [RD.TrajProjectToken(:Phase1, 1.0)]
+                ); simulate(p); p
+            ); nseed = 6, root_seed = 9
+        )
+        deal = ensemble(
+            s -> (
+                p = ReactionNetworkProblem(
+                    traj_model(; cost = 0.0); seed = s,
+                    population = [RD.TrajProjectToken(:Phase1, 1.0)]
+                ); simulate(p); p
+            ); nseed = 6, root_seed = 9
+        )
         te = treatment_effect(base, deal, p -> last(p.sol.budget))
         @test te.n_baseline == 6 && te.n_deal == 6
         @test te.deal >= te.baseline           # zero-cost deal leaves more budget
         @test te.se >= 0.0
-        @test isapprox(te.delta, te.deal - te.baseline; atol = 1e-9)
+        @test isapprox(te.delta, te.deal - te.baseline; atol = 1.0e-9)
     end
 
     @testset "§14.2 EnsembleProblem is a readable AA node (Invariant 4)" begin
@@ -236,7 +252,7 @@ content(df) = select(df, Not(:program))
             @test [metric(m) for m in ea.members] == [metric(m) for m in eb.members]
             @test summarize(ea, metric) == summarize(eb, metric)
             @test [content(token_trajectory(m)) for m in ea.members] ==
-                  [content(token_trajectory(m)) for m in eb.members]
+                [content(token_trajectory(m)) for m in eb.members]
         end
     end
 
@@ -244,14 +260,20 @@ content(df) = select(df, Not(:program))
         # The BD A/B lever comparison: baseline (cost 1) vs deal (cost 0). The unpaired Δ must be
         # the SAME whether the two arms are built by rebuild or by reinit-reseed.
         base_pop() = [RD.TrajProjectToken(:Phase1, 1.0)]
-        base_build(cost) = s -> (p = ReactionNetworkProblem(traj_model(; cost = cost);
-            seed = s, population = base_pop()); simulate(p); p)
+        base_build(cost) = s -> (
+            p = ReactionNetworkProblem(
+                traj_model(; cost = cost);
+                seed = s, population = base_pop()
+            ); simulate(p); p
+        )
         rnpv(m) = last(m.sol.budget)
-        te = Dict(mode => treatment_effect(
-            ensemble(base_build(1.0); nseed = 6, root_seed = 9, mode = mode),
-            ensemble(base_build(0.0); nseed = 6, root_seed = 9, mode = mode),
-            rnpv,
-        ) for mode in (:rebuild, :reinit))
+        te = Dict(
+            mode => treatment_effect(
+                    ensemble(base_build(1.0); nseed = 6, root_seed = 9, mode = mode),
+                    ensemble(base_build(0.0); nseed = 6, root_seed = 9, mode = mode),
+                    rnpv,
+                ) for mode in (:rebuild, :reinit)
+        )
         @test te[:rebuild].delta == te[:reinit].delta
         @test te[:rebuild].se == te[:reinit].se
         @test te[:rebuild].baseline == te[:reinit].baseline
@@ -259,8 +281,10 @@ content(df) = select(df, Not(:program))
     end
 
     @testset "§14.2 ensemble rejects an unknown mode" begin
-        @test_throws Exception ensemble(s -> (p = build_traj_prob(s); simulate(p); p);
-            nseed = 2, root_seed = 1, mode = :bogus)
+        @test_throws Exception ensemble(
+            s -> (p = build_traj_prob(s); simulate(p); p);
+            nseed = 2, root_seed = 1, mode = :bogus
+        )
     end
 
     # ── §14.3 export bundle ──────────────────────────────────────────────────────────────

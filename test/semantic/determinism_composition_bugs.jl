@@ -28,13 +28,13 @@ using ReactiveDynamics: nrows, row_ids
     @testset "T1 characterization: two unseeded runs diverge (entropy-seeded), and the state now owns an rng" begin
         # Poisson genesis + Binomial PoS => genuinely stochastic; each unseeded run draws a fresh entropy seed.
         mk() = begin
-          net = @reaction_network begin
-            3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
-          end
-          @prob_init net A = 100 B = 0
-          @prob_params net
-          @prob_meta net tspan = 30 dt = 1.0
-          net
+            net = @reaction_network begin
+                3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
+            end
+            @prob_init net A = 100 B = 0
+            @prob_params net
+            @prob_meta net tspan = 30 dt = 1.0
+            net
         end
         prob1 = ReactionNetworkProblem(mk()); simulate(prob1)
         prob2 = ReactionNetworkProblem(mk()); simulate(prob2)
@@ -56,13 +56,13 @@ using ReactiveDynamics: nrows, row_ids
     # the full trajectory and the entire log are equal.
     @testset "T1 D1: same (model, seed) => identical prob.sol AND prob.log" begin
         mk() = begin
-          net = @reaction_network begin
-            3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
-          end
-          @prob_init net A = 100 B = 0
-          @prob_params net
-          @prob_meta net tspan = 30 dt = 1.0
-          net
+            net = @reaction_network begin
+                3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
+            end
+            @prob_init net A = 100 B = 0
+            @prob_params net
+            @prob_meta net tspan = 30 dt = 1.0
+            net
         end
         p1 = ReactionNetworkProblem(mk(); seed = 42); simulate(p1)
         p2 = ReactionNetworkProblem(mk(); seed = 42); simulate(p2)
@@ -84,13 +84,13 @@ using ReactiveDynamics: nrows, row_ids
     # RNG), and the global RNG state must be untouched by the run.
     @testset "T1 D2: a run neither reads nor perturbs the global RNG (external rand() does not affect it)" begin
         mk() = begin
-          net = @reaction_network begin
-            3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
-          end
-          @prob_init net A = 100 B = 0
-          @prob_params net
-          @prob_meta net tspan = 30 dt = 1.0
-          net
+            net = @reaction_network begin
+                3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
+            end
+            @prob_init net A = 100 B = 0
+            @prob_params net
+            @prob_meta net tspan = 30 dt = 1.0
+            net
         end
         pa = ReactionNetworkProblem(mk(); seed = 99); simulate(pa)
         # Perturb the global stream, then re-run with the same seed.
@@ -114,13 +114,13 @@ using ReactiveDynamics: nrows, row_ids
     @testset "T1 D7: init -> step* -> reinit! -> step* reproduces the first trajectory" begin
         # import AlgebraicAgents: _reinit!
         mk() = begin
-          net = @reaction_network begin
-            3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
-          end
-          @prob_init net A = 100 B = 0
-          @prob_params net
-          @prob_meta net tspan = 30 dt = 1.0
-          net
+            net = @reaction_network begin
+                3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
+            end
+            @prob_init net A = 100 B = 0
+            @prob_params net
+            @prob_meta net tspan = 30 dt = 1.0
+            net
         end
         p = ReactionNetworkProblem(mk(); seed = 321)
         simulate(p)
@@ -142,13 +142,13 @@ using ReactiveDynamics: nrows, row_ids
     # is identical; assert two distinct members differ.
     @testset "T1 D8/D9: ensemble member k reproducible from (root_seed,k), independent of N and order, own RNG per member" begin
         mk() = begin
-          net = @reaction_network begin
-            3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
-          end
-          @prob_init net A = 100 B = 0
-          @prob_params net
-          @prob_meta net tspan = 20 dt = 1.0
-          net
+            net = @reaction_network begin
+                3.0, A --> B, name => birth, probability => 0.5, cycletime => 2.0
+            end
+            @prob_init net A = 100 B = 0
+            @prob_params net
+            @prob_meta net tspan = 20 dt = 1.0
+            net
         end
         # Derive a per-member seed from a single root seed + member index.
         member_seed(root, k) = hash((root, k))
@@ -175,10 +175,10 @@ using ReactiveDynamics: nrows, row_ids
     # merged schema.
     @testset "T1 lock-in: @join merged species count = |union of names|, transition count = sum (no transitions lost)" begin
         acs1 = @reaction_network begin
-          1.0, A --> B, name => t1
+            1.0, A --> B, name => t1
         end
         acs2 = @reaction_network begin
-          1.0, A --> C, name => t2
+            1.0, A --> C, name => t2
         end
         # acs1 species: {A,B}; acs2 species: {A,C}. Identify the two A's via the join eqs.
         m = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
@@ -201,13 +201,13 @@ using ReactiveDynamics: nrows, row_ids
     # action: Join models carrying events/observables and assert the :E / :obs parts survive into the merge.
     @testset "merge_networks! merges observables (:obs) and events (:E) (WS-3 fix)" begin
         acs1 = @reaction_network begin
-          1.0, A --> B, name => t1
+            1.0, A --> B, name => t1
         end
         @valuation acs1 B = 0.1
         # give acs2 an event so we can check it survives the merge
         acs2_ev = @reaction_network begin
-          1.0, C --> D, name => t2
-          (D > 5) && (D -= 1)
+            1.0, C --> D, name => t2
+            (D > 5) && (D -= 1)
         end
         n_ev = nrows(acs2_ev, :E)
         @test n_ev >= 1                              # sanity: acs2_ev actually declares an event
@@ -227,7 +227,7 @@ using ReactiveDynamics: nrows, row_ids
     # note: what merge_networks!/prepend_obs! touch, independent of the observable-authoring DSL surface.
     @testset "merge_networks! merges observables and namespaces their referenced species (WS-3 fix)" begin
         acs2 = @reaction_network begin
-          1.0, C --> D, name => t2
+            1.0, C --> D, name => t2
         end
         # attach an observable that samples species D (as a bare-Symbol trigger in `on`).
         ReactiveDynamics.add_row!(
@@ -237,7 +237,7 @@ using ReactiveDynamics: nrows, row_ids
         )
         @test nrows(acs2, :obs) == 1                # sanity
         acs1 = @reaction_network begin
-          1.0, A --> B, name => t1
+            1.0, A --> B, name => t1
         end
         m = @join acs1 acs2
         @test nrows(m, :obs) == 1                   # observable survives the merge (was silently dropped)
@@ -259,8 +259,8 @@ using ReactiveDynamics: nrows, row_ids
     # drops by one and references are rewritten.
     @testset "T1 lock-in: equalize! collapses two identified species into one and rewrites refs" begin
         net = @reaction_network begin
-          1.0, A --> B, name => t1
-          1.0, A2 --> B, name => t2
+            1.0, A --> B, name => t1
+            1.0, A2 --> B, name => t2
         end
         # A and A2 are conceptually the same pool; identify them.
         before_S = nrows(net, :S)
@@ -307,8 +307,8 @@ using ReactiveDynamics: nrows, row_ids
         # integer `species` FK into :S, and equalize! repoints those FKs structurally (rebuilds the
         # FK-exact table from the post-merge names) instead of only string-substituting :trans.
         net = @reaction_network begin
-          1.0, A --> B, name => t1
-          1.0, A2 --> B, name => t2
+            1.0, A --> B, name => t1
+            1.0, A2 --> B, name => t2
         end
         m = equalize!(net, [[(:catchall, :A), (:catchall, :A2)]])
         reactants = ReactiveDynamics.reactant_specs(m)   # accessor over the promoted table
@@ -337,10 +337,10 @@ using ReactiveDynamics: nrows, row_ids
         @test isdefined(ReactiveDynamics, :include_model)   # was the @test_broken pin
         # Round-trip: export a small model to JSON, then include_model it back to a schema.
         base = @reaction_network begin
-          1.0, C --> D, name => t2
+            1.0, C --> D, name => t2
         end
         @prob_params base
-        json = ReactiveDynamics.to_json_model(base; meta = Dict{String,Any}("tspan" => 10.0))
+        json = ReactiveDynamics.to_json_model(base; meta = Dict{String, Any}("tspan" => 10.0))
         path = joinpath(mktempdir(), "fragment.rdj.json")
         write(path, json)
         loaded = ReactiveDynamics.include_model(path)
@@ -348,7 +348,7 @@ using ReactiveDynamics: nrows, row_ids
         @test nrows(loaded, :T) == 1
         # a file-loaded fragment composes with an in-memory model via the normal @join symbol path.
         host = @reaction_network begin
-          1.0, A --> B, name => t1
+            1.0, A --> B, name => t1
         end
         m = @join host loaded
         @test nrows(m, :T) == 2                            # both transitions present after the join
@@ -374,8 +374,8 @@ using ReactiveDynamics: nrows, row_ids
     # reindexing rem_parts! must be refused, and the species indexing must be unchanged after the refusal.
     @testset "equalize!'s rem_parts! refuses on a live/stepping model (ADR 0004 INV-2 / ADR 0007 §A)" begin
         net = @reaction_network begin
-          1.0, A --> B, name => t1
-          1.0, A2 --> B, name => t2
+            1.0, A --> B, name => t1
+            1.0, A2 --> B, name => t2
         end
         @prob_init net A = 10 A2 = 10 B = 0
         @prob_params net
@@ -401,8 +401,8 @@ using ReactiveDynamics: nrows, row_ids
     # action: Build a model whose event bumps B every tick; simulate; B must rise (the action ran).
     @testset "Event channel repaired: a triggered event runs its action each tick (Invariant 7 met)" begin
         net = @reaction_network begin
-          0.0, A --> B, name => inert        # no spawning; isolates the event effect
-          (@t() >= 0.0) && (B += 100)        # event: always-true Expr trigger, action sets B
+            0.0, A --> B, name => inert        # no spawning; isolates the event effect
+            (@t() >= 0.0) && (B += 100)        # event: always-true Expr trigger, action sets B
         end
         @prob_init net A = 0 B = 0
         @prob_params net
@@ -431,7 +431,7 @@ using ReactiveDynamics: nrows, row_ids
         # Sustained over-demand against a hard capacity: rate forces 5 desired/ tick,
         # but capacity caps concurrent instances; overflow must be DEFERRED to transToSpawn.
         net = @reaction_network begin
-          @deterministic(5), A --> B, name => capped, capacity => 2.0, cycletime => 3.0
+            @deterministic(5), A --> B, name => capped, capacity => 2.0, cycletime => 3.0
         end
         @prob_init net A = 1000 B = 0
         @prob_params net
@@ -456,7 +456,7 @@ using ReactiveDynamics: nrows, row_ids
     @testset "T1 lock-in: resample! on a range-less observable yields missing on .sampled (no throw)" begin
         # Build a problem and a range-less Observable directly, then resample it.
         net = @reaction_network begin
-          1.0, A --> B, name => t1
+            1.0, A --> B, name => t1
         end
         @prob_init net A = 10 B = 0
         @prob_params net

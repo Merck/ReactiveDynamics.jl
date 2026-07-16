@@ -15,10 +15,10 @@ mutable struct ProgramLedger
     cost_incurred::Float64
     reward_realized::Float64
     valuation::Float64
-    entries::Vector{Tuple{Float64,Symbol,Float64,String}}
+    entries::Vector{Tuple{Float64, Symbol, Float64, String}}
 end
 ProgramLedger(species::Symbol, creation_index::Int) =
-    ProgramLedger(species, creation_index, 0.0, 0.0, 0.0, Tuple{Float64,Symbol,Float64,String}[])
+    ProgramLedger(species, creation_index, 0.0, 0.0, 0.0, Tuple{Float64, Symbol, Float64, String}[])
 
 struct UnfoldedReactant
     index::Int
@@ -37,7 +37,7 @@ Ongoing transition auxiliary structure.
 @aagent struct Transition
     i::Int
 
-    trans::Dict{Symbol,Any}
+    trans::Dict{Symbol, Any}
 
     bound_structured_agents::Vector{AbstractAlgebraicAgent}
     nonblock_structured_agents::Vector{AbstractAlgebraicAgent}
@@ -53,7 +53,7 @@ Base.setindex!(state::Transition, val, key) = state.trans[key] = val
 
 @aagent struct Observable
     last::Float64 # last sampling time
-    range::Vector{Union{Tuple{Float64,SampleableValues},SampleableValues}}
+    range::Vector{Union{Tuple{Float64, SampleableValues}, SampleableValues}}
     every::Float64
     on::Vector{ActionableValues}
 
@@ -63,8 +63,8 @@ end
 @aagent struct ReactionNetworkProblem
     network::ReactionNetwork
 
-    attrs::Dict{Symbol,Vector}
-    transition_recipes::Dict{Symbol,Vector}
+    attrs::Dict{Symbol, Vector}
+    transition_recipes::Dict{Symbol, Vector}
 
     u::Vector{Float64}
     p::Any
@@ -72,14 +72,14 @@ end
 
     structured_token::Vector{Symbol}
 
-    tspan::Tuple{Float64,Float64}
+    tspan::Tuple{Float64, Float64}
     dt::Float64
 
-    transitions::Dict{Symbol,Vector}
+    transitions::Dict{Symbol, Vector}
     ongoing_transitions::Vector{Transition}
     log::Vector{Tuple}
 
-    observables::Dict{Symbol,Observable}
+    observables::Dict{Symbol, Observable}
 
     wrap_fun::Any
     sol::DataFrame
@@ -89,20 +89,20 @@ end
     # the entropy-drawn one when none was given — always concrete, so any run is replayable, D6).
     # `initial_rng` is a snapshot of `rng` at t=0 so `_reinit!` restores the exact stream (D7).
     rng::Random.AbstractRNG
-    seed::Union{Integer,Nothing}
+    seed::Union{Integer, Nothing}
     initial_rng::Random.AbstractRNG
 
     # Endogenous decision channel (ADR 0010/0011, §12). `rules` are guard/action/fire_mode
     # triples fired at _step! step 10. `registry` is the per-network host-function/kind
     # allow-list (ADR 0006 §C) keyed by name — used by AddToken/Invoke; never eval'd.
     rules::Vector
-    registry::Dict{Symbol,Any}
+    registry::Dict{Symbol, Any}
 
     # Structured-token determinism (ADR 0006 §E / ADR 0008): per-species monotonic creation
     # counter, and the realized (token-name → creation_index) map that fixes the (species,
     # creation_index) total order tokens are selected in. Reset by _reinit! (§4 D7).
-    creation_counters::Dict{Symbol,Int}
-    creation_index::Dict{String,Int}
+    creation_counters::Dict{Symbol, Int}
+    creation_index::Dict{String, Int}
 
     # Declarative initial marking (ADR 0007 §B). `population` is the structured-token initial
     # state (the analogue of specInitVal for plain species): either a vector of declarative
@@ -113,7 +113,7 @@ end
     # attributes (species/phase/…), not just reset their bonds. `live` arms the §A phase guard:
     # once constructed, reindexers (rem_parts!) refuse.
     population::Vector
-    init_snapshot::Dict{String,Dict{Symbol,Any}}
+    init_snapshot::Dict{String, Dict{Symbol, Any}}
     live::Bool
 
     # Per-program (per-structured-token) ledger (MVP finding D — src/ledger.jl). `program_ledgers`
@@ -123,7 +123,7 @@ end
     # structured token (plain reactions), so the per-program rows + these buckets SUM EXACTLY to the
     # aggregate `:valuation_cost`/`:valuation_reward` rows (the invariant in program_ledger.jl).
     # All three are reset by _reinit! (§4 D7), mirroring `creation_counters`.
-    program_ledgers::Dict{String,ProgramLedger}
+    program_ledgers::Dict{String, ProgramLedger}
     unattributed_cost::Float64
     unattributed_reward::Float64
 
@@ -134,12 +134,12 @@ end
     # (Invariant 2, the §4-D4 sibling-order hazard the latch closes). Transient run-state: seeded
     # from the declared defaults at construction, re-seeded by `_reinit!` (§10.4), recomputed every
     # `_prestep!`, and NOT persisted by `dump_state` (recovered on the next prestep).
-    external_inputs::Dict{Symbol,Any}
+    external_inputs::Dict{Symbol, Any}
     # The immutable declared-default snapshot (the §B1 `inputs[]` defaults), paired with
     # `external_inputs` exactly as `initial_rng` is paired with `rng` (§4 D7): `_reinit!` restores
     # `external_inputs` to a copy of this so a re-run drops stale latched wire values but KEEPS the
     # pre-wire defaults, and every `_prestep!` merges wire reads OVER a copy of it.
-    external_input_defaults::Dict{Symbol,Any}
+    external_input_defaults::Dict{Symbol, Any}
 
     # Per-token trajectory log (ADR 0013 §A / CONTRACT §14.1). The time-indexed companion to the
     # per-program ledger: each tick `push_token_trajectory_row!` appends `(t, token_name, species,
@@ -148,7 +148,7 @@ end
     # `push_program_ledger_row!`), observation point, and determinism guarantee as the ledger row it
     # generalizes (§4 D4). `species` is captured at log time (it can change under soft-retire). Sibling
     # of `log`; bounded by per-kind opt-in (Invariant 2); reset by `_reinit!` like the ledger (§4 D7).
-    token_trajectory::Vector{Tuple{Float64,String,Symbol,NamedTuple}}
+    token_trajectory::Vector{Tuple{Float64, String, Symbol, NamedTuple}}
 end
 
 # get value of a numeric expression
@@ -181,7 +181,7 @@ end
 save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...))
 
 function compile_observables(net::ReactionNetwork)
-    observables = Dict{Symbol,Observable}()
+    observables = Dict{Symbol, Observable}()
     species_names = collect(net[:, :specName])
     prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
@@ -248,13 +248,15 @@ function prune_r_line(r_line)
         r_line.args[[3, 2]]
     elseif isexpr(r_line, :macrocall) && (macroname(r_line) == :choose)
         sample_range(
-            [(
-                if isexpr(r, :tuple)
-                    (r.args[1], prune_r_line(r.args[2]))
-                else
-                    prune_r_line(r)
-                end
-            ) for r in r_line.args[3:end]],
+            [
+                (
+                        if isexpr(r, :tuple)
+                            (r.args[1], prune_r_line(r.args[2]))
+                    else
+                            prune_r_line(r)
+                    end
+                    ) for r in r_line.args[3:end]
+            ],
             state,
         )
     end
@@ -268,7 +270,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
     for (_, v) in state.transitions
         empty!(v)
     end
-    for i = 1:length(state.transition_recipes[:trans])
+    for i in 1:length(state.transition_recipes[:trans])
         # A transition fires this tick iff it is activated (latching gate, ADR 0004) AND its
         # stateless guard holds this tick (ADR 0010 §B). We ALWAYS realize and push every
         # transition's attributes so `state.transitions[attr]` stays parallel to the `:T`
@@ -323,6 +325,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
 
         state.transition_recipes[:transToSpawn] .= 0
     end
+    return
 end
 
 function as_state(u, t, state::ReactionNetworkProblem)
@@ -350,14 +353,14 @@ state(state::ReactionNetworkProblem) = state
 function periodic(state::ReactionNetworkProblem, period)
     return period == 0.0 || (
         length(state.sol.t) > 1 &&
-        (fld(state.t, period) - fld(state.sol.t[end-1], period) > 0)
+            (fld(state.t, period) - fld(state.sol.t[end - 1], period) > 0)
     )
 end
 
 set_params(state::ReactionNetworkProblem, vals...) =
     for (p, v) in vals
-        state.p[p] = v
-    end
+    state.p[p] = v
+end
 
 function add_to_spawn!(state::ReactionNetworkProblem, hash, n)
     ix = findfirst(

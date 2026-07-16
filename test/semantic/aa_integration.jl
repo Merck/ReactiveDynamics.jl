@@ -38,7 +38,7 @@ end
 AATestSource(name::AbstractString, v0::Real, dt::Real) =
     AATestSource(name, Float64(v0), Float64(dt), 0.0)
 AlgebraicAgents.observables(s::AATestSource) = [:signal]
-AlgebraicAgents.getobservable(s::AATestSource, ::Union{Symbol,AbstractString}) = s.val
+AlgebraicAgents.getobservable(s::AATestSource, ::Union{Symbol, AbstractString}) = s.val
 AlgebraicAgents.getobservable(s::AATestSource, ::Int) = s.val
 AlgebraicAgents._step!(s::AATestSource) = (s.val += 1.0; s.t += s.dt; s.t)
 AlgebraicAgents._projected_to(s::AATestSource) = s.t > 5.0 ? true : s.t
@@ -143,7 +143,7 @@ const _COUPLED_JSON = """
         # MacroTools.striplines: the lowered Expr carries no LineNumberNodes here, but compare
         # robustly anyway (the suite convention for Expr equality).
         @test MacroTools.striplines(RD.from_expr(ex) |> RD.to_expr) ==
-              MacroTools.striplines(ex)
+            MacroTools.striplines(ex)
         @test RD.from_expr(ex) == n                        # exact leaf recovery
 
         # structural ==/hash work (so dedup / round-trip tests compare by value).
@@ -158,13 +158,15 @@ const _COUPLED_JSON = """
 
     # ── (B) validate rule 8 — every ExternalRef port must be a declared inputs[] port ───
     @testset "B: validate rule 8 flags an undeclared port and passes a declared one" begin
-        base = JSON.parse("""
-        { "meta":{"tspan":5.0,"dt":1.0},"params":[],
-          "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
-          "species":[{"name":"A","init":0}],
-          "transitions":[{"id":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"t1","species":"A","side":"rhs","stoich":1}] }
-        """)
+        base = JSON.parse(
+            """
+            { "meta":{"tspan":5.0,"dt":1.0},"params":[],
+              "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
+              "species":[{"name":"A","init":0}],
+              "transitions":[{"id":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
+              "reactants":[{"transition":"t1","species":"A","side":"rhs","stoich":1}] }
+            """
+        )
         # the declared port validates clean.
         @test isempty(RD.validate(base))
 
@@ -180,13 +182,22 @@ const _COUPLED_JSON = """
         guarded = deepcopy(base)
         guarded["inputs"] = [Dict("port" => "sentiment", "default" => Dict("node" => "const", "value" => 0.0))]
         guarded["transitions"][1]["rate"] = 0.0
-        guarded["rules"] = [Dict(
-            "id" => "lever", "fire_mode" => "once",
-            "guard" => Dict("node" => "call", "op" => ">",
-                "args" => [Dict("node" => "externalref", "port" => "sentiment"),
-                           Dict("node" => "const", "value" => 0.5)]),
-            "action" => Dict("verb" => "set_species", "name" => "A", "mode" => "inc",
-                "value" => Dict("node" => "const", "value" => 1)))]
+        guarded["rules"] = [
+            Dict(
+                "id" => "lever", "fire_mode" => "once",
+                "guard" => Dict(
+                    "node" => "call", "op" => ">",
+                    "args" => [
+                        Dict("node" => "externalref", "port" => "sentiment"),
+                        Dict("node" => "const", "value" => 0.5),
+                    ]
+                ),
+                "action" => Dict(
+                    "verb" => "set_species", "name" => "A", "mode" => "inc",
+                    "value" => Dict("node" => "const", "value" => 1)
+                )
+            ),
+        ]
         @test isempty(RD.validate(guarded))
         bad_guard = deepcopy(guarded); bad_guard["rules"][1]["guard"]["args"][1]["port"] = "ghost"
         @test any(d -> occursin("not a declared inputs[] port", d.msg), RD.validate(bad_guard))

@@ -135,11 +135,11 @@ RHS op moves its token out of `transition.bound_structured_agents` mid-loop, so 
 list afterward would lose exactly the program that earned the reward.
 """
 function attribute_reward!(
-    state::ReactionNetworkProblem,
-    transition::Transition,
-    tokens::AbstractVector,
-    reward::Real,
-)
+        state::ReactionNetworkProblem,
+        transition::Transition,
+        tokens::AbstractVector,
+        reward::Real,
+    )
     reward == 0.0 && return 0.0
     if isempty(tokens)
         state.unattributed_reward += reward
@@ -183,7 +183,7 @@ end
 # here are the RUNNING totals (matching the running `cost_incurred`/`reward_realized` fields); a
 # consumer wanting per-tick flow diffs successive rows.
 function push_program_ledger_row!(state::ReactionNetworkProblem)
-    snapshot = Dict{String,NamedTuple{(:cost, :reward, :valuation),Tuple{Float64,Float64,Float64}}}()
+    snapshot = Dict{String, NamedTuple{(:cost, :reward, :valuation), Tuple{Float64, Float64, Float64}}}()
     container = getagent(state, "structured")
     toks = collect(values(inners(container)))
     sort!(toks; by = a -> token_sortkey(state, a))
@@ -274,7 +274,7 @@ The append-only per-event audit trail for one program: `(t, kind, amount, transi
 """
 function program_ledger_entries(state::ReactionNetworkProblem, token_name::AbstractString)
     led = get(state.program_ledgers, String(token_name), nothing)
-    return led === nothing ? Tuple{Float64,Symbol,Float64,String}[] : led.entries
+    return led === nothing ? Tuple{Float64, Symbol, Float64, String}[] : led.entries
 end
 
 # Reset the per-program ledger to its t=0 (empty) state — mirrors how `_reinit!` clears

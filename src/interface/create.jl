@@ -1,4 +1,4 @@
-# reaction network DSL: CREATE part; reaction line and event parsing 
+# reaction network DSL: CREATE part; reaction line and event parsing
 
 export @reaction_network
 # Deprecated compatibility alias (ADR 0015 Tier 1) — exported so existing caller code keeps
@@ -85,8 +85,12 @@ macro ReactionNetworkSchema(args...)
         "`@ReactionNetworkSchema` is deprecated, use `@reaction_network` instead.",
         Symbol("@ReactionNetworkSchema"),
     )
-    return esc(Expr(:macrocall, GlobalRef(ReactiveDynamics, Symbol("@reaction_network")),
-                    __source__, args...))
+    return esc(
+        Expr(
+            :macrocall, GlobalRef(ReactiveDynamics, Symbol("@reaction_network")),
+            __source__, args...
+        )
+    )
 end
 
 function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
@@ -101,7 +105,7 @@ function esc_dollars!(ex)
         if ex.head == :$
             return esc(:($(ex.args[1])))
         else
-            for i = 1:length(ex.args)
+            for i in 1:length(ex.args)
                 ex.args[i] = esc_dollars!(ex.args[i])
             end
         end
@@ -133,7 +137,7 @@ end
 function get_data!(trans, reactants, pcs, evs, exs)
     length(exs) == 0 && return
 
-    if exs[1] isa Expr && (exs[1].head ∈ ifs)
+    return if exs[1] isa Expr && (exs[1].head ∈ ifs)
         get_events!(evs, normalize_pcs!(pcs, exs[1]))
     else
         get_transitions!(trans, reactants, pcs, exs)
@@ -141,14 +145,14 @@ function get_data!(trans, reactants, pcs, evs, exs)
 end
 
 get_events!(evs, ex) =
-    if ex.head == :&&
-        push!(evs, Event(ex.args...))
-    else
-        recursively_expand_actions!(evs, Expr(:call, :&), ex)
-    end
+if ex.head == :&&
+    push!(evs, Event(ex.args...))
+else
+    recursively_expand_actions!(evs, Expr(:call, :&), ex)
+end
 
 function recursively_expand_actions!(evs, condex, event)
-    if isexpr(event, :if)
+    return if isexpr(event, :if)
         condex_ = deepcopy(condex)
         push!(condex_.args, event.args[1])
         push!(evs, Event(condex_, event.args[2]))
@@ -168,7 +172,7 @@ function expand_rate(rate)
         rate.args[3]
     end
 
-    postwalk(rate) do ex
+    return postwalk(rate) do ex
         if (isexpr(ex, :macrocall) && (macroname(ex) ∈ prettynames[:transCycleTime]))
             :(1 / $(ex.args[3]))
         else
@@ -211,14 +215,14 @@ function replace_in_expr(expr, pairs...)
 end
 
 function normalize_pcs!(pcs, expr)
-    postwalk(expr) do ex
+    return postwalk(expr) do ex
         isexpr(ex, :macrocall) &&
             macroname(ex) == :register &&
             (
-                push!(pcs, deepcopy(ex));
-                ex.args[1] = Symbol("@", :take);
-                ex.args = ex.args[1:3]
-            )
+            push!(pcs, deepcopy(ex));
+            ex.args[1] = Symbol("@", :take);
+            ex.args = ex.args[1:3]
+        )
         if isexpr(ex, :macrocall) && macroname(ex) == :register
             r_sym = gensym()
             (
@@ -263,7 +267,7 @@ function prune_reaction_line!(pcs, reactants, line)
                 end,
             )
         end
-        for i = 3:length(line.args)
+        for i in 3:length(line.args)
             line.args[i] = if isexpr(line.args[i], :tuple)
                 Expr(
                     :tuple,
@@ -299,13 +303,13 @@ function recursively_find_reactants!(reactants, pcs, ex)
         end
     elseif ex.args[1] == :*
         recursively_find_reactants!(reactants, pcs, ex.args[end])
-        foreach(i -> ex.args[i] = normalize_pcs!(pcs, ex.args[i]), 2:(length(ex.args)-1))
+        foreach(i -> ex.args[i] = normalize_pcs!(pcs, ex.args[i]), 2:(length(ex.args) - 1))
     elseif ex.args[1] == :+
-        for i = 2:length(ex.args)
+        for i in 2:length(ex.args)
             recursively_find_reactants!(reactants, pcs, ex.args[i])
         end
     elseif isexpr(ex, :macrocall) && macroname(ex) == :choose
-        for i = 3:length(ex.args)
+        for i in 3:length(ex.args)
             recursively_find_reactants!(
                 reactants,
                 pcs,
@@ -321,10 +325,11 @@ function recursively_find_reactants!(reactants, pcs, ex)
         # TOTAL invariant (every genesis product is data). Reject the raw form at construction time.
         (length(ex.args) >= 3 && ex.args[3] isa QuoteNode) || error(
             "@structured: expected the named form `@structured(:Kind, field = value, …)` — a " *
-            "quoted kind symbol whose constructor is resolved through the network registry by " *
-            "name. The raw `@structured(Ctor(…))` constructor form is not supported (it cannot " *
-            "serialize eval-free); register the kind's `(state, fields) -> token` constructor and " *
-            "reference it by name instead (ADR 0006 §C). Got: $(ex.args[3])")
+                "quoted kind symbol whose constructor is resolved through the network registry by " *
+                "name. The raw `@structured(Ctor(…))` constructor form is not supported (it cannot " *
+                "serialize eval-free); register the kind's `(state, fields) -> token` constructor and " *
+                "reference it by name instead (ADR 0006 §C). Got: $(ex.args[3])"
+        )
         return ex
     elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:move, :advance]
         return ex

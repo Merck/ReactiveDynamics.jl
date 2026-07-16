@@ -1,4 +1,4 @@
-# reaction network DSL: UPDATE part; add species, name, add modalities, set model variables, set solver arguments 
+# reaction network DSL: UPDATE part; add species, name, add modalities, set model variables, set solver arguments
 
 export @push, @name_transition, @mode, @add_species
 export @periodic, @jump
@@ -20,11 +20,13 @@ function push_to_acs!(acsex, exs...)
         ex = striplines(exs[1])
     else
         args = Any[]
-        map(el -> if isexpr(el, :(=))
-            push!(args, :($(el.args[1]) => $(el.args[2])))
-        else
-            push!(args, el)
-        end, exs)
+        map(
+            el -> if isexpr(el, :(=))
+                push!(args, :($(el.args[1]) => $(el.args[2])))
+            else
+                push!(args, el)
+            end, exs
+        )
         ex = Expr(:tuple, args...)
     end
 
@@ -88,12 +90,12 @@ end
 
 function incident_pattern(pattern, attr)
     ix = []
-    for i = 1:length(attr)
+    for i in 1:length(attr)
         !isnothing(attr[i]) &&
             (
-                m = match(pattern, string(attr[i]));
-                !isnothing(m) && (string(attr[i]) == m.match)
-            ) &&
+            m = match(pattern, string(attr[i]));
+            !isnothing(m) && (string(attr[i]) == m.match)
+        ) &&
             push!(ix, i)
     end
 
@@ -113,6 +115,7 @@ function mode!(net, dict)
             union!(net[ix, :specModality], mods)
         end
     end
+    return
 end
 
 """
@@ -162,11 +165,12 @@ function set_valuation!(net, dict, valuation_type)
 
         foreach(
             ix ->
-                net[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] =
-                    eval(val),
+            net[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] =
+                eval(val),
             i,
         )
     end
+    return
 end
 
 export @cost, @reward, @valuation
@@ -195,11 +199,13 @@ for valuation_type in (:cost, :reward, :valuation)
                     ),
                     exs__,
                 )
-                return :(set_valuation!(
-                    $(esc(acsex)),
-                    $dictcall,
-                    $(QuoteNode($(QuoteNode(valuation_type)))),
-                ))
+                return :(
+                    set_valuation!(
+                        $(esc(acsex)),
+                        $dictcall,
+                        $(QuoteNode($(QuoteNode(valuation_type)))),
+                    )
+                )
             end
         end,
     )
@@ -397,10 +403,10 @@ end
 
 meta!(net, metas) =
     for (k, metaval) in metas
-        i = find_rows(net, k, :metaKeyword)
-        isempty(i) && (i = add_row!(net, :M; metaKeyword = k))
-        set_cell!(net, first(i), :metaVal, metaval)
-    end
+    i = find_rows(net, k, :metaKeyword)
+    isempty(i) && (i = add_row!(net, :M; metaKeyword = k))
+    set_cell!(net, first(i), :metaVal, metaval)
+end
 
 """
 Set model metadata (e.g. solver arguments)

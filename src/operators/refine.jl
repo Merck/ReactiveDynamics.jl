@@ -21,7 +21,7 @@ Set the open-port `role ∈ (:private, :input, :output, :shared)` (CONTRACT §11
 species by name. `:private` (default) auto-namespaces on compose; `:input`/`:output` are open ports
 matched by `@compose`; `:shared` is identified by bare name (first-class `@catchall`).
 """
-function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol,Symbol}...)
+function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol, Symbol}...)
     for (name, role) in pairs
         role in PORT_ROLES ||
             error("set_port_role!: role must be one of $(PORT_ROLES), got $(repr(role))")
@@ -85,7 +85,7 @@ function compose(fragments::ReactionNetwork...)
     acs_new = ReactionNetwork()
     # union each fragment under its own namespace. prepend! leaves `shared` species bare; open ports
     # (input/output) are namespaced here, then re-identified below by matching the ORIGINAL name.
-    portmap = Dict{Symbol,Vector{Symbol}}()   # original port name → its namespaced aliases in acs_new
+    portmap = Dict{Symbol, Vector{Symbol}}()   # original port name → its namespaced aliases in acs_new
     for (k, f) in enumerate(fragments)
         name = Symbol("f", k)
         # remember each fragment's open-port original names → their namespaced form
@@ -146,8 +146,10 @@ Splice `submodel` into the coarse `transition` (named `Symbol`) of `spec`, ident
 submodel's open ports (`sub_port`) with the parent boundary species (`boundary_species`) given in
 `ports`. Mutates and returns `spec`. Authoring-time only.
 """
-function refine!(spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork;
-    ports::AbstractDict = Dict{Symbol,Symbol}())
+function refine!(
+        spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork;
+        ports::AbstractDict = Dict{Symbol, Symbol}()
+    )
     # locate the coarse transition row by name
     ti = findfirst(i -> spec[i, :transName] === transition, collect(row_ids(spec, :T)))
     ti === nothing && error("refine!: no transition named $(repr(transition)) in the parent spec")
@@ -197,9 +199,11 @@ transition named `into`, whose boundary reaction line consumes/produces the give
 species. A structural convenience for round-tripping the granularity ladder; the collapsed coarse
 transition's attributes (cycletime/pos/cost) are the caller's to summarize (§C advises on drift).
 """
-function abstract_transitions(spec::ReactionNetwork, transitions::Vector{Symbol}, into::Symbol;
-    lhs::Vector{Symbol} = Symbol[], rhs::Vector{Symbol} = Symbol[],
-    attrs::AbstractDict = Dict{Symbol,Any}())
+function abstract_transitions(
+        spec::ReactionNetwork, transitions::Vector{Symbol}, into::Symbol;
+        lhs::Vector{Symbol} = Symbol[], rhs::Vector{Symbol} = Symbol[],
+        attrs::AbstractDict = Dict{Symbol, Any}()
+    )
     spec = deepcopy(spec)
     tis = Int[]
     for tn in transitions
@@ -239,8 +243,10 @@ const abstract! = abstract_transitions
 Advisory §11.3 diagnostics for splicing `submodel` into a coarse transition described by
 `coarse_attrs` (a Dict of e.g. `:transCycleTime`, `:transProbOfSuccess`). Warnings only.
 """
-function refinement_diagnostics(submodel::ReactionNetwork, coarse_attrs::AbstractDict;
-    ports::AbstractDict = Dict{Symbol,Symbol}(), tol = 0.25)
+function refinement_diagnostics(
+        submodel::ReactionNetwork, coarse_attrs::AbstractDict;
+        ports::AbstractDict = Dict{Symbol, Symbol}(), tol = 0.25
+    )
     warns = String[]
 
     # port-balance: an `input` port should be consumed by some sub-transition LHS; an `output` port
@@ -275,13 +281,13 @@ function refinement_diagnostics(submodel::ReactionNetwork, coarse_attrs::Abstrac
             cc = Float64(coarse_attrs[:transCycleTime])
             sc = sum(cts)
             (cc == 0 || abs(cc - sc) <= tol * max(cc, sc)) ||
-                push!(warns, "coarse cycletime $(cc) ≉ Σ sub cycletimes $(sc) (>$(round(Int,tol*100))% drift)")
+                push!(warns, "coarse cycletime $(cc) ≉ Σ sub cycletimes $(sc) (>$(round(Int, tol * 100))% drift)")
         end
         if haskey(coarse_attrs, :transProbOfSuccess) && coarse_attrs[:transProbOfSuccess] isa Number
             cp = Float64(coarse_attrs[:transProbOfSuccess])
             sp = prod(poss)
             abs(cp - sp) <= tol ||
-                push!(warns, "coarse prob_of_success $(cp) ≉ Π sub PoS $(round(sp,digits=3)) (>$(tol) drift)")
+                push!(warns, "coarse prob_of_success $(cp) ≉ Π sub PoS $(round(sp, digits = 3)) (>$(tol) drift)")
         end
     end
 
@@ -324,7 +330,7 @@ macro pipeline(nameex, block)
             error("@pipeline: edge must carry `: (ct=…, pos=…)` options, got $(colonex)")
         to = colonex.args[2]
         opts = colonex.args[3]
-        optd = Dict{Symbol,Any}()
+        optd = Dict{Symbol, Any}()
         if Meta.isexpr(opts, :tuple)
             for kv in opts.args
                 Meta.isexpr(kv, :(=)) && (optd[kv.args[1]] = kv.args[2])
@@ -344,7 +350,8 @@ macro pipeline(nameex, block)
         # --> To, name => <tname>, cycletime => ct, probability => pos`. `name`'s value must be a BARE
         # identifier Symbol (get_transitions! reads `exs[ix].args[3]`), NOT a QuoteNode — matching the
         # parser's `transName => :flow_…` output. `-->` is the reaction arrow the DSL normalizes.
-        line = Expr(:tuple,
+        line = Expr(
+            :tuple,
             Expr(:macrocall, Symbol("@deterministic"), LineNumberNode(0, :pipeline), 1.0e6),
             Expr(:-->, lhs, to),
             Expr(:call, :(=>), :name, tname),
@@ -402,9 +409,15 @@ macro process(defex)
     # (create.jl) — a structural substitution, no eval.
     blockq = QuoteNode(body)
     subs = Expr(:vect, (Expr(:call, :(=>), QuoteNode(p), p) for p in pnames)...)
-    newfn = Expr(:function, esc(sig),
-        :(ReactiveDynamics.ReactionNetwork(
-            ReactiveDynamics.get_data(
-                ReactiveDynamics.replace_in_expr($blockq, $(esc(subs))...))...)))
+    newfn = Expr(
+        :function, esc(sig),
+        :(
+            ReactiveDynamics.ReactionNetwork(
+                ReactiveDynamics.get_data(
+                    ReactiveDynamics.replace_in_expr($blockq, $(esc(subs))...)
+                )...
+            )
+        )
+    )
     return newfn
 end

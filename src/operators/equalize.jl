@@ -1,17 +1,17 @@
 export equalize!, @equalize
 
 expand_name_ff(ex) =
-    if ex isa Expr && isexpr(ex, :macrocall)
-        (macroname(ex), underscorize(ex.args[end]))
-    else
-        (nothing, underscorize(ex))
-    end
+if ex isa Expr && isexpr(ex, :macrocall)
+    (macroname(ex), underscorize(ex.args[end]))
+else
+    (nothing, underscorize(ex))
+end
 
 """
 Parse species equation blocks.
 """
 function get_eqs_ff(eq)
-    if eq isa Expr && isexpr(eq, :(=))
+    return if eq isa Expr && isexpr(eq, :(=))
         [
             expand_name_ff(eq.args[1])
             isexpr(eq.args[2], :(=)) ? get_eqs_ff(eq.args[2]) : expand_name_ff(eq.args[2])
@@ -30,11 +30,11 @@ function equalize!(net::ReactionNetwork, eqs = [])
         for e in block, i in row_ids(net, :S)
             (
                 (i == e[2]) ||
-                (
+                    (
                     e[1] == :catchall &&
-                    occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(net[i, :specName]))
+                        occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(net[i, :specName]))
                 ) ||
-                (e[2] == net[i, :specName])
+                    (e[2] == net[i, :specName])
             ) && (
                 push!(species_ixs, i);
                 push!(specmap, net[i, :specName] => (net[i, :specName] = block_alias))

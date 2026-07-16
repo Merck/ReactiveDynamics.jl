@@ -69,10 +69,10 @@ banner(title) = (println(); println("="^78); println(title); println("="^78))
     end
     function ProjectToken(phase, npv)
         return ProjectToken(
-            "Proj" * string(rand(1:10^9)),                       # name
+            "Proj" * string(rand(1:(10^9))),                       # name
             :Project,                                            # kind (one kind for all phases)
             nothing,                                             # bound_transition
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[], # past_bonds
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds
             phase,
             npv,
         )
@@ -84,7 +84,7 @@ end
 # checkpoint) references host token kinds BY NAME, and the registry is how those names resolve
 # to real Julia constructors WITHOUT the data file carrying any code. The same registry serves
 # the declarative population, the JSON loader, and `restore`.
-const REGISTRY = Dict{Symbol,Any}(
+const REGISTRY = Dict{Symbol, Any}(
     :Project => (state, f) -> RDX.ProjectToken(get(f, :phase, :Phase1), get(f, :npv, 100.0)),
 )
 
@@ -98,9 +98,11 @@ nretired(p) = count(t -> get_species(t) == :removed, livetokens(p))
 
 banner("§0. The structured-token KIND")
 println("Defined kind :Project as a ProjectToken{phase::Symbol, npv::Float64}.")
-println("One demo token: ", let t = RDX.ProjectToken(:Phase1, 120.0)
-    "phase=$(t.phase), npv=$(t.npv), kind=$(get_species(t))"
-end)
+println(
+    "One demo token: ", let t = RDX.ProjectToken(:Phase1, 120.0)
+        "phase=$(t.phase), npv=$(t.npv), kind=$(get_species(t))"
+    end
+)
 println("Why a structured token and not a Float64 count? A count is anonymous and stateless;")
 println("a token carries attributes (phase, npv) AND a stable identity preserved across phase")
 println("advances — so we can select projects by attribute and follow each one to launch.")
@@ -134,16 +136,16 @@ function pipeline_model()
     net = @reaction_network begin
         # Phase1 -> Phase2 : a sure step (probability 1) for didactic clarity.
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
-        name => adv12, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+            name => adv12, cycletime => 1.0, probability => 1.0
         # Phase2 -> Phase3 : a RISKY gate — only 60% of attempts succeed; the rest soft-retire.
         @deterministic(1.0),
-        @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
-        name => adv23, cycletime => 1.0, probability => 0.6
+            @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+            name => adv23, cycletime => 1.0, probability => 0.6
         # Phase3 -> Launched : a fairly safe late stage.
         @deterministic(1.0),
-        @select(Project, phase == :Phase3) --> @advance(phase, :Launched),
-        name => adv3L, cycletime => 1.0, probability => 0.9
+            @select(Project, phase == :Phase3) --> @advance(phase, :Launched),
+            name => adv3L, cycletime => 1.0, probability => 0.9
     end
     register_structured_species!(net, :Project)
     return net
@@ -160,14 +162,18 @@ explicit_portfolio() = [
 ]
 
 banner("§1. Phase-as-attribute pipeline + declarative initial portfolio")
-p1 = ReactionNetworkProblem(pipeline_model(); tspan = 6, dt = 1.0, seed = 1,
-    registry = REGISTRY, population = explicit_portfolio())
+p1 = ReactionNetworkProblem(
+    pipeline_model(); tspan = 6, dt = 1.0, seed = 1,
+    registry = REGISTRY, population = explicit_portfolio()
+)
 println("Seeded an explicit 5-project portfolio (population[] Form A — a list of structs).")
-println("t=0 by phase:  Phase1=$(nphase(p1,:Phase1))  Phase2=$(nphase(p1,:Phase2))  ",
-        "Phase3=$(nphase(p1,:Phase3))  Launched=$(nphase(p1,:Launched))")
+println(
+    "t=0 by phase:  Phase1=$(nphase(p1, :Phase1))  Phase2=$(nphase(p1, :Phase2))  ",
+    "Phase3=$(nphase(p1, :Phase3))  Launched=$(nphase(p1, :Launched))"
+)
 simulate(p1)
 println("After 6 ticks (Phase2->Phase3 gate is only 60% — some programs fail and soft-retire):")
-println("  Launched = $(nphase(p1,:Launched))   still-in-flight Phase3 = $(nphase(p1,:Phase3))")
+println("  Launched = $(nphase(p1, :Launched))   still-in-flight Phase3 = $(nphase(p1, :Phase3))")
 println("  soft-retired (:removed) = $(nretired(p1))   (their phase records how far they got)")
 println("Identity note: a project that reached Launched is the SAME object that started in")
 println("Phase1 — @advance writes the field in place, it does not create a new token.")
@@ -178,22 +184,32 @@ println("Phase1 — @advance writes the field in place, it does not create a new
 function sampled_portfolio()
     return [
         # 4 Phase1 programs with NPV sampled ~ Normal(100, 15), reproducible under the seed:
-        PopulationEntry(:Project, :Project; count = 4,
-            attributes = Dict(:phase => QuoteNode(:Phase1),
-                              :npv => :(rand(state.rng, Normal(100.0, 15.0))))),
+        PopulationEntry(
+            :Project, :Project; count = 4,
+            attributes = Dict(
+                :phase => QuoteNode(:Phase1),
+                :npv => :(rand(state.rng, Normal(100.0, 15.0)))
+            )
+        ),
         # 3 Phase2 programs at a fixed NPV:
-        PopulationEntry(:Project, :Project; count = 3,
-            attributes = Dict(:phase => QuoteNode(:Phase2), :npv => 200.0)),
+        PopulationEntry(
+            :Project, :Project; count = 3,
+            attributes = Dict(:phase => QuoteNode(:Phase2), :npv => 200.0)
+        ),
     ]
 end
 
-p1b = ReactionNetworkProblem(pipeline_model(); tspan = 4, dt = 1.0, seed = 42,
-    registry = REGISTRY, population = sampled_portfolio())
+p1b = ReactionNetworkProblem(
+    pipeline_model(); tspan = 4, dt = 1.0, seed = 42,
+    registry = REGISTRY, population = sampled_portfolio()
+)
 println()
 println("population[] Form B (PopulationEntry: count + seeded attribute exprs):")
 println("  built ", length(livetokens(p1b)), " projects = 4 Phase1 (NPV sampled) + 3 Phase2.")
-println("  sampled Phase1 NPVs (seeded, reproducible): ",
-        round.(sort([t.npv for t in livetokens(p1b) if t.phase == :Phase1]); digits = 1))
+println(
+    "  sampled Phase1 NPVs (seeded, reproducible): ",
+    round.(sort([t.npv for t in livetokens(p1b) if t.phase == :Phase1]); digits = 1)
+)
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §2. Predicate selection — advancing only the qualifying subset
@@ -211,26 +227,28 @@ println("  sampled Phase1 NPVs (seeded, reproducible): ",
 function fasttrack_model()
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
-        name => fasttrack, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
+            name => fasttrack, cycletime => 1.0, probability => 1.0
     end
     register_structured_species!(net, :Project)
     return net
 end
 
 banner("§2. Predicate selection (a continuous npv > θ clause)")
-p2 = ReactionNetworkProblem(fasttrack_model(); tspan = 3, dt = 1.0, seed = 1,
+p2 = ReactionNetworkProblem(
+    fasttrack_model(); tspan = 3, dt = 1.0, seed = 1,
     registry = REGISTRY,
     population = [
         RDX.ProjectToken(:Phase2, 100.0),   # below θ=150 — stays in Phase2
         RDX.ProjectToken(:Phase2, 220.0),   # above θ — fast-tracked to Phase3
         RDX.ProjectToken(:Phase2, 180.0),   # above θ — fast-tracked to Phase3
         RDX.ProjectToken(:Phase1, 999.0),   # wrong phase — never selected (clause is conjunctive)
-    ])
+    ]
+)
 println("Predicate: @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(:Phase3)")
-println("Before:  Phase1=$(nphase(p2,:Phase1))  Phase2=$(nphase(p2,:Phase2))  Phase3=$(nphase(p2,:Phase3))")
+println("Before:  Phase1=$(nphase(p2, :Phase1))  Phase2=$(nphase(p2, :Phase2))  Phase3=$(nphase(p2, :Phase3))")
 simulate(p2)
-println("After:   Phase1=$(nphase(p2,:Phase1))  Phase2=$(nphase(p2,:Phase2))  Phase3=$(nphase(p2,:Phase3))")
+println("After:   Phase1=$(nphase(p2, :Phase1))  Phase2=$(nphase(p2, :Phase2))  Phase3=$(nphase(p2, :Phase3))")
 println("Only the two high-NPV Phase2 programs advanced; the npv=100 program stayed (below θ),")
 println("and the Phase1 program was never eligible (the && clause gates BOTH phase and npv).")
 println("Bind order is deterministic: equal-priority ties break by creation_index (first added")
@@ -272,8 +290,8 @@ function lever_model()
         @deterministic(1.0), cash --> report, name => fund
         # the pipeline step the injected project will flow through
         @deterministic(1.0),
-        @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
-        name => adv23, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+            name => adv23, cycletime => 1.0, probability => 1.0
     end
     @prob_init net cash = 0 report = 0
     @prob_params net synergy = 0
@@ -282,23 +300,29 @@ function lever_model()
 end
 
 # The lever: a once-rule firing at t > 2 that raises capital, flips synergy, and adds a project.
-raise_lever() = Rule(:series_b, :(@t() > 2.0),
-    Seq([
-        SetSpecies(:cash, 500, :inc),                                    # +500 capital
-        SetParams([:synergy => 1]),                                      # flip the synergy flag
-        AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 175.0]), # add a Phase2 program
-        Log("Series-B raised: +500 cash, synergy on, +1 Phase2 program"),
-    ]);
-    fire_mode = :once)
+raise_lever() = Rule(
+    :series_b, :(@t() > 2.0),
+    Seq(
+        [
+            SetSpecies(:cash, 500, :inc),                                    # +500 capital
+            SetParams([:synergy => 1]),                                      # flip the synergy flag
+            AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 175.0]), # add a Phase2 program
+            Log("Series-B raised: +500 cash, synergy on, +1 Phase2 program"),
+        ]
+    );
+    fire_mode = :once
+)
 
 banner("§3. The in-model decision rule (a management lever, ADR 0010)")
-p3 = ReactionNetworkProblem(lever_model(); tspan = 6, dt = 1.0, seed = 1,
+p3 = ReactionNetworkProblem(
+    lever_model(); tspan = 6, dt = 1.0, seed = 1,
     registry = REGISTRY,
     population = [RDX.ProjectToken(:Phase2, 200.0)],   # one organic Phase2 program at t=0
-    rules = [raise_lever()])
+    rules = [raise_lever()]
+)
 set_guard!(p3, :fund, :(cash >= 50))   # the `fund` line only fires once the raise lands
 ci_cash = find_index(:cash, p3)
-println("t=0:  cash = $(p3.u[ci_cash])   synergy = $(p3.p[:synergy])   Phase2 projects = $(nphase(p3,:Phase2))")
+println("t=0:  cash = $(p3.u[ci_cash])   synergy = $(p3.p[:synergy])   Phase2 projects = $(nphase(p3, :Phase2))")
 println("Rule: once @t() > 2, Seq[ +500 cash, synergy:=1, AddToken(Phase2 npv=175) ]")
 println("Guard: set_guard!(:fund, cash >= 50) — the spend line is withheld until funded.")
 simulate(p3)
@@ -352,10 +376,10 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
     end
     function GenesisProjectToken(phase, npv, born)
         return GenesisProjectToken(
-            "Gen" * string(rand(1:10^9)),
+            "Gen" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             npv,
             born,
@@ -365,9 +389,10 @@ end
 
 # The registry the NAMED @structured form resolves `:Project` through — the SAME `(state, fields)`
 # convention §3's AddToken uses, so the genesis product and the rule action share one host contract.
-const GENESIS_REGISTRY = Dict{Symbol,Any}(
+const GENESIS_REGISTRY = Dict{Symbol, Any}(
     :Project => (state, f) -> RDX.GenesisProjectToken(
-        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, state.t)),
+        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, state.t)
+    ),
 )
 
 # The pipeline: a genesis source that BIRTHS one Phase1 project per tick (npv drawn from the seeded
@@ -376,12 +401,14 @@ const GENESIS_REGISTRY = Dict{Symbol,Any}(
 function genesis_model()
     net = @reaction_network begin
         @deterministic(1.0),
-        ∅ --> @structured(:Project, phase = :Phase1,
-                          npv = rand(state.rng, Normal(120.0, 20.0)), born = @t()),
-        name => genesis
+            ∅ --> @structured(
+                :Project, phase = :Phase1,
+                npv = rand(state.rng, Normal(120.0, 20.0)), born = @t()
+            ),
+            name => genesis
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
-        name => adv12, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+            name => adv12, cycletime => 1.0, probability => 1.0
     end
     register_structured_species!(net, :Project)
     return net
@@ -396,15 +423,21 @@ println("RHS: ∅ --> @structured(:Project, phase=:Phase1, npv=rand(state.rng,·
 println("After the run the source minted ", length(gtoks), " tokens, each a distinct agent:")
 println("  born times (from @t() at construction): ", sort([t.born for t in gtoks]))
 println("  npv values (drawn from the seeded RNG): ", round.(sort([t.npv for t in gtoks]); digits = 1))
-println("  every name unique (independent identity): ",
-        length(unique(RDX.getname.(gtoks))) == length(gtoks))
-println("  phases now (newborns flowed through @select/@advance to Phase2): ",
-        "Phase1=$(nphase(pg,:Phase1)) Phase2=$(nphase(pg,:Phase2))")
+println(
+    "  every name unique (independent identity): ",
+    length(unique(RDX.getname.(gtoks))) == length(gtoks)
+)
+println(
+    "  phases now (newborns flowed through @select/@advance to Phase2): ",
+    "Phase1=$(nphase(pg, :Phase1)) Phase2=$(nphase(pg, :Phase2))"
+)
 # same seed ⇒ identical births (the field exprs draw from the run's seeded rng)
 pg2 = ReactionNetworkProblem(genesis_model(); tspan = 5, dt = 1.0, seed = 1, registry = GENESIS_REGISTRY)
 simulate(pg2)
-println("Reproducible: same-seed npvs identical? ",
-        sort([t.npv for t in gtoks]) ≈ sort([t.npv for t in livetokens(pg2)]))
+println(
+    "Reproducible: same-seed npvs identical? ",
+    sort([t.npv for t in gtoks]) ≈ sort([t.npv for t in livetokens(pg2)])
+)
 
 # Genesis is DATA: because @structured carries only the kind name + typed field nodes (not the
 # constructor), the genesis model exports to the eval-free JSON IR and reloads loss-free — the
@@ -412,10 +445,12 @@ println("Reproducible: same-seed npvs identical? ",
 # raw inline-constructor form was removed, THIS ALWAYS HOLDS: any model the engine accepts exports.
 gjson = to_json_model(pg)
 pg_rt = from_json_model(gjson; seed = 1, registry = GENESIS_REGISTRY); simulate(pg_rt)
-println("Genesis round-trips: exported model validates clean? ",
-        isempty(validate(JSON.parse(gjson); registry = GENESIS_REGISTRY)),
-        "; reload reproduces births? ",
-        sort([t.born for t in gtoks]) == sort([t.born for t in livetokens(pg_rt)]))
+println(
+    "Genesis round-trips: exported model validates clean? ",
+    isempty(validate(JSON.parse(gjson); registry = GENESIS_REGISTRY)),
+    "; reload reproduces births? ",
+    sort([t.born for t in gtoks]) == sort([t.born for t in livetokens(pg_rt)])
+)
 println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, decision channel); here")
 println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species —")
 println("sharing AddToken's registry, so it serializes as eval-free data too.")
@@ -430,8 +465,10 @@ try
     println("Raw @structured(Ctor(…)): UNEXPECTEDLY accepted")
 catch e
     msg = sprint(showerror, e)
-    println("Raw @structured(Ctor(…)) rejected at construction: ",
-            occursin("named form", msg) ? "✓ (points to the named form)" : msg)
+    println(
+        "Raw @structured(Ctor(…)) rejected at construction: ",
+        occursin("named form", msg) ? "✓ (points to the named form)" : msg
+    )
 end
 
 # ════════════════════════════════════════════════════════════════════════════════════════
@@ -452,13 +489,15 @@ end
 #     expr); a numeric clause uses the bare number, e.g. `Clause(:npv, :(>), 150.0)`.
 
 banner("§5. Population write — SetTokens(@field) writes down a selected sub-population")
-p4 = ReactionNetworkProblem(pipeline_model(); tspan = 3, dt = 1.0, seed = 1,
+p4 = ReactionNetworkProblem(
+    pipeline_model(); tspan = 3, dt = 1.0, seed = 1,
     registry = REGISTRY,
     population = [
         RDX.ProjectToken(:Phase2, 100.0),
         RDX.ProjectToken(:Phase2, 200.0),
         RDX.ProjectToken(:Phase1, 50.0),   # not Phase2 — must be left untouched
-    ])
+    ]
+)
 writedown = SetTokens(
     TokenPredicate(:Project, [Clause(:phase, :(==), :(:Phase2))]),
     [:npv => :(@field(npv) * 0.9)],   # each selected token's own npv, ×0.9
@@ -530,16 +569,20 @@ shared_pop() = [
     RDX.ProjectToken(:Phase2, 150.0),
     RDX.ProjectToken(:Phase3, 300.0),
 ]
-p_dsl = ReactionNetworkProblem(pipeline_model(); tspan = 6, dt = 1.0, seed = 7,
-    registry = REGISTRY, population = shared_pop())
+p_dsl = ReactionNetworkProblem(
+    pipeline_model(); tspan = 6, dt = 1.0, seed = 7,
+    registry = REGISTRY, population = shared_pop()
+)
 p_json = from_json_model(PIPELINE_JSON; seed = 7, registry = REGISTRY, population = shared_pop())
 simulate(p_dsl)
 simulate(p_json)
 phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 println("(d) DSL final phases : ", phases_of(p_dsl))
 println("    JSON final phases: ", phases_of(p_json))
-println("    trajectories identical (sol == sol): ", p_dsl.sol == p_json.sol,
-        "  ⇒ the JSON model IS the DSL model under the same seed.")
+println(
+    "    trajectories identical (sol == sol): ", p_dsl.sol == p_json.sol,
+    "  ⇒ the JSON model IS the DSL model under the same seed."
+)
 
 # (e) the security point: a malicious string param value is stored as INERT DATA, never executed.
 malicious = """
@@ -561,8 +604,10 @@ tmp = tempname() * ".rdj.json"
 write(tmp, PIPELINE_JSON)                                      # the authored document on disk
 @import_model tmp p_fromfile seed = 7 registry = REGISTRY population = shared_pop()
 simulate(p_fromfile)
-println("(f) @import_model from a file: rebuilt a ", typeof(p_fromfile).name.name,
-        "; final phases match the in-memory build? ", phases_of(p_fromfile) == phases_of(p_dsl))
+println(
+    "(f) @import_model from a file: rebuilt a ", typeof(p_fromfile).name.name,
+    "; final phases match the in-memory build? ", phases_of(p_fromfile) == phases_of(p_dsl)
+)
 rm(tmp; force = true)
 
 # (g) the INVERSE direction — emit a LIVE model back to a full JSON document. `to_json_model`
@@ -577,20 +622,28 @@ exported = to_json_model(p_dsl)                            # live model → eval
 p_roundtrip = from_json_model(exported; seed = 7, registry = REGISTRY, population = shared_pop())
 simulate(p_roundtrip)
 println("(g) to_json_model(live model) -> reload -> simulate:")
-println("    re-exported model validates clean?  ",
-        isempty(validate(JSON.parse(exported); registry = REGISTRY)))
+println(
+    "    re-exported model validates clean?  ",
+    isempty(validate(JSON.parse(exported); registry = REGISTRY))
+)
 println("    reloaded final phases match DSL?     ", phases_of(p_roundtrip) == phases_of(p_dsl))
-println("    trajectories identical (sol == sol): ", p_dsl.sol == p_roundtrip.sol,
-        "  ⇒ build/load → export → reload is loss-free; a model is DATA in both directions.")
+println(
+    "    trajectories identical (sol == sol): ", p_dsl.sol == p_roundtrip.sol,
+    "  ⇒ build/load → export → reload is loss-free; a model is DATA in both directions."
+)
 # Idempotency: exporting the reload reproduces the same document (round-trip is a fixed point).
-println("    export idempotent (re-export == export)? ",
-        JSON.parse(to_json_model(p_roundtrip)) == JSON.parse(exported))
+println(
+    "    export idempotent (re-export == export)? ",
+    JSON.parse(to_json_model(p_roundtrip)) == JSON.parse(exported)
+)
 
 # (h) the run's OUTPUT (the solution trajectory) is a SEPARATE artifact from the model document —
 # the model is the reproducible input, the trajectory is its result (ADR 0005 §76).
 soltable = @export_solution_as_table p_fromfile           # the trajectory as a DataFrame
-println("(h) solution trajectory exported as a ", size(soltable, 1), "×", size(soltable, 2),
-        " DataFrame via @export_solution_as_table (the run OUTPUT, distinct from the model).")
+println(
+    "(h) solution trajectory exported as a ", size(soltable, 1), "×", size(soltable, 2),
+    " DataFrame via @export_solution_as_table (the run OUTPUT, distinct from the model)."
+)
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §7. Checkpoint & replay — dump_state / restore + reinit determinism
@@ -612,11 +665,11 @@ println("(h) solution trajectory exported as a ", size(soltable, 1), "×", size(
 function instant_pipeline()
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
-        name => adv12, cycletime => 0.0, probability => 1.0   # ct=0 ⇒ clean boundary every tick
+            @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+            name => adv12, cycletime => 0.0, probability => 1.0   # ct=0 ⇒ clean boundary every tick
         @deterministic(1.0),
-        @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
-        name => adv23, cycletime => 0.0, probability => 1.0
+            @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+            name => adv23, cycletime => 0.0, probability => 1.0
     end
     register_structured_species!(net, :Project)
     return net
@@ -624,52 +677,68 @@ end
 
 banner("§7. Checkpoint & replay (dump_state / restore + reinit determinism)")
 spec = instant_pipeline()
-cp_pop() = [PopulationEntry(:Project, :Project; count = 4,
-    attributes = Dict(:phase => QuoteNode(:Phase1), :npv => 150.0))]
-pc = ReactionNetworkProblem(spec; tspan = 10, dt = 1.0, seed = 1,
-    registry = REGISTRY, population = cp_pop())
+cp_pop() = [
+    PopulationEntry(
+        :Project, :Project; count = 4,
+        attributes = Dict(:phase => QuoteNode(:Phase1), :npv => 150.0)
+    ),
+]
+pc = ReactionNetworkProblem(
+    spec; tspan = 10, dt = 1.0, seed = 1,
+    registry = REGISTRY, population = cp_pop()
+)
 simulate(pc, 2)                          # step to a clean boundary (ct=0 ⇒ no in-flight)
-println("Simulated 2 ticks. ongoing_transitions empty? ", isempty(pc.ongoing_transitions),
-        "   t = ", pc.t)
+println(
+    "Simulated 2 ticks. ongoing_transitions empty? ", isempty(pc.ongoing_transitions),
+    "   t = ", pc.t
+)
 d = dump_state(pc)
 println("dump_state: t=$(d.t), $(length(d.tokens)) tokens captured (eval-free, JSON-able).")
 pc2 = restore(spec, d; registry = REGISTRY)
 println("restore  : t=$(pc2.t), tokens=$(length(livetokens(pc2))), u matches? ", pc2.u == pc.u)
 simulate(pc)                             # resume the original
 simulate(pc2)                            # resume the restored copy
-println("Resume both to t=10 — continuation matches? ", phases_of(pc) == phases_of(pc2),
-        "   (", phases_of(pc), ")")
+println(
+    "Resume both to t=10 — continuation matches? ", phases_of(pc) == phases_of(pc2),
+    "   (", phases_of(pc), ")"
+)
 
 # reinit determinism: same model + seed ⇒ identical trajectory after a reset.
-pr = ReactionNetworkProblem(pipeline_model(); tspan = 6, dt = 1.0, seed = 3,
-    registry = REGISTRY, population = explicit_portfolio())
+pr = ReactionNetworkProblem(
+    pipeline_model(); tspan = 6, dt = 1.0, seed = 3,
+    registry = REGISTRY, population = explicit_portfolio()
+)
 simulate(pr); sol1 = copy(pr.sol); ph1 = phases_of(pr)
 AlgebraicAgents._reinit!(pr)             # reset state + rebuild t=0 population + re-arm once-rules
 simulate(pr)
-println("reinit replay: trajectory reproduced (sol == sol)? ", pr.sol == sol1,
-        "   final phases reproduced? ", phases_of(pr) == ph1)
+println(
+    "reinit replay: trajectory reproduced (sol == sol)? ", pr.sol == sol1,
+    "   final phases reproduced? ", phases_of(pr) == ph1
+)
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §8. Recap — production & agentic capabilities, and the ADRs they realize
 # ════════════════════════════════════════════════════════════════════════════════════════
 banner("§8. Recap")
-println("""
-We toured, on ONE small R&D portfolio, the engine's production & agentic machinery:
+println(
+    """
+    We toured, on ONE small R&D portfolio, the engine's production & agentic machinery:
 
-  §0  Structured tokens          first-class project entities (attributes + identity)   ADR 0006/0008
-  §1  Phase-as-attribute + pop[]  one :Project kind, phase is a field; declarative input  ADR 0008/0007
-  §2  Predicate selection         @select(npv > θ) binds a subset; deterministic ties     ADR 0008
-  §3  In-model decision rule      a once-Rule lever: SetSpecies+SetParams+AddToken in Seq  ADR 0010
-  §4  Genesis as a product        ∅ --> @structured(:Kind, …): a token BORN on the RHS      ADR 0006/0008
-  §5  Population write            SetTokens(@field) revalues a selected sub-population      ADR 0011
-  §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
-  §7  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007
+      §0  Structured tokens          first-class project entities (attributes + identity)   ADR 0006/0008
+      §1  Phase-as-attribute + pop[]  one :Project kind, phase is a field; declarative input  ADR 0008/0007
+      §2  Predicate selection         @select(npv > θ) binds a subset; deterministic ties     ADR 0008
+      §3  In-model decision rule      a once-Rule lever: SetSpecies+SetParams+AddToken in Seq  ADR 0010
+      §4  Genesis as a product        ∅ --> @structured(:Kind, …): a token BORN on the RHS      ADR 0006/0008
+      §5  Population write            SetTokens(@field) revalues a selected sub-population      ADR 0011
+      §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
+      §7  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007
 
-The through-line: a model — species, pipeline, levers, and starting portfolio — is reproducible
-DATA, fully determined by (model, population, rules, seed). A token can enter the run three ways —
-declaratively at t=0 (population[], §1), imperatively via a rule action (AddToken, §3), or as a
-first-class transition product (@structured, §4) — the decision logic lives IN the model as typed
-Rules, the model serializes to an eval-free document an untrusted author can safely produce, and
-any point of a run can be checkpointed and replayed bit-for-bit.
-""")
+    The through-line: a model — species, pipeline, levers, and starting portfolio — is reproducible
+    DATA, fully determined by (model, population, rules, seed). A token can enter the run three ways —
+    declaratively at t=0 (population[], §1), imperatively via a rule action (AddToken, §3), or as a
+    first-class transition product (@structured, §4) — the decision logic lives IN the model as typed
+    Rules, the model serializes to an eval-free document an untrusted author can safely produce, and
+    any point of a run can be checkpointed and replayed bit-for-bit.
+    """
+)
 println("Done.")

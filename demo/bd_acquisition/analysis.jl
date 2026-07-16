@@ -37,7 +37,7 @@ tokens(prob) = collect(values(inners(getagent(prob, "structured"))))
 const YEARS_TO_MARKET = Dict(
     :Discovery => 9.0, :Phase1 => 7.0, :Phase2 => 5.0, :Phase3 => 3.0, :Filed => 1.0, :Market => 0.0,
 )
-function portfolio_rnpv(prob; discount = 0.10, acq_price = 0.0)
+function portfolio_rnpv(prob; discount = 0.1, acq_price = 0.0)
     gross = 0.0
     for t in tokens(prob)
         is_active(t) || continue
@@ -97,20 +97,20 @@ end
 # Cross-run means/SEs read straight off the engine `summarize` (mean + sem = std/√n). One metric
 # closure per headline scalar; `acq_price` flows into the rNPV metric.
 mean_rnpv(ens; acq_price = 0.0) = RD.summarize(ens, m_rnpv(acq_price)).mean
-sem_rnpv(ens; acq_price = 0.0)  = RD.summarize(ens, m_rnpv(acq_price)).sem
+sem_rnpv(ens; acq_price = 0.0) = RD.summarize(ens, m_rnpv(acq_price)).sem
 mean_launches(ens) = RD.summarize(ens, m_launches).mean
-sem_launches(ens)  = RD.summarize(ens, m_launches).sem
-p_launch(ens)      = RD.summarize(ens, prob -> m_launches(prob) >= 1 ? 1.0 : 0.0).mean
+sem_launches(ens) = RD.summarize(ens, m_launches).sem
+p_launch(ens) = RD.summarize(ens, prob -> m_launches(prob) >= 1 ? 1.0 : 0.0).mean
 mean_peak_capital(ens) = RD.summarize(ens, m_peak_capital).mean
-mean_cash_trough(ens)  = RD.summarize(ens, m_cash_trough).mean
-mean_sci_trough(ens)   = RD.summarize(ens, m_sci_trough).mean
+mean_cash_trough(ens) = RD.summarize(ens, m_cash_trough).mean
+mean_sci_trough(ens) = RD.summarize(ens, m_sci_trough).mean
 
 # Per-member metric vectors (the raw distributions the figures/export need) — read off the engine
 # ensemble's `members` in seed order, applying the same metric closures.
 rnpv_samples(ens; acq_price = 0.0) = Float64[m_rnpv(acq_price)(m) for m in ens.members]
 launch_samples(ens) = Float64[m_launches(m) for m in ens.members]
 cash_trough_samples(ens) = Float64[m_cash_trough(m) for m in ens.members]
-sci_trough_samples(ens)  = Float64[m_sci_trough(m) for m in ens.members]
+sci_trough_samples(ens) = Float64[m_sci_trough(m) for m in ens.members]
 
 # Δ-rNPV treatment effect: the engine's unpaired `treatment_effect` (difference of means with
 # se = √(var_b/n_b + var_d/n_d), MVP §4.1 finding A — the two scenarios desync the shared RNG after
@@ -120,8 +120,10 @@ sci_trough_samples(ens)  = Float64[m_sci_trough(m) for m in ens.members]
 function treatment_effect(baseline_ens, deal_ens; deal_price = 0.0)
     te = RD.treatment_effect(baseline_ens, deal_ens, m_rnpv(0.0))    # gross (price-free) Δ + SE
     tl = RD.treatment_effect(baseline_ens, deal_ens, m_launches)
-    pl = RD.treatment_effect(baseline_ens, deal_ens,
-                             prob -> m_launches(prob) >= 1 ? 1.0 : 0.0)
+    pl = RD.treatment_effect(
+        baseline_ens, deal_ens,
+        prob -> m_launches(prob) >= 1 ? 1.0 : 0.0
+    )
     return (
         delta_rnpv = te.delta - deal_price,                          # net of the acquisition price
         se_delta_rnpv = te.se,                                       # SE invariant to a constant offset

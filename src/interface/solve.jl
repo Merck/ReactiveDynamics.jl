@@ -58,7 +58,7 @@ macro agentize(netex, args...)
         push!(kwargs, Expr(:kw, :name, string(netex)))
     end
 
-    quote
+    return quote
         ReactionNetworkProblem($(esc(netex)), $(args...); $(kwargs...))
     end
 end

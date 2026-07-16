@@ -42,8 +42,12 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 function trans_signature(m, tname)
     ti = findfirst(i -> m[i, :transName] === tname, collect(row_ids(m, :T)))
     ti === nothing && return nothing
-    rows = sort([(string(specname(m, r.species)), r.side, r.stoich)
-                 for r in reactant_specs(m) if r.trans == ti && r.species > 0])
+    rows = sort(
+        [
+            (string(specname(m, r.species)), r.side, r.stoich)
+                for r in reactant_specs(m) if r.trans == ti && r.species > 0
+        ]
+    )
     return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
 end
 
@@ -62,11 +66,11 @@ banner("§1. The coarse portfolio in ONE block: @pipeline (§D)")
 # transition names come out as `flow_<From>_<To>`.
 
 build_portfolio() = @pipeline Project begin
-    Discovery => Phase1 : (ct = 1.0, pos = 0.45)
-    Phase1    => Phase2 : (ct = 1.5, pos = 0.60)
-    Phase2    => Phase3 : (ct = 2.0, pos = 0.40)
-    Phase3    => Filed  : (ct = 3.0, pos = 0.65)
-    Filed     => Market : (ct = 1.0, pos = 0.90)
+    Discovery => Phase1:(ct = 1.0, pos = 0.45)
+    Phase1 => Phase2:(ct = 1.5, pos = 0.6)
+    Phase2 => Phase3:(ct = 2.0, pos = 0.4)
+    Phase3 => Filed:(ct = 3.0, pos = 0.65)
+    Filed => Market:(ct = 1.0, pos = 0.9)
 end
 
 portfolio = build_portfolio()
@@ -75,19 +79,25 @@ RD.populate_reactant_specs!(portfolio)   # promote the incidence table so we can
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
 println("  species (phases)   : ", portfolio[:, :specName])
 println("  transitions        : ", [portfolio[i, :transName] for i in row_ids(portfolio, :T)])
-println("  parts              : ", nrows(portfolio, :S), " species, ",
-        nrows(portfolio, :T), " transitions")
+println(
+    "  parts              : ", nrows(portfolio, :S), " species, ",
+    nrows(portfolio, :T), " transitions"
+)
 println("  per-edge (ct, pos) :")
 for i in row_ids(portfolio, :T)
-    @printf("    %-24s ct=%.1f  pos=%.2f\n",
-            portfolio[i, :transName], portfolio[i, :transCycleTime],
-            portfolio[i, :transProbOfSuccess])
+    @printf(
+        "    %-24s ct=%.1f  pos=%.2f\n",
+        portfolio[i, :transName], portfolio[i, :transCycleTime],
+        portfolio[i, :transProbOfSuccess]
+    )
 end
 # A flow transition consumes its upstream phase on the LHS (the §2.8 flow idiom).
 p2ix = find_index(:Phase2, portfolio)
 consumes_phase2 = any(r -> r.species == p2ix && r.side === :lhs, reactant_specs(portfolio))
-println("  flow_Phase2_Phase3 consumes :Phase2 on its LHS? ", consumes_phase2,
-        "  (token-gated genesis, §2.8)")
+println(
+    "  flow_Phase2_Phase3 consumes :Phase2 on its LHS? ", consumes_phase2,
+    "  (token-gated genesis, §2.8)"
+)
 
 
 # =============================================================================
@@ -114,8 +124,8 @@ banner("§2. Reusable fragments + open ports: @process / @port / @compose (§A,�
 end
 
 # Two instances of the SAME fragment, wired head-to-tail on the shared species `Lead`.
-screening = phase_gate(:Screen, :Lead;      ct = 0.5, pos = 0.85)
-lead_opt  = phase_gate(:Lead,   :Candidate;  ct = 0.7, pos = 0.80)
+screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
+lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
 println("  species   : ", screening[:, :specName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
@@ -125,20 +135,26 @@ println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transPro
 # ports (single-fragment), Lead is the join seam.
 @port screening  Screen => input   Lead => output
 @port lead_opt   Lead => input      Candidate => output
-println("port roles — screening: Screen=", port_role(screening, :Screen),
-        " Lead=", port_role(screening, :Lead),
-        " | lead_opt: Lead=", port_role(lead_opt, :Lead),
-        " Candidate=", port_role(lead_opt, :Candidate))
+println(
+    "port roles — screening: Screen=", port_role(screening, :Screen),
+    " Lead=", port_role(screening, :Lead),
+    " | lead_opt: Lead=", port_role(lead_opt, :Lead),
+    " Candidate=", port_role(lead_opt, :Candidate)
+)
 
 chain = @compose screening lead_opt
 RD.populate_reactant_specs!(chain)
 names_chain = chain[:, :specName]
 println("@compose screening lead_opt:")
 println("  merged species : ", names_chain)
-println("  shared port `Lead` collapsed to ONE species? ",
-        count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)")
-println("  private species namespaced per fragment (f1__Screen, f2__Candidate)? ",
-        (:f1__Screen in names_chain) && (:f2__Candidate in names_chain))
+println(
+    "  shared port `Lead` collapsed to ONE species? ",
+    count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
+)
+println(
+    "  private species namespaced per fragment (f1__Screen, f2__Candidate)? ",
+    (:f1__Screen in names_chain) && (:f2__Candidate in names_chain)
+)
 println("  transitions preserved : ", nrows(chain, :T), " (1 + 1, none lost)")
 # The promoted incidence table is FK-EXACT: every static FK resolves, and both
 # transitions route through the single shared `Lead` index.
@@ -169,10 +185,10 @@ banner("§3. REFINE one transition — the multifidelity payoff (§B)  ★ headl
 # COMPATIBLE (Invariant 1): every OTHER transition is structurally untouched.
 
 phase2_detail = @reaction_network begin
-    1.0, p2_in  --> screen,  name => screening,   cycletime => 0.5, probability => 0.85
-    1.0, screen --> leadopt, name => lead_opt,    cycletime => 0.7, probability => 0.80
-    1.0, leadopt --> tox,    name => tox_study,   cycletime => 0.5, probability => 0.85
-    1.0, tox    --> p2_out,  name => filing_prep, cycletime => 0.3, probability => 0.70
+    1.0, p2_in  --> screen, name => screening, cycletime => 0.5, probability => 0.85
+    1.0, screen --> leadopt, name => lead_opt, cycletime => 0.7, probability => 0.8
+    1.0, leadopt --> tox, name => tox_study, cycletime => 0.5, probability => 0.85
+    1.0, tox    --> p2_out, name => filing_prep, cycletime => 0.3, probability => 0.7
 end
 # The sub-model's boundary: `p2_in` is where it plugs onto the parent's Phase2,
 # `p2_out` onto Phase3. Everything else (screen/leadopt/tox) is :private → namespaced.
@@ -182,11 +198,13 @@ RD.set_port_role!(phase2_detail, :p2_in => :input, :p2_out => :output)
 phase2_ix_before = find_index(:Phase2, portfolio)
 phase3_ix_before = find_index(:Phase3, portfolio)
 
-refined = refine(portfolio, :flow_Phase2_Phase3, phase2_detail;
-                 ports = Dict(:Phase2 => :p2_in, :Phase3 => :p2_out))
+refined = refine(
+    portfolio, :flow_Phase2_Phase3, phase2_detail;
+    ports = Dict(:Phase2 => :p2_in, :Phase3 => :p2_out)
+)
 
 tnames_before = [portfolio[i, :transName] for i in row_ids(portfolio, :T)]
-tnames_after  = [refined[i, :transName]   for i in row_ids(refined, :T)]
+tnames_after = [refined[i, :transName]   for i in row_ids(refined, :T)]
 println("transitions BEFORE refine : ", tnames_before)
 println("transitions AFTER  refine : ", tnames_after)
 println("  coarse `flow_Phase2_Phase3` removed?      ", !(:flow_Phase2_Phase3 in tnames_after))
@@ -194,18 +212,24 @@ println("  sub-steps spliced in (namespaced …__sub__…)?")
 for n in tnames_after
     occursin("__sub__", string(n)) && println("      ", n)
 end
-println("  refine was NON-mutating (coarse still intact)? ",
-        :flow_Phase2_Phase3 in tnames_before)
+println(
+    "  refine was NON-mutating (coarse still intact)? ",
+    :flow_Phase2_Phase3 in tnames_before
+)
 
 # ── The plug-compatibility headline: the boundary is unchanged and every OTHER
 #    transition is byte-for-byte structurally identical before and after. ──
 println()
 println("PLUG-COMPATIBILITY (Invariant 1):")
 println("  boundary species keep their indices:")
-println("    Phase2 : ", phase2_ix_before, " → ", find_index(:Phase2, refined),
-        "   Phase3 : ", phase3_ix_before, " → ", find_index(:Phase3, refined))
-println("    (and their names — Phase2, Phase3 still present: ",
-        (:Phase2 in refined[:, :specName]) && (:Phase3 in refined[:, :specName]), ")")
+println(
+    "    Phase2 : ", phase2_ix_before, " → ", find_index(:Phase2, refined),
+    "   Phase3 : ", phase3_ix_before, " → ", find_index(:Phase3, refined)
+)
+println(
+    "    (and their names — Phase2, Phase3 still present: ",
+    (:Phase2 in refined[:, :specName]) && (:Phase3 in refined[:, :specName]), ")"
+)
 
 untouched = [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase3_Filed, :flow_Filed_Market]
 println("  every OTHER transition is structurally IDENTICAL before/after:")
@@ -213,14 +237,18 @@ identical = [tn => (trans_signature(portfolio, tn) == trans_signature(refined, t
 for (tn, same) in identical
     @printf("    %-24s identical? %s\n", tn, same)
 end
-println("  ⇒ all untouched transitions identical: ", all(last, identical),
-        "  — the rest of the portfolio does not notice the zoom.")
+println(
+    "  ⇒ all untouched transitions identical: ", all(last, identical),
+    "  — the rest of the portfolio does not notice the zoom."
+)
 
 # The sub's PRIVATE species are namespaced (not leaked as bare names).
-println("  sub-private species namespaced (bare `screen` NOT present): ",
-        !(:screen in refined[:, :specName]),
-        " ; namespaced form present: ",
-        any(n -> occursin("__sub__screen", string(n)), refined[:, :specName]))
+println(
+    "  sub-private species namespaced (bare `screen` NOT present): ",
+    !(:screen in refined[:, :specName]),
+    " ; namespaced form present: ",
+    any(n -> occursin("__sub__screen", string(n)), refined[:, :specName])
+)
 
 
 # =============================================================================
@@ -240,19 +268,19 @@ banner("§4. Advisory boundary check: refinement_diagnostics (§C)")
 
 # The coarse `flow_Phase2_Phase3` claimed (ct=2.0, pos=0.40). Check the detailed
 # sub-model we actually spliced in against those coarse attributes.
-coarse_attrs = Dict(:transCycleTime => 2.0, :transProbOfSuccess => 0.40)
+coarse_attrs = Dict(:transCycleTime => 2.0, :transProbOfSuccess => 0.4)
 warns_ok = RD.refinement_diagnostics(phase2_detail, coarse_attrs)
 println("refinement_diagnostics(phase2_detail, coarse (ct=2.0, pos=0.40)):")
-Σct  = 0.5 + 0.7 + 0.5 + 0.3           # = 2.0  ≈ coarse ct
-Πpos = 0.85 * 0.80 * 0.85 * 0.70       # ≈ 0.40 ≈ coarse pos
+Σct = 0.5 + 0.7 + 0.5 + 0.3           # = 2.0  ≈ coarse ct
+Πpos = 0.85 * 0.8 * 0.85 * 0.7       # ≈ 0.40 ≈ coarse pos
 @printf("  Σ sub cycletimes = %.2f (≈ coarse 2.0) ; Π sub PoS = %.3f (≈ coarse 0.40)\n", Σct, Πpos)
 println("  warnings: ", isempty(warns_ok) ? "none — well-matched, SILENT" : warns_ok)
 
 # Now a DELIBERATELY DRIFTED refinement: cycletimes summing to 6.0 and PoS 0.81,
 # both far from the coarse (2.0, 0.40) → both aggregate checks fire.
 drifted = @reaction_network begin
-    1.0, p2_in --> mid,    name => slow_a, cycletime => 3.0, probability => 0.90
-    1.0, mid   --> p2_out, name => slow_b, cycletime => 3.0, probability => 0.90
+    1.0, p2_in --> mid, name => slow_a, cycletime => 3.0, probability => 0.9
+    1.0, mid   --> p2_out, name => slow_b, cycletime => 3.0, probability => 0.9
 end
 RD.set_port_role!(drifted, :p2_in => :input, :p2_out => :output)
 warns_drift = RD.refinement_diagnostics(drifted, coarse_attrs)
@@ -286,27 +314,37 @@ banner("§5. Round-tripping the ladder: abstract (§B) and JSON (Invariant 5)")
 # NOT garbage-collect the now-orphaned internal species — those rows remain, inert.)
 
 sub_transitions = [n for n in tnames_after if occursin("__sub__", string(n))]
-collapsed = RD.abstract_transitions(refined, sub_transitions, :flow_Phase2_Phase3;
+collapsed = RD.abstract_transitions(
+    refined, sub_transitions, :flow_Phase2_Phase3;
     lhs = [:Phase2], rhs = [:Phase3],
-    attrs = Dict(:transCycleTime => 2.0, :transProbOfSuccess => 0.40))
-println("abstract_transitions collapsed the ", length(sub_transitions),
-        " sub-steps back into one coarse `flow_Phase2_Phase3`:")
+    attrs = Dict(:transCycleTime => 2.0, :transProbOfSuccess => 0.4)
+)
+println(
+    "abstract_transitions collapsed the ", length(sub_transitions),
+    " sub-steps back into one coarse `flow_Phase2_Phase3`:"
+)
 println("  transitions : ", [collapsed[i, :transName] for i in row_ids(collapsed, :T)])
-println("  coarse `flow_Phase2_Phase3` restored? ",
-        :flow_Phase2_Phase3 in [collapsed[i, :transName] for i in row_ids(collapsed, :T)],
-        " ; T count back to ", nrows(collapsed, :T),
-        " (coarse was ", nrows(portfolio, :T), ")")
+println(
+    "  coarse `flow_Phase2_Phase3` restored? ",
+    :flow_Phase2_Phase3 in [collapsed[i, :transName] for i in row_ids(collapsed, :T)],
+    " ; T count back to ", nrows(collapsed, :T),
+    " (coarse was ", nrows(portfolio, :T), ")"
+)
 
 # Invariant 5 — a refined spec serializes / reloads as a FLAT model: refinement left
 # no runtime trace, it is a plain ModelSpec.
 @prob_params refined
-json = RD.to_json_model(refined; meta = Dict{String,Any}("tspan" => 5.0))
+json = RD.to_json_model(refined; meta = Dict{String, Any}("tspan" => 5.0))
 reloaded = RD.build_network_from_dict(RD.JSON.parse(json))
 println("JSON round-trip of the refined model (Invariant 5 — no runtime trace):")
-println("  species : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
-        "   transitions : ", nrows(refined, :T), " → reload ", nrows(reloaded, :T))
-println("  same species set after reload? ",
-        Set(reloaded[:, :specName]) == Set(refined[:, :specName]))
+println(
+    "  species : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
+    "   transitions : ", nrows(refined, :T), " → reload ", nrows(reloaded, :T)
+)
+println(
+    "  same species set after reload? ",
+    Set(reloaded[:, :specName]) == Set(refined[:, :specName])
+)
 
 
 # =============================================================================
@@ -322,8 +360,10 @@ banner("§6. It's just a ModelSpec: construct + simulate the refined pipeline")
 
 const SEED = 20260710
 function build_sim_model()
-    m = refine(build_portfolio(), :flow_Phase2_Phase3, phase2_detail;
-               ports = Dict(:Phase2 => :p2_in, :Phase3 => :p2_out))
+    m = refine(
+        build_portfolio(), :flow_Phase2_Phase3, phase2_detail;
+        ports = Dict(:Phase2 => :p2_in, :Phase3 => :p2_out)
+    )
     @prob_init m Discovery = 60
     @prob_params m
     @prob_meta m tspan = 30 dt = 1.0
@@ -349,29 +389,31 @@ println("  detailed Phase-2 sub-net pools present in prob.sol: ", subcols)
 # =============================================================================
 banner("§7. Recap — the granularity ladder ADR 0009 / CONTRACT §11 gives you")
 # =============================================================================
-println("""
-  §1  @pipeline — a chain of phases authored in ONE block, each edge a `flow`
-      routing transition carrying (ct, pos): the coarse portfolio, compactly.
-  §2  @process / @port / @compose — a reusable parameterized fragment, instantiated
-      twice and composed by DECLARED open ports (output↔input identified by FK-
-      repoint, private namespaced, shared bare) — compositionality without
-      remembering which names to @equalize.
-  §3  ★ refine — substitute a finer sub-model for one coarse transition, PLUG-
-      COMPATIBLY: the boundary species keep their indices/names, so every OTHER
-      transition is structurally untouched. The portfolio doesn't notice Phase-2
-      became four sub-steps. (Non-mutating; refine! is the in-place form.)
-  §4  refinement_diagnostics — ADVISORY §C checks (dangling ports; Σct / ΠPoS drift
-      on a linear chain) that make the ladder auditable, WITHOUT claiming behavioral
-      equivalence (Invariant 6 — warnings you may override).
-  §5  abstract — climb back UP the ladder (collapse sub-steps into one coarse
-      transition); and JSON round-trip proving a refined spec reloads as a FLAT model
-      (Invariant 5 — refinement leaves no runtime trace).
-  §6  …and it's just a ModelSpec: the refined pipeline constructs + simulates like any
-      hand-written flat model, reproducibly from (model, seed) (Invariant 4 closure).
+println(
+    """
+      §1  @pipeline — a chain of phases authored in ONE block, each edge a `flow`
+          routing transition carrying (ct, pos): the coarse portfolio, compactly.
+      §2  @process / @port / @compose — a reusable parameterized fragment, instantiated
+          twice and composed by DECLARED open ports (output↔input identified by FK-
+          repoint, private namespaced, shared bare) — compositionality without
+          remembering which names to @equalize.
+      §3  ★ refine — substitute a finer sub-model for one coarse transition, PLUG-
+          COMPATIBLY: the boundary species keep their indices/names, so every OTHER
+          transition is structurally untouched. The portfolio doesn't notice Phase-2
+          became four sub-steps. (Non-mutating; refine! is the in-place form.)
+      §4  refinement_diagnostics — ADVISORY §C checks (dangling ports; Σct / ΠPoS drift
+          on a linear chain) that make the ladder auditable, WITHOUT claiming behavioral
+          equivalence (Invariant 6 — warnings you may override).
+      §5  abstract — climb back UP the ladder (collapse sub-steps into one coarse
+          transition); and JSON round-trip proving a refined spec reloads as a FLAT model
+          (Invariant 5 — refinement leaves no runtime trace).
+      §6  …and it's just a ModelSpec: the refined pipeline constructs + simulates like any
+          hand-written flat model, reproducibly from (model, seed) (Invariant 4 closure).
 
-  This is the maintainer's ask — "various levels of granularity with more refined
-  dynamics possibly substituted" — realized as cheap, collision-safe, authoring-time
-  structural operations over the ADR-0003 ReactantSpec FK table. All of §11 is
-  FORBIDDEN on a live/stepping model (it reindexes); it operates on a static
-  ReactionNetwork only.
-""")
+      This is the maintainer's ask — "various levels of granularity with more refined
+      dynamics possibly substituted" — realized as cheap, collision-safe, authoring-time
+      structural operations over the ADR-0003 ReactantSpec FK table. All of §11 is
+      FORBIDDEN on a live/stepping model (it reindexes); it operates on a static
+      ReactionNetwork only.
+    """
+)

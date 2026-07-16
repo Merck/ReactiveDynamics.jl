@@ -156,13 +156,13 @@ function normalize_name(acs_name, i::Int, name::Symbol, eqs = [])
         for e in block
             (
                 (i == e[2]) ||
-                (
+                    (
                     e[1] == :catchall &&
-                    (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
+                        (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
                 ) ||
-                (
+                    (
                     e[1] == acs_name &&
-                    (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
+                        (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
                 )
             ) && return block_alias
         end
@@ -174,19 +174,19 @@ end
 matching_name(name::Symbol, parent_name) = [name, Symbol("$(parent_name)__$name")]
 
 expand_name(ex) =
-    if isexpr(ex, :.)
-        reconstruct(ex)
-    elseif isexpr(ex, :macrocall)
-        (
-            if macroname(ex) == :alias
-                [(:alias, ex.args[3])]
-            else
-                [(:catchall, ex.args[3]), (:alias, ex.args[3])]
-            end
-        )
-    else
-        (:catchall, ex)
-    end
+if isexpr(ex, :.)
+    reconstruct(ex)
+elseif isexpr(ex, :macrocall)
+    (
+        if macroname(ex) == :alias
+            [(:alias, ex.args[3])]
+        else
+            [(:catchall, ex.args[3]), (:alias, ex.args[3])]
+        end
+    )
+else
+    (:catchall, ex)
+end
 
 function recursively_get_syms(ex)
     return isexpr(ex, :.) ? [recursively_get_syms(ex.args[1]); ex.args[2].value] : ex
@@ -203,7 +203,7 @@ end
 Parse species equation blocks.
 """
 function get_eqs(eq)
-    if isexpr(eq, :macrocall)
+    return if isexpr(eq, :macrocall)
         expand_name(eq)
     elseif eq isa Expr
         [

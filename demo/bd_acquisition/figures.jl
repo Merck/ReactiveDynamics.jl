@@ -21,10 +21,10 @@ const OUTDIR = joinpath(HERE, "figures")
 isdir(OUTDIR) || mkdir(OUTDIR)
 
 # Brand-ish palette (muted, deck-friendly).
-const NAVY = RGB(0.13, 0.20, 0.36)
-const TEAL = RGB(0.10, 0.52, 0.55)
+const NAVY = RGB(0.13, 0.2, 0.36)
+const TEAL = RGB(0.1, 0.52, 0.55)
 const GOLD = RGB(0.83, 0.62, 0.18)
-const GREY = RGB(0.62, 0.65, 0.70)
+const GREY = RGB(0.62, 0.65, 0.7)
 const RUST = RGB(0.72, 0.34, 0.22)
 
 # ── Run the full grid once and cache the per-scenario engine ensembles ──────────────────
@@ -32,8 +32,10 @@ const RUST = RGB(0.72, 0.34, 0.22)
 # are read with the `*_samples` helpers, the acquisition price netted in the metric closures.
 function run_grid(; root_seed = 2026, nseed = 160)
     scenarios = [:S0, :S1, :S2, :S3, :S4, :S5]
-    Dict(s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
-         for s in scenarios)
+    return Dict(
+        s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
+            for s in scenarios
+    )
 end
 
 function make_figures(; nseed = 160)
@@ -42,7 +44,7 @@ function make_figures(; nseed = 160)
     base = R[:S0]
     price(s) = s == :S0 ? 0.0 : ACQ_PRICE
     rnpv(s) = rnpv_samples(R[s]; acq_price = price(s))          # per-member rNPV vector, price-netted
-    Δ(s)   = treatment_effect(base, R[s]; deal_price = price(s)).delta_rnpv
+    Δ(s) = treatment_effect(base, R[s]; deal_price = price(s)).delta_rnpv
     SEΔ(s) = treatment_effect(base, R[s]; deal_price = price(s)).se_delta_rnpv
 
     # ── Figure 1: Δ-rNPV waterfall (bridge) ──────────────────────────────────────────────
@@ -54,20 +56,24 @@ function make_figures(; nseed = 160)
     marg_pos = Δ(:S3) - s1
     marg_eff = Δ(:S4) - s1
     interaction = Δ(:S5) - (s1 + marg_res + marg_pos + marg_eff)  # super/sub-additivity remainder
-    steps   = ["Baseline\n(S0)", "+ Pipeline\nprograms", "+ Resource\nsynergy",
-               "+ Capability\n/PoS synergy", "+ Op-eff.\nsynergy", "+ Inter-\naction", "Full deal\n(S5)"]
-    incr    = [s1, marg_res, marg_pos, marg_eff, interaction]      # the five additive blocks
-    barcols = [TEAL, GOLD, RUST, GREY, RGB(0.55,0.58,0.63)]
-    base0   = mean_rnpv(base; acq_price = 0.0)
-    total   = base0 + sum(incr)
-    n       = length(steps)
-    hw      = 0.38                                                  # half-width of each bar
+    steps = [
+        "Baseline\n(S0)", "+ Pipeline\nprograms", "+ Resource\nsynergy",
+        "+ Capability\n/PoS synergy", "+ Op-eff.\nsynergy", "+ Inter-\naction", "Full deal\n(S5)",
+    ]
+    incr = [s1, marg_res, marg_pos, marg_eff, interaction]      # the five additive blocks
+    barcols = [TEAL, GOLD, RUST, GREY, RGB(0.55, 0.58, 0.63)]
+    base0 = mean_rnpv(base; acq_price = 0.0)
+    total = base0 + sum(incr)
+    n = length(steps)
+    hw = 0.38                                                  # half-width of each bar
 
-    rect(i, lo, hi) = Shape([i-hw, i+hw, i+hw, i-hw], [lo, lo, hi, hi])
-    p1 = plot(; legend = false, title = "Where the deal's value comes from — Δ-rNPV bridge",
+    rect(i, lo, hi) = Shape([i - hw, i + hw, i + hw, i - hw], [lo, lo, hi, hi])
+    p1 = plot(;
+        legend = false, title = "Where the deal's value comes from — Δ-rNPV bridge",
         ylabel = "risk-adjusted portfolio NPV", size = (980, 560), titlefontsize = 13,
         guidefontsize = 10, tickfontsize = 8, grid = :y, framestyle = :box,
-        xticks = (1:n, steps), xlims = (0.4, n+0.6), bottom_margin = 7Plots.mm, left_margin = 7Plots.mm)
+        xticks = (1:n, steps), xlims = (0.4, n + 0.6), bottom_margin = 7Plots.mm, left_margin = 7Plots.mm
+    )
     # endpoint totals (bar 1 = baseline level, bar n = full-deal level), both float from 0
     plot!(p1, rect(1, 0, base0); fillcolor = NAVY, linecolor = :white, fillalpha = 0.92)
     plot!(p1, rect(n, 0, total); fillcolor = NAVY, linecolor = :white, fillalpha = 0.92)
@@ -78,12 +84,12 @@ function make_figures(; nseed = 160)
     for (k, dv) in enumerate(incr)
         i = k + 1
         lo, hi = runtot, runtot + dv
-        plot!(p1, rect(i, min(lo,hi), max(lo,hi)); fillcolor = barcols[k], linecolor = :white, fillalpha = 0.92)
-        plot!(p1, [i-1+hw, i-hw], [runtot, runtot]; color = GREY, lw = 1, linestyle = :dot)  # connector
-        annotate!(p1, i, max(lo,hi) + 110, text(@sprintf("%+.0f", dv), 8, :black))
+        plot!(p1, rect(i, min(lo, hi), max(lo, hi)); fillcolor = barcols[k], linecolor = :white, fillalpha = 0.92)
+        plot!(p1, [i - 1 + hw, i - hw], [runtot, runtot]; color = GREY, lw = 1, linestyle = :dot)  # connector
+        annotate!(p1, i, max(lo, hi) + 110, text(@sprintf("%+.0f", dv), 8, :black))
         runtot = hi
     end
-    plot!(p1, [n-1+hw, n-hw], [runtot, runtot]; color = GREY, lw = 1, linestyle = :dot)
+    plot!(p1, [n - 1 + hw, n - hw], [runtot, runtot]; color = GREY, lw = 1, linestyle = :dot)
     savefig(p1, joinpath(OUTDIR, "delta_waterfall.png"))
 
     # ── Figure 2: synergy decomposition with ±1 SE bars ─────────────────────────────────
@@ -94,21 +100,23 @@ function make_figures(; nseed = 160)
     # SEs: S1 and S5 are vs-S0 SEs; marginals use the paired SE over S1. The per-member rNPV vectors
     # are price-netted and seed-aligned (member k in every scenario shares seed hash((2026,k))), so a
     # per-seed paired difference is well-defined.
-    paired_se(s) = (d = rnpv(s) .- rnpv(:S1); std(d)/sqrt(length(d)))
+    paired_se(s) = (d = rnpv(s) .- rnpv(:S1); std(d) / sqrt(length(d)))
     ses2 = [SEΔ(:S1), paired_se(:S2), paired_se(:S3), paired_se(:S4), SEΔ(:S5)]
     cols2 = [TEAL, GOLD, RUST, GREY, NAVY]
     n2 = length(labels2)
-    p2 = plot(; legend = false, title = "Synergy decomposition (Δ-rNPV, ±1 SE)",
+    p2 = plot(;
+        legend = false, title = "Synergy decomposition (Δ-rNPV, ±1 SE)",
         ylabel = "Δ risk-adjusted NPV (S1 & S5 vs baseline; synergies vs S1)", size = (960, 560),
         titlefontsize = 13, guidefontsize = 9, tickfontsize = 9, grid = :y, framestyle = :box,
         xticks = (1:n2, labels2), xlims = (0.4, n2 + 0.6), ylims = (0, maximum(vals2) * 1.18),
-        bottom_margin = 7Plots.mm, left_margin = 7Plots.mm)
-    rect2(i, h) = Shape([i-0.4, i+0.4, i+0.4, i-0.4], [0, 0, h, h])
+        bottom_margin = 7Plots.mm, left_margin = 7Plots.mm
+    )
+    rect2(i, h) = Shape([i - 0.4, i + 0.4, i + 0.4, i - 0.4], [0, 0, h, h])
     for (i, v) in enumerate(vals2)
         plot!(p2, rect2(i, v); fillcolor = cols2[i], linecolor = :white, fillalpha = 0.92)
         plot!(p2, [i, i], [v - ses2[i], v + ses2[i]]; color = :black, lw = 1.5)             # error bar
-        plot!(p2, [i-0.08, i+0.08], [v + ses2[i], v + ses2[i]]; color = :black, lw = 1.5)    # top cap
-        plot!(p2, [i-0.08, i+0.08], [v - ses2[i], v - ses2[i]]; color = :black, lw = 1.5)    # bottom cap
+        plot!(p2, [i - 0.08, i + 0.08], [v + ses2[i], v + ses2[i]]; color = :black, lw = 1.5)    # top cap
+        plot!(p2, [i - 0.08, i + 0.08], [v - ses2[i], v - ses2[i]]; color = :black, lw = 1.5)    # bottom cap
         annotate!(p2, i, v + ses2[i] + 55, text(@sprintf("%+.0f", v), 9, :black))
     end
     annotate!(p2, 3, vals2[3] + ses2[3] + 200, text("← the BD insight:\nvalue lifts the pipeline\nyou ALREADY own", 8, RUST, :center))
@@ -122,17 +130,24 @@ function make_figures(; nseed = 160)
     r5 = rnpv(:S5)
     edges = range(min(minimum(r0), minimum(r5)), max(maximum(r0), maximum(r5)); length = 28)
     # headroom: tallest bin (the baseline mode) must not clip under the legend
-    ymax = 1.18 * maximum(vcat(
-        [count(v -> edges[b] <= v < edges[b+1], r0) for b in 1:length(edges)-1],
-        [count(v -> edges[b] <= v < edges[b+1], r5) for b in 1:length(edges)-1]))
-    p3 = histogram(r0; bins = edges, color = GREY, alpha = 0.55, linecolor = :white,
+    ymax = 1.18 * maximum(
+        vcat(
+            [count(v -> edges[b] <= v < edges[b + 1], r0) for b in 1:(length(edges) - 1)],
+            [count(v -> edges[b] <= v < edges[b + 1], r5) for b in 1:(length(edges) - 1)]
+        )
+    )
+    p3 = histogram(
+        r0; bins = edges, color = GREY, alpha = 0.55, linecolor = :white,
         label = @sprintf("Baseline S0 (mean %.0f)", mean(r0)),
         title = "Outcomes are distributions, not points (per-seed rNPV)",
         xlabel = "portfolio rNPV", ylabel = "ensemble members", size = (880, 540),
         titlefontsize = 13, guidefontsize = 10, tickfontsize = 9, framestyle = :box, ylims = (0, ymax),
-        legend = :topright, left_margin = 6Plots.mm, bottom_margin = 5Plots.mm)
-    histogram!(p3, r5; bins = edges, color = TEAL, alpha = 0.55, linecolor = :white,
-        label = @sprintf("Full deal S5 (mean %.0f)", mean(r5)))
+        legend = :topright, left_margin = 6Plots.mm, bottom_margin = 5Plots.mm
+    )
+    histogram!(
+        p3, r5; bins = edges, color = TEAL, alpha = 0.55, linecolor = :white,
+        label = @sprintf("Full deal S5 (mean %.0f)", mean(r5))
+    )
     vline!(p3, [mean(r0)]; color = GREY, lw = 2, linestyle = :dash, label = "")
     vline!(p3, [mean(r5)]; color = TEAL, lw = 2, linestyle = :dash, label = "")
     savefig(p3, joinpath(OUTDIR, "rnpv_distribution.png"))
@@ -146,15 +161,19 @@ function make_figures(; nseed = 160)
     scen = [:S0, :S1, :S2, :S3, :S4, :S5]
     names4 = ["S0", "S1", "S2", "S3", "S4", "S5"]
     cashlo = [mean_cash_trough(R[s]) for s in scen]
-    scilo  = [mean_sci_trough(R[s]) for s in scen]
-    p4 = plot(names4, cashlo; color = GOLD, lw = 3, marker = :circle, markersize = 6,
+    scilo = [mean_sci_trough(R[s]) for s in scen]
+    p4 = plot(
+        names4, cashlo; color = GOLD, lw = 3, marker = :circle, markersize = 6,
         label = "cash trough (budget pool low-water mark)", legend = :topleft,
         ylabel = "pool units remaining at the trough",
         title = "Both constraints bind until the FULL deal lifts them off the floor",
         size = (920, 520), titlefontsize = 12, guidefontsize = 10, tickfontsize = 9,
-        ylims = (0, 45), framestyle = :box, left_margin = 6Plots.mm, bottom_margin = 4Plots.mm)
-    plot!(p4, names4, scilo; color = TEAL, lw = 3, marker = :diamond, markersize = 6,
-        label = "scientist trough (headcount pool low-water mark)")
+        ylims = (0, 45), framestyle = :box, left_margin = 6Plots.mm, bottom_margin = 4Plots.mm
+    )
+    plot!(
+        p4, names4, scilo; color = TEAL, lw = 3, marker = :diamond, markersize = 6,
+        label = "scientist trough (headcount pool low-water mark)"
+    )
     hline!(p4, [0]; color = RUST, lw = 1, linestyle = :dash, label = "")
     annotate!(p4, 3.5, 26, text("pinned near the floor through S4 — resource synergy alone (S2)", 7, NAVY, :center))
     annotate!(p4, 3.5, 23.5, text("is absorbed into more parallel programs, not banked", 7, NAVY, :center))

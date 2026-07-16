@@ -10,7 +10,7 @@ function recursively_find_vars!(r, exs...)
         else
             (
                 ex isa Expr &&
-                recursively_find_vars!(r, ex.args[(!isexpr(ex, :call) ? 1 : 2):end]...)
+                    recursively_find_vars!(r, ex.args[(!isexpr(ex, :call) ? 1 : 2):end]...)
             )
         end
     end
@@ -29,7 +29,7 @@ function recursively_substitute_vars!(varmap, ex)
     if ex isa Symbol
         return haskey(varmap, ex) ? varmap[ex] : ex
     elseif ex isa Expr
-        for i = 1:length(ex.args)
+        for i in 1:length(ex.args)
             if ex.args[i] isa Expr
                 ex.args[i] = recursively_substitute_vars!(varmap, ex.args[i])
             else
@@ -56,8 +56,8 @@ function recursively_expand_dots_in_ex!(ex, vars)
             ex
         end
     end
-    ex isa Expr && for i = 1:length(ex.args)
-        ex.args[i] isa Union{Expr,Symbol} &&
+    ex isa Expr && for i in 1:length(ex.args)
+        ex.args[i] isa Union{Expr, Symbol} &&
             (ex.args[i] = recursively_expand_dots_in_ex!(ex.args[i], vars))
     end
 
@@ -72,14 +72,14 @@ function escape_ref(ex, species)
     else
         prewalk(
             ex ->
-                isexpr(ex, :ref) && Symbol(string(ex)) ∈ species ? Symbol(string(ex)) : ex,
+            isexpr(ex, :ref) && Symbol(string(ex)) ∈ species ? Symbol(string(ex)) : ex,
             ex,
         )
     end
 end
 
 function wrap_expr(fex, species_names, prm_names, varmap)
-    !isa(fex, Union{Expr,Symbol}) && return fex
+    !isa(fex, Union{Expr, Symbol}) && return fex
     # escape refs in species names: A[1] -> Symbol("A[1]")
     fex = escape_ref(fex, species_names)
     # escape dots in species' names: A.B -> Symbol("A.B")
@@ -94,7 +94,7 @@ function wrap_expr(fex, species_names, prm_names, varmap)
 
     # expression walking (MacroTools): visit each expression, subsitute with the body's return value
     fex = prewalk(fex) do x
-        # here we convert the query metalanguage: @t() -> time(state) etc. 
+        # here we convert the query metalanguage: @t() -> time(state) etc.
         if isexpr(x, :macrocall) && (macroname(x) ∈ reserved_names)
             Expr(:call, macroname(x), :state, x.args[3:end]...)
         elseif isexpr(x, :macrocall) && (macroname(x) == :transition)
@@ -119,11 +119,13 @@ function wrap_expr(fex, species_names, prm_names, varmap)
     # the function shall be a function of the dynamic ReactionNetwork structure: letex -> :(state -> $letex)
     # eval the expression to a Julia function, save that function into the "compiled" network
 
-    return eval(quote
-        function (state, transition)
-            return $letex
+    return eval(
+        quote
+            function (state, transition)
+                return $letex
+            end
         end
-    end)
+    )
 end
 
 function get_wrap_fun(net::ReactionNetwork)
@@ -139,12 +141,12 @@ end
 
 function skip_compile(attr)
     return any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) ||
-           (string(attr) == "trans") ||
-           (attr === :specRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
+        (string(attr) == "trans") ||
+        (attr === :specRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
 end
 
 function compile_attrs(net::ReactionNetwork, structured_token)
-    species_names = collect(net[:, :specName])#setdiff(collect(net[:, :specName]), structured_token)
+    species_names = collect(net[:, :specName]) #setdiff(collect(net[:, :specName]), structured_token)
 
     prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
@@ -152,8 +154,8 @@ function compile_attrs(net::ReactionNetwork, structured_token)
         push!(varmap, name => :(state.p[$(QuoteNode(name))]))
     end
     wrap_fun = ex -> wrap_expr(ex, species_names, prm_names, varmap)
-    attrs = Dict{Symbol,Vector}()
-    transitions = Dict{Symbol,Vector}()
+    attrs = Dict{Symbol, Vector}()
+    transitions = Dict{Symbol, Vector}()
     for attr in propertynames(net.columns)
         attrs_ = column(net, attr)
         if !contains(string(attr), "trans")
@@ -191,7 +193,7 @@ function remove_choose(net::ReactionNetwork)
         attrs_ = column(net, attr)
         foreach(
             i ->
-                !isnothing(attrs_[i]) &&
+            !isnothing(attrs_[i]) &&
                 attrs_[i] isa Expr &&
                 (attrs_[i] = normalize_pcs!(pcs, attrs_[i])),
             1:length(attrs_),

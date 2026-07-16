@@ -93,7 +93,7 @@ function _trajectory_dataframe(rows)
         df[!, f] = Vector{Any}()
     end
     for (t, name, species, fields) in rows
-        row = Dict{Symbol,Any}(:t => t, :program => name, :species => species)
+        row = Dict{Symbol, Any}(:t => t, :program => name, :species => species)
         for f in fieldnames
             row[f] = haskey(fields, f) ? fields[f] : missing
         end
@@ -109,8 +109,8 @@ end
 # but still available in the DataFrame view. Returns (name => Vector{Float64}); paths of differing
 # length are compared on their common prefix by the metric below (tokens aligned by tick index).
 function _numeric_paths(state::ReactionNetworkProblem, names)
-    paths = Dict{String,Vector{Float64}}()
-    by_name = Dict{String,Vector{Tuple{Float64,String,Symbol,NamedTuple}}}()
+    paths = Dict{String, Vector{Float64}}()
+    by_name = Dict{String, Vector{Tuple{Float64, String, Symbol, NamedTuple}}}()
     for r in state.token_trajectory
         r[2] in names || continue
         push!(get!(by_name, r[2], eltype(state.token_trajectory)[]), r)
@@ -205,7 +205,7 @@ end
 function _envelope(state::ReactionNetworkProblem, names; align_on::Symbol = :t)
     nameset = Set(names)
     # Group rows by token, in append order, so per-token alignment index is well-defined.
-    by_name = Dict{String,Vector{Tuple{Float64,String,Symbol,NamedTuple}}}()
+    by_name = Dict{String, Vector{Tuple{Float64, String, Symbol, NamedTuple}}}()
     for r in state.token_trajectory
         r[2] in nameset || continue
         push!(get!(by_name, r[2], eltype(state.token_trajectory)[]), r)
@@ -215,11 +215,11 @@ function _envelope(state::ReactionNetworkProblem, names; align_on::Symbol = :t)
         _trajectory_field_names(state.token_trajectory),
     )
     # alignment index → field → collected values
-    bucket = Dict{Any,Dict{Symbol,Vector{Float64}}}()
+    bucket = Dict{Any, Dict{Symbol, Vector{Float64}}}()
     for (_, rows) in by_name
         for (k, (t, _, _, fields)) in enumerate(rows)
             align = align_on === :t ? t : (k - 1)            # absolute tick or per-token event index
-            fb = get!(bucket, align, Dict{Symbol,Vector{Float64}}())
+            fb = get!(bucket, align, Dict{Symbol, Vector{Float64}}())
             for f in fieldnames
                 if haskey(fields, f) && fields[f] isa Real
                     push!(get!(fb, f, Float64[]), Float64(fields[f]))
@@ -227,14 +227,20 @@ function _envelope(state::ReactionNetworkProblem, names; align_on::Symbol = :t)
             end
         end
     end
-    df = DataFrame(align = Float64[], field = Symbol[], median = Float64[],
-        q25 = Float64[], q75 = Float64[], n = Int[])
+    df = DataFrame(
+        align = Float64[], field = Symbol[], median = Float64[],
+        q25 = Float64[], q75 = Float64[], n = Int[]
+    )
     for align in sort!(collect(keys(bucket)))
         for f in fieldnames
             vals = get(bucket[align], f, Float64[])
             isempty(vals) && continue
-            push!(df, (Float64(align), f, median(vals),
-                quantile(vals, 0.25), quantile(vals, 0.75), length(vals)))
+            push!(
+                df, (
+                    Float64(align), f, median(vals),
+                    quantile(vals, 0.25), quantile(vals, 0.75), length(vals),
+                )
+            )
         end
     end
     return df
@@ -296,9 +302,11 @@ backend is future work (the API is fixed so callers need not change) — and it 
 `:rebuild` (mode (b) serially reuses one object). Subsumes `demo/bd_acquisition/analysis.jl`'s
 hand-rolled `ensemble`.
 """
-function ensemble(build; nseed::Integer, root_seed::Integer = 2026,
-                  max_t = nothing, parallel::Bool = false, name = "ensemble",
-                  mode::Symbol = :rebuild)
+function ensemble(
+        build; nseed::Integer, root_seed::Integer = 2026,
+        max_t = nothing, parallel::Bool = false, name = "ensemble",
+        mode::Symbol = :rebuild
+    )
     mode in (:rebuild, :reinit) ||
         error("ensemble: mode must be :rebuild (mode a) or :reinit (mode b), got $(repr(mode)).")
     seeds = UInt64[hash((root_seed, k)) for k in 1:nseed]
@@ -352,8 +360,10 @@ _ensemble_members(build, seeds, max_t, mode::Symbol) =
 function _build_member(build, s, max_t)
     m = build(s)
     m isa ReactionNetworkProblem ||
-        error("ensemble: build(seed) must return a ReactionNetworkProblem (got $(typeof(m))); " *
-              "for a coupled member, extract the RD child before returning (ADR 0013 open Q).")
+        error(
+        "ensemble: build(seed) must return a ReactionNetworkProblem (got $(typeof(m))); " *
+            "for a coupled member, extract the RD child before returning (ADR 0013 open Q)."
+    )
     max_t === nothing || simulate(m, max_t)
     return m
 end
@@ -438,7 +448,7 @@ diagnostic, never AA's silent `@error` fall-through). `Int` indexes `observables
 function AlgebraicAgents.getobservable(ens::EnsembleProblem, name::Symbol)
     name in AlgebraicAgents.observables(ens) || error(
         "getobservable: `$name` is not an exported aggregate of $(getname(ens)); " *
-        "exported names are $(AlgebraicAgents.observables(ens)) (§14.2 Invariant 4)",
+            "exported names are $(AlgebraicAgents.observables(ens)) (§14.2 Invariant 4)",
     )
     vals = Float64[]
     for m in ens.members
@@ -497,7 +507,7 @@ end
 struct TokenTrajectoryPlot      # recipe 5 — a field's per-token paths + the typical envelope band
     prob::ReactionNetworkProblem
     field::Symbol
-    pred::Union{Nothing,TokenPredicate}
+    pred::Union{Nothing, TokenPredicate}
 end
 TokenTrajectoryPlot(prob::ReactionNetworkProblem, field::Symbol; pred = nothing) =
     TokenTrajectoryPlot(prob, field, pred)

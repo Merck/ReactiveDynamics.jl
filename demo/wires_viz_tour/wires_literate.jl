@@ -96,14 +96,20 @@ tbl = coupling_table(sys)
 # chart shows all three series and marks the tick the acquisition lever fires:
 
 let
-    plot(tbl.t, tbl.rd_cash; label = "RD cash", lw = 3, marker = :circle,
+    plot(
+        tbl.t, tbl.rd_cash; label = "RD cash", lw = 3, marker = :circle,
         color = :steelblue, legend = :topleft,
-        xlabel = "tick t", ylabel = "cash", title = "The coupled trajectory (one-tick Jacobi lag)")
-    plot!(tbl.t, coalesce.(tbl.finance_cash_seen, NaN); label = "finance saw (wire 2)",
-        lw = 0, marker = :xcross, markersize = 7, color = :orange)
+        xlabel = "tick t", ylabel = "cash", title = "The coupled trajectory (one-tick Jacobi lag)"
+    )
+    plot!(
+        tbl.t, coalesce.(tbl.finance_cash_seen, NaN); label = "finance saw (wire 2)",
+        lw = 0, marker = :xcross, markersize = 7, color = :orange
+    )
     sc = maximum(tbl.rd_cash) / maximum(tbl.sentiment)
-    plot!(tbl.t, tbl.sentiment .* sc; label = "market sentiment (right-scaled)",
-        lw = 2, ls = :dash, color = :seagreen)
+    plot!(
+        tbl.t, tbl.sentiment .* sc; label = "market sentiment (right-scaled)",
+        lw = 2, ls = :dash, color = :seagreen
+    )
     acq = findfirst(==(1), tbl.acquired)
     isnothing(acq) || vline!([tbl.t[acq]]; label = "acquisition fires", color = :firebrick, ls = :dot, lw = 2)
     current()

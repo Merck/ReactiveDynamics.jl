@@ -36,10 +36,10 @@ const RDX = ReactiveDynamics
     end
     function GenProjectToken(phase, npv, born)
         return GenProjectToken(
-            "GP" * string(rand(1:10^9)),
+            "GP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             npv,
             born,
@@ -50,9 +50,10 @@ end
 # Registry the NAMED @structured form (and AddToken) resolve the kind through, BY NAME (ADR 0006
 # §C): key => a `(state, fields::Dict) -> token` host constructor — the SAME convention AddToken
 # uses (actions.jl:203-211), so the named genesis product and the rule action share one contract.
-const GEN_REGISTRY = Dict{Symbol,Any}(
+const GEN_REGISTRY = Dict{Symbol, Any}(
     :Project => (state, f) -> RDX.GenProjectToken(
-        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, -1.0)),
+        get(f, :phase, :Phase1), get(f, :npv, 0.0), get(f, :born, -1.0)
+    ),
 )
 
 livetokens(p) = collect(values(RDX.inners(RDX.getagent(p, "structured"))))
@@ -65,8 +66,8 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     @testset "∅ --> @structured(:Kind, …) mints a fresh token per firing, tracked in state.u" begin
         net = @reaction_network begin
             @deterministic(1.0),
-            ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
-            name => genesis
+                ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+                name => genesis
         end
         RDX.register_structured_species!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
@@ -90,9 +91,11 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         function genesis_dynamic(seed)
             net = @reaction_network begin
                 @deterministic(1.0),
-                ∅ --> @structured(:Project, phase = :Phase1,
-                                  npv = rand(state.rng, Normal(100.0, 10.0)), born = @t()),
-                name => genesis
+                    ∅ --> @structured(
+                        :Project, phase = :Phase1,
+                        npv = rand(state.rng, Normal(100.0, 10.0)), born = @t()
+                    ),
+                    name => genesis
             end
             RDX.register_structured_species!(net, :Project)
             @prob_meta net tspan = 4 dt = 1.0
@@ -116,11 +119,11 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     @testset "genesis feeds a downstream @select/@advance leg (birth → select → advance)" begin
         net = @reaction_network begin
             @deterministic(1.0),
-            ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
-            name => genesis
+                ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+                name => genesis
             @deterministic(1.0),
-            @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
-            name => adv12, cycletime => 1.0, probability => 1.0
+                @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+                name => adv12, cycletime => 1.0, probability => 1.0
         end
         RDX.register_structured_species!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
@@ -138,11 +141,11 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         function det_model()   # deterministic npv so DSL and JSON runs are bit-identical
             net = @reaction_network begin
                 @deterministic(1.0),
-                ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
-                name => genesis
+                    ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+                    name => genesis
                 @deterministic(1.0),
-                @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
-                name => adv12, cycletime => 1.0, probability => 1.0
+                    @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
+                    name => adv12, cycletime => 1.0, probability => 1.0
             end
             RDX.register_structured_species!(net, :Project)
             @prob_meta net tspan = 5 dt = 1.0
@@ -172,8 +175,8 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
     @testset "validate rejects a named @structured with an unknown kind" begin
         net = @reaction_network begin
             @deterministic(1.0),
-            ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
-            name => genesis
+                ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
+                name => genesis
         end
         RDX.register_structured_species!(net, :Project)
         @prob_meta net tspan = 2 dt = 1.0
@@ -196,8 +199,8 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         err = try
             @reaction_network begin
                 @deterministic(1.0),
-                ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),   # inline host ctor
-                name => genesis
+                    ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t())),   # inline host ctor
+                    name => genesis
             end
             nothing
         catch e
@@ -213,8 +216,8 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         err = try
             @reaction_network begin
                 @deterministic(1.0),
-                ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t()), :Project),
-                name => genesis
+                    ∅ --> @structured(GenProjectToken(:Phase1, 100.0, @t()), :Project),
+                    name => genesis
             end
             nothing
         catch e

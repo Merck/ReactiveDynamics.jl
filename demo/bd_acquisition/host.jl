@@ -28,18 +28,18 @@ using Random, Distributions, DataFrames
     using Random: randstring
     # Host constructor (positional fields after the @aagent-injected name/species/bound/past_bonds).
     function ProjectToken(;
-        phase = :Discovery,
-        npv_peak = 1000.0,
-        pos_remaining = 0.1,
-        therapeutic_area = :onc,
-        acquired = false,
-        acq_time = NaN,
-    )
+            phase = :Discovery,
+            npv_peak = 1000.0,
+            pos_remaining = 0.1,
+            therapeutic_area = :onc,
+            acquired = false,
+            acq_time = NaN,
+        )
         return ProjectToken(
             "Proj" * randstring(8),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             npv_peak,
             pos_remaining,
@@ -53,7 +53,7 @@ end
 
 # The registry constructor the model's AddToken lever references BY NAME (ADR 0006 §C / 0010).
 # Signature is (state, fields::Dict) — fields are the evaluated AddToken field exprs.
-const PROJECT_REGISTRY = Dict{Symbol,Any}(
+const PROJECT_REGISTRY = Dict{Symbol, Any}(
     :ProjectToken => (state, fields) -> ReactiveDynamics.ProjectToken(;
         phase = get(fields, :phase, :Phase2),
         npv_peak = get(fields, :npv_peak, 1200.0),
@@ -106,32 +106,32 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     net = @reaction_network begin
         # Discovery -> Phase1
         @deterministic(2.0),
-        @select(Project, phase == :Discovery) + 2 * @conserved(scientist) + 2 * @rate(budget) -->
-        @advance(phase, :Phase1),
-        name => adv_discovery, cycletime => 1.0, probability => 0.45, priority => 1.0
+            @select(Project, phase == :Discovery) + 2 * @conserved(scientist) + 2 * @rate(budget) -->
+            @advance(phase, :Phase1),
+            name => adv_discovery, cycletime => 1.0, probability => 0.45, priority => 1.0
         # Phase1 -> Phase2
         @deterministic(2.0),
-        @select(Project, phase == :Phase1) + 3 * @conserved(scientist) + 3 * @rate(budget) -->
-        @advance(phase, :Phase2),
-        name => adv_phase1, cycletime => 1.5, probability => 0.6, priority => 1.5
+            @select(Project, phase == :Phase1) + 3 * @conserved(scientist) + 3 * @rate(budget) -->
+            @advance(phase, :Phase2),
+            name => adv_phase1, cycletime => 1.5, probability => 0.6, priority => 1.5
         # Phase2 -> Phase3  (capability/PoS synergy raises PoS; op-efficiency shortens cycletime —
         # both param-mediated, MVP §2.1: the rule flips synergy_pos/synergy_eff at acquisition)
         @deterministic(2.0),
-        @select(Project, phase == :Phase2) + 4 * @conserved(scientist) + 5 * @rate(budget) -->
-        @advance(phase, :Phase3),
-        name => adv_phase2, cycletime => 2.0 - 0.5 * synergy_eff,
-        probability => 0.4 + 0.2 * synergy_pos, priority => 2.0
+            @select(Project, phase == :Phase2) + 4 * @conserved(scientist) + 5 * @rate(budget) -->
+            @advance(phase, :Phase3),
+            name => adv_phase2, cycletime => 2.0 - 0.5 * synergy_eff,
+            probability => 0.4 + 0.2 * synergy_pos, priority => 2.0
         # Phase3 -> Filed
         @deterministic(2.0),
-        @select(Project, phase == :Phase3) + 5 * @conserved(scientist) + 8 * @rate(budget) -->
-        @advance(phase, :Filed),
-        name => adv_phase3, cycletime => 3.0 - 1.0 * synergy_eff,
-        probability => 0.65 + 0.15 * synergy_pos, priority => 3.0
+            @select(Project, phase == :Phase3) + 5 * @conserved(scientist) + 8 * @rate(budget) -->
+            @advance(phase, :Filed),
+            name => adv_phase3, cycletime => 3.0 - 1.0 * synergy_eff,
+            probability => 0.65 + 0.15 * synergy_pos, priority => 3.0
         # Filed -> Market
         @deterministic(2.0),
-        @select(Project, phase == :Filed) + 1 * @conserved(scientist) + 2 * @rate(budget) -->
-        @advance(phase, :Market),
-        name => adv_filed, cycletime => 1.0, probability => 0.9, priority => 4.0
+            @select(Project, phase == :Filed) + 1 * @conserved(scientist) + 2 * @rate(budget) -->
+            @advance(phase, :Market),
+            name => adv_filed, cycletime => 1.0, probability => 0.9, priority => 4.0
         # budget replenishment (financing): a steady inflow each tick. Calibrated (with the budget0
         # below) so cash is a GENUINELY BINDING constraint — the organic pipeline runs the pools
         # near empty (budget/scientists both bottom out in single digits), so the deal's resource
@@ -181,29 +181,33 @@ const ORGANIC_PORTFOLIO = [
 function initial_population()
     return [
         ReactiveDynamics.ProjectToken(;
-            phase = ph,
-            npv_peak = npv,
-            pos_remaining = pos_from_phase(ph),   # remaining PoS from THIS phase forward (per-phase)
-            therapeutic_area = area,
-            acquired = false,
-        ) for (ph, npv, area) in ORGANIC_PORTFOLIO
+                phase = ph,
+                npv_peak = npv,
+                pos_remaining = pos_from_phase(ph),   # remaining PoS from THIS phase forward (per-phase)
+                therapeutic_area = area,
+                acquired = false,
+            ) for (ph, npv, area) in ORGANIC_PORTFOLIO
     ]
 end
 
 # ── The acquisition lever (endogenous Rule, ADR 0010) ───────────────────────────────────
 # Fires once at t > T_acq: injects M acquired Phase-2 programs and (synergy 2) bumps scientists,
 # (synergies 3/4) flips the synergy_pos/synergy_eff params. Built as a typed Rule the driver arms.
-function acquisition_rule(; T_acq = 4.0, n_programs = 3, extra_scientists = 0, extra_budget = 0,
-        synergy_pos = false, synergy_eff = false)
+function acquisition_rule(;
+        T_acq = 4.0, n_programs = 3, extra_scientists = 0, extra_budget = 0,
+        synergy_pos = false, synergy_eff = false
+    )
     actions = ReactiveDynamics.ActionStmt[]
-    for _ = 1:n_programs
+    for _ in 1:n_programs
         push!(
             actions,
-            AddToken(:ProjectToken, [
-                :phase => QuoteNode(:Phase2),
-                :npv_peak => 1400.0,
-                :pos_remaining => pos_from_phase(:Phase2),   # same per-phase risk scale as organic
-            ]),
+            AddToken(
+                :ProjectToken, [
+                    :phase => QuoteNode(:Phase2),
+                    :npv_peak => 1400.0,
+                    :pos_remaining => pos_from_phase(:Phase2),   # same per-phase risk scale as organic
+                ]
+            ),
         )
     end
     # Resource synergy (MVP §2.1): the target brings BOTH headcount and capital. On the calibrated

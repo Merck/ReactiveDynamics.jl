@@ -38,4 +38,5 @@ function recursively_find_mults!(multarray, mults...)
             push!(multarray, m)
         end
     end
+    return
 end

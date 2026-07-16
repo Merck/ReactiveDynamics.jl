@@ -4,7 +4,7 @@ using Random
 export ReactionNetworkProblem
 
 function get_sampled_transition(state, i)
-    transition = Dict{Symbol,Any}()
+    transition = Dict{Symbol, Any}()
     foreach(k -> push!(transition, k => state[i, k]), keys(state.transitions))
 
     return transition
@@ -98,13 +98,13 @@ The modality rules match the deleted builders exactly; the conjunctive `req[s,t]
 demand per unit fill, so `alloc[s,t] = f[t]·req[s,t]`.
 """
 function build_requirements!(
-    ws::AllocWorkspace,
-    state,
-    qs;
-    counted = nothing,
-    dt_scale = 1,
-    ongoing = false,
-)
+        ws::AllocWorkspace,
+        state,
+        qs;
+        counted = nothing,
+        dt_scale = 1,
+        ongoing = false,
+    )
     reqs = ws.req
     reqs .= 0.0
     if ongoing
@@ -165,16 +165,16 @@ function progressive_fill!(ws::AllocWorkspace, u, w; fmax = fill(Inf, length(w))
     fill!(f, 0.0)
 
     # Stage 1: positive-priority tier fills from the full supply.
-    pos = [t for t = 1:nT if w[t] > 0]
+    pos = [t for t in 1:nT if w[t] > 0]
     _fill_tier!(ws, u, w, fmax, pos)
 
     # Stage 2: zero-priority tier fills the leftover, at equal weight (max-min fair). Recover the
     # residual supply after stage 1, then fill the w[t]==0 transitions with a flat unit weight.
-    zero_tier = [t for t = 1:nT if w[t] == 0]
+    zero_tier = [t for t in 1:nT if w[t] == 0]
     if !isempty(zero_tier)
         r = ws.r
         copyto!(r, u)
-        for t = 1:nT, s in axes(ws.req, 1)
+        for t in 1:nT, s in axes(ws.req, 1)
             r[s] -= ws.req[s, t] * f[t]
         end
         @. r = max(0.0, r)
@@ -210,18 +210,18 @@ function _fill_tier!(ws::AllocWorkspace, supply, weights, fmax, tier)
         end
     end
 
-    tol = 1e-12
+    tol = 1.0e-12
     while any(active)
         # 1. largest fill-step τ that neither overdraws a resource nor overshoots a cap.
         dτ = Inf
         fill!(D, 0.0)
         for t in tier
             active[t] || continue
-            for s = 1:nS
+            for s in 1:nS
                 D[s] += weights[t] * ws.req[s, t]
             end
         end
-        for s = 1:nS
+        for s in 1:nS
             D[s] > 0 && (dτ = min(dτ, r[s] / D[s]))
         end
         for t in tier
@@ -233,7 +233,7 @@ function _fill_tier!(ws::AllocWorkspace, supply, weights, fmax, tier)
         for t in tier
             active[t] && (f[t] += weights[t] * dτ)
         end
-        for s = 1:nS
+        for s in 1:nS
             r[s] = max(0.0, r[s] - D[s] * dτ)
         end
 
@@ -241,7 +241,7 @@ function _fill_tier!(ws::AllocWorkspace, supply, weights, fmax, tier)
         for t in tier
             active[t] && f[t] >= fmax[t] - tol && (active[t] = false; f[t] = fmax[t])
         end
-        for s = 1:nS
+        for s in 1:nS
             if r[s] <= tol
                 for t in tier
                     active[t] && ws.req[s, t] > 0 && (active[t] = false)
@@ -275,7 +275,7 @@ function spawn_integer!(ws::AllocWorkspace, u, w, q_desired)
     # Residual supply after the floored grants.
     r = ws.r
     copyto!(r, u)
-    for t = 1:nT, s in axes(ws.req, 1)
+    for t in 1:nT, s in axes(ws.req, 1)
         r[s] -= ws.req[s, t] * n[t]
     end
 
@@ -286,7 +286,7 @@ function spawn_integer!(ws::AllocWorkspace, u, w, q_desired)
         progress = false
         for t in order
             n[t] >= q_desired[t] && continue
-            fits = all(s -> r[s] >= ws.req[s, t] - 1e-12, axes(ws.req, 1))
+            fits = all(s -> r[s] >= ws.req[s, t] - 1.0e-12, axes(ws.req, 1))
             fits || continue
             for s in axes(ws.req, 1)
                 r[s] -= ws.req[s, t]
@@ -397,7 +397,7 @@ function evolve!(state)
                     pred = lhs_predicate(state.transitions[:transLHS][i], type)
                     available_species = filter(
                         a ->
-                            get_species(a) == type &&
+                        get_species(a) == type &&
                             !isblocked(a) &&
                             matches(pred, a, state, transition),
                         structured_token,
@@ -464,7 +464,7 @@ function evolve!(state)
             state.t,
             [
                 (state.ongoing_transitions[i][:transHash], qs[i]) for
-                i in eachindex(state.ongoing_transitions)
+                    i in eachindex(state.ongoing_transitions)
             ]...,
         ),
     )
@@ -495,7 +495,7 @@ function evolve!(state)
                     pred = lhs_predicate(transition[:transLHS], type)
                     available_species = filter(
                         a ->
-                            get_species(a) == type &&
+                        get_species(a) == type &&
                             !isblocked(a) &&
                             matches(pred, a, state, transition),
                         structured_token,
@@ -555,7 +555,7 @@ end
 
 function allocate_for_move(t::Transition, s::Symbol)
     return t.bound_structured_agents ∩
-           map(x -> x[2], filter(x -> x[1] == s, t.structured_to_agents))
+        map(x -> x[2], filter(x -> x[1] == s, t.structured_to_agents))
 end
 
 function structured_rhs(expr::Expr, state, transition)
@@ -575,7 +575,7 @@ function structured_rhs(expr::Expr, state, transition)
             haskey(state.registry, kind) ||
                 error("@structured: kind $kind not in the network registry (ADR 0006 §C)")
             ctor = state.registry[kind]
-            fieldvals = Dict{Symbol,Any}()
+            fieldvals = Dict{Symbol, Any}()
             for kw in @view expr.args[4:end]
                 (isexpr(kw, :(=)) && kw.args[1] isa Symbol) || error(
                     "@structured($kind, …): each field must be `name = value`, got `$(kw)`",
@@ -593,12 +593,12 @@ function structured_rhs(expr::Expr, state, transition)
             # hand-built :trans Expr bypassed that check — surface it rather than eval host code.
             error(
                 "@structured: only the named form `@structured(:Kind, field = value, …)` is " *
-                "supported; the raw constructor form was removed (see create.jl). Got: $expr",
+                    "supported; the raw constructor form was removed (see create.jl). Got: $expr",
             )
         end
     elseif isexpr(expr, :macrocall) && macroname(expr) == :move
         expr = quote
-            species_from = $(expr.args[end-1])
+            species_from = $(expr.args[end - 1])
             species_to = $(expr.args[end])
 
             return species_from, species_to
@@ -667,8 +667,8 @@ end
 # collect terminated transitions
 function finish!(state)
     val_reward = 0
-    terminated_all = Dict{Symbol,Float64}()
-    terminated_success = Dict{Symbol,Float64}()
+    terminated_all = Dict{Symbol, Float64}()
+    terminated_success = Dict{Symbol, Float64}()
 
     ix = 1
     while ix <= length(state.ongoing_transitions)
@@ -694,7 +694,7 @@ function finish!(state)
             if r.species isa Expr
                 stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
 
-                for _ = 1:(q*stoich)
+                for _ in 1:(q * stoich)
                     token, species = structured_rhs(r.species, state, trans_)
                     # A structured-RHS op may legitimately produce nothing (e.g. @advance with no
                     # bound token to advance) — skip the count/reward in that case.
@@ -725,7 +725,7 @@ function finish!(state)
                     tok.stoich *
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
                 if tok.species ∈ state.structured_token
-                    for _ = 1:(trans_.q*tok.stoich)
+                    for _ in 1:(trans_.q * tok.stoich)
                         agent_ix = findfirst(
                             a -> get_species(a) == tok.species,
                             trans_.bound_structured_agents,
@@ -752,7 +752,7 @@ function finish!(state)
 
                 state.u[tok.index] += trans_.q * tok.stoich
                 if tok.species ∈ state.structured_token
-                    for _ = 1:(trans_.q*tok.stoich)
+                    for _ in 1:(trans_.q * tok.stoich)
                         agent_ix = findfirst(
                             a -> get_species(a) == tok.species,
                             trans_.nonblock_structured_agents,
@@ -818,6 +818,7 @@ function free_blocked_species!(state)
 
         empty!(trans.nonblock_structured_agents)
     end
+    return
 end
 
 ## resolve tspan, dt
@@ -872,9 +873,9 @@ function validate_modalities(net::ReactionNetwork)
                 throw(
                     ArgumentError(
                         "Transition `$tlabel`, LHS token `$sname`: modality {:nonblock, :conserved} is " *
-                        "illegal (CONTRACT §1.4) — a resource cannot be both held-until-finish " *
-                        "(:conserved) and released-every-step (:nonblock). `blocking = nonblock` " *
-                        "requires `return = consumed`.",
+                            "illegal (CONTRACT §1.4) — a resource cannot be both held-until-finish " *
+                            "(:conserved) and released-every-step (:nonblock). `blocking = nonblock` " *
+                            "requires `return = consumed`.",
                     ),
                 )
             end
@@ -885,9 +886,9 @@ function validate_modalities(net::ReactionNetwork)
                 throw(
                     ArgumentError(
                         "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) with " *
-                        "cycletime == 0 is illegal (CONTRACT §1.4) — a per-step reservation only fires " *
-                        "when cycletime > 0, so with cycletime == 0 it silently reserves nothing. " *
-                        "`allocation = perstep` requires `transCycleTime > 0`.",
+                            "cycletime == 0 is illegal (CONTRACT §1.4) — a per-step reservation only fires " *
+                            "when cycletime > 0, so with cycletime == 0 it silently reserves nothing. " *
+                            "`allocation = perstep` requires `transCycleTime > 0`.",
                     ),
                 )
             end
@@ -897,9 +898,9 @@ function validate_modalities(net::ReactionNetwork)
                 throw(
                     ArgumentError(
                         "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) on a " *
-                        "structured/agent species is illegal (CONTRACT §1.4) — you cannot reserve a " *
-                        "fractional, dt-scaled slice of an indivisible agent. `allocation = perstep` " *
-                        "requires a non-structured (countable) species.",
+                            "structured/agent species is illegal (CONTRACT §1.4) — you cannot reserve a " *
+                            "fractional, dt-scaled slice of an indivisible agent. `allocation = perstep` " *
+                            "requires a non-structured (countable) species.",
                     ),
                 )
             end
@@ -909,21 +910,23 @@ function validate_modalities(net::ReactionNetwork)
 end
 
 function ReactionNetworkProblem(
-    net::ReactionNetwork,
-    u0 = Dict(),
-    p = Dict();
-    name = "reaction_network",
-    kwargs...,
-)
+        net::ReactionNetwork,
+        u0 = Dict(),
+        p = Dict();
+        name = "reaction_network",
+        kwargs...,
+    )
     assign_defaults!(net)
     # CONTRACT §1.4: reject the three illegal modality configurations up front, before any closure
     # compiles or any tick runs (the T2 acceptance tests require the throw from the constructor
     # itself, not deep in the stepper). Runs after assign_defaults! so :specModality is materialized.
     validate_modalities(net)
-    keywords = Dict{Symbol,Any}([
-        net[i, :metaKeyword] => net[i, :metaVal] for i in row_ids(net, :M) if
-        !isnothing(net[i, :metaKeyword]) && !isnothing(net[i, :metaVal])
-    ])
+    keywords = Dict{Symbol, Any}(
+        [
+            net[i, :metaKeyword] => net[i, :metaVal] for i in row_ids(net, :M) if
+                !isnothing(net[i, :metaKeyword]) && !isnothing(net[i, :metaVal])
+        ]
+    )
 
     merge!(keywords, Dict(collect(kwargs)))
     # `alloc_strategy` (legacy :weighted/:greedy switch) is accepted and IGNORED: ADR 0002 makes
@@ -974,10 +977,12 @@ function ReactionNetworkProblem(
         end
     end
 
-    prms = Dict{Symbol,Any}((
-        net[i, :prmName] => net[i, :prmVal] for
-        i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), 1:nrows(net, :P))
-    ))
+    prms = Dict{Symbol, Any}(
+        (
+            net[i, :prmName] => net[i, :prmVal] for
+                i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), 1:nrows(net, :P))
+        )
+    )
 
     merge!(p, prms)
 
@@ -986,10 +991,10 @@ function ReactionNetworkProblem(
     observables = compile_observables(net)
     transitions_attrs =
         setdiff(
-            filter(a -> contains(string(a), "trans"), propertynames(net.columns)),
-            (:trans,),
-        ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash, :transFiring]
-    transitions = Dict{Symbol,Vector}(a => [] for a in transitions_attrs)
+        filter(a -> contains(string(a), "trans"), propertynames(net.columns)),
+        (:trans,),
+    ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash, :transFiring]
+    transitions = Dict{Symbol, Vector}(a => [] for a in transitions_attrs)
 
     sol = DataFrame(
         "t" => Float64[],
@@ -1000,11 +1005,11 @@ function ReactionNetworkProblem(
     # (ADR 0006 §C — by-name, never eval'd). Rules are built from the :E rows: a legacy event
     # `trigger && action` becomes a Rule{guard=trigger, action=RawExpr(action), every_tick}.
     # Typed Rules can also be supplied directly via the `rules=` kwarg / @rule authoring.
-    registry = Dict{Symbol,Any}(get(keywords, :registry, Dict{Symbol,Any}()))
+    registry = Dict{Symbol, Any}(get(keywords, :registry, Dict{Symbol, Any}()))
     rules = Any[
         Rule(Symbol("rule_", i), net[i, :eventTrigger], RawExpr(net[i, :eventAction]))
-        for i in row_ids(net, :E) if
-        !isnothing(net[i, :eventTrigger]) && !isnothing(net[i, :eventAction])
+            for i in row_ids(net, :E) if
+            !isnothing(net[i, :eventTrigger]) && !isnothing(net[i, :eventAction])
     ]
     append!(rules, get(keywords, :rules, Any[]))
 
@@ -1014,7 +1019,7 @@ function ReactionNetworkProblem(
     # re-derived every `_prestep!` (merged over a copy of the defaults); the defaults snapshot is
     # kept immutable so `_reinit!` can restore the pre-wire seed (§4 D7).
     external_input_defaults =
-        Dict{Symbol,Any}(get(keywords, :external_inputs, Dict{Symbol,Any}()))
+        Dict{Symbol, Any}(get(keywords, :external_inputs, Dict{Symbol, Any}()))
     external_inputs = copy(external_input_defaults)
 
     network = ReactionNetworkProblem(
@@ -1039,21 +1044,21 @@ function ReactionNetworkProblem(
         initial_rng,
         rules,
         registry,
-        Dict{Symbol,Int}(),
-        Dict{String,Int}(),
+        Dict{Symbol, Int}(),
+        Dict{String, Int}(),
         collect(get(keywords, :population, [])),
-        Dict{String,Dict{Symbol,Any}}(),
+        Dict{String, Dict{Symbol, Any}}(),
         false,
         # Per-program ledger (MVP finding D, src/ledger.jl): empty at construction, populated at the
         # bind/finish sites in evolve!/finish!, reset by _reinit!.
-        Dict{String,ProgramLedger}(),
+        Dict{String, ProgramLedger}(),
         0.0,
         0.0,
         external_inputs,
         external_input_defaults,
         # Per-token trajectory log (ADR 0013 §14.1): empty at construction, appended each tick by
         # push_token_trajectory_row! for opted-in kinds, reset by _reinit!.
-        Tuple{Float64,String,Symbol,NamedTuple}[],
+        Tuple{Float64, String, Symbol, NamedTuple}[],
     )
 
     entangle!(network, FreeAgent("structured"))
@@ -1216,8 +1221,10 @@ function AlgebraicAgents._projected_to(state::ReactionNetworkProblem)
 end
 
 function fetch_params(net::ReactionNetwork)
-    return Dict{Symbol,Any}((
-        net[i, :prmName] => net[i, :prmVal] for
-        i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), row_ids(net, :P))
-    ))
+    return Dict{Symbol, Any}(
+        (
+            net[i, :prmName] => net[i, :prmVal] for
+                i in Iterators.filter(i -> !isnothing(net[i, :prmVal]), row_ids(net, :P))
+        )
+    )
 end

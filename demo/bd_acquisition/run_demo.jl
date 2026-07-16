@@ -65,10 +65,10 @@ const ACQ_PRICE = 400.0
 # (the marginal synergies are ~100–550 apart), so the ordering looks noisy/non-monotone; by ~160
 # seeds the SE (~±150) resolves res < pos and op-efficiency≈0 as real, stable signals.
 function main(; root_seed = 2026, nseed = 160)
-    println("=" ^ 78)
+    println("="^78)
     println("BD ACQUISITION-IMPACT DEMO — acquisition effect on a pharma pipeline portfolio")
     println("  ensemble: $nseed seeds from root $root_seed  |  horizon 40 ticks  |  acq price $(ACQ_PRICE)")
-    println("=" ^ 78)
+    println("="^78)
 
     scenarios = [:S0, :S1, :S2, :S3, :S4, :S5]
     labels = Dict(
@@ -84,7 +84,7 @@ function main(; root_seed = 2026, nseed = 160)
     # per-member seeding hash((root_seed,k)) is identical to the old hand-rolled loop, so the numbers
     # are unchanged. The acquisition price is netted in the metric closures (deals carry it, S0 does
     # not), not baked into the ensemble, so one ensemble per scenario serves every metric.
-    results = Dict{Symbol,Any}()
+    results = Dict{Symbol, Any}()
     for s in scenarios
         results[s] = scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
     end
@@ -96,7 +96,7 @@ function main(; root_seed = 2026, nseed = 160)
     # i.e. a linear transform of cash⌄, so it would carry no extra information; it appears once in
     # the headline below as the "capital ask" framing.)
     println("\nScenario                      mean rNPV     launches  P(≥1)   cash⌄   sci⌄   Δ-rNPV vs S0 (±SE)")
-    println("-" ^ 100)
+    println("-"^100)
     for s in scenarios
         ens = results[s]
         te = treatment_effect(base, ens; deal_price = price(s))
@@ -117,8 +117,10 @@ function main(; root_seed = 2026, nseed = 160)
     @printf("  Δ-rNPV (deal value, net of price)  : %+.1f ± %.1f (1 SE, %d seeds)\n", te.delta_rnpv, te.se_delta_rnpv, nseed)
     @printf("  Δ-launches (extra programs to mkt) : %+.2f\n", te.delta_launches)
     @printf("  Δ-P(launch)                        : %+.2f\n", te.delta_p_launch)
-    @printf("  cash trough, baseline → full deal  : %.1f → %.1f (the deal EASES the cash squeeze)\n",
-            mean_cash_trough(base), mean_cash_trough(results[:S5]))
+    @printf(
+        "  cash trough, baseline → full deal  : %.1f → %.1f (the deal EASES the cash squeeze)\n",
+        mean_cash_trough(base), mean_cash_trough(results[:S5])
+    )
     println("\nSynergy decomposition (marginal Δ over S1 pipeline-only):")
     s1 = treatment_effect(base, results[:S1]; deal_price = ACQ_PRICE).delta_rnpv
     for (s, name) in ((:S2, "resource (capital+headcount)"), (:S3, "capability/PoS"), (:S4, "op-efficiency"))
@@ -131,9 +133,9 @@ function main(; root_seed = 2026, nseed = 160)
     # deterministic token order; previously this was reconstructed in post. We surface it for one
     # representative full-deal run and CROSS-CHECK that the per-program rows reconcile to the
     # aggregate ledger and that the engine-attributed spend agrees with the post-hoc rNPV roll-up.
-    println("\n" * "=" ^ 78)
+    println("\n" * "="^78)
     println("ENGINE-LEVEL PER-PROGRAM LEDGER (MVP finding D) — one representative full-deal run")
-    println("=" ^ 78)
+    println("="^78)
     demo_prob = run_scenario(:S5, hash((root_seed, 1)))
     sm = program_ledger_summary(demo_prob)
     @printf("  programs tracked                    : %d\n", sm.n_programs)
@@ -150,16 +152,22 @@ function main(; root_seed = 2026, nseed = 160)
     println("\n  Top programs by engine-attributed capital burned:")
     println("    creation_idx  phase       acquired   npv_peak    cost_incurred")
     for r in eachrow(first(led, min(6, nrow(led))))
-        @printf("    %10d  %-10s  %-8s   %8.0f    %10.1f\n",
-                r.creation_index, string(r.phase), string(r.acquired),
-                isnan(r.npv_peak) ? 0.0 : r.npv_peak, r.cost_incurred)
+        @printf(
+            "    %10d  %-10s  %-8s   %8.0f    %10.1f\n",
+            r.creation_index, string(r.phase), string(r.acquired),
+            isnan(r.npv_peak) ? 0.0 : r.npv_peak, r.cost_incurred
+        )
     end
     # The per-program ledger AGREES with the demo's portfolio roll-up: both walk the same final
     # population; the ledger now ALSO carries the engine-attributed capital each program consumed.
-    @printf("\n  cross-check — portfolio rNPV (post-hoc roll-up)        : %.1f\n",
-            portfolio_rnpv(demo_prob; acq_price = ACQ_PRICE))
-    @printf("  cross-check — engine cost reconciles to aggregate     : %s\n",
-            abs(sm.reconciliation_residual) < 1e-6 ? "YES" : "NO")
+    @printf(
+        "\n  cross-check — portfolio rNPV (post-hoc roll-up)        : %.1f\n",
+        portfolio_rnpv(demo_prob; acq_price = ACQ_PRICE)
+    )
+    @printf(
+        "  cross-check — engine cost reconciles to aggregate     : %s\n",
+        abs(sm.reconciliation_residual) < 1.0e-6 ? "YES" : "NO"
+    )
 
     println("\nReproducible: each cell is a (model, scenario, seed) triple; the lever is in-model")
     println("(an ADR-0010 Rule), so re-running with the same root seed gives identical numbers.")

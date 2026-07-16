@@ -9,9 +9,9 @@ abstract type AbstractStructuredToken <: AbstractAlgebraicAgent end
 # In general, we will probably assume that each "structured agent" type implements this field.
 # Otherwise, it would be possible to implement getter and setter interface and use it from within ReaDyn.
 @aagent FreeAgent struct BaseStructuredToken
-    species::Union{Nothing,Symbol}
-    bound_transition::Union{Nothing,ReactiveDynamics.Transition}
-    past_bonds::Vector{Tuple{Symbol,Float64,Transition}}
+    species::Union{Nothing, Symbol}
+    bound_transition::Union{Nothing, ReactiveDynamics.Transition}
+    past_bonds::Vector{Tuple{Symbol, Float64, Transition}}
 end
 
 # We use this to let the network know that the type is structured.
@@ -29,12 +29,14 @@ end
 # Convenience macro to define structured species.
 macro structured_token(network, type)
     return quote
-        $(AlgebraicAgents.aagent(
-            BaseStructuredToken,
-            AbstractStructuredToken,
-            type,
-            ReactiveDynamics,
-        ))
+        $(
+            AlgebraicAgents.aagent(
+                BaseStructuredToken,
+                AbstractStructuredToken,
+                type,
+                ReactiveDynamics,
+            )
+        )
     end
 end
 
@@ -63,10 +65,10 @@ struct PopulationEntry
     species::Symbol
     kind::Symbol
     count::Int
-    attributes::Dict{Symbol,Any}
+    attributes::Dict{Symbol, Any}
 end
-PopulationEntry(species, kind; count = 1, attributes = Dict{Symbol,Any}()) =
-    PopulationEntry(species, kind, count, Dict{Symbol,Any}(attributes))
+PopulationEntry(species, kind; count = 1, attributes = Dict{Symbol, Any}()) =
+    PopulationEntry(species, kind, count, Dict{Symbol, Any}(attributes))
 
 # Evaluate an initial-marking attribute through the seeded closure path; a bare QuoteNode (a
 # literal `:Phase2`) is the symbol it wraps (wrap_fun/context_eval pass QuoteNodes through).
@@ -88,8 +90,8 @@ function instantiate_population!(problem::ReactionNetworkProblem)
                 "population: kind $(entry.kind) not in the network registry (ADR 0006 §C)",
             )
             ctor = problem.registry[entry.kind]
-            for _ = 1:entry.count
-                fields = Dict{Symbol,Any}(
+            for _ in 1:entry.count
+                fields = Dict{Symbol, Any}(
                     f => _eval_attr(problem, v) for (f, v) in entry.attributes
                 )
                 add_structured_token!(problem, ctor(problem, fields))
@@ -106,14 +108,16 @@ end
 # population form can be restored to its t=0 attributes on reinit! (the PopulationEntry form
 # rebuilds fresh tokens instead, so it needs no snapshot). Captures the modeling attributes plus
 # the protocol `species` field (a soft-retired token has species==:removed and must be restored).
-const _SNAPSHOT_SKIP = (:uuid, :name, :parent, :inners, :relpathrefs, :opera,
-    :bound_transition, :past_bonds)
+const _SNAPSHOT_SKIP = (
+    :uuid, :name, :parent, :inners, :relpathrefs, :opera,
+    :bound_transition, :past_bonds,
+)
 function snapshot_population!(problem::ReactionNetworkProblem)
     empty!(problem.init_snapshot)
     for tok in values(inners(getagent(problem, "structured")))
         fields = filter(f -> !(f in _SNAPSHOT_SKIP), fieldnames(typeof(tok)))
         problem.init_snapshot[AlgebraicAgents.getname(tok)] =
-            Dict{Symbol,Any}(f => getproperty(tok, f) for f in fields)
+            Dict{Symbol, Any}(f => getproperty(tok, f) for f in fields)
     end
     return problem
 end
@@ -144,7 +148,7 @@ end
 
 # Set the transition a token is bound to.
 get_bound_transition(a::AbstractStructuredToken) = a.bound_transition
-function set_bound_transition!(a::AbstractStructuredToken, t::Union{Nothing,Transition})
+function set_bound_transition!(a::AbstractStructuredToken, t::Union{Nothing, Transition})
     return a.bound_transition = t
 end
 

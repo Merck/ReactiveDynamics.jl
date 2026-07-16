@@ -18,13 +18,13 @@ using Statistics
     # note: specInitVal/sol column order is spec order: material is col 1.
     @testset "Row 1 (upfront/consumed/block): empty modality is raw stoichiometric consumption, never returned" begin
         net = @reaction_network begin
-            @deterministic(1.0), 2*material --> widget, name => build
+            @deterministic(1.0), 2 * material --> widget, name => build
         end
         @prob_init net material = 100 widget = 0
         @prob_params net
         @cost net material = 5.0
         prob = ReactionNetworkProblem(net, Dict(); tspan = 3, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         @test df.material[1] == 100.0
         # 2 material burned per tick, monotone non-increasing, never credited back
@@ -44,15 +44,15 @@ using Statistics
         # steady-state proof of return: 1 conserved-holder spawned/tick, each holds 3 cash for ct=3 ticks.
         # Backlog of in-flight holders is bounded, so cash settles to a constant (held, not consumed).
         net = @reaction_network begin
-            @deterministic(1.0), 3*@conserved(cash) --> product, name => hold, cycletime => 3.0
+            @deterministic(1.0), 3 * @conserved(cash) --> product, name => hold, cycletime => 3.0
         end
         @prob_init net cash = 100 product = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 12, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         # cash is HELD (debited at spawn) but RETURNED at finish: it reaches a steady floor, never drains to 0
-        tail = df.cash[(end-3):end]
+        tail = df.cash[(end - 3):end]
         @test all(==(tail[1]), tail)            # constant in steady state
         @test tail[1] > 0                        # not consumed away (would hit 0 if raw-consumed)
         @test tail[1] == 94.0                    # observed steady floor: 100 - 2*3 (two cohorts mid-flight)
@@ -70,7 +70,7 @@ using Statistics
         @prob_init net fuel = 1000 trip = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 6, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         # one new in-flight instance per tick; each draws 1*1*dt=1 fuel/tick while alive (ct=3)
         # so per-tick fuel draw ramps 1,2,3,3,... as the in-flight population builds toward 3
@@ -88,15 +88,15 @@ using Statistics
     # note: down the nesting).
     @testset "Row 4 (perstep/conserved/block): @rate+@conserved is a rented hold — drawn per tick, fully returned at finish" begin
         net = @reaction_network begin
-            @deterministic(1.0), 2*@rate(@conserved(fuel)) --> out, name => rc, cycletime => 2.0
+            @deterministic(1.0), 2 * @rate(@conserved(fuel)) --> out, name => rc, cycletime => 2.0
         end
         @prob_init net fuel = 1000 out = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 8, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         # rented throughput: per-tick draws are exactly offset by q·s·C returns at finish, so the pool plateaus high
-        tail = df.fuel[(end-3):end]
+        tail = df.fuel[(end - 3):end]
         @test all(==(tail[1]), tail)        # steady state
         @test tail[1] == 998.0              # observed floor (one cohort's in-flight reservation)
         @test tail[1] > 990.0               # net hold is small vs raw consumption — characterizes 'rented'
@@ -118,9 +118,9 @@ using Statistics
         # (step 3 of _step!) iterates it; the freed :nonblock resource is credited back rather than crashing on `q`.
         net = @reaction_network begin
             @deterministic(1.0),
-            @nonblock(sensor) --> reading,
-            name => measure,
-            cycletime => 3.0
+                @nonblock(sensor) --> reading,
+                name => measure,
+                cycletime => 3.0
         end
         @prob_init net sensor = 10 reading = 0
         @prob_params net
@@ -128,7 +128,7 @@ using Statistics
         @test (simulate(prob); true)              # FIXED: free_blocked_species! no longer hits undefined `q`
         df = prob.sol
         # the freed :nonblock resource is credited back every step ⇒ non-negative, finite trajectory
-        @test all(>=(-1e-9), df.sensor)
+        @test all(>=(-1.0e-9), df.sensor)
         @test all(isfinite, df.sensor) && all(isfinite, df.reading)
     end
 
@@ -242,8 +242,8 @@ using Statistics
             simulate(prob)
             return prob.u[1]
         end
-        m1 = mean(total_spawned(1.0; seed = s) for s = 1:200)
-        m2 = mean(total_spawned(0.5; seed = s) for s = 1:200)
+        m1 = mean(total_spawned(1.0; seed = s) for s in 1:200)
+        m2 = mean(total_spawned(0.5; seed = s) for s in 1:200)
         @test isapprox(m1, 100.0; atol = 8.0)     # E = rate*tspan = 2*50
         @test isapprox(m2, 100.0; atol = 8.0)
         @test isapprox(m1, m2; atol = 8.0)        # halving dt preserves the expected total
@@ -309,7 +309,7 @@ using Statistics
         @prob_init net feed = 0 product = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 5, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         # t=0: feed=0 ⇒ router (nominal rate 100) is TOKEN-GATED to 0; product stays 0 through the first interval
         @test df.product[1] == 0.0 && df.product[2] == 0.0
@@ -317,7 +317,7 @@ using Statistics
         @test df.product[end] > 0
         @test all(>=(0.0), df.feed)         # gate never debits below available tokens
         # realized routing == upstream deposit rate, NOT the nominal rate=100
-        @test maximum(-diff(df.product)) <= 2.0 + 1e-9
+        @test maximum(-diff(df.product)) <= 2.0 + 1.0e-9
     end
 
     # [gen-capacity-overflow-deferral] tier=T1-characterization expectedStatus=pass-now
@@ -335,10 +335,10 @@ using Statistics
         # triggering the overflow-deferral path add_to_spawn!.
         net = @reaction_network begin
             @deterministic(3.0),
-            1*@conserved(slot) --> job,
-            name => start,
-            cycletime => 10.0,
-            capacity => 5
+                1 * @conserved(slot) --> job,
+                name => start,
+                cycletime => 10.0,
+                capacity => 5
         end
         @prob_init net slot = 100 job = 0
         @prob_params net
@@ -346,7 +346,7 @@ using Statistics
         @test simulate(prob) !== nothing   # FIXED: add_to_spawn! deferral no longer hits MethodError / Symbol +=
         # Invariant 3: live concurrent instances never exceed capacity; overflow is carried forward, not dropped.
         @test count(t -> t[:transHash] == prob[1, :transHash], prob.ongoing_transitions) <=
-              5
+            5
     end
 
     # [gen-capacity-clamp-no-overflow] tier=T1-characterization expectedStatus=pass-now
@@ -359,10 +359,10 @@ using Statistics
         # proposal (1/tick) never exceeds capacity (3); live count rises to 3 (ct=3) and holds — no add_to_spawn! crash.
         net = @reaction_network begin
             @deterministic(1.0),
-            @rate(fuel) --> job,
-            name => start,
-            cycletime => 3.0,
-            capacity => 3
+                @rate(fuel) --> job,
+                name => start,
+                cycletime => 3.0,
+                capacity => 3
         end
         @prob_init net fuel = 1000 job = 0
         @prob_params net
@@ -374,7 +374,7 @@ using Statistics
         # each tick proposes exactly 1 (deterministic), within capacity, so no overflow is ever deferred
         spawncounts = [
             v for r in prob.log if r[1] == :new_transitions for
-            (hh, v) in r[3:end] if hh == h
+                (hh, v) in r[3:end] if hh == h
         ]
         @test all(c -> c <= 3, spawncounts)
     end
@@ -394,7 +394,7 @@ using Statistics
         @prob_init net cohort = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 7, dt = 1.0)
-        simulate(prob);
+        simulate(prob)
         df = prob.sol
         # spawns occur only at period boundaries (t=2,4,6): cohort steps up by 3 there, flat between
         deltas = diff(df.cohort)

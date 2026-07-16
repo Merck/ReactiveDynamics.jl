@@ -22,8 +22,10 @@ function export_data(; root_seed = 2026, nseed = 160)
     # Each scenario is an engine EnsembleProblem (RD.ensemble via scenario_ensemble); per-member
     # vectors and summary stats come from the engine-backed analysis helpers. The acquisition price
     # is netted in the metric closures (deals carry it, S0 does not).
-    R = Dict(s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
-             for s in scenarios)
+    R = Dict(
+        s => scenario_ensemble(seed -> run_scenario(s, seed); root_seed = root_seed, nseed = nseed)
+            for s in scenarios
+    )
     base = R[:S0]
     price(s) = s == :S0 ? 0.0 : ACQ_PRICE
     out = joinpath(HERE, "presentation_data.json")
@@ -36,13 +38,19 @@ function export_data(; root_seed = 2026, nseed = 160)
             te = treatment_effect(base, ens; deal_price = price(s))
             comma = i < length(scenarios) ? "," : ""
             println(io, "    \"$s\": {")
-            @printf(io, "      \"mean_rnpv\": %.4f, \"sem_rnpv\": %.4f,\n",
-                    mean_rnpv(ens; acq_price = price(s)), sem_rnpv(ens; acq_price = price(s)))
+            @printf(
+                io, "      \"mean_rnpv\": %.4f, \"sem_rnpv\": %.4f,\n",
+                mean_rnpv(ens; acq_price = price(s)), sem_rnpv(ens; acq_price = price(s))
+            )
             @printf(io, "      \"mean_launches\": %.4f, \"p_launch\": %.4f,\n", mean_launches(ens), p_launch(ens))
-            @printf(io, "      \"mean_cash_trough\": %.4f, \"mean_sci_trough\": %.4f,\n",
-                    mean_cash_trough(ens), mean_sci_trough(ens))
-            @printf(io, "      \"delta_rnpv\": %.4f, \"se_delta_rnpv\": %.4f, \"delta_launches\": %.4f,\n",
-                    te.delta_rnpv, te.se_delta_rnpv, te.delta_launches)
+            @printf(
+                io, "      \"mean_cash_trough\": %.4f, \"mean_sci_trough\": %.4f,\n",
+                mean_cash_trough(ens), mean_sci_trough(ens)
+            )
+            @printf(
+                io, "      \"delta_rnpv\": %.4f, \"se_delta_rnpv\": %.4f, \"delta_launches\": %.4f,\n",
+                te.delta_rnpv, te.se_delta_rnpv, te.delta_launches
+            )
             println(io, "      \"rnpv\": ", jarr(rnpv_samples(ens; acq_price = price(s))), ",")
             println(io, "      \"launches\": ", jarr(launch_samples(ens)), ",")
             println(io, "      \"cash_trough\": ", jarr(cash_trough_samples(ens)), ",")

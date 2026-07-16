@@ -79,10 +79,10 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
     end
     function TrajProjectToken(phase, value)
         return TrajProjectToken(
-            "TP" * string(rand(1:10^9)),
+            "TP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             value,
         )
@@ -98,8 +98,8 @@ RD.log_token_fields(t::RD.TrajProjectToken) = (; phase = t.phase, value = t.valu
 function project_model(; budget0 = 8, cost = 1.0, reward = 10.0)
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
-        name => adv, cycletime => 1.0, probability => 0.6
+            @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
+            name => adv, cycletime => 1.0, probability => 0.6
     end
     RD.register_structured_species!(net, :Project)
     bi = findfirst(==(:budget), net[:, :specName])
@@ -113,9 +113,13 @@ end
 
 # Build + simulate one member under a seed. The starting portfolio is a handful of
 # Phase1 projects with different values, passed declaratively as `population`.
-build_prob(seed; pop = [RD.TrajProjectToken(:Phase1, 1.0),
-                        RD.TrajProjectToken(:Phase1, 2.0),
-                        RD.TrajProjectToken(:Phase1, 3.0)]) =
+build_prob(
+    seed; pop = [
+        RD.TrajProjectToken(:Phase1, 1.0),
+        RD.TrajProjectToken(:Phase1, 2.0),
+        RD.TrajProjectToken(:Phase1, 3.0),
+    ]
+) =
     ReactionNetworkProblem(project_model(); seed = seed, population = pop)
 
 const SEED = 20260709
@@ -149,8 +153,10 @@ banner("§1. Raw run artifacts: prob.sol, prob.log, the per-program ledger")
 # prob.sol — read the budget pool's trajectory (it burns down as projects advance).
 budget = prob.sol[!, "budget"]
 println("prob.sol — budget pool over time : ", round.(budget; digits = 1))
-println("  budget start → end             : ", round(budget[1]; digits = 1),
-        " → ", round(budget[end]; digits = 1), "  (burned by the @rate metering)")
+println(
+    "  budget start → end             : ", round(budget[1]; digits = 1),
+    " → ", round(budget[end]; digits = 1), "  (burned by the @rate metering)"
+)
 
 # prob.log — reduce the ledger rows by tag (the core_engine_tour idiom).
 agg_cost = sum(r[3] for r in prob.log if r[1] == :valuation_cost; init = 0.0)
@@ -164,8 +170,10 @@ println("  aggregate reward (Σ :valuation_reward): ", round(agg_reward; digits 
 led = program_ledger(prob)
 println("program_ledger(prob) — one row per program (", nrow(led), " rows):")
 for row in eachrow(led)
-    @printf("  %-14s  species=%-8s  cost=%5.2f  reward=%5.2f  net=%6.2f\n",
-            row.program, row.species, row.cost_incurred, row.reward_realized, row.net)
+    @printf(
+        "  %-14s  species=%-8s  cost=%5.2f  reward=%5.2f  net=%6.2f\n",
+        row.program, row.species, row.cost_incurred, row.reward_realized, row.net
+    )
 end
 # The append-only audit trail for the first program: (t, kind, amount, transition).
 if nrow(led) > 0
@@ -204,16 +212,20 @@ println()
 # One token's life (the first program in the log).
 one_name = traj[1, :program]
 one = token_trajectory(prob, one_name)
-println("token_trajectory(prob, \"", one_name, "\") — that one token's ", nrow(one),
-        " logged ticks; phases: ", one.phase)
+println(
+    "token_trajectory(prob, \"", one_name, "\") — that one token's ", nrow(one),
+    " logged ticks; phases: ", one.phase
+)
 
 # Predicate scope: the tokens that ended in :Phase2 (they advanced). TokenPredicate
 # reuses the @select machinery (a conjunctive clause list); a QuoteNode wraps the
 # literal symbol being compared against.
 adv_pred = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNode(:Phase2))])
 adv_rows = token_trajectory(prob, adv_pred)
-println("token_trajectory(prob, @select Phase2) — the advanced cohort: ",
-        length(unique(adv_rows.program)), " token(s), ", nrow(adv_rows), " rows")
+println(
+    "token_trajectory(prob, @select Phase2) — the advanced cohort: ",
+    length(unique(adv_rows.program)), " token(s), ", nrow(adv_rows), " rows"
+)
 
 
 # =============================================================================
@@ -242,8 +254,10 @@ println("trajectory_envelope(prob) — columns: ", names(env))
 val_band = env[env.field .== :value, :]
 println("  the numeric `value` field's median ± IQR band by tick:")
 for row in eachrow(val_band)
-    @printf("    t=%.1f  median=%.2f  [q25=%.2f, q75=%.2f]  n=%d\n",
-            row.align, row.median, row.q25, row.q75, row.n)
+    @printf(
+        "    t=%.1f  median=%.2f  [q25=%.2f, q75=%.2f]  n=%d\n",
+        row.align, row.median, row.q25, row.q75, row.n
+    )
 end
 
 
@@ -279,29 +293,45 @@ println("  run mode           : ", ens.mode, "  (:rebuild — mode a ships today
 # exists to report). The metric is any `member -> Real`; here it reads the ledger.
 realized_reward(p) = sum(program_ledger(p).reward_realized)
 s = summarize(ens, realized_reward)
-@printf("summarize(ens, realized reward) : mean=%.2f ± sem=%.2f   median=%.2f  [q25=%.2f, q75=%.2f]  n=%d\n",
-        s.mean, s.sem, s.median, s.q25, s.q75, s.n)
+@printf(
+    "summarize(ens, realized reward) : mean=%.2f ± sem=%.2f   median=%.2f  [q25=%.2f, q75=%.2f]  n=%d\n",
+    s.mean, s.sem, s.median, s.q25, s.q75, s.n
+)
 
 # EnsembleProblem is an AA-readable node: it exports cross-run observables (the
 # across-member mean of its members' observables) and holds each member as a child.
 obs = AlgebraicAgents.observables(ens)
 println("AlgebraicAgents.observables(ens) : ", obs)
 if :budget in obs
-    println("  getobservable(ens, :budget)    : ", round(AlgebraicAgents.getobservable(ens, :budget); digits = 2),
-            "  (the across-member mean)")
+    println(
+        "  getobservable(ens, :budget)    : ", round(AlgebraicAgents.getobservable(ens, :budget); digits = 2),
+        "  (the across-member mean)"
+    )
 end
 println("  AA children (members)          : ", length(AlgebraicAgents.inners(ens)))
 
 # treatment_effect: an A/B lever. The "deal" arm injects more starting capital
 # (budget0 20 vs the scarce baseline 8), so it leaves more budget at the horizon.
-base = ensemble(s -> (p = build_prob(s; pop = [RD.TrajProjectToken(:Phase1, 1.0)]);
-    simulate(p); p); nseed = 6, root_seed = 9)
-deal = ensemble(s -> (p = ReactionNetworkProblem(project_model(; budget0 = 20); seed = s,
-    population = [RD.TrajProjectToken(:Phase1, 1.0)]); simulate(p); p); nseed = 6, root_seed = 9)
+base = ensemble(
+    s -> (
+        p = build_prob(s; pop = [RD.TrajProjectToken(:Phase1, 1.0)]);
+        simulate(p); p
+    ); nseed = 6, root_seed = 9
+)
+deal = ensemble(
+    s -> (
+        p = ReactionNetworkProblem(
+            project_model(; budget0 = 20); seed = s,
+            population = [RD.TrajProjectToken(:Phase1, 1.0)]
+        ); simulate(p); p
+    ); nseed = 6, root_seed = 9
+)
 te = treatment_effect(base, deal, p -> last(p.sol.budget))
 @printf("treatment_effect(baseline budget0=8, deal budget0=20; final budget):\n")
-@printf("  baseline=%.2f  deal=%.2f  Δ=%.2f ± se=%.2f  (n_b=%d, n_d=%d)\n",
-        te.baseline, te.deal, te.delta, te.se, te.n_baseline, te.n_deal)
+@printf(
+    "  baseline=%.2f  deal=%.2f  Δ=%.2f ± se=%.2f  (n_b=%d, n_d=%d)\n",
+    te.baseline, te.deal, te.delta, te.se, te.n_baseline, te.n_deal
+)
 println("  ⇒ the better-capitalized deal arm leaves more budget (Δ ≥ 0), the A/B signal.")
 
 
@@ -326,8 +356,10 @@ println("export_run(prob, \"", relpath(run_dir, HERE), "\") wrote:")
 for f in sort(readdir(run_dir))
     println("  ", f)
 end
-println("  (.arrow siblings present ⇒ Arrow is loaded: RD._arrow_available() = ",
-        RD._arrow_available(), ")")
+println(
+    "  (.arrow siblings present ⇒ Arrow is loaded: RD._arrow_available() = ",
+    RD._arrow_available(), ")"
+)
 
 ens_dir = joinpath(OUTDIR, "ensemble")
 ispath(ens_dir) && rm(ens_dir; recursive = true)
@@ -352,9 +384,13 @@ end
 banner("§6. Result-plot recipes: MarkingPlot / LedgerPlot / TokenTrajectoryPlot …")
 
 # The wrapper types (constructible regardless of Plots).
-println("recipe wrapper types constructed: ",
-        (RD.MarkingPlot(prob), RD.SaturationPlot(prob), RD.ValuationPlot(prob),
-         RD.LedgerPlot(prob), RD.ThroughputPlot(prob)) .|> typeof .|> nameof)
+println(
+    "recipe wrapper types constructed: ",
+    (
+        RD.MarkingPlot(prob), RD.SaturationPlot(prob), RD.ValuationPlot(prob),
+        RD.LedgerPlot(prob), RD.ThroughputPlot(prob),
+    ) .|> typeof .|> nameof
+)
 
 # Render two to PNG (RDPlotsExt is live since Plots is loaded).
 marking_png = joinpath(OUTDIR, "marking.png")
@@ -401,8 +437,10 @@ println("  arcs               : ", length(g.arcs), " (:in LHS→T and :out T→R
 dot = to_graphviz(g)
 dot_path = joinpath(OUTDIR, "network.dot")
 write(dot_path, dot)
-println("Layer B to_graphviz(g): wrote DOT source → ", relpath(dot_path, HERE),
-        " (", length(dot), " bytes)")
+println(
+    "Layer B to_graphviz(g): wrote DOT source → ", relpath(dot_path, HERE),
+    " (", length(dot), " bytes)"
+)
 
 # Is a Graphviz backend available? Try to render Layer B to a file. draw_network
 # with a `path` writes the rendered output there and returns the path.
@@ -416,11 +454,15 @@ catch err
     @warn "draw_network: no Graphviz backend available — falling back to DOT" exception = err
 end
 if graphviz_ok
-    println("  draw_network rendered → ", relpath(network_svg, HERE),
-            " (", filesize(network_svg), " bytes)")
+    println(
+        "  draw_network rendered → ", relpath(network_svg, HERE),
+        " (", filesize(network_svg), " bytes)"
+    )
 else
-    println("  no Graphviz backend — the structure lives in ", relpath(dot_path, HERE),
-            " (render it with `dot -Tsvg`)")
+    println(
+        "  no Graphviz backend — the structure lives in ", relpath(dot_path, HERE),
+        " (render it with `dot -Tsvg`)"
+    )
 end
 
 # Layer C — the decorated exec map. Highlight the advanced (:Phase2) cohort's path.
@@ -432,7 +474,7 @@ println("  starved species (pool trough ≤ 0) : ", isempty(starved) ? "none" : 
 
 # Build the highlight arc set the way exec_map does: each matching token's
 # past_bonds map a (species, transition-index) to the SAME node id the graph uses.
-hi_arcs = Tuple{Symbol,Symbol}[]
+hi_arcs = Tuple{Symbol, Symbol}[]
 for tok in RD.select_tokens(prob, adv_pred)
     for (sp, _t, tr) in tok.past_bonds
         push!(hi_arcs, (sp, RD._transition_node_name(prob.network, tr.i)))
@@ -462,8 +504,10 @@ if exec_ok
     println("  ★ Open it: the gold-filled place is a starved pool; the thick arcs are the")
     println("    advanced cohort's path through the net — the (in)efficiency read.")
 else
-    println("  no Graphviz backend — the decorated exec map DOT is in ",
-            relpath(exec_dot_path, HERE), " (render it with `dot -Tsvg`)")
+    println(
+        "  no Graphviz backend — the decorated exec map DOT is in ",
+        relpath(exec_dot_path, HERE), " (render it with `dot -Tsvg`)"
+    )
 end
 
 
@@ -471,25 +515,27 @@ end
 # §8. Recap — what this tour exercised
 # =============================================================================
 banner("§8. Recap — the Phase-0.6 analysis & visualization surface")
-println("""
-  §1  Raw artifacts: prob.sol (marking DataFrame), prob.log (tagged event stream,
-      reduced by tag to aggregate cost/reward), and program_ledger(prob) +
-      program_ledger_entries (the per-program attribution DataFrame + audit trail).
-  §2  The per-token trajectory log: token_trajectory(prob) (long form), one token's
-      life by name, and predicate-scoped rows via a @select TokenPredicate.
-  §3  "Typical" helpers: representative_token (the medoid program) and
-      trajectory_envelope (per-tick median + IQR band over a numeric field).
-  §4  Ensembles: ensemble (nseed members, hash((root,k)) seeding), summarize
-      (mean/sem/quantiles), treatment_effect (unpaired A/B Δ), and the
-      EnsembleProblem as an AA-readable node (observables / getobservable / inners).
-  §5  Export bundles: export_run / export_ensemble — CSV + JSON core, plus the
-      Arrow siblings (RDArrowExt, because this demo loads Arrow), manifest-pinned.
-  §6  Result-plot recipes: the model-agnostic wrapper types (MarkingPlot, …) and
-      two rendered to PNG via RDPlotsExt.
-  §7  ★ The exec map, three layers: network_graph (pure structure) → draw_network
-      (Graphviz render of the Petri net) → exec_map (decorated with starvation
-      coloring + a @select cohort's token-path highlighting) — the (in)efficiency view.
+println(
+    """
+      §1  Raw artifacts: prob.sol (marking DataFrame), prob.log (tagged event stream,
+          reduced by tag to aggregate cost/reward), and program_ledger(prob) +
+          program_ledger_entries (the per-program attribution DataFrame + audit trail).
+      §2  The per-token trajectory log: token_trajectory(prob) (long form), one token's
+          life by name, and predicate-scoped rows via a @select TokenPredicate.
+      §3  "Typical" helpers: representative_token (the medoid program) and
+          trajectory_envelope (per-tick median + IQR band over a numeric field).
+      §4  Ensembles: ensemble (nseed members, hash((root,k)) seeding), summarize
+          (mean/sem/quantiles), treatment_effect (unpaired A/B Δ), and the
+          EnsembleProblem as an AA-readable node (observables / getobservable / inners).
+      §5  Export bundles: export_run / export_ensemble — CSV + JSON core, plus the
+          Arrow siblings (RDArrowExt, because this demo loads Arrow), manifest-pinned.
+      §6  Result-plot recipes: the model-agnostic wrapper types (MarkingPlot, …) and
+          two rendered to PNG via RDPlotsExt.
+      §7  ★ The exec map, three layers: network_graph (pure structure) → draw_network
+          (Graphviz render of the Petri net) → exec_map (decorated with starvation
+          coloring + a @select cohort's token-path highlighting) — the (in)efficiency view.
 
-  All of the above is READ-ONLY post-processing over a finished run — it never
-  touches the dynamics. Artifacts were written under demo/introspection_tour/output/.
-""")
+      All of the above is READ-ONLY post-processing over a finished run — it never
+      touches the dynamics. Artifacts were written under demo/introspection_tour/output/.
+    """
+)

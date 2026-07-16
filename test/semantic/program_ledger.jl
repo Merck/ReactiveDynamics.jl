@@ -26,7 +26,7 @@ RD = ReactiveDynamics
             "LP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
         )
     end
@@ -46,10 +46,10 @@ agg_reward(p) = sum(r[3] for r in p.log if r[1] == :valuation_reward; init = 0.0
 function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
-        name => adv,
-        cycletime => 1.0,
-        probability => 1.0
+            @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
+            name => adv,
+            cycletime => 1.0,
+            probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
     bi = findfirst(==(:budget), net[:, :specName])
@@ -102,14 +102,14 @@ end
         df = program_ledger(p)
         per_cost = sum(df.cost_incurred) + p.unattributed_cost
         per_reward = sum(df.reward_realized) + p.unattributed_reward
-        @test isapprox(per_cost, agg_cost(p); atol = 1e-9)
-        @test isapprox(per_reward, agg_reward(p); atol = 1e-9)
+        @test isapprox(per_cost, agg_cost(p); atol = 1.0e-9)
+        @test isapprox(per_reward, agg_reward(p); atol = 1.0e-9)
         # After the program advances at tick 0 it no longer matches @select(Phase1); the transition
         # keeps spawning (rate 1) and burning budget on instances with NO bound program — that spend
         # is the documented UNATTRIBUTED bucket (the boundary of finding D), so it is > 0 here and is
         # exactly what makes the per-program total fall short of the aggregate.
         @test p.unattributed_cost > 0.0
-        @test isapprox(sum(df.cost_incurred), 2.0; atol = 1e-9)        # only tick 0 is the program's
+        @test isapprox(sum(df.cost_incurred), 2.0; atol = 1.0e-9)        # only tick 0 is the program's
     end
 
     # ── even split across multiple bound programs ────────────────────────────────────────
@@ -125,10 +125,10 @@ end
         # for this instant (ct=0) transition and gives a nonzero per-program cost to split.
         net = @reaction_network begin
             @deterministic(2.0),
-            @select(Project, phase == :Phase1) + 3 * budget --> @advance(phase, :Phase2),
-            name => adv2,
-            cycletime => 0.0,
-            probability => 1.0
+                @select(Project, phase == :Phase1) + 3 * budget --> @advance(phase, :Phase2),
+                name => adv2,
+                cycletime => 0.0,
+                probability => 1.0
         end
         RD.register_structured_species!(net, :Project)
         @prob_init net budget = 100
@@ -148,7 +148,7 @@ end
         @test isapprox(
             sum(df.cost_incurred) + p.unattributed_cost,
             agg_cost(p);
-            atol = 1e-9,
+            atol = 1.0e-9,
         )
         @test all(df.species .== :Project)
         @test sort(df.creation_index) == [1, 2]
@@ -184,9 +184,9 @@ end
         @test p.unattributed_reward == 0.0
 
         simulate(p)
-        @test isapprox(sum(program_ledger(p).cost_incurred), cost1; atol = 1e-9)
-        @test isapprox(sum(program_ledger(p).reward_realized), reward1; atol = 1e-9)
-        @test isapprox(p.unattributed_cost, unattr1; atol = 1e-9)
+        @test isapprox(sum(program_ledger(p).cost_incurred), cost1; atol = 1.0e-9)
+        @test isapprox(sum(program_ledger(p).reward_realized), reward1; atol = 1.0e-9)
+        @test isapprox(p.unattributed_cost, unattr1; atol = 1.0e-9)
     end
 
     # ── the per-tick :program_ledger log row is present and in deterministic token order ──
@@ -201,8 +201,8 @@ end
         for row in eachrow(df)
             haskey(last_snapshot, row.program) || continue
             s = last_snapshot[row.program]
-            @test isapprox(s.cost, row.cost_incurred; atol = 1e-9)
-            @test isapprox(s.reward, row.reward_realized; atol = 1e-9)
+            @test isapprox(s.cost, row.cost_incurred; atol = 1.0e-9)
+            @test isapprox(s.reward, row.reward_realized; atol = 1.0e-9)
         end
     end
 

@@ -64,7 +64,7 @@ function AlgebraicAgents.getobservable(rd::ReactionNetworkProblem, name::Symbol)
     haskey(rd.observables, name) && return rd.observables[name].sampled
     return error(
         "getobservable: `$name` is not an exported observable of $(getname(rd)); " *
-        "exported names are $(AlgebraicAgents.observables(rd)) (ADR 0012 §A)",
+            "exported names are $(AlgebraicAgents.observables(rd)) (ADR 0012 §A)",
     )
 end
 

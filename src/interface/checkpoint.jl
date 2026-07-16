@@ -17,31 +17,33 @@ export StateDump, dump_state, restore
 struct StateDump
     model_hash::UInt64
     t::Float64
-    tspan::Tuple{Float64,Float64}    # time control, so restore is self-contained
+    tspan::Tuple{Float64, Float64}    # time control, so restore is self-contained
     dt::Float64
-    rng_state::NTuple{5,UInt64}      # Xoshiro s0..s4 (eval-free, JSON-representable)
-    creation_counters::Dict{Symbol,Int}
-    creation_index::Dict{String,Int}
+    rng_state::NTuple{5, UInt64}      # Xoshiro s0..s4 (eval-free, JSON-representable)
+    creation_counters::Dict{Symbol, Int}
+    creation_index::Dict{String, Int}
     u::Vector{Float64}               # plain-species columns; structured columns are re-derived
     tokens::Vector{NamedTuple}       # (species, name, creation_index, fields::Dict, bound::Bool)
-    rule_latches::Dict{Symbol,Bool}  # `once`-rule enabled state
+    rule_latches::Dict{Symbol, Bool}  # `once`-rule enabled state
 end
 
 # The host-struct fields of a token beyond the @aagent/protocol injected ones — the modeling
 # attributes (phase, npv, …) we snapshot as current literal values.
-const _PROTOCOL_FIELDS = (:uuid, :name, :parent, :inners, :relpathrefs, :opera,
-    :species, :bound_transition, :past_bonds)
+const _PROTOCOL_FIELDS = (
+    :uuid, :name, :parent, :inners, :relpathrefs, :opera,
+    :species, :bound_transition, :past_bonds,
+)
 _token_attr_fields(tok) = filter(f -> !(f in _PROTOCOL_FIELDS), fieldnames(typeof(tok)))
 
 function dump_state(problem::ReactionNetworkProblem)
     isempty(problem.ongoing_transitions) || error(
         "dump_state: $(length(problem.ongoing_transitions)) in-flight transition(s) — dump is " *
-        "only supported at a clean tick boundary (empty `ongoing`) in Milestone-1 (ADR 0007 §C " *
-        "open question). Step to a boundary where no instance is mid-cycle, or use reinit! to reset.",
+            "only supported at a clean tick boundary (empty `ongoing`) in Milestone-1 (ADR 0007 §C " *
+            "open question). Step to a boundary where no instance is mid-cycle, or use reinit! to reset.",
     )
     toks = NamedTuple[]
     for tok in values(inners(getagent(problem, "structured")))
-        fields = Dict{Symbol,Any}(f => getproperty(tok, f) for f in _token_attr_fields(tok))
+        fields = Dict{Symbol, Any}(f => getproperty(tok, f) for f in _token_attr_fields(tok))
         push!(
             toks,
             (
@@ -64,7 +66,7 @@ function dump_state(problem::ReactionNetworkProblem)
         copy(problem.creation_index),
         copy(problem.u),
         toks,
-        Dict{Symbol,Bool}(r.id => r.enabled for r in problem.rules if r.fire_mode === :once),
+        Dict{Symbol, Bool}(r.id => r.enabled for r in problem.rules if r.fire_mode === :once),
     )
 end
 
@@ -72,7 +74,7 @@ end
 # overlay the dumped clock/RNG/counters/u and rebuild the token population from the dump (each
 # token's kind resolved via the registry, fields set to the dumped literal values). The structured
 # u columns are re-derived by update_u_structured! from the restored population, not copied.
-function restore(spec, dump::StateDump; registry = Dict{Symbol,Any}(), kwargs...)
+function restore(spec, dump::StateDump; registry = Dict{Symbol, Any}(), kwargs...)
     hash(spec) == dump.model_hash || @warn "restore: model hash mismatch — restoring a dump " *
         "against a different spec is ill-defined (ADR 0007 §C open question)."
     problem = ReactionNetworkProblem(

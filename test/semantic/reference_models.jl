@@ -49,9 +49,9 @@ using Statistics
         simulate(prob)
         S = prob.sol[!, "S"]; I = prob.sol[!, "I"]; R = prob.sol[!, "R"]
         total = S .+ I .+ R
-        @test all(isapprox.(total, total[1]; atol = 1e-9))   # S+I+R invariant
+        @test all(isapprox.(total, total[1]; atol = 1.0e-9))   # S+I+R invariant
         @test total[1] == 1009.0
-        @test all(S .>= -1e-9) && all(I .>= -1e-9) && all(R .>= -1e-9)   # non-negativity
+        @test all(S .>= -1.0e-9) && all(I .>= -1.0e-9) && all(R .>= -1.0e-9)   # non-negativity
     end
 
     # [sir-epidemic-peak] tier=T1-characterization expectedStatus=pass-now
@@ -74,7 +74,7 @@ using Statistics
         peak_ix = argmax(I)
         @test 1 < peak_ix < length(I)   # peak is interior, not at an endpoint
         @test I[end] < maximum(I)        # infection declines after the peak
-        @test all(diff(R) .>= -1e-9)     # recovered is monotone non-decreasing
+        @test all(diff(R) .>= -1.0e-9)     # recovered is monotone non-decreasing
     end
 
     # [sir-infection-burns-out] tier=T2-acceptance expectedStatus=pass-after-fix
@@ -177,15 +177,19 @@ using Statistics
     # note: @register the α/β rate fns BEFORE building, exactly as the tutorial does. No maxlifetime/nonblock so
     # note: the known bugs are not triggered.
     @testset "Toy-pharma pipeline runs end to end and flows candidate_compound to market" begin
-        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
-        @register function β(n1, n2); return n1 + exp(-n2); end
+        @register function α(n1, n2, κ)
+            return κ + exp(-n1) + exp(-n2)
+        end
+        @register function β(n1, n2)
+            return n1 + exp(-n2)
+        end
         toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
-            3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-            name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
             β(candidate_compound, marketed_drug),
-            candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-            name => dx2market, probability => 0.5 + 0.001 * @t(), cycletime => 4
+                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                name => dx2market, probability => 0.5 + 0.001 * @t(), cycletime => 4
             γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
         end
         @periodic toy 1.0 budget += 11 * marketed_drug
@@ -208,15 +212,19 @@ using Statistics
     # note: times out before completing (no maxlifetime); the conserved-reentry bug (solvers.jl:501) would break
     # note: the cap — that is pinned separately in pharma-conserved-reentry-bug.
     @testset "Toy-pharma conserved (scientist) and rate (budget) pools stay non-negative" begin
-        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
-        @register function β(n1, n2); return n1 + exp(-n2); end
+        @register function α(n1, n2, κ)
+            return κ + exp(-n1) + exp(-n2)
+        end
+        @register function β(n1, n2)
+            return n1 + exp(-n2)
+        end
         toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
-            3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-            name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
             β(candidate_compound, marketed_drug),
-            candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-            name => dx2market, probability => 0.5, cycletime => 4
+                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                name => dx2market, probability => 0.5, cycletime => 4
             γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
         end
         @periodic toy 1.0 budget += 11 * marketed_drug
@@ -226,9 +234,9 @@ using Statistics
         prob = ReactionNetworkProblem(toy; seed = 1)
         simulate(prob)
         sci = prob.sol[!, "scientist"]; bud = prob.sol[!, "budget"]
-        @test all(sci .>= -1e-9)         # conserved pool never goes negative
-        @test all(bud .>= -1e-9)         # rate pool never goes negative
-        @test maximum(sci) <= 20 + 1e-9  # conserved scientist never exceeds its initial holding
+        @test all(sci .>= -1.0e-9)         # conserved pool never goes negative
+        @test all(bud .>= -1.0e-9)         # rate pool never goes negative
+        @test maximum(sci) <= 20 + 1.0e-9  # conserved scientist never exceeds its initial holding
     end
 
     # [pharma-ledger-populated] tier=T1-characterization expectedStatus=pass-now
@@ -238,15 +246,19 @@ using Statistics
     # note: (verified) — the brief's 'ledger populated' is true row-wise even then, but a meaningful (nonzero)
     # note: ledger REQUIRES @cost/@reward. No bug; PoS fixed at 0.5 + seed= construction so the draw is reproducible.
     @testset "Toy-pharma ledger has cost/reward/valuation rows once valuation attrs are set" begin
-        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
-        @register function β(n1, n2); return n1 + exp(-n2); end
+        @register function α(n1, n2, κ)
+            return κ + exp(-n1) + exp(-n2)
+        end
+        @register function β(n1, n2)
+            return n1 + exp(-n2)
+        end
         toy = @reaction_network begin
             α(candidate_compound, marketed_drug, κ),
-            3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-            name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
             β(candidate_compound, marketed_drug),
-            candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-            name => dx2market, probability => 0.5, cycletime => 4
+                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                name => dx2market, probability => 0.5, cycletime => 4
             γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
         end
         @periodic toy 1.0 budget += 11 * marketed_drug
@@ -261,7 +273,7 @@ using Statistics
         tags = unique([r[1] for r in prob.log])
         @test :valuation_cost in tags && :valuation_reward in tags && :valuation in tags
         cost_rows = filter(r -> r[1] == :valuation_cost, prob.log)
-        rew_rows  = filter(r -> r[1] == :valuation_reward, prob.log)
+        rew_rows = filter(r -> r[1] == :valuation_reward, prob.log)
         @test !isempty(cost_rows) && !isempty(rew_rows)
         @test sum(r[3] for r in cost_rows) > 0   # cost actually accrues (verified ≈585.6 under seed=1)
         @test sum(r[3] for r in rew_rows) > 0    # reward actually accrues (verified ≈250.0 under seed=1)
@@ -275,16 +287,20 @@ using Statistics
     # note: proxy on the current ledger; the full phase-PoS-weighted form (sum over phases of
     # note: expected_cashflow*cumulativePoS*discount) is its T2 generalization in rnpv-pos-lever's notes.
     @testset "rNPV as a post-processing reduction over the ledger is finite" begin
-        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
-        @register function β(n1, n2); return n1 + exp(-n2); end
+        @register function α(n1, n2, κ)
+            return κ + exp(-n1) + exp(-n2)
+        end
+        @register function β(n1, n2)
+            return n1 + exp(-n2)
+        end
         function build_pharma(pos)
             toy = @reaction_network begin
                 α(candidate_compound, marketed_drug, κ),
-                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                    3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                    name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
                 β(candidate_compound, marketed_drug),
-                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-                name => dx2market, probability => 0.5, cycletime => 4
+                    candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                    name => dx2market, probability => 0.5, cycletime => 4
                 γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
             end
             @prob_init toy candidate_compound = 5 marketed_drug = 6 scientist = 20 budget = 100
@@ -317,16 +333,20 @@ using Statistics
     # note: rnpv-finite-reduction testset.
     @testset "Higher probability-of-success lever raises rNPV (BD demo core assertion)" begin
         # Self-contained: build_pharma(pos)/rnpv(prob) defined here, matching rnpv-finite-reduction.
-        @register function α(n1, n2, κ); return κ + exp(-n1) + exp(-n2); end
-        @register function β(n1, n2); return n1 + exp(-n2); end
+        @register function α(n1, n2, κ)
+            return κ + exp(-n1) + exp(-n2)
+        end
+        @register function β(n1, n2)
+            return n1 + exp(-n2)
+        end
         function build_pharma(pos)
             toy = @reaction_network begin
                 α(candidate_compound, marketed_drug, κ),
-                3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-                name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+                    3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+                    name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
                 β(candidate_compound, marketed_drug),
-                candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-                name => dx2market, probability => 0.5, cycletime => 4
+                    candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+                    name => dx2market, probability => 0.5, cycletime => 4
                 γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
             end
             @prob_init toy candidate_compound = 5 marketed_drug = 6 scientist = 20 budget = 100
@@ -369,7 +389,7 @@ using Statistics
         @prob_meta m tspan = 10 dt = 1.0
         prob = ReactionNetworkProblem(m; seed = 1)
         @test (simulate(prob); true)            # completes — no UndefVarError from free_blocked_species!
-        @test all(prob.sol.A .>= -1e-9)         # freed @nonblock resource credited back; A never negative
+        @test all(prob.sol.A .>= -1.0e-9)         # freed @nonblock resource credited back; A never negative
         @test all(isfinite, prob.sol.A) && all(isfinite, prob.sol.B)   # trajectory stays finite
     end
 
@@ -391,7 +411,7 @@ using Statistics
         prob = ReactionNetworkProblem(m; seed = 1)
         simulate(prob)
         cash = prob.sol[!, "cash"]
-        @test maximum(cash) <= 10 + 1e-9   # conserved pool never exceeds its initial holding (INV2)
+        @test maximum(cash) <= 10 + 1.0e-9   # conserved pool never exceeds its initial holding (INV2)
         @test length(prob.ongoing_transitions) == 0   # timed-out instance is pruned (INV6; verified count==0)
     end
 end

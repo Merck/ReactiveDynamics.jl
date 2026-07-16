@@ -80,14 +80,22 @@ total = S .+ I .+ R
 
 peak_ix = argmax(I)
 println("Initial population S+I+R           : ", total[1])
-println("Population invariant holds (max-min): ",
-        round(maximum(total) - minimum(total); digits = 9), "  (≈ 0 ⇒ conserved)")
-println("Epidemic peak |I|                   : ", round(maximum(I); digits = 1),
-        "  vs initial I = ", I[1])
-println("Peak occurs at t                    : ",
-        round(sir_prob.sol[!, "t"][peak_ix]; digits = 1), " (interior ⇒ a genuine outbreak)")
-println("Infected at horizon                 : ", round(I[end]; digits = 1),
-        "  (declines after the peak)")
+println(
+    "Population invariant holds (max-min): ",
+    round(maximum(total) - minimum(total); digits = 9), "  (≈ 0 ⇒ conserved)"
+)
+println(
+    "Epidemic peak |I|                   : ", round(maximum(I); digits = 1),
+    "  vs initial I = ", I[1]
+)
+println(
+    "Peak occurs at t                    : ",
+    round(sir_prob.sol[!, "t"][peak_ix]; digits = 1), " (interior ⇒ a genuine outbreak)"
+)
+println(
+    "Infected at horizon                 : ", round(I[end]; digits = 1),
+    "  (declines after the peak)"
+)
 println("`prob.u` final state vector         : ", round.(sir_prob.u; digits = 1))
 println("Index of :S in the state vector     : ", ReactiveDynamics.find_index(:S, sir_prob))
 
@@ -116,7 +124,7 @@ banner("§2. Stateful transitions & lifecycle: cycletime, probability, capacity,
 
 pipeline = @reaction_network begin
     @deterministic(1.0), budget --> product,
-    name => job, cycletime => 3.0, probability => 0.6, capacity => 4
+        name => job, cycletime => 3.0, probability => 0.6, capacity => 4
 end
 @prob_init pipeline budget = 1000 product = 0
 @prob_params pipeline
@@ -134,8 +142,10 @@ inflight = count(tr -> tr[:transHash] == h, pipe_prob.ongoing_transitions)
 
 println("cycletime = 3.0, dt = 1.0  ⇒ no product can appear before t = 3")
 println("First product appears at t : ", first_completion, "  (cycletime delay, as expected)")
-println("Products completed by end   : ", Int(prod[end]),
-        "  (~60% of started jobs succeed; the rest fail the Binomial draw)")
+println(
+    "Products completed by end   : ", Int(prod[end]),
+    "  (~60% of started jobs succeed; the rest fail the Binomial draw)"
+)
 println("In-flight instances at end  : ", inflight, "  (bounded by capacity => 4)")
 
 
@@ -169,9 +179,11 @@ end
 @prob_params raw
 raw_prob = ReactionNetworkProblem(raw, Dict(); tspan = 3, dt = 1.0)
 simulate(raw_prob)
-println("3a. raw  `2*material --> widget`    : material ",
-        raw_prob.sol[!, "material"][1], " → ", raw_prob.sol[!, "material"][end],
-        "  (monotone drain; consumed mass never comes back)")
+println(
+    "3a. raw  `2*material --> widget`    : material ",
+    raw_prob.sol[!, "material"][1], " → ", raw_prob.sol[!, "material"][end],
+    "  (monotone drain; consumed mass never comes back)"
+)
 
 # --- 3b. @conserved: 3 cash held for 3 ticks, then returned ------------------
 # One holder spawns per tick; each ties up 3 cash for its 3-tick cycle, then
@@ -184,9 +196,11 @@ end
 @prob_params cons
 cons_prob = ReactionNetworkProblem(cons, Dict(); tspan = 12, dt = 1.0)
 simulate(cons_prob)
-cash_tail = cons_prob.sol[!, "cash"][end-3:end]
-println("3b. @conserved(cash)                : cash steady floor ", cash_tail[end],
-        "  (held during cycle, returned in full ⇒ plateaus above 0)")
+cash_tail = cons_prob.sol[!, "cash"][(end - 3):end]
+println(
+    "3b. @conserved(cash)                : cash steady floor ", cash_tail[end],
+    "  (held during cycle, returned in full ⇒ plateaus above 0)"
+)
 
 # --- 3c. @rate: fuel metered per ongoing tick (gated on cycletime) -----------
 # One instance starts per tick and lives 3 ticks, each drawing 1 fuel/tick. As
@@ -200,8 +214,10 @@ end
 rate_prob = ReactionNetworkProblem(rate, Dict(); tspan = 6, dt = 1.0)
 simulate(rate_prob)
 draws = -diff(rate_prob.sol[!, "fuel"])
-println("3c. @rate(fuel) (ct=3)               : per-tick draws ", Int.(draws[1:4]),
-        "...  (metered q·s·Δt each ongoing tick, ramps then saturates at 3 concurrent)")
+println(
+    "3c. @rate(fuel) (ct=3)               : per-tick draws ", Int.(draws[1:4]),
+    "...  (metered q·s·Δt each ongoing tick, ramps then saturates at 3 concurrent)"
+)
 
 # --- 3d. The @rate cycletime=0 FOOT-GUN --------------------------------------
 # @rate's per-step draw is GATED on cycletime > 0. With the default cycletime 0,
@@ -215,10 +231,12 @@ end
 @prob_params footgun
 fg_prob = ReactionNetworkProblem(footgun, Dict(); tspan = 4, dt = 1.0)
 simulate(fg_prob)
-println("3d. @rate FOOT-GUN (ct defaults 0)  : fuel ",
-        fg_prob.sol[!, "fuel"][1], " → ", fg_prob.sol[!, "fuel"][end],
-        " (UNTOUCHED!) while out → ", Int(fg_prob.sol[!, "out"][end]),
-        "  ⇒ @rate needs cycletime > 0")
+println(
+    "3d. @rate FOOT-GUN (ct defaults 0)  : fuel ",
+    fg_prob.sol[!, "fuel"][1], " → ", fg_prob.sol[!, "fuel"][end],
+    " (UNTOUCHED!) while out → ", Int(fg_prob.sol[!, "out"][end]),
+    "  ⇒ @rate needs cycletime > 0"
+)
 
 # --- 3e. @nonblock: held but freed every step --------------------------------
 # A soft hold: the sensor is reserved while the instance runs but credited back
@@ -230,9 +248,11 @@ end
 @prob_params nb
 nb_prob = ReactionNetworkProblem(nb, Dict(); tspan = 5, dt = 1.0)
 simulate(nb_prob)
-println("3e. @nonblock(sensor) (ct=3)        : sensor ",
-        nb_prob.sol[!, "sensor"][1], " → ", nb_prob.sol[!, "sensor"][end],
-        "  (freed every step ⇒ stays non-negative, does not drain away)")
+println(
+    "3e. @nonblock(sensor) (ct=3)        : sensor ",
+    nb_prob.sol[!, "sensor"][1], " → ", nb_prob.sol[!, "sensor"][end],
+    "  (freed every step ⇒ stays non-negative, does not drain away)"
+)
 
 # --- 3f. Stacked @rate(@conserved(...)): a rented hold -----------------------
 # Both tags attach. The resource is drawn per tick like @rate, but the full
@@ -246,9 +266,11 @@ end
 @prob_params rented
 rented_prob = ReactionNetworkProblem(rented, Dict(); tspan = 8, dt = 1.0)
 simulate(rented_prob)
-println("3f. 2*@rate(@conserved(fuel))       : fuel steady floor ",
-        rented_prob.sol[!, "fuel"][end],
-        "  (drawn per tick BUT fully returned at finish ⇒ small net hold)")
+println(
+    "3f. 2*@rate(@conserved(fuel))       : fuel steady floor ",
+    rented_prob.sol[!, "fuel"][end],
+    "  (drawn per tick BUT fully returned at finish ⇒ small net hold)"
+)
 
 
 # =============================================================================
@@ -275,8 +297,10 @@ ws = ReactiveDynamics.AllocWorkspace(reqs)
 f = ReactiveDynamics.progressive_fill!(ws, supply, weights; fmax = [Inf, Inf])
 allocs = vec(ws.req .* f')
 println("Direct call — contended (supply 8 < uncapped demand), weights 1:3")
-println("  allocation          : ", allocs, "  (ratio ", round(allocs[2] / allocs[1]; digits = 2),
-        " ≈ 3.0, the priority ratio)")
+println(
+    "  allocation          : ", allocs, "  (ratio ", round(allocs[2] / allocs[1]; digits = 2),
+    " ≈ 3.0, the priority ratio)"
+)
 println("  sum allocated       : ", sum(allocs), "  (= supply 8 ⇒ work-conserving)")
 
 # The no-contention regime: cap each requester at its full demand (fmax = 1 unit
@@ -296,9 +320,9 @@ println("  allocation          : ", allocs_slack, "  (granted in full; priority 
 
 contend = @reaction_network begin
     @deterministic(3.0), 4 * @conserved(cash) --> lowprod,
-    name => low,  cycletime => 2.0, priority => 1.0
+        name => low, cycletime => 2.0, priority => 1.0
     @deterministic(3.0), 4 * @conserved(cash) --> highprod,
-    name => high, cycletime => 2.0, priority => 3.0
+        name => high, cycletime => 2.0, priority => 3.0
     @deterministic(6.0), ∅ --> cash, name => financing   # steady but insufficient inflow
 end
 @prob_init contend cash = 12 lowprod = 0 highprod = 0
@@ -310,9 +334,11 @@ lo = contend_prob.sol[!, "lowprod"][end]
 hi = contend_prob.sol[!, "highprod"][end]
 println("In-model contention for a scarce `cash` pool (both demand 4, priority 1 vs 3):")
 println("  low-priority output : ", Int(lo))
-println("  high-priority output: ", Int(hi),
-        hi > lo ? "  ⇒ the higher-priority transition won more of the scarce resource" :
-                  "  (priority allocator active)")
+println(
+    "  high-priority output: ", Int(hi),
+    hi > lo ? "  ⇒ the higher-priority transition won more of the scarce resource" :
+        "  (priority allocator active)"
+)
 
 
 # =============================================================================
@@ -350,26 +376,32 @@ m_dt1 = mean(source_total(1.0; seed = s) for s in 1:60)
 m_dt2 = mean(source_total(0.5; seed = s) for s in 1:60)
 println("5a. Poisson source  `2.0, ∅ --> arrival`  (E = rate·tspan = 2·50 = 100)")
 println("    ensemble mean total @ dt=1.0 : ", round(m_dt1; digits = 1))
-println("    ensemble mean total @ dt=0.5 : ", round(m_dt2; digits = 1),
-        "  ⇒ halving dt preserves the expected total (dt-invariant)")
+println(
+    "    ensemble mean total @ dt=0.5 : ", round(m_dt2; digits = 1),
+    "  ⇒ halving dt preserves the expected total (dt-invariant)"
+)
 
 # --- 5b. Flow / routing: non-empty LHS is token-gated ------------------------
 # `upstream` deposits 2 feed/tick; `router` has nominal rate 100 but can only
 # route what feed actually holds, so realized routing tracks the 2/tick deposit
 # — NOT the nominal 100.
 flow = @reaction_network begin
-    @deterministic(2.0),   ∅ --> feed,        name => upstream
-    @deterministic(100.0), feed --> product,  name => router
+    @deterministic(2.0), ∅ --> feed, name => upstream
+    @deterministic(100.0), feed --> product, name => router
 end
 @prob_init flow feed = 0 product = 0
 @prob_params flow
 flow_prob = ReactionNetworkProblem(flow, Dict(); tspan = 5, dt = 1.0)
 simulate(flow_prob)
 println("5b. Flow/routing (nominal rate 100, fed 2/tick)")
-println("    product at t=0,1 : ", flow_prob.sol[!, "product"][1], ", ",
-        flow_prob.sol[!, "product"][2], "  (0 while feed empty)")
-println("    max routed/tick  : ", maximum(diff(flow_prob.sol[!, "product"])),
-        "  ⇒ token-gated to the 2/tick supply, NOT the nominal 100")
+println(
+    "    product at t=0,1 : ", flow_prob.sol[!, "product"][1], ", ",
+    flow_prob.sol[!, "product"][2], "  (0 while feed empty)"
+)
+println(
+    "    max routed/tick  : ", maximum(diff(flow_prob.sol[!, "product"])),
+    "  ⇒ token-gated to the 2/tick supply, NOT the nominal 100"
+)
 
 # --- 5c. Scheduled: @periodic fires N at each calendar boundary --------------
 sched = @reaction_network begin
@@ -381,8 +413,10 @@ sched_prob = ReactionNetworkProblem(sched, Dict(); tspan = 7, dt = 1.0)
 simulate(sched_prob)
 deltas = diff(sched_prob.sol[!, "cohort"])
 println("5c. Scheduled  `@deterministic(3 * @periodic(2.0))`  (period 2.0, 3 per boundary)")
-println("    cohort end total : ", Int(sched_prob.sol[!, "cohort"][end]),
-        "  (3 boundaries at t=2,4,6 × 3 each = 9)")
+println(
+    "    cohort end total : ", Int(sched_prob.sol[!, "cohort"][end]),
+    "  (3 boundaries at t=2,4,6 × 3 each = 9)"
+)
 println("    per-tick deltas  : ", Int.(deltas), "  (spawns only at period boundaries, flat between)")
 
 
@@ -413,11 +447,11 @@ end
 
 toy = @reaction_network begin
     α(candidate_compound, marketed_drug, κ),
-    3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
-    name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
+        3 * @conserved(scientist) + @rate(budget) --> candidate_compound,
+        name => discovery, probability => 0.3, cycletime => 10.0, priority => 0.5
     β(candidate_compound, marketed_drug),
-    candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
-    name => dx2market, probability => 0.5, cycletime => 4
+        candidate_compound + 5 * @conserved(scientist) + 2 * @rate(budget) --> marketed_drug + 5 * budget,
+        name => dx2market, probability => 0.5, cycletime => 4
     γ * marketed_drug, marketed_drug --> ∅, name => drug_killed
 end
 @periodic toy 1.0 budget += 11 * marketed_drug          # financing tied to revenue
@@ -434,18 +468,26 @@ simulate(toy_prob)
 costs = [r[3] for r in toy_prob.log if r[1] == :valuation_cost]
 rewards = [r[3] for r in toy_prob.log if r[1] == :valuation_reward]
 # A simple discounted rNPV reduction over the ledger (post-processing only).
-rnpv = sum((row[1] == :valuation_reward ? row[3] :
-            row[1] == :valuation_cost ? -row[3] : 0.0) / (1 + 0.1)^row[2]
-           for row in toy_prob.log)
+rnpv = sum(
+    (
+            row[1] == :valuation_reward ? row[3] :
+            row[1] == :valuation_cost ? -row[3] : 0.0
+        ) / (1 + 0.1)^row[2]
+        for row in toy_prob.log
+)
 println("Toy-pharma pipeline with @register'd rates α, β")
 println("  solution columns   : ", names(toy_prob.sol), "  (construction order ⇒ index by name)")
-println("  scientists held     : min ", round(minimum(toy_prob.sol[!, "scientist"]); digits = 1),
-        " / max ", round(maximum(toy_prob.sol[!, "scientist"]); digits = 1),
-        "  (≤ 20 initial ⇒ @conserved never overruns its holding)")
+println(
+    "  scientists held     : min ", round(minimum(toy_prob.sol[!, "scientist"]); digits = 1),
+    " / max ", round(maximum(toy_prob.sol[!, "scientist"]); digits = 1),
+    "  (≤ 20 initial ⇒ @conserved never overruns its holding)"
+)
 println("  ledger cost rows    : ", length(costs), "  totalling ", round(sum(costs); digits = 1))
 println("  ledger reward rows  : ", length(rewards), "  totalling ", round(sum(rewards); digits = 1))
-println("  discounted rNPV     : ", round(rnpv; digits = 1),
-        "  (a post-processing reduction over the ledger; the engine does no discounting)")
+println(
+    "  discounted rNPV     : ", round(rnpv; digits = 1),
+    "  (a post-processing reduction over the ledger; the engine does no discounting)"
+)
 
 
 # =============================================================================
@@ -476,8 +518,10 @@ acs2 = @reaction_network begin
 end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
 println("@join acs1 acs2 (identifying the shared species A)")
-println("  species in join : ", nrows(joined, :S),
-        "  (union {A,B,C} ⇒ 3; the two A's merged into one)")
+println(
+    "  species in join : ", nrows(joined, :S),
+    "  (union {A,B,C} ⇒ 3; the two A's merged into one)"
+)
 println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
 # @equalize: two conceptually-identical species A and A2 collapse to one.
@@ -488,8 +532,10 @@ end
 before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
-println("  species before  : ", before_S, "  → after : ", nrows(equalized, :S),
-        "  (dropped by exactly 1; references rewritten)")
+println(
+    "  species before  : ", before_S, "  → after : ", nrows(equalized, :S),
+    "  (dropped by exactly 1; references rewritten)"
+)
 println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
 
 
@@ -523,7 +569,7 @@ end
 
 a = (p = ReactionNetworkProblem(build_birth(); seed = 42); simulate(p); p.sol[!, "B"])
 b = (p = ReactionNetworkProblem(build_birth(); seed = 42); simulate(p); p.sol[!, "B"])
-c = (p = ReactionNetworkProblem(build_birth(); seed = 7);  simulate(p); p.sol[!, "B"])
+c = (p = ReactionNetworkProblem(build_birth(); seed = 7); simulate(p); p.sol[!, "B"])
 println("Same seed (42 vs 42) identical : ", a == b)
 println("Different seed (42 vs 7) differ: ", a != c)
 
@@ -541,33 +587,37 @@ ens_member_3 = ens[3]
 println("Ensemble of 200 members, final B (cycletime=2, probability=0.5):")
 println("  mean ± std         : ", round(mean(ens); digits = 2), " ± ", round(std(ens); digits = 2))
 println("  range [min, max]   : [", Int(minimum(ens)), ", ", Int(maximum(ens)), "]")
-println("  member 3 in-ensemble vs standalone equal : ", ens_member_3 == solo,
-        "  (reproducible from (root,k), independent of N/order)")
+println(
+    "  member 3 in-ensemble vs standalone equal : ", ens_member_3 == solo,
+    "  (reproducible from (root,k), independent of N/order)"
+)
 
 
 # =============================================================================
 banner("§9. Recap — what this tour exercised")
 # =============================================================================
-println("""
-  §1  The metalanguage: @reaction_network / @prob_init / @prob_params /
-      @prob_meta, mass-action rates, simulate, reading prob.sol by name, and a
-      conserved-population invariant on an SIR epidemic.
-  §2  Stateful lifecycle: cycletime (in-flight delay), Binomial `probability`,
-      `capacity` bound on concurrency, and `maxlifetime` timeout.
-  §3  Resource modalities: raw-consumed vs @conserved vs @rate vs @nonblock vs
-      the stacked rented hold — plus the @rate-with-cycletime=0 foot-gun.
-  §4  The priority-weighted allocator: progressive_fill! directly (contended and
-      slack), then genuine in-model contention where higher priority wins.
-  §5  Genesis: Poisson source (∅, dt-invariant), token-gated flow/routing, and
-      scheduled @periodic batch intake.
-  §6  @register'd custom rate functions on a toy-pharma pipeline, and the
-      cost / reward / valuation ledger with a discounted-rNPV reduction.
-  §7  Composition: @join (union + shared-species identification) and @equalize
-      (collapse + rewrite).
-  §8  Determinism: seed= reproducibility, divergence on different seeds, and a
-      deterministically-seeded ensemble with mean ± spread.
+println(
+    """
+      §1  The metalanguage: @reaction_network / @prob_init / @prob_params /
+          @prob_meta, mass-action rates, simulate, reading prob.sol by name, and a
+          conserved-population invariant on an SIR epidemic.
+      §2  Stateful lifecycle: cycletime (in-flight delay), Binomial `probability`,
+          `capacity` bound on concurrency, and `maxlifetime` timeout.
+      §3  Resource modalities: raw-consumed vs @conserved vs @rate vs @nonblock vs
+          the stacked rented hold — plus the @rate-with-cycletime=0 foot-gun.
+      §4  The priority-weighted allocator: progressive_fill! directly (contended and
+          slack), then genuine in-model contention where higher priority wins.
+      §5  Genesis: Poisson source (∅, dt-invariant), token-gated flow/routing, and
+          scheduled @periodic batch intake.
+      §6  @register'd custom rate functions on a toy-pharma pipeline, and the
+          cost / reward / valuation ledger with a discounted-rNPV reduction.
+      §7  Composition: @join (union + shared-species identification) and @equalize
+          (collapse + rewrite).
+      §8  Determinism: seed= reproducibility, divergence on different seeds, and a
+          deterministically-seeded ensemble with mean ± spread.
 
-  Everything above used CLASSICAL (plain Float64) species only. Structured /
-  agent tokens with attributes and lifecycle identity are a separate demo:
-  see demo/bd_acquisition.
-""")
+      Everything above used CLASSICAL (plain Float64) species only. Structured /
+      agent tokens with attributes and lifecycle identity are a separate demo:
+      see demo/bd_acquisition.
+    """
+)

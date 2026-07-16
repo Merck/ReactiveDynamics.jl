@@ -18,7 +18,7 @@ const RD = ReactiveDynamics
     # ── §A: open-port role annotation ───────────────────────────────────────────────────────────
     @testset "§A: port roles default to :private and are set by set_port_role!/@port" begin
         f = @reaction_network begin
-          1.0, A --> B, name => t
+            1.0, A --> B, name => t
         end
         # default role is :private for every species
         @test RD.port_role(f, :A) == :private
@@ -30,8 +30,8 @@ const RD = ReactiveDynamics
         @test !RD.is_open_port(:private) && !RD.is_open_port(:shared)
         # @port sugar tags groups; unlisted species keep :private
         g = @reaction_network begin
-          1.0, X --> Y, name => t
-          1.0, Y --> Z, name => u
+            1.0, X --> Y, name => t
+            1.0, Y --> Z, name => u
         end
         @port g X => input  Z => output  Y => shared
         @test RD.port_role(g, :X) == :input
@@ -44,11 +44,11 @@ const RD = ReactiveDynamics
     # ── §E: @compose — port-connected composition (also closes §7/J4 :E/:obs, J9 include_model) ──
     @testset "§E: @compose identifies output↔input ports by FK-repoint; private namespaced" begin
         f1 = @reaction_network begin
-          1.0, raw --> mid, name => step1
+            1.0, raw --> mid, name => step1
         end
         RD.set_port_role!(f1, :raw => :input, :mid => :output)
         f2 = @reaction_network begin
-          1.0, mid --> product, name => step2
+            1.0, mid --> product, name => step2
         end
         RD.set_port_role!(f2, :mid => :input, :product => :output)
         m = @compose f1 f2
@@ -70,11 +70,11 @@ const RD = ReactiveDynamics
 
     @testset "§E/J4: @compose merges events (:E) and observables (:obs) of the fragments" begin
         f1 = @reaction_network begin
-          1.0, A --> B, name => t1
-          (B > 5) && (B -= 1)
+            1.0, A --> B, name => t1
+            (B > 5) && (B -= 1)
         end
         f2 = @reaction_network begin
-          1.0, C --> D, name => t2
+            1.0, C --> D, name => t2
         end
         n_ev = nrows(f1, :E)
         @test n_ev >= 1
@@ -85,12 +85,12 @@ const RD = ReactiveDynamics
     # ── §B: refine — boundary-matched splice via FK-repoint ──────────────────────────────────────
     @testset "§B: refine! splices a sub-model into a coarse transition, plug-compatibly" begin
         coarse = @reaction_network begin
-          1.0, P1 --> P2, name => phase2
-          1.0, P2 --> P3, name => phase3
+            1.0, P1 --> P2, name => phase2
+            1.0, P2 --> P3, name => phase3
         end
         sub = @reaction_network begin
-          1.0, entry --> work, name => screen
-          1.0, work --> exit, name => filing
+            1.0, entry --> work, name => screen
+            1.0, work --> exit, name => filing
         end
         RD.set_port_role!(sub, :entry => :input, :exit => :output)
         r = refine(coarse, :phase2, sub; ports = Dict(:P1 => :entry, :P2 => :exit))
@@ -119,15 +119,15 @@ const RD = ReactiveDynamics
     # ── §B round-trip: a refined spec serializes/reloads as a flat model (Invariant 5) ───────────
     @testset "§B/Invariant 5: a refined spec round-trips through JSON as a flat model" begin
         coarse = @reaction_network begin
-          1.0, P1 --> P2, name => phase2
+            1.0, P1 --> P2, name => phase2
         end
         sub = @reaction_network begin
-          1.0, entry --> exit, name => step
+            1.0, entry --> exit, name => step
         end
         RD.set_port_role!(sub, :entry => :input, :exit => :output)
         r = refine(coarse, :phase2, sub; ports = Dict(:P1 => :entry, :P2 => :exit))
         @prob_params r
-        json = RD.to_json_model(r; meta = Dict{String,Any}("tspan" => 5.0))
+        json = RD.to_json_model(r; meta = Dict{String, Any}("tspan" => 5.0))
         r2 = RD.build_network_from_dict(RD.JSON.parse(json))
         # the reloaded flat model has the same species and transition counts (refinement left no
         # runtime trace — it is a plain ModelSpec).
@@ -139,9 +139,9 @@ const RD = ReactiveDynamics
     # ── §D: @pipeline expands to flow-genesis routing transitions ────────────────────────────────
     @testset "§D: @pipeline expands a phase chain to N flow transitions carrying (ct, pos)" begin
         p = @pipeline Project begin
-            Discovery => Phase1 : (ct = 1.0, pos = 0.4)
-            Phase1    => Phase2 : (ct = 2.0, pos = 0.6)
-            Phase2    => Market : (ct = 1.0, pos = 0.9)
+            Discovery => Phase1:(ct = 1.0, pos = 0.4)
+            Phase1 => Phase2:(ct = 2.0, pos = 0.6)
+            Phase2 => Market:(ct = 1.0, pos = 0.9)
         end
         @test nrows(p, :T) == 3                       # one transition per edge
         @test Set(p[:, :specName]) == Set([:Discovery, :Phase1, :Phase2, :Market])
@@ -180,8 +180,8 @@ const RD = ReactiveDynamics
     @testset "§C: refinement_diagnostics flags a dangling port and aggregate drift" begin
         # a sub whose cycletimes sum to 1.0, spliced under a coarse transition claiming ct=5.0 → drift.
         sub = @reaction_network begin
-          1.0, entry --> work, name => s1, cycletime => 0.5
-          1.0, work --> exit, name => s2, cycletime => 0.5
+            1.0, entry --> work, name => s1, cycletime => 0.5
+            1.0, work --> exit, name => s2, cycletime => 0.5
         end
         RD.set_port_role!(sub, :entry => :input, :exit => :output)
         warns = RD.refinement_diagnostics(sub, Dict(:transCycleTime => 5.0))
@@ -192,7 +192,7 @@ const RD = ReactiveDynamics
         # a dangling input port (declared :input but consumed by no sub-transition LHS) is flagged.
         # `sink` only ever appears on the RHS (produced), so declaring it an :input is a dangling port.
         bad = @reaction_network begin
-          1.0, src --> sink, name => s
+            1.0, src --> sink, name => s
         end
         RD.set_port_role!(bad, :sink => :input)   # declared input but only ever PRODUCED (RHS)
         @test any(w -> occursin("dangling input", w), RD.refinement_diagnostics(bad, Dict()))
@@ -201,16 +201,16 @@ const RD = ReactiveDynamics
     # ── Invariant 4 (closure): refine/@compose map ModelSpec(s) → a ModelSpec usable downstream ──
     @testset "Invariant 4: refine/compose results are valid inputs to further composition" begin
         base = @reaction_network begin
-          1.0, P1 --> P2, name => phase2
+            1.0, P1 --> P2, name => phase2
         end
         sub = @reaction_network begin
-          1.0, entry --> exit, name => step
+            1.0, entry --> exit, name => step
         end
         RD.set_port_role!(sub, :entry => :input, :exit => :output)
         refined = refine(base, :phase2, sub; ports = Dict(:P1 => :entry, :P2 => :exit))
         # the refined model is a valid ReactionNetwork that can be @join'd again.
         extra = @reaction_network begin
-          1.0, P2 --> P3, name => downstream
+            1.0, P2 --> P3, name => downstream
         end
         combined = @join refined extra
         @test combined isa RD.ReactionNetwork

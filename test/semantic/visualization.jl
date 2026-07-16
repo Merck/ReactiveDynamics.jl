@@ -36,16 +36,18 @@ end
         phase::Symbol
     end
     function VizProjectToken(phase)
-        return VizProjectToken("VP" * string(rand(1:10^9)), :Project, nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[], phase)
+        return VizProjectToken(
+            "VP" * string(rand(1:(10^9))), :Project, nothing,
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], phase
+        )
     end
 end
 
 function pharma_model(; budget0 = 100)
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
-        name => adv, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
+            name => adv, cycletime => 1.0, probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
     bi = findfirst(==(:budget), net[:, :specName])
@@ -60,7 +62,7 @@ function valid_dot(s)
     st = strip(s)
     startswith(st, "digraph") || return false
     endswith(st, "}") || return false
-    count(==('{'), st) == count(==('}'), st)
+    return count(==('{'), st) == count(==('}'), st)
 end
 
 # Try to render DOT through AA's run_graphviz; returns true if it rendered, false if no backend.
@@ -109,8 +111,10 @@ end
     # ── §15.2 Layer B — valid DOT emission for the reference models ───────────────────────
     @testset "§15.2 Layer B to_graphviz emits valid DOT for SIR and toy-pharma" begin
         for acs_fn in (sir_model, pharma_model)
-            p = ReactionNetworkProblem(acs_fn(); seed = 1,
-                population = acs_fn === pharma_model ? [RD.VizProjectToken(:Phase1)] : [])
+            p = ReactionNetworkProblem(
+                acs_fn(); seed = 1,
+                population = acs_fn === pharma_model ? [RD.VizProjectToken(:Phase1)] : []
+            )
             dot = to_graphviz(network_graph(p))
             @test valid_dot(dot)
             @test occursin("shape=box", dot)       # transitions are boxes
@@ -139,7 +143,7 @@ end
         pred = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNode(:Phase2))])
         g = network_graph(p)
         # the overlay DOT (Layer C styling) is valid and includes highlight styling hooks
-        hi = to_graphviz(g; highlight_species = [:budget], highlight_arcs = Tuple{Symbol,Symbol}[])
+        hi = to_graphviz(g; highlight_species = [:budget], highlight_arcs = Tuple{Symbol, Symbol}[])
         @test valid_dot(hi)
         @test occursin("fillcolor=gold", hi)       # starvation/highlight fill present
         if renders(hi)
@@ -153,7 +157,7 @@ end
         # graph arc. Build the highlight arc set the way exec_map does and assert overlap.
         gnodes = Set(t.name for t in g.transitions)
         garcs = Set((a.from, a.to) for a in g.arcs)
-        hi = Tuple{Symbol,Symbol}[]
+        hi = Tuple{Symbol, Symbol}[]
         for tok in RD.select_tokens(p, pred)
             for (sp, _t, tr) in tok.past_bonds
                 push!(hi, (sp, RD._transition_node_name(p.network, tr.i)))

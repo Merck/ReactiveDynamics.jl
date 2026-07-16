@@ -22,10 +22,10 @@ const RDX = ReactiveDynamics
     end
     function FiltProjectToken(phase, npv)
         return FiltProjectToken(
-            "FP" * string(rand(1:10^9)),
+            "FP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol,Float64,ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
             phase,
             npv,
         )
@@ -36,11 +36,11 @@ end
 function advance_model()
     net = @reaction_network begin
         @deterministic(1.0),
-        @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
-        name => p2_to_p3, cycletime => 1.0, probability => 1.0
+            @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+            name => p2_to_p3, cycletime => 1.0, probability => 1.0
     end
     RDX.register_structured_species!(net, :Project)
-    net
+    return net
 end
 
 phases(p) =
@@ -100,8 +100,8 @@ phases(p) =
     @testset "@select with a continuous clause (npv > θ) advances only the qualifying subset" begin
         net = @reaction_network begin
             @deterministic(1.0),
-            @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
-            name => high_npv_advance, cycletime => 1.0, probability => 1.0
+                @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
+                name => high_npv_advance, cycletime => 1.0, probability => 1.0
         end
         RDX.register_structured_species!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
@@ -137,8 +137,8 @@ phases(p) =
         function which_advances_first(seed)
             net = @reaction_network begin
                 @deterministic(1.0),
-                @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
-                name => adv, cycletime => 1.0, probability => 1.0
+                    @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
+                    name => adv, cycletime => 1.0, probability => 1.0
             end
             RDX.register_structured_species!(net, :Project)
             @prob_meta net tspan = 2 dt = 1.0
@@ -163,8 +163,8 @@ phases(p) =
         # (species, creation_index) order, one per firing instance.
         net = @reaction_network begin
             @deterministic(2.0),
-            @select(Project) --> @advance(phase, :Done),
-            name => any_advance, cycletime => 0.0, probability => 1.0
+                @select(Project) --> @advance(phase, :Done),
+                name => any_advance, cycletime => 0.0, probability => 1.0
         end
         RDX.register_structured_species!(net, :Project)
         @prob_meta net tspan = 4 dt = 1.0

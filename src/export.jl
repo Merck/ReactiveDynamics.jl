@@ -48,12 +48,12 @@ _model_hash(prob::ReactionNetworkProblem) = hash(prob.network)
 # payload rendered structurally (Dicts/vectors pass through JSON.jl; everything else stringifies so
 # the stream always round-trips structurally — the §8 guarantee for a non-rectangular artifact).
 function _log_to_records(log)
-    recs = Vector{Dict{String,Any}}(undef, length(log))
+    recs = Vector{Dict{String, Any}}(undef, length(log))
     for (i, row) in enumerate(log)
         tag = row[1]
         t = length(row) >= 2 ? row[2] : nothing
         payload = length(row) >= 3 ? collect(row[3:end]) : Any[]
-        recs[i] = Dict{String,Any}(
+        recs[i] = Dict{String, Any}(
             "event" => string(tag),
             "t" => t,
             "data" => map(_jsonable, payload),
@@ -64,24 +64,24 @@ end
 
 # Render an arbitrary log payload element into something JSON.jl emits faithfully. Dicts and vectors
 # recurse; numbers/strings/bools pass through; anything else (a Symbol, a NamedTuple) stringifies.
-_jsonable(x::Union{Real,AbstractString,Bool,Nothing}) = x
+_jsonable(x::Union{Real, AbstractString, Bool, Nothing}) = x
 _jsonable(x::Symbol) = string(x)
-_jsonable(x::AbstractDict) = Dict{String,Any}(string(k) => _jsonable(v) for (k, v) in x)
+_jsonable(x::AbstractDict) = Dict{String, Any}(string(k) => _jsonable(v) for (k, v) in x)
 _jsonable(x::AbstractVector) = map(_jsonable, x)
-_jsonable(x::NamedTuple) = Dict{String,Any}(string(k) => _jsonable(getfield(x, k)) for k in keys(x))
+_jsonable(x::NamedTuple) = Dict{String, Any}(string(k) => _jsonable(getfield(x, k)) for k in keys(x))
 _jsonable(x::Tuple) = map(_jsonable, collect(x))
 _jsonable(x) = string(x)
 
 # Per-token histories as nested JSON: token name → ordered list of {t, species, fields…} records,
 # from the §14.1 trajectory store. Round-trips structurally like the model JSON (Invariant 5).
 function _tokens_to_records(prob::ReactionNetworkProblem)
-    out = Dict{String,Vector{Dict{String,Any}}}()
+    out = Dict{String, Vector{Dict{String, Any}}}()
     for (t, name, species, fields) in prob.token_trajectory
-        rec = Dict{String,Any}("t" => t, "species" => string(species))
+        rec = Dict{String, Any}("t" => t, "species" => string(species))
         for k in keys(fields)
             rec[string(k)] = _jsonable(getfield(fields, k))
         end
-        push!(get!(out, name, Dict{String,Any}[]), rec)
+        push!(get!(out, name, Dict{String, Any}[]), rec)
     end
     return out
 end
@@ -124,7 +124,7 @@ function export_run(prob::ReactionNetworkProblem, dir::AbstractString; with_mode
     append!(artifacts, ["events.json", "tokens.json"])
 
     # The manifest (nested) — pins (model_hash, seed) so the bundle is traceable to a replayable run.
-    manifest = Dict{String,Any}(
+    manifest = Dict{String, Any}(
         "schema" => "rd-run/1",
         "model_hash" => string(_model_hash(prob)),
         "seed" => prob.seed === nothing ? nothing : string(prob.seed),
@@ -148,13 +148,15 @@ Write the ensemble `ens` to `dir` as the §14.3 layout: one subdirectory `member
 root seed, the run mode, and — when a `metric::(member -> Real)` is supplied — the `summarize` table
 over it. Returns `dir`.
 """
-function export_ensemble(ens::EnsembleProblem, dir::AbstractString;
-                         metric = nothing, with_model::Bool = true)
+function export_ensemble(
+        ens::EnsembleProblem, dir::AbstractString;
+        metric = nothing, with_model::Bool = true
+    )
     mkpath(dir)
     for (k, m) in enumerate(ens.members)
         export_run(m, joinpath(dir, "member_$k"); with_model = with_model)
     end
-    top = Dict{String,Any}(
+    top = Dict{String, Any}(
         "schema" => "rd-ensemble/1",
         "root_seed" => ens.root_seed,
         "mode" => string(ens.mode),
@@ -163,7 +165,7 @@ function export_ensemble(ens::EnsembleProblem, dir::AbstractString;
     )
     if metric !== nothing
         s = summarize(ens, metric)
-        top["summary"] = Dict{String,Any}(string(k) => getfield(s, k) for k in keys(s))
+        top["summary"] = Dict{String, Any}(string(k) => getfield(s, k) for k in keys(s))
     end
     open(joinpath(dir, "ensemble.json"), "w") do io
         JSON.print(io, top)

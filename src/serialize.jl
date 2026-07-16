@@ -11,27 +11,27 @@ export node_to_dict, node_from_dict, model_to_dict, build_network_from_dict
 export from_json_model, to_json_model
 
 # ── ExprNode ⟷ JSON dict (the recursive node-tagged union) ──────────────────────────────
-node_to_dict(n::Const) = Dict{String,Any}(
+node_to_dict(n::Const) = Dict{String, Any}(
     "node" => "const",
     "value" => n.value isa Symbol ? string(n.value) : n.value,
     # tag a Symbol-valued const so node_from_dict can recover it (vs a string param name)
     "symbol" => n.value isa Symbol,
 )
 node_to_dict(n::NodeRef) =
-    Dict{String,Any}("node" => "ref", "kind" => string(n.kind), "name" => string(n.name))
+    Dict{String, Any}("node" => "ref", "kind" => string(n.kind), "name" => string(n.name))
 node_to_dict(n::Call) =
-    Dict{String,Any}("node" => "call", "op" => string(n.op), "args" => map(node_to_dict, n.args))
+    Dict{String, Any}("node" => "call", "op" => string(n.op), "args" => map(node_to_dict, n.args))
 node_to_dict(n::Sample) =
-    Dict{String,Any}("node" => "sample", "dist" => string(n.dist), "args" => map(node_to_dict, n.args))
-node_to_dict(::TimeRef) = Dict{String,Any}("node" => "timeref")
-node_to_dict(n::Choose) = Dict{String,Any}(
+    Dict{String, Any}("node" => "sample", "dist" => string(n.dist), "args" => map(node_to_dict, n.args))
+node_to_dict(::TimeRef) = Dict{String, Any}("node" => "timeref")
+node_to_dict(n::Choose) = Dict{String, Any}(
     "node" => "choose",
-    "alts" => [Dict{String,Any}("weight" => w, "value" => node_to_dict(v)) for (w, v) in n.alts],
+    "alts" => [Dict{String, Any}("weight" => w, "value" => node_to_dict(v)) for (w, v) in n.alts],
 )
-node_to_dict(n::Field) = Dict{String,Any}("node" => "field", "name" => string(n.name))
+node_to_dict(n::Field) = Dict{String, Any}("node" => "field", "name" => string(n.name))
 # ExternalRef (ADR 0012 §B2): a declared inputs[] port read. The JSON carries only the port NAME;
 # the foreign-agent topology that fills it lives host-side in add_wire! (Invariant 4, eval-free).
-node_to_dict(n::ExternalRef) = Dict{String,Any}("node" => "externalref", "port" => string(n.port))
+node_to_dict(n::ExternalRef) = Dict{String, Any}("node" => "externalref", "port" => string(n.port))
 
 function node_from_dict(d::AbstractDict)
     tag = d["node"]
@@ -75,7 +75,7 @@ _attr_node(x::AbstractString) = Const(Symbol(x))   # a string scalar is a litera
 # from reactants[] into the :trans reaction line (E4); for E2 a transition may carry an explicit
 # `reaction` string-free node-list, but the minimal path supports params + species + a transition
 # whose reactants[] are plain (no modality/predicate) — assembled by assemble_reaction_line (E4).
-function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
+function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}())
     net = ReactionNetwork()
 
     # params[] → :P (values are JSON numbers, never eval'd — replaces loadsave.jl:65)
@@ -96,7 +96,7 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
     end
 
     # transitions[] → :T. reactants[] for this transition assemble into the :trans reaction line.
-    reactants_by_tr = Dict{String,Vector{Any}}()
+    reactants_by_tr = Dict{String, Vector{Any}}()
     for r in get(d, "reactants", [])
         push!(get!(reactants_by_tr, string(r["transition"]), []), r)
     end
@@ -113,13 +113,13 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
             transName = haskey(tr, "name") ? String(tr["name"]) : missing,
         )
         for (jsonkey, col) in (
-            "cycletime" => :transCycleTime,
-            "prob_of_success" => :transProbOfSuccess,
-            "capacity" => :transCapacity,
-            "priority" => :transPriority,
-            "max_lifetime" => :transMaxLifeTime,
-            "multiplier" => :transMultiplier,
-        )
+                "cycletime" => :transCycleTime,
+                "prob_of_success" => :transProbOfSuccess,
+                "capacity" => :transCapacity,
+                "priority" => :transPriority,
+                "max_lifetime" => :transMaxLifeTime,
+                "multiplier" => :transMultiplier,
+            )
             haskey(tr, jsonkey) && (net[i, col] = to_expr(_attr_node(tr[jsonkey])))
         end
     end
@@ -132,7 +132,7 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}())
 end
 
 # Deprecated alias (ADR 0015 Tier 2): `build_acs_from_dict` → `build_network_from_dict`.
-@deprecate build_acs_from_dict(d::AbstractDict; registry = Dict{Symbol,Any}()) build_network_from_dict(d; registry = registry)
+@deprecate build_acs_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()) build_network_from_dict(d; registry = registry)
 
 # meta[] → keywords. A few string-valued meta keys are symbolized for backward compatibility.
 # `alloc_strategy`/`strategy` are now accepted-and-ignored (ADR 0002 makes priority-weighted
@@ -140,8 +140,8 @@ end
 # switch), so symbolizing them is harmless; `schedule` is likewise a legacy no-op key.
 const _SYMBOL_META = (:alloc_strategy, :strategy, :schedule)
 function _meta_kwargs(d::AbstractDict)
-    m = get(d, "meta", Dict{String,Any}())
-    kw = Dict{Symbol,Any}()
+    m = get(d, "meta", Dict{String, Any}())
+    kw = Dict{Symbol, Any}()
     for (k, v) in m
         key = Symbol(k)
         kw[key] = (key in _SYMBOL_META && v isa AbstractString) ? Symbol(v) : v
@@ -155,7 +155,7 @@ end
 # fed to `merge_networks!`. Unlike `from_json_model`, it does NOT require `meta.tspan` — a joined fragment
 # carries no simulation horizon of its own; the composed whole supplies it. The loader is eval-free
 # (build_network_from_dict / validate — the ADR-0005 typed IR), so the file-include path carries no RCE.
-function include_model(path::AbstractString; registry = Dict{Symbol,Any}())
+function include_model(path::AbstractString; registry = Dict{Symbol, Any}())
     d = JSON.parse(read(path, String))
     diags = validate(d; registry = registry)
     isempty(diags) ||
@@ -164,7 +164,7 @@ function include_model(path::AbstractString; registry = Dict{Symbol,Any}())
 end
 
 # ── from_json / to_json (the model envelope) ────────────────────────────────────────────
-function from_json_model(json::AbstractString; seed = nothing, registry = Dict{Symbol,Any}(), population = [])
+function from_json_model(json::AbstractString; seed = nothing, registry = Dict{Symbol, Any}(), population = [])
     d = JSON.parse(json)
     diags = validate(d; registry = registry)
     isempty(diags) || error("from_json_model: model failed validation:\n" * join(string.(diags), "\n"))
@@ -172,7 +172,7 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
     kw = _meta_kwargs(d)
     haskey(kw, :tspan) || error(
         "from_json_model: meta.tspan is required (the simulation horizon) — add e.g. " *
-        "\"meta\": { \"tspan\": 100.0, \"dt\": 1.0 } to the model document.",
+            "\"meta\": { \"tspan\": 100.0, \"dt\": 1.0 } to the model document.",
     )
     seed === nothing && haskey(kw, :seed) && (seed = kw[:seed])
     # rules[] (ADR 0010) → typed Rule structs passed to the constructor (the endogenous channel).
@@ -209,16 +209,18 @@ end
 # Expr's bare symbols are classified back to the right NodeRef kind (species vs param), matching
 # how the authoring DSL named them — exactly the inverse of to_expr's name→state.u[i]/state.p[:k]
 # substitution (ADR 0005 §66).
-function model_to_dict(net::ReactionNetwork; meta = Dict{String,Any}(), rules = [],
-                       inputs = Dict{Symbol,Any}())
+function model_to_dict(
+        net::ReactionNetwork; meta = Dict{String, Any}(), rules = [],
+        inputs = Dict{Symbol, Any}()
+    )
     species, params = _name_sets(net)
-    d = Dict{String,Any}(
+    d = Dict{String, Any}(
         "rd_format" => "reactive-dynamics-model",
         "version" => "1.0",
         "meta" => meta,
         "params" => [
-            Dict{String,Any}("name" => string(net[i, :prmName]), "value" => net[i, :prmVal])
-            for i in row_ids(net, :P) if !isnothing(net[i, :prmName])
+            Dict{String, Any}("name" => string(net[i, :prmName]), "value" => net[i, :prmVal])
+                for i in row_ids(net, :P) if !isnothing(net[i, :prmName])
         ],
         "species" => [_species_to_dict(net, i) for i in row_ids(net, :S)],
         "transitions" => [_transition_to_dict(net, i; species, params) for i in row_ids(net, :T)],
@@ -239,30 +241,36 @@ function model_to_dict(net::ReactionNetwork; meta = Dict{String,Any}(), rules = 
     # defaults), so to_json_model(::ReactionNetworkProblem) passes them through. A default is a
     # literal value (inputs_from_dict requires a Const), so it round-trips as a `const` node. Sorted
     # by port name for deterministic output (the buffer is an unordered Dict).
-    input_dicts = [Dict{String,Any}("port" => string(p), "default" => node_to_dict(Const(inputs[p])))
-                   for p in sort!(collect(keys(inputs)))]
+    input_dicts = [
+        Dict{String, Any}("port" => string(p), "default" => node_to_dict(Const(inputs[p])))
+            for p in sort!(collect(keys(inputs)))
+    ]
     isempty(input_dicts) || (d["inputs"] = input_dicts)
     return d
 end
 
-to_json_model(net::ReactionNetwork; meta = Dict{String,Any}()) =
+to_json_model(net::ReactionNetwork; meta = Dict{String, Any}()) =
     JSON.json(model_to_dict(net; meta = meta))
 # A constructed model also carries its typed Rules — round-trip them through rules[] — and its
 # solver settings (tspan/dt/seed), which live on the ReactionNetworkProblem (not the net) and merge
 # into the meta bag at construction (solvers.jl ~line 544). When the caller supplies no `meta`, we
 # reconstruct it from those fields so the exported document is COMPLETE and re-importable on its own
 # (from_json_model requires meta.tspan). An explicit `meta` always takes precedence.
-function to_json_model(prob::ReactionNetworkProblem; meta = Dict{String,Any}())
+function to_json_model(prob::ReactionNetworkProblem; meta = Dict{String, Any}())
     full = _meta_from_prob(prob)
     merge!(full, meta)   # caller-supplied keys win
-    return JSON.json(model_to_dict(prob.network; meta = full, rules = prob.rules,
-                                   inputs = prob.external_input_defaults))
+    return JSON.json(
+        model_to_dict(
+            prob.network; meta = full, rules = prob.rules,
+            inputs = prob.external_input_defaults
+        )
+    )
 end
 
 # Reconstruct the meta bag from a constructed model's solver fields. `tspan` is stored as a
 # (t0, tend) tuple; the JSON `tspan` is the horizon `tend` (the scalar from_json_model passes on).
 function _meta_from_prob(prob::ReactionNetworkProblem)
-    m = Dict{String,Any}("tspan" => float(prob.tspan[2]), "dt" => float(prob.dt))
+    m = Dict{String, Any}("tspan" => float(prob.tspan[2]), "dt" => float(prob.dt))
     prob.seed === nothing || (m["seed"] = prob.seed)
     return m
 end
@@ -394,26 +402,31 @@ end
 # bare symbol via to_expr, so a from_json-loaded model is unaffected — and only mislabels the JSON
 # `ref.kind` tag when re-serializing a model whose actions were hand-built from raw Exprs. JSON-
 # authored actions carry typed nodes and never round-trip through from_expr, so they are exact.
-stmt_to_dict(s::SetSpecies) = Dict{String,Any}(
+stmt_to_dict(s::SetSpecies) = Dict{String, Any}(
     "verb" => "set_species", "name" => string(s.name),
-    "value" => node_to_dict(from_expr(s.value)), "mode" => string(s.mode))
-stmt_to_dict(s::SetParams) = Dict{String,Any}(
+    "value" => node_to_dict(from_expr(s.value)), "mode" => string(s.mode)
+)
+stmt_to_dict(s::SetParams) = Dict{String, Any}(
     "verb" => "set_params",
-    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns])
-stmt_to_dict(s::SetField) = Dict{String,Any}(
-    "verb" => "set_field", "field" => string(s.field), "value" => node_to_dict(from_expr(s.value)))
-stmt_to_dict(s::SetTokens) = Dict{String,Any}(
+    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns]
+)
+stmt_to_dict(s::SetField) = Dict{String, Any}(
+    "verb" => "set_field", "field" => string(s.field), "value" => node_to_dict(from_expr(s.value))
+)
+stmt_to_dict(s::SetTokens) = Dict{String, Any}(
     "verb" => "set_tokens", "predicate" => pred_to_dict(s.predicate),
-    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns])
-stmt_to_dict(s::AddToken) = Dict{String,Any}(
+    "assigns" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.assigns]
+)
+stmt_to_dict(s::AddToken) = Dict{String, Any}(
     "verb" => "add_token", "kind" => string(s.kind),
-    "fields" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.fields])
-stmt_to_dict(s::Activate) = Dict{String,Any}("verb" => "activate", "transition" => string(s.transition))
-stmt_to_dict(s::Deactivate) = Dict{String,Any}("verb" => "deactivate", "transition" => string(s.transition))
+    "fields" => [Dict("name" => string(n), "value" => node_to_dict(from_expr(v))) for (n, v) in s.fields]
+)
+stmt_to_dict(s::Activate) = Dict{String, Any}("verb" => "activate", "transition" => string(s.transition))
+stmt_to_dict(s::Deactivate) = Dict{String, Any}("verb" => "deactivate", "transition" => string(s.transition))
 stmt_to_dict(s::Invoke) =
-    Dict{String,Any}("verb" => "invoke", "fn" => string(s.fn), "args" => [node_to_dict(from_expr(a)) for a in s.args])
-stmt_to_dict(s::Log) = Dict{String,Any}("verb" => "log", "msg" => s.msg isa Union{Expr,Symbol} ? node_to_dict(from_expr(s.msg)) : s.msg)
-stmt_to_dict(s::Seq) = Dict{String,Any}("verb" => "seq", "stmts" => [stmt_to_dict(x) for x in s.stmts])
+    Dict{String, Any}("verb" => "invoke", "fn" => string(s.fn), "args" => [node_to_dict(from_expr(a)) for a in s.args])
+stmt_to_dict(s::Log) = Dict{String, Any}("verb" => "log", "msg" => s.msg isa Union{Expr, Symbol} ? node_to_dict(from_expr(s.msg)) : s.msg)
+stmt_to_dict(s::Seq) = Dict{String, Any}("verb" => "seq", "stmts" => [stmt_to_dict(x) for x in s.stmts])
 stmt_to_dict(::RawExpr) =
     error("RawExpr is not JSON-serializable (the legacy non-typed bridge) — re-express with typed action verbs")
 
@@ -429,11 +442,15 @@ function stmt_from_dict(d::AbstractDict)
     elseif verb == "set_field"
         return SetField(Symbol(d["field"]), _stmt_value(d["value"]))
     elseif verb == "set_tokens"
-        return SetTokens(pred_from_dict(d["predicate"]),
-            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["assigns"]])
+        return SetTokens(
+            pred_from_dict(d["predicate"]),
+            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["assigns"]]
+        )
     elseif verb == "add_token"
-        return AddToken(Symbol(d["kind"]),
-            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["fields"]])
+        return AddToken(
+            Symbol(d["kind"]),
+            [Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["fields"]]
+        )
     elseif verb == "activate"
         return Activate(Symbol(d["transition"]))
     elseif verb == "deactivate"
@@ -450,9 +467,10 @@ function stmt_from_dict(d::AbstractDict)
 end
 
 # TokenPredicate ⟷ JSON (the @select predicate). Clause value is an ExprNode (or literal).
-pred_to_dict(p::TokenPredicate) = Dict{String,Any}(
+pred_to_dict(p::TokenPredicate) = Dict{String, Any}(
     "kind" => string(p.kind),
-    "clauses" => [[string(c.field), string(c.op), node_to_dict(from_expr(c.value))] for c in p.clauses])
+    "clauses" => [[string(c.field), string(c.op), node_to_dict(from_expr(c.value))] for c in p.clauses]
+)
 function pred_from_dict(d::AbstractDict)
     clauses = Clause[]
     for c in get(d, "clauses", [])
@@ -464,12 +482,14 @@ function pred_from_dict(d::AbstractDict)
 end
 
 # A Rule ⟷ JSON (ADR 0010): id, guard ExprNode, action stmt, fire_mode.
-rule_to_dict(r::Rule) = Dict{String,Any}(
+rule_to_dict(r::Rule) = Dict{String, Any}(
     "id" => string(r.id), "guard" => node_to_dict(from_expr(r.guard)),
-    "action" => stmt_to_dict(r.action), "fire_mode" => string(r.fire_mode))
+    "action" => stmt_to_dict(r.action), "fire_mode" => string(r.fire_mode)
+)
 rule_from_dict(d::AbstractDict) = Rule(
     Symbol(d["id"]), _stmt_value(d["guard"]), stmt_from_dict(d["action"]);
-    fire_mode = Symbol(get(d, "fire_mode", "every_tick")))
+    fire_mode = Symbol(get(d, "fire_mode", "every_tick"))
+)
 
 # ── E6: modality 3-axis ⟷ Set{Symbol} — the bijective 5-row translation (CONTRACT §1.1/§1.3) ──
 # The 5 legal rows (CONTRACT §1.3). An illegal combination is rejected with a citing message.
@@ -508,14 +528,16 @@ end
 # omitted (a read before its wire delivers then KeyErrors, surfacing the missing-default — exactly
 # as a missing param would). The wiring itself is host-side (`add_wire!`), never in this document.
 function inputs_from_dict(inputs)
-    seed = Dict{Symbol,Any}()
+    seed = Dict{Symbol, Any}()
     for inp in inputs
         port = Symbol(inp["port"])
         if haskey(inp, "default")
             node = _attr_node(inp["default"])
             node isa Const ||
-                error("inputs_from_dict: port `$port` default must be a literal value (a bare " *
-                      "scalar or a Const node), not a live expression — got $(typeof(node))")
+                error(
+                "inputs_from_dict: port `$port` default must be a literal value (a bare " *
+                    "scalar or a Const node), not a live expression — got $(typeof(node))"
+            )
             seed[port] = node.value
         end
     end
@@ -541,12 +563,16 @@ function _load_observables!(net, obs)
 end
 
 function obs_to_dict(name, o::FoldedObservable)
-    return Dict{String,Any}(
+    return Dict{String, Any}(
         "name" => string(name),
         "every" => o.every,
         "on" => [node_to_dict(from_expr(e)) for e in o.on],
-        "range" => [Dict("weight" => (r isa Tuple ? r[1] : 1.0),
-                         "value" => node_to_dict(from_expr(r isa Tuple ? r[2] : r))) for r in o.range],
+        "range" => [
+            Dict(
+                    "weight" => (r isa Tuple ? r[1] : 1.0),
+                    "value" => node_to_dict(from_expr(r isa Tuple ? r[2] : r))
+                ) for r in o.range
+        ],
     )
 end
 
@@ -564,8 +590,10 @@ Base.string(d::Diagnostic) = "[$(d.severity)] $(d.path): $(d.msg)"
 # whether a Sample node is legal here (false in a predicate clause value — no RNG, §9.5); `allow_field`
 # governs whether a Field (@field) node is legal here (true only in a SetField/@advance value,
 # ADR 0008 §D — a Field in a predicate clause would crash at runtime since @field is a macro).
-function _validate_node!(diags, d, path; species, params, obs, ports = Set{Symbol}(),
-        allow_sample = true, allow_field = true)
+function _validate_node!(
+        diags, d, path; species, params, obs, ports = Set{Symbol}(),
+        allow_sample = true, allow_field = true
+    )
     d isa AbstractDict || return diags        # a bare literal scalar — fine
     tag = get(d, "node", nothing)
     if tag == "const"
@@ -585,19 +613,23 @@ function _validate_node!(diags, d, path; species, params, obs, ports = Set{Symbo
     elseif tag == "sample"
         allow_sample || push!(diags, Diagnostic(:error, path, "Sample (RNG) is not 𝓕ₜ-measurable here (no draws in a predicate)"))
         Symbol(get(d, "dist", "")) in DIST_WHITELIST ||
-            push!(diags, Diagnostic(:error, path, "dist $(get(d,"dist","")) ∉ DIST_WHITELIST"))
+            push!(diags, Diagnostic(:error, path, "dist $(get(d, "dist", "")) ∉ DIST_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
             _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, ports, allow_sample, allow_field)
         end
     elseif tag == "field"
-        allow_field || push!(diags, Diagnostic(:error, path,
-            "Field (@field) is legal only in a SetField/@advance value, not here (ADR 0008 §D)"))
+        allow_field || push!(
+            diags, Diagnostic(
+                :error, path,
+                "Field (@field) is legal only in a SetField/@advance value, not here (ADR 0008 §D)"
+            )
+        )
     elseif tag == "externalref"
         # rule 8 (ADR 0012 §B2): an ExternalRef's port must be a declared inputs[] port. The node
         # is eval-free and 𝓕ₜ-measurable everywhere (it reads the latched buffer, never the RNG),
         # so it is legal in any value context — only an UNDECLARED port is flagged.
         Symbol(get(d, "port", "")) in ports ||
-            push!(diags, Diagnostic(:error, path, "ExternalRef port `$(get(d,"port",""))` is not a declared inputs[] port"))
+            push!(diags, Diagnostic(:error, path, "ExternalRef port `$(get(d, "port", ""))` is not a declared inputs[] port"))
     elseif tag == "timeref"
         # ok
     elseif tag == "choose"
@@ -614,7 +646,7 @@ end
 # (a TVE=no attribute must be a literal, not a non-trivial tree).
 _is_literal(x) = !(x isa AbstractDict) || get(x, "node", "") == "const"
 
-function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
+function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
     diags = Diagnostic[]
     species = Set(Symbol(s["name"]) for s in get(d, "species", []))
     structured = Set(Symbol(s["name"]) for s in get(d, "species", []) if get(s, "structured", false) === true)
@@ -634,8 +666,10 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
         if haskey(s, "modality")
             m = s["modality"]
             try
-                to_set(Symbol(get(m, "allocation", "upfront")), Symbol(get(m, "return", "consumed")),
-                    Symbol(get(m, "blocking", "block")))
+                to_set(
+                    Symbol(get(m, "allocation", "upfront")), Symbol(get(m, "return", "consumed")),
+                    Symbol(get(m, "blocking", "block"))
+                )
             catch e
                 push!(diags, Diagnostic(:error, "species[$i].modality", sprint(showerror, e)))
             end
@@ -666,7 +700,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
     # rule 2: dangling reactant FKs (+ §9.5 predicate well-formedness, rule 7)
     for (i, r) in enumerate(get(d, "reactants", []))
         string(get(r, "transition", "")) in ids ||
-            push!(diags, Diagnostic(:error, "reactants[$i].transition", "dangling FK `$(get(r,"transition",""))`"))
+            push!(diags, Diagnostic(:error, "reactants[$i].transition", "dangling FK `$(get(r, "transition", ""))`"))
         if haskey(r, "species")
             Symbol(r["species"]) in species ||
                 push!(diags, Diagnostic(:error, "reactants[$i].species", "undeclared species `$(r["species"])`"))
@@ -674,7 +708,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol,Any}())
         if haskey(r, "predicate")   # rule 7: predicate over a structured kind; clause values 𝓕ₜ-measurable
             pd = r["predicate"]
             Symbol(get(pd, "kind", "")) in structured ||
-                push!(diags, Diagnostic(:error, "reactants[$i].predicate.kind", "kind `$(get(pd,"kind",""))` is not a structured species"))
+                push!(diags, Diagnostic(:error, "reactants[$i].predicate.kind", "kind `$(get(pd, "kind", ""))` is not a structured species"))
             for (j, c) in enumerate(get(pd, "clauses", []))
                 Symbol(c[2]) in PRED_OP_WHITELIST ||
                     push!(diags, Diagnostic(:error, "reactants[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
@@ -729,10 +763,10 @@ function _validate_action!(diags, a, path; species, params, obs, ports = Set{Sym
         push!(diags, Diagnostic(:error, path, "SetField is illegal in a Rule (no bound token, ADR 0010 §C)"))
     elseif verb == "add_token"
         Symbol(get(a, "kind", "")) in regnames ||
-            push!(diags, Diagnostic(:error, "$path.kind", "AddToken kind `$(get(a,"kind",""))` not in registry"))
+            push!(diags, Diagnostic(:error, "$path.kind", "AddToken kind `$(get(a, "kind", ""))` not in registry"))
     elseif verb == "invoke"
         Symbol(get(a, "fn", "")) in regnames ||
-            push!(diags, Diagnostic(:error, "$path.fn", "Invoke fn `$(get(a,"fn",""))` not in registry"))
+            push!(diags, Diagnostic(:error, "$path.fn", "Invoke fn `$(get(a, "fn", ""))` not in registry"))
     elseif verb == "seq"
         for (i, s) in enumerate(get(a, "stmts", []))
             _validate_action!(diags, s, "$path.stmts[$i]"; species, params, obs, ports, structured, regnames, in_rule)
@@ -768,7 +802,7 @@ end
 # clean and re-import reconstructs the same value via assign_defaults!. A literal Const lowered by
 # the loader is a bare Number here, so we emit the bare number (the loader's _attr_node wraps it).
 function _species_to_dict(net, i)
-    sp = Dict{String,Any}("name" => string(net[i, :specName]))
+    sp = Dict{String, Any}("name" => string(net[i, :specName]))
     iv = net[i, :specInitVal]
     iv isa Number && iv != 0 && (sp["init"] = iv)
     # cost/reward/valuation default to 0.0 (defargs[:S]); emit only when set (TVE=no literals).
@@ -791,7 +825,7 @@ end
 # falling back to a positional "t<i>" for an unnamed transition so the reactant FKs still resolve.
 function _transition_to_dict(net, i; species = Set{Symbol}(), params = Set{Symbol}())
     name = net[i, :transName]
-    tr = Dict{String,Any}("id" => string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name))
+    tr = Dict{String, Any}("id" => string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name))
     (ismissing(name) || isnothing(name)) || (tr["name"] = string(name))
 
     # rate: rate_from_expr Poisson-unwraps the stored :transRate Expr back to (bare-intensity node,
@@ -804,13 +838,13 @@ function _transition_to_dict(net, i; species = Set{Symbol}(), params = Set{Symbo
     # (defargs[:T]) so the JSON matches what import expects as the default. Each is lowered back to
     # a node by from_expr (the inverse of to_expr on import).
     for (col, key, default) in (
-        (:transCycleTime, "cycletime", 0.0),
-        (:transProbOfSuccess, "prob_of_success", 1),
-        (:transCapacity, "capacity", Inf),
-        (:transPriority, "priority", 1),
-        (:transMaxLifeTime, "max_lifetime", Inf),
-        (:transMultiplier, "multiplier", 1),
-    )
+            (:transCycleTime, "cycletime", 0.0),
+            (:transProbOfSuccess, "prob_of_success", 1),
+            (:transCapacity, "capacity", Inf),
+            (:transPriority, "priority", 1),
+            (:transMaxLifeTime, "max_lifetime", Inf),
+            (:transMultiplier, "multiplier", 1),
+        )
         v = net[i, col]
         (isnothing(v) || _is_default_attr(v, default)) && continue
         tr[key] = node_to_dict(from_expr(v; species, params))
@@ -847,7 +881,7 @@ _is_default_attr(v, default) = v isa Number && default isa Number && (v == defau
 # _apply_modality / the stoich coefficient.
 function _reactants_to_dict(net)
     species, params = _name_sets(net)
-    out = Dict{String,Any}[]
+    out = Dict{String, Any}[]
     for i in row_ids(net, :T)
         name = net[i, :transName]
         id = string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name)
@@ -872,8 +906,10 @@ function _split_reaction_line(line)
     elseif line isa Expr && line.head == :call && line.args[1] in bwd_arrows
         return line.args[3], line.args[2]
     else
-        error("_reactants_to_dict: unexpected reaction line shape $(repr(line)) " *
-              "(a @choose/bidirectional line is not yet supported by the export path)")
+        error(
+            "_reactants_to_dict: unexpected reaction line shape $(repr(line)) " *
+                "(a @choose/bidirectional line is not yet supported by the export path)"
+        )
     end
 end
 
@@ -889,7 +925,7 @@ _static_reactants(arm) =
 #     (FoldedReactant.species is a macrocall Expr)
 #   • a plain species → {side, species, stoich, modality}
 function _reactant_to_dict(r::FoldedReactant, id, side; species, params)
-    d = Dict{String,Any}("transition" => id, "side" => side)
+    d = Dict{String, Any}("transition" => id, "side" => side)
     if r.predicate !== nothing
         # @select(Kind, clauses) — the inverse of _reactant_atom's predicate branch. pred_to_dict
         # emits {kind, clauses:[[field, op, value-node], …]} exactly as the loader's predicate{} reads.
@@ -913,13 +949,13 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
         # @advance(field, value) — an RHS lifecycle field-write (ADR 0008 §D).
         field = mc.args[3]
         valex = mc.args[4]
-        d["advance"] = Dict{String,Any}(
+        d["advance"] = Dict{String, Any}(
             "field" => string(field isa QuoteNode ? field.value : field),
             "value" => node_to_dict(from_expr(valex; species, params)),
         )
     elseif name === :move
         # @move(from, to) — species relabel (ADR 0006). Emit the two species symbols.
-        d["move"] = Dict{String,Any}(
+        d["move"] = Dict{String, Any}(
             "from" => string(_macro_sym(mc.args[3])),
             "to" => string(_macro_sym(mc.args[4])),
         )
@@ -930,13 +966,13 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
         # {kind, fields:[{name, value-node}, …]}, the inverse of _reactant_atom's structured branch;
         # each field value lowers through from_expr exactly like an @advance value or an AddToken
         # field. args[3] is always a QuoteNode here (construction guarantees it).
-        d["structured"] = Dict{String,Any}(
+        d["structured"] = Dict{String, Any}(
             "kind" => string(mc.args[3].value),
             "fields" => [
-                Dict{String,Any}(
-                    "name" => string(kw.args[1]),
-                    "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
-                ) for kw in @view mc.args[4:end]
+                Dict{String, Any}(
+                        "name" => string(kw.args[1]),
+                        "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
+                    ) for kw in @view mc.args[4:end]
             ],
         )
     else
@@ -962,7 +998,7 @@ function _emit_stoich!(d, stoich)
     return d
 end
 
-modality_to_dict(s::Set{Symbol}) = Dict{String,Any}(
+modality_to_dict(s::Set{Symbol}) = Dict{String, Any}(
     "allocation" => (:rate in s ? "perstep" : "upfront"),
     "return" => (:conserved in s ? "conserved" : "consumed"),
     "blocking" => (:nonblock in s ? "nonblock" : "block"),
@@ -991,8 +1027,12 @@ function populate_reactant_specs!(net::ReactionNetwork)
             for r in _static_reactants(arm)
                 if r.predicate !== nothing || (r.species isa Expr)
                     # dynamic: a @select predicate or an @advance/@move/@structured macrocall term.
-                    push!(net.reactants, ReactantSpec(t, 0, r.stoich, side, r.modality,
-                        r.species isa Union{Expr,Symbol} ? r.species : nothing))
+                    push!(
+                        net.reactants, ReactantSpec(
+                            t, 0, r.stoich, side, r.modality,
+                            r.species isa Union{Expr, Symbol} ? r.species : nothing
+                        )
+                    )
                 else
                     sp = r.species isa Symbol ? r.species : Symbol(r.species)
                     j = find_index(sp, net)

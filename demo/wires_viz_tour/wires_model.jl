@@ -39,7 +39,7 @@ MarketAgent(name::AbstractString, s0::Real, drift::Real, dt::Real, horizon::Real
     MarketAgent(name, Float64(s0), Float64(drift), Float64(dt), 0.0, Float64(horizon))
 
 AlgebraicAgents.observables(m::MarketAgent) = [:sentiment]
-AlgebraicAgents.getobservable(m::MarketAgent, ::Union{Symbol,AbstractString}) = m.sentiment
+AlgebraicAgents.getobservable(m::MarketAgent, ::Union{Symbol, AbstractString}) = m.sentiment
 AlgebraicAgents.getobservable(m::MarketAgent, ::Int) = m.sentiment
 AlgebraicAgents._step!(m::MarketAgent) = (m.sentiment += m.drift; m.t += m.dt; m.t)
 AlgebraicAgents._projected_to(m::MarketAgent) = m.t > m.horizon ? true : m.t
@@ -116,8 +116,12 @@ end
 # is the per-agent filtered view of that same list.
 function all_wires(root)
     ws = AlgebraicAgents.getopera(root).wires
-    return [(from = AlgebraicAgents.getname(w.from), from_var = String(w.from_var_name),
-             to = AlgebraicAgents.getname(w.to), to_var = String(w.to_var_name)) for w in ws]
+    return [
+        (
+                from = AlgebraicAgents.getname(w.from), from_var = String(w.from_var_name),
+                to = AlgebraicAgents.getname(w.to), to_var = String(w.to_var_name),
+            ) for w in ws
+    ]
 end
 
 # Build + run the whole coupled system under a single simulate(root).
@@ -138,13 +142,15 @@ function _clean_svg(s::AbstractString; scale::Real = 1.0)
     i = findfirst("<svg", s)
     svg = i === nothing ? String(s) : String(s[first(i):end])
     scale == 1.0 && return svg
-    return replace(svg, r"width=\"([\d.]+)pt\" height=\"([\d.]+)pt\"" =>
-        m -> begin
+    return replace(
+        svg, r"width=\"([\d.]+)pt\" height=\"([\d.]+)pt\"" =>
+            m -> begin
             mm = match(r"width=\"([\d.]+)pt\" height=\"([\d.]+)pt\"", m)
             w = round(parse(Float64, mm.captures[1]) * scale; digits = 1)
             h = round(parse(Float64, mm.captures[2]) * scale; digits = 1)
             "width=\"$(w)pt\" height=\"$(h)pt\""
-        end; count = 1)
+        end; count = 1
+    )
 end
 
 # (2) The HEADLINE visual: AA's wiring_diagram(root) → DOT → run_graphviz → SVG. This is the
@@ -182,8 +188,10 @@ function coupling_table(sys)
     # finance.cash_seen is latched once per tick at _prestep!; align it to the RD clock, padding
     # with `missing` if the lengths differ (the lag can leave it one shorter/longer).
     seen = sys.finance.cash_seen
-    finance_seen = Union{Float64,Missing}[k <= length(seen) ? round(seen[k]; digits = 1) : missing
-                                          for k in 1:n]
+    finance_seen = Union{Float64, Missing}[
+        k <= length(seen) ? round(seen[k]; digits = 1) : missing
+            for k in 1:n
+    ]
     return DataFrame(
         t = t,
         sentiment = sent,

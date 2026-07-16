@@ -81,7 +81,7 @@ MarketAgent(name::AbstractString, s0::Real, drift::Real, dt::Real, horizon::Real
 
 # OUTBOUND surface for the market agent: it exports one observable, `sentiment`.
 AlgebraicAgents.observables(m::MarketAgent) = [:sentiment]
-AlgebraicAgents.getobservable(m::MarketAgent, ::Union{Symbol,AbstractString}) = m.sentiment
+AlgebraicAgents.getobservable(m::MarketAgent, ::Union{Symbol, AbstractString}) = m.sentiment
 AlgebraicAgents.getobservable(m::MarketAgent, ::Int) = m.sentiment
 # Stepping: drift the sentiment upward, advance the clock.
 AlgebraicAgents._step!(m::MarketAgent) = (m.sentiment += m.drift; m.t += m.dt; m.t)
@@ -218,8 +218,10 @@ println("Hierarchy: portfolio (root) ⊇ {market, RD pharma net, finance}.")
 println("RD exports observables: ", AlgebraicAgents.observables(sys.rd))
 println("Wire 1 (inbound) : market.sentiment ──▶ RD.sentiment port")
 println("Wire 2 (outbound): RD.cash (getobservable) ──▶ finance.rd_cash")
-println("RD reads sentiment=", AlgebraicAgents.getobservable(sys.market, :sentiment),
-        " at t=0 (the pre-wire default in RD's buffer is ", sys.rd.external_inputs[:sentiment], ").")
+println(
+    "RD reads sentiment=", AlgebraicAgents.getobservable(sys.market, :sentiment),
+    " at t=0 (the pre-wire default in RD's buffer is ", sys.rd.external_inputs[:sentiment], ")."
+)
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §3. Run the WHOLE coupled model under one simulate(root)
@@ -234,7 +236,7 @@ println("RD reads sentiment=", AlgebraicAgents.getobservable(sys.market, :sentim
 banner("§3. Run the coupled model — one simulate(root)")
 simulate(sys.root)
 
-sentiment_path = round.(0.0:0.12:0.12*8; digits = 3)
+sentiment_path = round.(0.0:0.12:(0.12 * 8); digits = 3)
 println("market sentiment over the run (drifts up):   ", sentiment_path[1:9])
 println()
 println("RD cash trajectory (grow rate = sentiment × base_inflow, latched one tick late):")
@@ -243,8 +245,10 @@ println("   cash : ", round.(sys.rd.sol.cash; digits = 1))
 println("   acquired (the lever): ", Int.(sys.rd.sol.acquired))
 println()
 acq_tick = findfirst(>(0.0), sys.rd.sol.acquired)
-println("The acquisition lever fired at t = ", isnothing(acq_tick) ? "never" : Int(sys.rd.sol.t[acq_tick]),
-        " — the first tick BOTH the external sentiment cleared its threshold AND cash ≥ trigger.")
+println(
+    "The acquisition lever fired at t = ", isnothing(acq_tick) ? "never" : Int(sys.rd.sol.t[acq_tick]),
+    " — the first tick BOTH the external sentiment cleared its threshold AND cash ≥ trigger."
+)
 println("rule `acquire` enabled? ", sys.rd.rules[1].enabled, "  (false ⇒ the :once lever has fired)")
 
 # ════════════════════════════════════════════════════════════════════════════════════════
@@ -291,35 +295,41 @@ println("no algebraic loop, no sibling-order dependence (Invariants 2-3).")
 # the next one — the first post-reinit `_prestep!` re-latches from a clean seed.
 
 banner("§6. reinit clears the external-input buffer to its declared default")
-println("after the run, RD's latched sentiment = ", round(sys.rd.external_inputs[:sentiment]; digits = 3),
-        " (a stale wire value)")
+println(
+    "after the run, RD's latched sentiment = ", round(sys.rd.external_inputs[:sentiment]; digits = 3),
+    " (a stale wire value)"
+)
 AlgebraicAgents._reinit!(sys.rd)
-println("after _reinit!, RD's sentiment buffer  = ", sys.rd.external_inputs[:sentiment],
-        "  (restored to the declared inputs[] default)")
+println(
+    "after _reinit!, RD's sentiment buffer  = ", sys.rd.external_inputs[:sentiment],
+    "  (restored to the declared inputs[] default)"
+)
 println("equal to the declared defaults snapshot? ", sys.rd.external_inputs == sys.rd.external_input_defaults)
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # §7. Recap
 # ════════════════════════════════════════════════════════════════════════════════════════
 banner("§7. Recap")
-println("""
-We ran a pharma portfolio RD net as ONE node inside an AlgebraicAgents hierarchy, coupled in BOTH
-directions and driven by a single simulate(root):
+println(
+    """
+    We ran a pharma portfolio RD net as ONE node inside an AlgebraicAgents hierarchy, coupled in BOTH
+    directions and driven by a single simulate(root):
 
-  §0  sibling agents      a MarketAgent (source) + a FinanceAgent (sink), ordinary AA @aagents
-  §1  inputs[] port       the RD JSON declares a `sentiment` read port; ExternalRef reads it in a
-                          RATE and a RULE GUARD; validate rule 8 enforces the port is declared
-  §2  wiring (host-side)  add_wire! lays market.sentiment ▶ RD, and RD.cash ▶ finance — topology
-                          lives in the host, never in the RD document (Invariant 4)
-  §3  simulate(root)      AA's least-projected-time gate interleaves the clocks; _prestep! latches
-                          external reads once/tick; the acquisition lever fires on external state
-  §4  OUTBOUND read       finance consumed RD's cash purely via getobservable on a wire
-  §5  determinism         same (hierarchy, seed) ⇒ identical coupled trajectory (Invariants 2-3)
-  §6  reinit              the external buffer resets to its declared default (§B3 / §4 D7)
+      §0  sibling agents      a MarketAgent (source) + a FinanceAgent (sink), ordinary AA @aagents
+      §1  inputs[] port       the RD JSON declares a `sentiment` read port; ExternalRef reads it in a
+                              RATE and a RULE GUARD; validate rule 8 enforces the port is declared
+      §2  wiring (host-side)  add_wire! lays market.sentiment ▶ RD, and RD.cash ▶ finance — topology
+                              lives in the host, never in the RD document (Invariant 4)
+      §3  simulate(root)      AA's least-projected-time gate interleaves the clocks; _prestep! latches
+                              external reads once/tick; the acquisition lever fires on external state
+      §4  OUTBOUND read       finance consumed RD's cash purely via getobservable on a wire
+      §5  determinism         same (hierarchy, seed) ⇒ identical coupled trajectory (Invariants 2-3)
+      §6  reinit              the external buffer resets to its declared default (§B3 / §4 D7)
 
-The through-line (ADR 0012 / CONTRACT §13): a reactive network is a first-class AA hierarchy node
-in BOTH directions — readable by the hierarchy (getobservable/observables) and able to read it
-(inputs[] + ExternalRef) — and the coupling is explicit, eval-free, and deterministic: one new
-closed ExternalRef leaf, a model-local inputs[] port list, and a pinned _prestep! latch.
-""")
+    The through-line (ADR 0012 / CONTRACT §13): a reactive network is a first-class AA hierarchy node
+    in BOTH directions — readable by the hierarchy (getobservable/observables) and able to read it
+    (inputs[] + ExternalRef) — and the coupling is explicit, eval-free, and deterministic: one new
+    closed ExternalRef leaf, a model-local inputs[] port list, and a pinned _prestep! latch.
+    """
+)
 println("Done.")

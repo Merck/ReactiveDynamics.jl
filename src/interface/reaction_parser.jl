@@ -3,7 +3,7 @@
 using MacroTools: postwalk
 
 struct FoldedReactant
-    species::Union{Expr,Symbol}
+    species::Union{Expr, Symbol}
     stoich::SampleableValues
     modality::Set{Symbol}
     predicate::Any   # nothing, or a TokenPredicate built from a @select(kind, clauses) LHS
@@ -11,17 +11,17 @@ end
 FoldedReactant(species, stoich, modality) = FoldedReactant(species, stoich, modality, nothing)
 
 function recursively_choose(r_line, state)
-    postwalk(r_line) do ex
+    return postwalk(r_line) do ex
         if isexpr(ex, :macrocall) && (macroname(ex) == :choose)
             sample_range(
                 [
                     (
-                        if isexpr(r, :tuple)
-                            (r.args[1], recursively_choose(r.args[2], state))
+                            if isexpr(r, :tuple)
+                                (r.args[1], recursively_choose(r.args[2], state))
                         else
-                            recursively_choose(r, state)
+                                recursively_choose(r, state)
                         end
-                    ) for r in ex.args[3:end]
+                        ) for r in ex.args[3:end]
                 ],
                 state,
             )
@@ -72,11 +72,11 @@ function _collect_pred_clauses!(clauses, ex)
 end
 
 function recursive_find_reactants!(
-    ex::SampleableValues,
-    mult::SampleableValues,
-    mods::Set{Symbol},
-    reactants::Vector{FoldedReactant},
-)
+        ex::SampleableValues,
+        mult::SampleableValues,
+        mods::Set{Symbol},
+        reactants::Vector{FoldedReactant},
+    )
     if typeof(ex) != Expr || isexpr(ex, :.) || (ex.head == :escape)
         if (ex == 0 || in(ex, empty_set))
             return reactants
@@ -86,12 +86,12 @@ function recursive_find_reactants!(
     elseif ex.args[1] == :*
         recursive_find_reactants!(
             ex.args[end],
-            multiplex(mult, ex.args[2:(end-1)]...),
+            multiplex(mult, ex.args[2:(end - 1)]...),
             mods,
             reactants,
         )
     elseif ex.args[1] == :+
-        for i = 2:length(ex.args)
+        for i in 2:length(ex.args)
             recursive_find_reactants!(ex.args[i], mult, mods, reactants)
         end
     elseif ex.head == :macrocall && macroname(ex) == :select
@@ -99,7 +99,7 @@ function recursive_find_reactants!(
         kind, pred = parse_token_predicate(ex)
         push!(reactants, FoldedReactant(kind, mult, mods, pred))
     elseif isexpr(ex, :call) ||
-           (ex.head == :macrocall && macroname(ex) ∈ [:structured, :move, :advance])
+            (ex.head == :macrocall && macroname(ex) ∈ [:structured, :move, :advance])
         push!(reactants, FoldedReactant(ex, mult, mods))
     elseif ex.head == :macrocall
         mods = copy(mods)

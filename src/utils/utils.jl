@@ -18,11 +18,13 @@ Split an array of expressions into arrays of "argument" expressions and keyword 
 function args_kwargs(args)
     args_ = Any[]
     kwargs = Any[]
-    map(el -> if isexpr(el, :(=))
-        push!(kwargs, Expr(:kw, el.args[1], el.args[2]))
-    else
-        push!(args_, esc(el))
-    end, args)
+    map(
+        el -> if isexpr(el, :(=))
+            push!(kwargs, Expr(:kw, el.args[1], el.args[2]))
+        else
+            push!(args_, esc(el))
+        end, args
+    )
 
     return args_, kwargs
 end
@@ -40,11 +42,11 @@ function find_kwargex_delete!(collection, key, default = :())
 end
 
 macroname(ex) =
-    if isexpr(ex, :macrocall)
-        (str = string(ex.args[1]); Symbol(strip(str, '@')))
-    else
-        error("expr $ex is not a macrocall")
-    end
+if isexpr(ex, :macrocall)
+    (str = string(ex.args[1]); Symbol(strip(str, '@')))
+else
+    error("expr $ex is not a macrocall")
+end
 strip_sym(sym) = (str = string(sym); Symbol(strip(str, '@')))
 
 blockize(ex) = striplines(isexpr(ex, :block) ? ex : Expr(:block, ex))
@@ -94,7 +96,7 @@ function get_kwarg(collection, key, default = :())
 end
 
 function get_bound_agent(transition, place)
-    if !isnothing(transition) && !isempty(transition.bound_structured_agents)
+    return if !isnothing(transition) && !isempty(transition.bound_structured_agents)
         bound_agents = filter(x -> x.species == place, transition.bound_structured_agents)
 
         bound_agents

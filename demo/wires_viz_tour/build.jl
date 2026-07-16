@@ -44,8 +44,10 @@ function build_literate()
     # resolve to `mddir`. Pin the real demo dir via ENV so the script's `include(wires_model.jl)`
     # finds it (the script reads `WIRES_VIZ_DIR`, falling back to `@__DIR__` when run directly).
     ENV["WIRES_VIZ_DIR"] = HERE
-    Literate.markdown(LITERATE_SRC, mddir; execute = true, flavor = Literate.CommonMarkFlavor(),
-        credit = true, name = "wires_literate")
+    Literate.markdown(
+        LITERATE_SRC, mddir; execute = true, flavor = Literate.CommonMarkFlavor(),
+        credit = true, name = "wires_literate"
+    )
     mdfile = joinpath(mddir, "wires_literate.md")
     md = read(mdfile, String)
 
@@ -58,13 +60,15 @@ function build_literate()
         i = findfirst("<svg", svg)
         svg = i === nothing ? svg : svg[first(i):end]
         # Markdown.html emits <img src="f" alt="" /> ; splice the raw SVG in its place.
-        body = replace(body, Regex("<img src=\"" * escape_regex(f) * "\"[^>]*/>") =>
-            "<div class=\"diagram\">" * svg * "</div>")
+        body = replace(
+            body, Regex("<img src=\"" * escape_regex(f) * "\"[^>]*/>") =>
+                "<div class=\"diagram\">" * svg * "</div>"
+        )
     end
 
     html = wrap_html("ReactiveDynamics — wires & ports (Literate)", body)
     write(LITERATE_HTML, html)
-    println("wrote $(LITERATE_HTML)  ($(filesize(LITERATE_HTML)) bytes)")
+    return println("wrote $(LITERATE_HTML)  ($(filesize(LITERATE_HTML)) bytes)")
 end
 
 escape_regex(s) = replace(s, r"([.\-\[\]()+*?^$\\])" => s"\\\1")
@@ -90,14 +94,14 @@ function wrap_html(title, body)
     hr { border: none; border-top: 1px solid #eee; margin: 2.5rem 0 1rem; }
     """
     return """<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>$title</title>
-<style>$css</style>
-</head><body>
-$body
-</body></html>
-"""
+    <html lang="en"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>$title</title>
+    <style>$css</style>
+    </head><body>
+    $body
+    </body></html>
+    """
 end
 
 build_literate()
