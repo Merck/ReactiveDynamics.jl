@@ -409,7 +409,7 @@ Set model metadata (e.g. solver arguments)
 
 ```julia
 @prob_meta net tspan = (0, 100.0) schedule = schedule_weighted!
-@prob_meta sir_acs tspan = 250 tstep = 1
+@prob_meta sir_acs tspan = 250 dt = 1   # `tstep` is a deprecated alias for `dt`
 ```
 """
 macro prob_meta(acsex, exs...)

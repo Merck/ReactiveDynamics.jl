@@ -74,7 +74,7 @@ Because Tier 2 removes names from the export surface, the deprecation is a re-ex
 - **Standardize the `ReactionNetworkProblem` variable.** It is `state` in the engine core (`state.jl`, `solvers.jl`) and `prob` in the viz/serialize/export/plot layers. Standardize the PUBLIC/boundary API on `prob` (matches the `ReactionNetworkProblem` constructor and SciML convention); keep `state` only inside the hot `_step!`/`_reinit!` loop where it is entrenched and local. (Lower priority; do not let it balloon the diff.)
 - **Delete the dead docstring** at `create.jl:40` ("outputs an instance of `TheoryReactionNetwork` that can be converted to a `DiscreteProblem`") — both types are gone. Replace with an accurate one-line description referencing `ReactionNetwork`.
 - **Correct stale docs** that still describe ACSets/`BasicSchema`/`TheoryReactionNetwork`/`@present FreeSchema` as PRESENT: `INVENTORY.md:5,230-233`, `docs/HANDOFF_PLAN.md:40`, `docs/adr/0014-visualization.md:4`, `REVIEW.md:26,119`, and the `readme.md:31` "attributed C-set" line. These describe an intermediate or pre-migration state and now contradict `src/`.
-- **`dt` / `tstep`.** `CONTRACT_DRAFT.md:108` already flags `tstep` as an internal alias and rename candidate. Out of scope for THIS ADR (it is not lineage debt), but noted so a future pass folds it in; not blocking.
+- **`dt` / `tstep`.** `CONTRACT_DRAFT.md:108` already flags `tstep` as an internal alias and rename candidate. Out of scope for THIS ADR (it is not lineage debt), but noted so a future pass folds it in; not blocking. **RESOLVED 2026-07-16 (separate pass):** the internal bag key and accepted keyword now use `dt` (name-matched to the `state.dt` field); `tstep` is an accepted-but-deprecated alias mapped to `dt` with a depwarn (this ADR's Tier 1 pattern).
 
 ## Rationale
 
@@ -111,4 +111,4 @@ Update `docs/adr/README.md` with the 0015 row and this file's summary.
 - **Deprecation window.** One minor release, or remove the shims immediately given RD is pre-1.0 with no external users on record? (Recommendation: one release — cheap insurance, and it documents the rename in-code.)
 - **`incident` → `find_rows` vs `find_incident`.** `find_rows` drops the misleading FK connotation entirely; if any future FK-following accessor is planned on `ReactantSpec`, reserve a distinct name for it (`follow_fk`?) so `find_rows` stays a pure column search.
 - **Template expansion, if ever needed.** If model-template comprehensions return as a requirement, spec them as an owned internal utility (a ~40-line brace expander over the block AST) in a new ADR — not a dependency.
-- **`dt`/`tstep`** rename (`CONTRACT_DRAFT.md:108`) — fold into a later naming pass; not part of this ADR.
+- **`dt`/`tstep`** rename (`CONTRACT_DRAFT.md:108`) — fold into a later naming pass; not part of this ADR. **RESOLVED 2026-07-16 (separate pass):** landed as a rename to `dt` plus a one-release deprecated `tstep` alias.

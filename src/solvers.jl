@@ -820,7 +820,7 @@ function free_blocked_species!(state)
     end
 end
 
-## resolve tspan, tstep
+## resolve tspan, dt
 
 function get_tcontrol(tspan, args)
     tspan isa Tuple && (tspan = tspan[2] - tspan[1])
@@ -931,7 +931,21 @@ function ReactionNetworkProblem(
     # priority→∞ limit, not a separate path), so the allocator no longer reads `state.p[:strategy]`.
     # A JSON/DSL model may still carry the key; it is a harmless no-op rather than a hard error.
 
-    keywords[:tspan], keywords[:tstep] = get_tcontrol(keywords[:tspan], keywords)
+    # Deprecation shim (ADR 0015 follow-up dt/tstep naming pass): the integrator step is authored
+    # as `dt` (the settled struct-field name); the legacy `tstep` meta keyword is honored for one
+    # release with a depwarn, following the ADR 0015 Tier 1 alias pattern. Map it BEFORE
+    # get_tcontrol resolves the step — get_tcontrol reads only :dt/:tstops/:tunit, so a user-supplied
+    # `tstep` was previously SILENTLY IGNORED (immediately overwritten by the resolved value below);
+    # mapping it here both renames it and fixes that latent silent-ignore bug.
+    if haskey(keywords, :tstep) && !haskey(keywords, :dt)
+        Base.depwarn(
+            "The `tstep` meta keyword is deprecated (dt/tstep naming pass); use `dt` instead.",
+            :ReactionNetworkProblem,
+        )
+        keywords[:dt] = pop!(keywords, :tstep)
+    end
+
+    keywords[:tspan], keywords[:dt] = get_tcontrol(keywords[:tspan], keywords)
 
     # Determinism (§4 D5/D6): build the state-owned RNG. A `seed` kwarg fixes the stream;
     # absent it, draw a fresh seed from system entropy so a default run is still self-contained.
@@ -1013,7 +1027,7 @@ function ReactionNetworkProblem(
         keywords[:tspan][1],
         structured_token_names,
         keywords[:tspan],
-        get(keywords, :tstep, 1),
+        get(keywords, :dt, 1),
         transitions,
         ongoing_transitions,
         log,
