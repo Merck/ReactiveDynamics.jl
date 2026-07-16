@@ -41,7 +41,7 @@ RDArrowExt = "Arrow"
 RDPlotsExt = "Plots"
 
 [compat]
-julia = "1.11"
+julia = "1.12"
 CSV = "0.10"
 Plots = "1.40"
 Arrow = "2"
