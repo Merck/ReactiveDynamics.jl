@@ -1,12 +1,17 @@
 # DRAFT PR — ReactiveDynamics.jl: native discrete-event engine rework
 
-This intentionally stays draft until the docs/tutorial refinement lands.
+Let's improve the PR text further. I would like it to communicate the changes 
+This intentionally stays draft until refined documentation and tutorials are delivered, to accompany the present technical/code-level refinements.
 
-## What this is
+## The goals of this rework
 
-I decided to address the years of accummulated/unresolved technical debt that would limit the applicability and publication prospects of the framework, with the intent to revisit/solidify the core foundations of the framework (DSL, data store, simulation engine), and proper semantic tests, and improve documentation. We pivot from a SciML/Catlab embedding to a **native, dependency-light discrete-event engine** for timed, stochastic, resource-constrained business/R&D process modeling (enabling budgeting, ledgers, what-if, rNPV). The whole rework is specified contract-first: a normative operational-semantics contract (`docs/CONTRACT_DRAFT.md` §1–§15) and 15 Architecture Decision Records (`docs/adr/`), with the engine built to satisfy them. State of the implementation is tracked in `docs/STATUS.md`.
+I decided to address the years of unresolved technical debt that would limit the applicability and publication prospects of the framework, and bury the framework's conceptual novelty under the technical-level constraints. My intent was to revisit how the core pillars of the framework are implemented (DSL, data store, simulation engine-focusing on correctness and intended semantics), introduce proper semantic tests, and improve documentation. 
 
-The whole modeling surface is one small script. A classical (plain-species) SIR, end to end:
+In this rework, we pivot from a SciML/Catlab base to a **native, dependency-light discrete-event engine** for timed, stochastic, resource-constrained business/R&D process modeling (enabling budgeting, ledgers, what-if, rNPV), with the support for agentic/structured resources and composability---the model is now accommodated within AlgebraicAgents.jl, which provides a modeling interface and unlocks these goals (agentic resources, composability with "third party models").
+
+The whole rework is specified contract-first: a normative operational-semantics contract (`spec/CONTRACT_DRAFT.md` §1–§15) and 15 Architecture Decision Records (`spec/adr/`), with the engine built to satisfy them. State of the implementation is tracked in `spec/STATUS.md`.
+
+The whole modeling surface stays familiar. A classical (plain-species) SIR, end to end:
 
 ```julia
 using ReactiveDynamics
@@ -27,13 +32,13 @@ prob.sol[!, "I"]                                # read solution columns BY NAME 
 ## Headline changes
 
 **Engine & semantics**
-- Native discrete-event engine (`ReactionNetworkProblem` stepped via AA's `_step!`); SciML demoted to optional (ADR 0001).
+- Native discrete-event engine (`ReactionNetworkProblem` stepped via AA's `_step!`) is the sole simulation backbone; the SciML stack (`DifferentialEquations`/`OrdinaryDiffEq`/`DiffEqBase`) and the old `DiscreteProblem` transform were **removed entirely** — no deps, no code (ADR 0001). A SciML interop adapter is left as a possible future package extension, but none ships here.
 - Priority-weighted progressive-fill (water-filling) resource allocator — work-conserving, deterministic, dependency-free (ADR 0002).
 - Append-only + soft-deactivate runtime mutation, so transitions/species/params can be added and transitions retired mid-simulation without breaking position-indexed compiled closures (ADR 0004).
 - `AbstractRNG`/`seed=` threaded through every draw; a run is fully determined by `(model, seed)` (CONTRACT §4).
 - Construction-time modality validation (`validate_modalities`, CONTRACT §1.4): rejects the three illegal modality configs (`{:nonblock,:conserved}`; `:rate` with concrete `cycletime==0`; `:rate` on a structured species) with a clear `ArgumentError` before any tick, replacing late/silent failures.
 
-Resource modality is a per-participation tag on the LHS — `@conserved` (returned at finish), `@rate` (drawn per in-flight tick), `@nonblock` (claimed, not held) — so contention is modeled, not hand-coded:
+Resource modality is a per-participation tag on the LHS — `@conserved` (returned at finish), `@rate` (drawn per in-flight tick), `@nonblock` (claimed, not held) — so contention is properly modeled, not hand-coded:
 
 ```julia
 pipeline = @reaction_network begin
@@ -133,8 +138,8 @@ to_json_model(prob)                                        # the inverse — a l
 - `Plots`/`Arrow` demoted to weakdeps with `RDPlotsExt`/`RDArrowExt` package extensions; `Pluto`/`PlutoUI`/`IJulia`/`DifferentialEquations` dropped from deps.
 
 **Documentation & records**
-- Contract-first: normative operational-semantics spec (`docs/CONTRACT_DRAFT.md` §1–§15) and 15 ADRs (`docs/adr/`), all statuses truthed-up to Implemented with commit citations.
-- Repo-root `CLAUDE.md` agent guide; `docs/STATUS.md` as the single state index; the completed handoff plans archived under `docs/history/`.
+- Contract-first: normative operational-semantics spec (`spec/CONTRACT_DRAFT.md` §1–§15) and 15 ADRs (`spec/adr/`), all statuses truthed-up to Implemented with commit citations. The durable engineering artifacts live under top-level `spec/`, kept separate from `docs/` (the Documenter static-pages site).
+- Repo-root `CLAUDE.md` agent guide; `spec/STATUS.md` as the single state index; the completed handoff plans archived under `spec/history/`.
 
 ## Tests
 
@@ -143,11 +148,11 @@ to_json_model(prob)                                        # the inverse — a l
 ## Documentation and Tutorials
 
 Docs/tutorial refinement is deliberately NOT in this PR. This PR should not be merged until the rework until the demos/tutorials are polished and coherent against the final (post-ADR-0015) surface. This will be addressed through a standalone PR into `rework`. There are currently seven demos illustrating the various facets of the framework along with applied examples. The rough plan is to improve this further and
-- have onboarding tutorials for tiered user expertise level (introductory, advanced, expert); these should be in literate form and clearly didactive, on sample problems; consider the end-to-end modeling workflow in varying depth of detail;
-- in addition, worked out examples demonstrating the modeling value on examples such as "business development"/MA valuation, optimization/decision making in R&D.
-- have usual docs for the API, also interfacing the tutorials.
+- have onboarding tutorials for tiered user expertise level (introductory, advanced, expert); these should be in literate form and clearly didactive, on sample problems; framed as end-to-end modeling workflow in varying depth of detail; and perhaps dive-in for various technical-focused aspects (serialization, composition);
+- in addition, worked out examples demonstrating the modeling value on examples such as "business development"/MA valuation, optimization/decision making in R&D;
+- have usual docs for the API.
 
-These should come in literate form and be interfaced from the official github pages documentation, with the applied examples deserving more refined presentations (HTML, and beyond).
+These should come in literate form and be interfaced from the official github pages documentation, with the applied examples deserving more refined presentations (HTML).
 
 ## Genuinely deferred (gates recorded, NOT part of this or the follow-up)
 

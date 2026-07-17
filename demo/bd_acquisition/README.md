@@ -1,6 +1,6 @@
 # BD Acquisition-Impact Demo
 
-A reproducible counterfactual on a living pharma pipeline portfolio: run the same pipeline once *without* an acquisition and once *with* it, and read off the change in portfolio value, launches, and capital need *attributable to the deal* — including the deal's effect on the programs the company already owns. This is the [MVP_BD_DEMO.md](../../docs/MVP_BD_DEMO.md) Milestone-1 scope made executable against the Phase-1 engine.
+A reproducible counterfactual on a living pharma pipeline portfolio: run the same pipeline once *without* an acquisition and once *with* it, and read off the change in portfolio value, launches, and capital need *attributable to the deal* — including the deal's effect on the programs the company already owns. This is the [MVP_BD_DEMO.md](MVP_BD_DEMO.md) Milestone-1 scope made executable against the Phase-1 engine.
 
 ## Run it
 
@@ -22,7 +22,7 @@ julia --project=demo/bd_acquisition demo/bd_acquisition/export_data.jl    # the 
 
 ## What it shows
 
-The headline is **Δ-rNPV** — the deal's attributable change in risk-adjusted portfolio NPV, computed as an **ensemble-averaged difference of means** across N seeds (not a per-seed paired difference; the contract keeps a single state-owned RNG stream, so the two scenarios desync after the deal — [MVP §4.1](../../docs/MVP_BD_DEMO.md) finding A). The default run uses 160 seeds, because the per-scenario SE (~±450 at 24 seeds) otherwise swamps the synergy decomposition. The canonical 160-seed run (root seed 2026):
+The headline is **Δ-rNPV** — the deal's attributable change in risk-adjusted portfolio NPV, computed as an **ensemble-averaged difference of means** across N seeds (not a per-seed paired difference; the contract keeps a single state-owned RNG stream, so the two scenarios desync after the deal — [MVP §4.1](MVP_BD_DEMO.md) finding A). The default run uses 160 seeds, because the per-scenario SE (~±450 at 24 seeds) otherwise swamps the synergy decomposition. The canonical 160-seed run (root seed 2026):
 
 | Scenario | mean rNPV | launches | P(≥1) | cash⌄ | sci⌄ | Δ-rNPV vs S0 (±1 SE) |
 |---|--:|--:|--:|--:|--:|--:|

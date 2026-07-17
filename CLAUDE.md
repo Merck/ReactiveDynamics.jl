@@ -8,12 +8,15 @@ ReactiveDynamics.jl (RD) is a timed, stochastic, resource-constrained Petri net 
 
 ## Where the durable spec lives
 
-- **`docs/STATUS.md`** — the single "what is the state, what is left" index. Start here.
-- **`docs/CONTRACT_DRAFT.md`** — the normative operational-semantics spec (§1–§15). The durable spine.
-- **`docs/adr/`** — Architecture Decision Records 0001–0015 (append-only), with the status table in `docs/adr/README.md`. To change a decision, add a new ADR; do not rewrite history.
+The durable engineering artifacts live under top-level **`spec/`**, kept separate from **`docs/`** — which is reserved for the Documenter.jl static-pages site (`docs/make.jl`, `docs/src/`, generated `docs/build/`). Do not put spec material in `docs/`.
+
+- **`spec/STATUS.md`** — the single "what is the state, what is left" index. Start here.
+- **`spec/CONTRACT_DRAFT.md`** — the normative operational-semantics spec (§1–§15). The durable spine.
+- **`spec/adr/`** — Architecture Decision Records 0001–0015 (append-only), with the status table in `spec/adr/README.md`. To change a decision, add a new ADR; do not rewrite history.
+- **`spec/PR_DRAFT.md`** — the draft PR narrative for the rework.
 - **`INVENTORY.md`** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints).
-- **`readme.md`** — the user-facing package README (about + four worked sketches).
-- `docs/PHASE0_REVIEW.md` and `docs/MVP_BD_DEMO.md` are records/design docs (Phase-0 sign-off; the BD acquisition demo that drove §12). Superseded planning docs are archived under `docs/history/`.
+- **`readme.md`** — the user-facing package README (about + demos).
+- The BD acquisition demo design doc that drove §12 lives with its demo: **`demo/bd_acquisition/MVP_BD_DEMO.md`**. Superseded handoff plans are archived under `spec/history/`. The origin-story review (`REVIEW.md`) and the Phase-0 sign-off record (`PHASE0_REVIEW.md`) were retired in the 2026-07-17 consolidation (superseded by `spec/STATUS.md` + the ADRs; both remain in git history).
 
 ## Current architecture (post-ADR-0015)
 
@@ -27,7 +30,7 @@ The static authoring/IR store is a dependency-free typed struct-of-columns (ACSe
 
 Module layout (`src/`, include order orchestrated in `src/ReactiveDynamics.jl`): `state.jl` (live sim state, the `@aagent` structs), `exprnode.jl` (the closed eval-free `ExprNode` IR), `compilers.jl` (expr→closure), `interface/*` (the DSL: `create.jl`/`update.jl` macros, `agents.jl` structured tokens, `aa_coupling.jl` the AA read/coupling surface, `checkpoint.jl` dump/restore, `solve.jl` `@agentize`), `operators/*` (`joins.jl`/`equalize.jl`/`refine.jl`), `solvers.jl` (THE step loop + constructor + `_step!`/`_reinit!`/`_projected_to`), `predicates.jl` (`TokenPredicate`/`@select`), `actions.jl` (the closed action family + `Rule`), `ledger.jl` (per-program ledger), `serialize.jl` (single-JSON eval-free (de)serialization), `analysis.jl`/`export.jl`/`visualize.jl` (Phase-0.6 result-inspection layer). Extensions: `ext/RDPlotsExt.jl` (Plots recipes + `_draw`, weakdep), `ext/RDArrowExt.jl` (Arrow export, weakdep).
 
-Everything specified in the contract (§1–§15) and ADRs 0001–0015 is IMPLEMENTED and green. See `docs/STATUS.md` for the feature→commit table. There is no open non-deferred work: the suite is fully green with zero skips, and the only remaining items are deliberate deferrals (`dump_state`'s clean-tick-boundary constraint; entity-level refinement ADR 0009 §F; threaded ensemble backend; AA Opera implicit coupling) — plus the rejected/will-not-do ACSets interop view (ADR 0003 Phase 3).
+Everything specified in the contract (§1–§15) and ADRs 0001–0015 is IMPLEMENTED and green. See `spec/STATUS.md` for the feature→commit table. There is no open non-deferred work: the suite is fully green with zero skips, and the only remaining items are deliberate deferrals (`dump_state`'s clean-tick-boundary constraint; entity-level refinement ADR 0009 §F; threaded ensemble backend; AA Opera implicit coupling) — plus the rejected/will-not-do ACSets interop view (ADR 0003 Phase 3).
 
 ## Build / test / dev
 
@@ -52,4 +55,4 @@ Formatting is [Runic](https://github.com/fredrikekre/Runic.jl) (opinionated, non
 
 ## Working rules
 
-Source of truth for decisions is `docs/adr/`; the normative spec is `docs/CONTRACT_DRAFT.md`. When docs contradict code, the CODE is truth. Commit at the end of a coherent logical batch (not per-file). Do not hard-wrap prose in Markdown — one continuous line per paragraph/list-item.
+Source of truth for decisions is `spec/adr/`; the normative spec is `spec/CONTRACT_DRAFT.md`. When docs contradict code, the CODE is truth. Commit at the end of a coherent logical batch (not per-file). Do not hard-wrap prose in Markdown — one continuous line per paragraph/list-item.

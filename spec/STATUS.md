@@ -1,16 +1,19 @@
 # ReactiveDynamics.jl — Status & Remaining Work
 
-> The single entry point for "what is the state, and what is left." Last updated 2026-07-15 on branch `ref-agents` (HEAD at the ADR-status truth-up + docs reorg). Re-verify any `file:line` before acting — line numbers drift; grep to confirm.
+> The single entry point for "what is the state, and what is left." Last updated 2026-07-17 on branch `rework` (HEAD at the supporting-docs consolidation: the durable engineering artifacts moved to a top-level `spec/`, obsolete reviews dropped, the BD demo design doc relocated to its demo). Re-verify any `file:line` before acting — line numbers drift; grep to confirm.
 
 ## Where the durable spec lives
 
+The durable engineering artifacts live under top-level **`spec/`** (this directory), kept separate from **`docs/`**, which is now reserved for the Documenter.jl static-pages site (`docs/make.jl`, `docs/src/`).
+
 - **[CONTRACT_DRAFT.md](CONTRACT_DRAFT.md)** — the normative operational-semantics spec (§1–§15). This is the durable spine: it pins the time model, per-tick firing/lifecycle rules, modality semantics, determinism/seeding obligations, typed attribute domains, the object model, composition semantics, serialization schema, structured tokens & queries, and the Phase-0.5/0.6 extensions (interface & initial state §10, refinement & composition §11, rules/decisions §12, AA integration §13, analysis & observability §14, visualization §15).
 - **[adr/](adr/)** — one Architecture Decision Record per real decision (0001–0015), append-only, with a status table in [adr/README.md](adr/README.md). ADRs record context/decision/consequences/rejected-options; the CONTRACT records the resulting semantics.
+- **[PR_DRAFT.md](PR_DRAFT.md)** — the draft PR narrative for the rework (the headline changes, tiered against the ADRs).
 - **[../INVENTORY.md](../INVENTORY.md)** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints). Verified against the `ref-agents` tree.
-- **[../readme.md](../readme.md)** — the user-facing package README (about, four sketches, demos).
-- **[../CLAUDE.md](../CLAUDE.md)** — the agent-facing guide (what the project is, current post-ADR-0015 architecture, build/test commands, dev-loop gotchas). `REVIEW.md` at the repo root is a HISTORICAL 2026-06-15 review snapshot, not a current guide.
+- **[../readme.md](../readme.md)** — the user-facing package README (about + demos).
+- **[../CLAUDE.md](../CLAUDE.md)** — the agent-facing guide (what the project is, current post-ADR-0015 architecture, build/test commands, dev-loop gotchas).
 
-Design/record documents (not normative, kept for provenance): **[PHASE0_REVIEW.md](PHASE0_REVIEW.md)** (the Phase-0 sign-off + Phase-0.6 work-package record) and **[MVP_BD_DEMO.md](MVP_BD_DEMO.md)** (the Business-Development acquisition-impact demo design doc that drove §12 and catalogued findings A–I). Superseded planning docs are archived under **[history/](history/)**.
+The Business-Development acquisition-impact demo design doc that drove §12 and catalogued findings A–I now lives with its demo: **[../demo/bd_acquisition/MVP_BD_DEMO.md](../demo/bd_acquisition/MVP_BD_DEMO.md)**. Superseded handoff plans are archived under **[history/](history/)**. The origin-story review (`REVIEW.md`) and the Phase-0 sign-off record (`PHASE0_REVIEW.md`) were retired in the 2026-07-17 consolidation — both were fully superseded by this file plus the ADRs, and remain in git history.
 
 ## Overall state
 
@@ -48,7 +51,7 @@ The modeling + analysis + visualization surface is BUILT and green. The full con
 3. **Entity-level refinement (ADR 0009 §F) — deferred.** A structured token hosting its own sub-network. `refine`/`abstract`/`@compose`/`@pipeline`/`@process` (transition-level refinement + composition) all shipped; only the entity-hosts-a-subnetwork axis is deferred to a future ADR. §A of ADR 0009 was designed so as not to preclude it.
 4. **Threaded ensemble backend — deferred.** `ensemble(...; parallel = true)` is accepted but currently runs sequentially (`src/analysis.jl:294`); a real threaded backend is future work, orthogonal to mode (b) (members are independent, so it is a safe extension).
 5. **AA `Opera`-level implicit/fixed-point (algebraic-loop) coupling — deferred.** Current AA coupling is explicit one-tick-lag Jacobi (`src/interface/aa_coupling.jl:123`); a within-tick fixed point is a separate AA-level `Opera` design (noted in ADR 0012).
-6. **ADR 0003 Phase 3 (`to_acset` weakdep interop view) — REJECTED / will-not-do (2026-07-15).** No AlgebraicJulia/ACSets/Catlab interop view will be built; interop is off the BD/rNPV roadmap and impossible for the running stateful engine. This is a definitive rejection, not a parked/deferred option — any future interop would be a new ADR against the then-current engine (the dependency-free typed IR is the permanent core). Recorded in ADR 0003 Resolved and PHASE0_REVIEW §5b. NOT counted as remaining work.
+6. **ADR 0003 Phase 3 (`to_acset` weakdep interop view) — REJECTED / will-not-do (2026-07-15).** No AlgebraicJulia/ACSets/Catlab interop view will be built; interop is off the BD/rNPV roadmap and impossible for the running stateful engine. This is a definitive rejection, not a parked/deferred option — any future interop would be a new ADR against the then-current engine (the dependency-free typed IR is the permanent core). Recorded in ADR 0003 Resolved. NOT counted as remaining work.
 7. **Follow-up naming pass (`dt`/`tstep`) — DONE 2026-07-16.** CONTRACT_DRAFT flagged `tstep` as an internal alias / rename candidate; explicitly out of scope for ADR 0015, folded into this separate pass. Landed: the internal keyword-bag key and the accepted keyword now both use `dt` (matching the `state.dt` field, reconciled by name not position); the legacy `tstep` meta keyword is an accepted-but-deprecated alias mapped to `dt` with a depwarn for one release. Also fixed a latent silent-ignore bug (a user-supplied `tstep` was previously overwritten before use).
 8. **Tutorial refinement — separate later pass.** A dedicated pass will refine the demos/tutorials (`demo/core_engine_tour`, `demo/agentic_pipeline`, `demo/introspection_tour`, `demo/refinement_tour`, `demo/aa_integration`, `demo/wires_viz_tour`, `demo/bd_acquisition`). Not part of this docs-consolidation pass.
 
