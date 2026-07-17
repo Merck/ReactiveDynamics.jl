@@ -1,8 +1,8 @@
 # # Introductory tutorial — your first ReactiveDynamics model
 #
 # **What you will build.** A timed, stochastic R&D pipeline, end to end: author it in
-# the modeling metalanguage, simulate it reproducibly, read the results by name, and
-# — the point of the whole exercise — turn the run into *a number a manager acts on*.
+# the modeling metalanguage, simulate it, read the results by name, and use the model to
+# compute a quantity that informs a concrete decision.
 #
 # **Who this is for.** Anyone new to ReactiveDynamics. You need no prior exposure to
 # discrete-event simulation or to the package. We stay entirely in the *classical*
@@ -15,13 +15,11 @@
 # **reactants** it consumes, and a right-hand side of **products** it emits. Firing can
 # be instantaneous or take time (a `cycletime`, during which an in-flight instance may
 # also fail a success draw). All randomness flows through a per-run **seeded RNG**, so a
-# run is fully reproducible from `(model, seed)`. That is the whole engine.
-#
-# Every construct below is drawn from the package's passing semantic test suite — this
-# tutorial invents no API.
+# run is fully determined by the model and its seed. That is the whole engine.
 
 using ReactiveDynamics
-using Statistics                # mean / std / quantile for the closing decision number
+using Statistics                # mean / std / quantile for the ensemble reductions in §3–§4
+using Plots                     # inline figures
 
 # ## 1. A first model: the SIR epidemic
 #
@@ -56,10 +54,9 @@ end
 @prob_meta sir tspan = 250 dt = 0.1
 
 # `ReactionNetworkProblem(model; seed = …)` compiles the authored network into a runnable
-# problem. **The `seed=` kwarg owns a per-run RNG — it is the only route to
-# reproducibility** (§8 returns to this). `simulate(prob)` then advances to `tspan`; the
-# solution lands in `prob.sol`, a `DataFrame` with a `"t"` column plus one column per
-# species.
+# problem. The `seed=` kwarg owns a per-run RNG; §3 comes back to what that guarantees.
+# `simulate(prob)` then advances to `tspan`; the solution lands in `prob.sol`, a
+# `DataFrame` with a `"t"` column plus one column per species.
 
 sir_prob = ReactionNetworkProblem(sir; seed = 1)
 simulate(sir_prob)
@@ -82,6 +79,14 @@ println("Infected at the horizon       : ", round(I[end]; digits = 1), "  (decli
 
 # The population is conserved to floating-point exactness, and `I` rises to a genuine
 # interior peak before burning out — an outbreak, reproduced from `(sir, seed=1)`.
+#
+# Plotting the three columns against time shows the classic epidemic shape:
+
+t = sir_prob.sol[!, "t"]
+plot(
+    t, [S I R]; label = ["S" "I" "R"], xlabel = "time", ylabel = "count",
+    title = "SIR epidemic (seed 1)", lw = 2,
+)
 
 # ## 2. From epidemic to pipeline: timed, probabilistic transitions
 #
@@ -101,7 +106,7 @@ println("Infected at the horizon       : ", round(I[end]; digits = 1), "  (decli
 # The routing rates are high (`@deterministic(50.0)`) so that each phase moves whatever
 # its upstream pool holds — the flow is **token-gated**, clamped to available programs,
 # not to the nominal rate. That makes the long, capacity-limited clinical `trial` the
-# real bottleneck, which is exactly the lever we will price in §4.
+# real bottleneck, which is exactly the lever we examine at the end.
 #
 # We read one tick as one month, so `tspan = 60` is a five-year horizon (`dt = 1.0` ⇒ 60
 # monthly ticks). Time units are whatever you choose; the engine only sees ticks.
@@ -130,27 +135,24 @@ println("Clinical queue depth (max)    : ", Int(maximum(clinical)), "  (programs
 
 # A queue builds in front of the clinical trial: more programs are ready than the three
 # slots can run. That backlog is the signature of a **binding constraint** — and the
-# reason the next slot might be worth paying for.
+# reason the next slot might be worth adding.
 
-# ## 3. Reproducibility: the seed *is* the run
+# ## 3. Running the model many times
 #
-# Reproducibility comes from the `seed=` construction kwarg **alone**. The state owns its
-# own RNG, isolated from Julia's global stream, so `Random.seed!` does *not* pin a run and
-# a seeded run neither reads nor perturbs the global RNG. The contract:
+# A single run is one sample of a stochastic process, so before drawing any conclusion we
+# need a *distribution*, not a point. Two facts about seeding make that clean.
 #
-# - same `(model, seed)` ⇒ byte-identical trajectory,
-# - different seed ⇒ (almost surely) a different trajectory,
-# - unseeded ⇒ a fresh entropy seed each construction.
+# First, a run is fully determined by the model and its `seed=`. The state owns its own
+# RNG, isolated from Julia's global stream (`Random.seed!` does not pin a run), so the
+# same seed replays a run exactly and a different seed gives an independent draw:
 
 run_once(seed) = (p = ReactionNetworkProblem(pipeline; seed); simulate(p); p.sol[!, "approved"][end])
-println("seed 1 vs seed 1 identical    : ", run_once(1) == run_once(1))
-println("seed 1 vs seed 2 differ       : ", run_once(1) != run_once(2))
+println("same seed replays exactly     : ", run_once(1) == run_once(1))
+println("different seed, different draw : ", run_once(1) != run_once(2))
 
-# A single seeded run is one sample of a stochastic process — never report it as *the*
-# answer. To get a distribution, run an **ensemble**: derive each member's seed
-# deterministically from a single root seed plus the member index, `hash((root, k))`.
-# Member `k` is then reproducible from `(root, k)` regardless of how many members you run
-# or in what order — the basis for stable Monte-Carlo statistics.
+# Second, that lets us build a reproducible **ensemble**: derive each member's seed from a
+# single root seed plus the member index, `hash((root, k))`. Member `k` is then the same
+# regardless of how many members you run or in what order — stable Monte-Carlo statistics.
 
 member_seed(root, k) = hash((root, k))
 function approvals(model, root, k)
@@ -164,18 +166,17 @@ println("Ensemble of 200 runs, approvals by horizon:")
 println("  mean ± std       : ", round(mean(ens); digits = 2), " ± ", round(std(ens); digits = 2))
 println("  p10 / p90        : ", quantile(ens, 0.1), " / ", quantile(ens, 0.9))
 
-# ## 4. The decision: is a fourth clinical trial slot worth it?
+# ## 4. Using the model to inform a decision
 #
-# Here is the discipline this framework is built for: a run is not a chart, it is an
-# **input to a decision**. Our pipeline is cash-constrained at three concurrent clinical
-# trials, and a backlog is queueing behind them (§2). *Does adding a fourth slot move the
-# number a portfolio manager cares about — approvals over the horizon — enough to justify
+# A simulation output is not a chart to admire — it is an input to a decision. Our pipeline
+# is capacity-constrained at three concurrent clinical trials, with a backlog queued behind
+# them (§2). *Does adding a fourth slot raise approvals over the horizon enough to justify
 # its cost?*
 #
 # We answer it as a **counterfactual**: the identical pipeline with `capacity => 4` on the
 # clinical trial, run over the same 200 ensemble seeds, and compare the mean approvals.
 # (Model attributes are literals, so the two capacities are two literal model builders —
-# the honest, idiomatic way to hold everything else fixed.)
+# the idiomatic way to hold everything else fixed.)
 
 pipeline_4slots = @reaction_network begin
     2.0, ∅ --> discovery, name => intake
@@ -201,17 +202,28 @@ println("  3 clinical slots : ", round(mean(ens_3); digits = 2))
 println("  4 clinical slots : ", round(mean(ens_4); digits = 2))
 println("  marginal 4th slot: +", round(marginal; digits = 2), " approvals  (± ", round(se; digits = 2), " SE)")
 
-# ### The number, and what it means
+# The two approval distributions, with their means, make the shift visible — the whole
+# 4-slot distribution sits to the right of the 3-slot one:
+
+histogram(
+    ens_3; bins = 0:1:30, alpha = 0.5, label = "3 slots", xlabel = "approvals over horizon",
+    ylabel = "ensemble members", title = "Effect of a 4th clinical trial slot",
+)
+histogram!(ens_4; bins = 0:1:30, alpha = 0.5, label = "4 slots")
+vline!([mean(ens_3), mean(ens_4)]; label = "means", lw = 2, color = :black, ls = :dash)
+
+# ### Reading the result
 #
-# **A fourth clinical trial slot buys roughly +4 additional approvals over the five-year
-# horizon** — well outside the ensemble noise. The verdict a manager acts on: *fund the
-# fourth slot if the incremental value of ~4 approvals exceeds the cost of standing it up.*
+# **A fourth clinical trial slot yields roughly +4 additional approvals over the five-year
+# horizon**, with a standard error well below the effect — so it is a real gain, not noise.
+# That converts directly into a decision rule: the fourth slot is worth adding when the
+# value of ~4 more approvals exceeds the cost of standing it up.
 #
-# The point is not the specific number; it is that the framework produced a *marginal,
-# system-level* answer that a static spreadsheet cannot. The fourth slot's value comes
-# from relieving a contended bottleneck, and only a timed, stochastic, resource-aware
-# model surfaces that — the same machinery that, scaled up, prices the marginal scientist
-# and values an in-licensing deal in the [applied case studies](../case_studies/marginal_scientist.md).
+# What matters is not the specific number but its *kind*: a marginal, system-level quantity
+# that a static spreadsheet cannot produce. The gain comes from relieving a contended
+# bottleneck, which only a timed, stochastic, resource-aware model surfaces — the same
+# machinery that, scaled up, estimates the shadow price of a scientist and the value of an
+# in-licensing deal in the [applied case studies](../case_studies/marginal_scientist.md).
 
 # ## Recap
 #
@@ -223,8 +235,8 @@ println("  marginal 4th slot: +", round(marginal; digits = 2), " approvals  (± 
 #    `prob.sol` **by column name**;
 # 3. seen mass-action (Poisson) vs `@deterministic` rates and the timed lifecycle
 #    (`cycletime`, `probability`, `capacity`);
-# 4. made a run *reproducible* via `seed=` and turned an ensemble into a **decision
-#    number** — the marginal value of one more clinical trial slot.
+# 4. run a seeded ensemble and used it to compute a marginal, decision-relevant quantity —
+#    the value of one more clinical trial slot.
 #
 # Next: the [advanced tutorial](advanced.md) replaces plain counted pools with *structured
 # tokens* — programs that carry attributes and identity through their lifecycle — and adds

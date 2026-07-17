@@ -9,7 +9,7 @@ The central concept is a **transition**: a stateful recipe that spawns in-flight
 
 ## Find your way by intent
 
-- **New here?** Start with the **[introductory tutorial](tutorials/introductory.md)** — author, simulate, and read your first model end to end, closing on a decision number. Then the *advanced* tutorial (structured tokens, resource modalities, in-model decision rules) and the *expert* tutorial (composition, AlgebraicAgents coupling, checkpointing).
+- **New here?** Start with the **[introductory tutorial](tutorials/introductory.md)** — author, simulate, and read your first model end to end, closing on a computed, decision-relevant quantity. Then the *advanced* tutorial (structured tokens, resource modalities, in-model decision rules) and the *expert* tutorial (composition, AlgebraicAgents coupling, checkpointing).
 - **What can it do for my decision?** The **applied case studies** are decision memos with a headline number: *"What is the marginal eNPV of the Nth scientist?"*, *"What is this in-licensing asset worth to this pipeline?"*, and *"When should you kill a program?"*.
 - **How do I call X?** The **API reference**, organized by capability (authoring, structured tokens, rules & actions, construction & simulation, composition, serialization, analysis & visualization, AlgebraicAgents coupling).
 - **Why does it behave this way?** The **explanation layer** promotes the normative operational-semantics contract (§1–§15) and the Architecture Decision Records — the modality truth table, the single-clock time model, and the determinism/seeding obligations.
@@ -34,4 +34,4 @@ simulate(prob)
 prob.sol[!, "I"]                               # read solution columns BY NAME (order is construction order)
 ```
 
-The [introductory tutorial](tutorials/introductory.md) takes this from here to a manager-actionable number.
+The [introductory tutorial](tutorials/introductory.md) takes this from here to a computed, decision-relevant quantity.

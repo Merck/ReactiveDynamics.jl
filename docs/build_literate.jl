@@ -15,6 +15,7 @@
 
 using Literate
 import Markdown
+import Base64
 
 const HERE = @__DIR__
 const DEFAULT_SRC = joinpath(HERE, "literate", "tutorials", "introductory.jl")
@@ -35,8 +36,31 @@ Literate.markdown(
     src, mddir; execute = true, flavor = Literate.CommonMarkFlavor(),
     credit = false, name = name,
 )
+escape_regex(s) = replace(s, r"([.\-\[\]()+*?^$\\|{}])" => s"\\\1")
+
+# Inline each sidecar figure Literate wrote for a plot so the HTML is self-contained: SVGs
+# are spliced in raw; PNG/JPEG are base64 data-URI'd. (Same trick as demo/wires_viz_tour/build.jl.)
+# Wrapped in a function so the accumulating `html` reassignment has a clear local scope.
+function inline_figures(html, dir)
+    for f in readdir(dir)
+        ext = lowercase(last(splitext(f)))
+        ext in (".svg", ".png", ".jpg", ".jpeg") || continue
+        tag = if ext == ".svg"
+            svg = read(joinpath(dir, f), String)
+            i = findfirst("<svg", svg)
+            "<div class=\"figure\">" * (i === nothing ? svg : svg[first(i):end]) * "</div>"
+        else
+            mime = ext == ".png" ? "image/png" : "image/jpeg"
+            data = Base64.base64encode(read(joinpath(dir, f)))
+            "<div class=\"figure\"><img src=\"data:$(mime);base64,$(data)\" /></div>"
+        end
+        html = replace(html, Regex("<img src=\"" * escape_regex(f) * "\"[^>]*/>") => tag)
+    end
+    return html
+end
+
 md = read(joinpath(mddir, "$(name).md"), String)
-body = Markdown.html(Markdown.parse(md))
+body = inline_figures(Markdown.html(Markdown.parse(md)), mddir)
 
 # A minimal self-contained HTML wrapper — readable typography, no external assets.
 function wrap_html(title, body)
@@ -53,6 +77,8 @@ function wrap_html(title, body)
     p code, li code { background: #f0f4f8; padding: .05rem .3rem; border-radius: 4px; }
     blockquote { border-left: 3px solid #cbd5e0; margin: 1rem 0; padding: .2rem 1rem; color: #444; }
     hr { border: none; border-top: 1px solid #eee; margin: 2.5rem 0 1rem; }
+    .figure { text-align: center; margin: 1.4rem 0; }
+    .figure svg, .figure img { max-width: 100%; height: auto; }
     """
     return """<!DOCTYPE html>
     <html lang="en"><head><meta charset="utf-8">
