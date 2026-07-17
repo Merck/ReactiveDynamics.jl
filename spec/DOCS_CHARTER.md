@@ -6,7 +6,7 @@
 
 The engine rework (§1–§15 of [CONTRACT_DRAFT.md](CONTRACT_DRAFT.md), ADRs 0001–0015) is implemented and green (801 pass / 0 broken). What is missing is the reader-facing surface: onboarding tutorials, applied case studies, and an API reference that match the post-ADR-0015 API. The current [docs/src/index.md](../docs/src/index.md) is a single stale API page referencing removed macros (`@ReactionNetwork`, `@optimize`, `@fit`, `@problematize`, `@plot`, `@import_network`, …), and [docs/make.jl](../docs/make.jl) still uses the deprecated `DocumenterMarkdown` backend (not even declared in `docs/Project.toml`). The seven runnable tours under [demo/](../demo) are the current source of truth for working code but are not wired into a published site.
 
-This PR closes that gap. **Done** for the whole PR means: a Documenter site, publishable to GitHub Pages, comprising three tiered tutorials, two focused deep-dives, three applied case studies, a complete API reference, and an explanation layer built on the contract — every code block executed against the current engine, every tutorial ending in a manager-actionable number, and the `demo/` sources migrated in as the single source of truth (no duplicated model code). The per-facet acceptance criteria are in §9; the progress tracker is in §10.
+This PR closes that gap. **Done** for the whole PR means: a Documenter site, publishable to GitHub Pages, comprising three tiered tutorials, two focused deep-dives, three applied case studies, a complete API reference, and an explanation layer built on the contract and anchored by an arXiv-first academic paper — every code block executed against the current engine, every tutorial ending in a manager-actionable number, and the `demo/` sources migrated in as the single source of truth (no duplicated model code). The per-facet acceptance criteria are in §12; the progress tracker is in §10.
 
 ## 2. Design principles (non-negotiable)
 
@@ -26,9 +26,9 @@ These are the brand and quality commitments the whole effort is measured against
 | **Tutorials** | learning | Three tiered onboarding tutorials (introductory / advanced / expert) + two focused technical deep-dives (serialization, composition). End-to-end modeling workflows at increasing depth. | Workstream A (§5) |
 | **Case studies** (how-to / understanding) | understanding | Three applied decision case studies, question-titled, each with a headline number. The flagship gets a refined HTML presentation. | Workstream B (§6) |
 | **Reference** | information | The complete public API, autodoc-generated from docstrings, organized by capability; the attribute/shorthand tables; the JSON model schema. | Workstream C (§7) |
-| **Explanation** | understanding | The normative operational-semantics contract (§1–§15) and the ADRs, framed for readers as *why the engine behaves this way* — the differentiator. | Workstream D (§8) |
+| **Explanation** | understanding | The normative operational-semantics contract (§1–§15) and the ADRs, framed for readers as *why the engine behaves this way* — the differentiator — **anchored by an academic paper** (arXiv-first) that argues the semantics and backing concepts as scholarly narrative. | Workstream D (§8) |
 
-The site's landing page routes a reader by intent: "new here" → introductory tutorial; "what can it do for my decision" → case studies; "how do I call X" → reference; "why does it behave this way" → explanation/contract.
+The site's landing page routes a reader by intent: "new here" → introductory tutorial; "what can it do for my decision" → case studies; "how do I call X" → reference; "why does it behave this way" → explanation/contract/paper.
 
 ## 4. Toolchain, mechanics, and the migrate-in-place rule
 
@@ -57,8 +57,10 @@ docs/
     tutorials/                   # generated from literate/tutorials
     case_studies/                # generated from literate/case_studies
     reference/                   # autodocs by capability (Workstream C)
-    explanation/                 # contract + ADRs framed for readers (Workstream D)
+    explanation/                 # contract + ADRs framed for readers, links to the paper (Workstream D)
     assets/                      # existing diagram*.png etc. (audit for staleness)
+paper/                           # [ ] the academic paper (Workstream D3) — format/home TBD at authoring
+                                 #     (LaTeX+arXiv vs Markdown+pandoc; see §8). NORMATIVE source stays spec/CONTRACT_DRAFT.md
 ```
 
 **Migrate-in-place rule (the anti-drift contract).** For each of the seven demos, the demo's `.jl` becomes (or is refactored into) the Literate source the site ingests; the demo directory keeps its README and its `--project=demo/x` runnability by pointing at the same source, so a demo stays independently runnable AND is the site's input. Where a demo has a demo-local `Project.toml` for weakdeps (Plots/Arrow), the site build reuses that dependency set. No page re-authors model code that a demo already contains; a tutorial that needs a subset of a demo extracts it into a shared included file rather than copying. The demo→tutorial mapping:
@@ -160,21 +162,66 @@ Understanding-oriented. **Question-titled, headline-number-first** (§2). In thi
 - **Docstring coverage.** src carries ~146 docstring blocks already; the reference is largely `@autodocs`/`@docs` assembly plus filling gaps flagged during assembly.
 - **Status:** ⬜ not started.
 
-## 8. Workstream D — Explanation layer
+## 8. Workstream D — Explanation layer & the academic paper
 
-- **Promote the contract.** `CONTRACT_DRAFT.md` §1–§15 becomes the explanation quadrant — framed for a reader as *why the engine behaves this way* (the modality truth table, the single-clock time model, the determinism/seeding obligations, the object model, composition/serialization semantics). This is the JOSS/software-paper differentiator.
-- **Surface the ADRs** as linked "decisions and rejected alternatives" reading, with the status table from `adr/README.md`.
-- **Editorial note.** The contract stays normative in `spec/`; the explanation pages *link to and excerpt* it rather than forking it, to avoid a second drifting copy (same anti-drift rule as the demos).
+The explanation quadrant is anchored by an **academic paper**: a long-form, scholarly treatment of the engine's semantics, the *why*, and the backing concepts — authored **arXiv-first** as a citable preprint for socialization, and downstream feeding a thin JOSS `paper.md` and/or a peer-reviewed methods paper. This is the strongest argument versus every ad-hoc DES package and in any software-paper review. The three artifacts have non-overlapping roles and must not fork (§8.4).
+
+### D1 — Contract-as-explanation pages
+
+- **Promote the contract.** `CONTRACT_DRAFT.md` §1–§15 becomes the web explanation quadrant — framed for a reader as *why the engine behaves this way* (the modality truth table, the single-clock time model, the determinism/seeding obligations, the object model, composition/serialization semantics), with short web-native "why" bridges linking to both the normative contract and the paper.
 - **Status:** ⬜ not started.
+
+### D2 — ADR reading surface
+
+- **Surface the ADRs** as linked "decisions and rejected alternatives" reading, with the status table from `adr/README.md`.
+- **Status:** ⬜ not started.
+
+### D3 — The academic paper (arXiv-first)
+
+- **Purpose.** A scholarly narrative arguing the operational semantics and backing concepts — the artifact to *share for socialization* and cite. Longer than a JOSS paper (which is ~250–1000 words of Summary + Statement of need); here the semantics themselves are the substance.
+- **Fixed outline** (the substance exists as `CONTRACT_DRAFT.md` §1–§15 + the ADRs; the work is reframing it as scholarly narrative — the *why* and the backing concepts, not the normative *what*):
+  1. **Abstract.**
+  2. **Introduction** — modeling R&D/business processes as timed, stochastic, resource-contended, *decision-laden* systems; rNPV / what-if; why the question is dynamic, not a spreadsheet.
+  3. **Statement of need & positioning** — vs ad-hoc DES (SimPy-style), vs chemical reaction networks (Gillespie/Catalyst), vs system dynamics, vs spreadsheet rNPV; the DyVE + AlgebraicAgents lineage. *(Also seeds a later JOSS statement-of-need.)*
+  4. **The conceptual model** — transitions as stateful recipes, species as resources, the ontology; why it is *not* a CRN despite the DSL surface.
+  5. **Operational semantics** — the formal core: single discrete clock, the ordered per-tick step, instance lifecycle, the modality truth table, the invariants (CONTRACT §1–§3).
+  6. **Determinism & reproducibility** — the `(model, seed)` contract, RNG threading, ensembles (§4). A genuine differentiator — most DES tools are informal here.
+  7. **Resource allocation under contention** — the priority-weighted progressive-fill allocator (ADR 0002 / §1.5).
+  8. **Models as data** — the eval-free typed `ExprNode` IR + single-JSON serialization, the RCE boundary, registry-by-name; why it matters for agentic authoring/exchange (§8, ADR 0005/0006).
+  9. **Structured/agentic tokens** — first-class entities, filtration, phase-as-attribute (§9, ADR 0006/0008).
+  10. **The endogenous decision channel** — rules, guards, conditional transitions; decisions *in* the model (§12, ADR 0010/0011).
+  11. **Composition & refinement** — open ports, boundary-matched FK-splice refinement, granularity substitution, the algebraic properties (§7/§11, ADR 0009).
+  12. **Integration** — RD as an AlgebraicAgents node; coupled heterogeneous simulation, the one-tick Jacobi lag (§13, ADR 0012).
+  13. **Worked case studies** — the three Workstream-B decision case studies as evidence the semantics deliver decision value (shared skeleton: question → number → implication).
+  14. **Related work.**
+  15. **Discussion, limitations & deferred work** — the honest deferrals (entity-level refinement, threaded ensemble backend, `Opera` implicit coupling, `dump_state` in-flight constraint).
+  16. **Availability & reproducibility** — license (MIT), the semantic test suite, `(model, seed)` reproducibility.
+  17. **References.**
+- **Format/home — DEFERRED to authoring time** (decision 2026-07-17). Two candidates, chosen when authoring starts: **(a) LaTeX under `paper/`, arXiv-primary** — best typesetting/math, direct `.tar.gz` submission, docs explanation links to the PDF + a short web distillation; **(b) Markdown, docs-primary** — single source authored as the explanation pages, PDF generated via pandoc→LaTeX for arXiv (web-first, but arXiv fidelity for math/refs is more brittle). The outline above and the artifact roles (§8.4) hold regardless of format.
+- **Status:** ⬜ not started (scoped, format TBD).
+
+### D-future — downstream venues (fed by the preprint, not scheduled)
+
+- **JOSS `paper.md`** — a thin (~750-word) Summary + Statement-of-need vehicle for a citable DOI, distilled from the paper's §2–§3. Prerequisites JOSS will check and that are **not yet in place**: CI (no `.github/workflows/` exists in-repo), a tagged release + archival DOI (Zenodo), and community guidelines (`CONTRIBUTING`/support). Tracked as gates, not committed work.
+- **Peer-reviewed methods paper** (JSS / SoftwareX / a decision-sciences or DES domain venue) — where the operational-semantics contract *is* the reviewed substance, expanded from the preprint with a comparison against ad-hoc DES packages. A larger effort; parked.
+
+### D4 — Artifact roles (the anti-fork rule)
+
+Three artifacts, non-overlapping, so nothing drifts:
+
+- **`spec/CONTRACT_DRAFT.md` stays NORMATIVE** — the source of truth for engine *behavior*; the paper and explanation pages cite it, never restate it normatively.
+- **The paper is the scholarly narrative built on the contract** — the citable, socialization artifact; it summarizes and argues the semantics, and is where the *why* and backing concepts live.
+- **The docs explanation quadrant links to both** (arXiv PDF + normative contract) plus short web-native bridges — not a third copy.
 
 ## 9. Workstream E — Build, render, and deploy
 
 - **`docs/make.jl`** rewritten for Documenter HTML + a Literate pre-pass over `docs/literate/**`. Replaces `DocumenterMarkdown`.
 - **`docs/Project.toml`** gains `Documenter`, `Literate` (and `Plots`/`Arrow`/`DataFrames`/`Distributions` for the case-study renders, mirroring the demo-local envs). `ReactiveDynamics` path-dev'd.
 - **Self-contained HTML render recipe** for the case studies generalized from `demo/wires_viz_tour/build.jl` (executed Literate → markdown → inlined-SVG HTML) and `demo/bd_acquisition/build_presentation.jl`.
-- **GitHub Pages deploy** via `deploydocs` (repo already targets `github.com/Merck/ReactiveDynamics.jl.git`). No CI exists in-repo (no `.github/workflows/`); document the local build+deploy command, and note CI as an optional follow-up.
+- **GitHub Pages deploy** via `deploydocs` (repo already targets `github.com/Merck/ReactiveDynamics.jl.git`). No CI exists in-repo (no `.github/workflows/`); document the local build+deploy command, and note CI as an optional follow-up (also a JOSS gate, §8 D-future).
+- **Paper build (E4)** — when D3's format lands: either `latexmk` over `paper/*.tex` (LaTeX route) or a pandoc→LaTeX pass over the Markdown route. Deferred with the format decision (§8 D3).
 - **Formatter.** All Literate `.jl` sources pass Runic (`julia -m Runic --check .`), same as the rest of the tree.
-- **Status:** ⬜ not started (exemplar renders via a scoped path this PR; full site build tracked).
+- **Status:** 🟡 E1/E2 landed this PR (site build green with A1); E3 (case-study HTML) and E4 (paper build) tracked.
 
 ## 10. Progress tracker
 
@@ -195,17 +242,21 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started.
 | Reference | C2 | JSON model schema page | CONTRACT §8 / ADR 0005 | ⬜ |
 | Explanation | D1 | Contract-as-explanation pages | CONTRACT_DRAFT.md | ⬜ |
 | Explanation | D2 | ADR reading surface | spec/adr | ⬜ |
-| Build | E1 | make.jl (Documenter + Literate) | wires_viz_tour/build.jl | ⬜ |
-| Build | E2 | docs/Project.toml + deploy | — | ⬜ |
+| Explanation | **D3** | **Academic paper (arXiv-first; outline §8 fixed, format TBD)** | CONTRACT §1–§15 + ADRs + case studies | ⬜ |
+| Explanation | D-future | JOSS `paper.md` + methods paper (gated: CI, release/DOI, CONTRIBUTING) | fed by D3 | ⬜ (parked) |
+| Build | E1 | make.jl (Documenter + Literate) | wires_viz_tour/build.jl | ✅ |
+| Build | E2 | docs/Project.toml (site build green) | — | ✅ |
 | Build | E3 | Refined-HTML render recipe (case studies) | bd_acquisition/build_presentation.jl | ⬜ |
+| Build | E4 | Paper build (latexmk or pandoc) | — | ⬜ (with D3 format) |
 
 ## 11. Sequencing
 
-1. **Charter + exemplar (this PR increment).** This document + the introductory tutorial (A1) authored in the target Literate style and rendered end-to-end, as the quality bar. *(done)*
-2. **Toolchain (E1/E2).** Wire `make.jl` + `docs/Project.toml` so the full Documenter+Literate site builds with A1 in place. Land the reference (C1/C2) and explanation (D1/D2) scaffolds so the site is navigable.
+1. **Charter + exemplar + toolchain (this PR increment).** This document + the introductory tutorial (A1) authored in the target Literate style and rendered end-to-end, plus the `make.jl` + `docs/Project.toml` Documenter+Literate build (E1/E2), which builds the site green with A1 in place. *(done)*
+2. **Reference + explanation scaffolds (C1/C2, D1/D2).** Land the capability-organized reference and the contract-as-explanation pages so the site is navigable end-to-end.
 3. **Tutorial tiers (A2/A3) + deep-dives (A4/A5).** Migrate the remaining demos in.
-4. **Case studies (B1/B2/B3).** Flagship first; refined HTML for B1/B2 (E3).
-5. **Polish + deploy.** Runic pass, link audit, GitHub Pages deploy, README refresh to point at the published site.
+4. **Case studies (B1/B2/B3).** Flagship first; refined HTML for B1/B2 (E3). These become the paper's §13 worked evidence.
+5. **The paper (D3).** Once the case studies exist as evidence, decide the format (§8 D3), then author the arXiv paper against the fixed outline; wire its build (E4). Post the preprint for socialization. *(May run in parallel with 3–4 for the semantics sections, which do not depend on the case studies.)*
+6. **Polish + deploy.** Runic pass, link audit, GitHub Pages deploy, README refresh to point at the published site + the preprint. Optionally open the D-future gates (CI, tagged release + Zenodo DOI, `CONTRIBUTING`) toward a JOSS submission.
 
 Each numbered step is a reviewable batch; the charter's tracker (§10) is updated as facets land.
 
@@ -218,3 +269,4 @@ A tutorial or case-study page is *done* when: every code block executes clean du
 - **2026-07-17 — Migrate demos in place** (single source of truth), not keep-alongside or absorb-and-retire. Rationale: no duplicated model code to drift; demos stay independently runnable.
 - **2026-07-17 — This-PR scope: charter + one rendered exemplar** (the introductory tutorial), not full scaffolding. The exemplar sets the quality bar; the rest is tracked in §10 and sequenced in §11.
 - **2026-07-17 — Introductory tier is a strict subset** (plain-species timed pipeline only); the modality truth-table and the allocator move to the advanced tier, per the PR-draft tier mapping.
+- **2026-07-17 — Workstream D is anchored by an academic paper, arXiv-first.** The explanation layer is framed as a scholarly paper (semantics + why + backing concepts) posted to arXiv for socialization and citation, downstream feeding a thin JOSS `paper.md` and/or a peer-reviewed methods paper. Rationale: arXiv has no infra prerequisites (unlike JOSS, which needs CI + a release DOI first), suits long-form, and doesn't foreclose the deeper venues. The §8 outline (§1–§17) is fixed; the paper's format/home (LaTeX+arXiv vs Markdown+pandoc) is **deferred to authoring time**. The normative contract stays in `spec/CONTRACT_DRAFT.md`; the paper cites it, never forks it (§8.4 anti-fork rule).
