@@ -2,8 +2,10 @@
 *.jl.*.cov
 *.jl.mem
 docs/build/
-docs/build_*
 docs/site/
+docs/preview/
+docs/src/tutorials/
+docs/src/case_studies/
 tmp.gif
 gks.*
 Manifest.toml
