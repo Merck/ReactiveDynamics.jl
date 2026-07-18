@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" role="img" aria-label="A two-panel comparison of the two kinds of token the engine holds at once. Left: a fungible token is a pool quantity — identical interchangeable units whose entire state is a single count, with no attributes and no memory, so there is no property to select on. Right: a structured agent token is one drug program carrying its own attributes — phase, peak value, therapeutic area — and its history; because it has state, the engine can select and filter on that state, e.g. binding every program currently in Phase 2.">
+  <!-- Two kinds of token — a fungible quantity vs. a structured agent. Lifted from
+       demo/bd_acquisition/presentation.html (Exhibit 6). -->
+  <style>
+    [font-family^="JetBrains"]{font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace}
+    [font-family="Inter"]{font-family:'Inter',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+  </style>
+  <defs>
+    <marker id="tok-blk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6E6E6E"/></marker>
+    <marker id="tok-az" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0A47FF"/></marker>
+  </defs>
+  <!-- centre divider -->
+  <line x1="500" y1="18" x2="500" y2="416" stroke="#D6D6D6" stroke-width="1"/>
+  <!-- horizontal rule: what it IS (top) vs what FOLLOWS for selection (bottom) -->
+  <line x1="30" y1="232" x2="970" y2="232" stroke="#D6D6D6" stroke-width="1"/>
+
+  <!-- ============ LEFT · FUNGIBLE ============ -->
+  <text x="30" y="30" font-family="JetBrains Mono" font-size="12" font-weight="700" letter-spacing="1.5" fill="#0A0A0A">FUNGIBLE · A POOL QUANTITY</text>
+  <text x="30" y="48" font-family="JetBrains Mono" font-size="10.5" fill="#6E6E6E">cash · headcount</text>
+  <!-- the pool of identical units -->
+  <rect x="40" y="70" width="180" height="104" fill="#FBEFD2" stroke="#B5740A" stroke-width="1.8"/>
+  <g fill="#B5740A">
+    <circle cx="72" cy="98" r="6"/><circle cx="112" cy="98" r="6"/><circle cx="152" cy="98" r="6"/><circle cx="192" cy="98" r="6"/>
+    <circle cx="72" cy="122" r="6"/><circle cx="112" cy="122" r="6"/><circle cx="152" cy="122" r="6"/><circle cx="192" cy="122" r="6"/>
+    <circle cx="72" cy="146" r="6"/><circle cx="112" cy="146" r="6"/><circle cx="152" cy="146" r="6"/><circle cx="192" cy="146" r="6"/>
+  </g>
+  <text x="130" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#B5740A">interchangeable units</text>
+  <!-- annotations -->
+  <g font-family="JetBrains Mono" font-size="12" fill="#0A0A0A">
+    <rect x="250" y="92" width="9" height="9" fill="#B5740A"/><text x="268" y="101">one unit is any other</text>
+    <rect x="250" y="124" width="9" height="9" fill="#B5740A"/><text x="268" y="133">no attributes · no memory</text>
+    <rect x="250" y="156" width="9" height="9" fill="#B5740A"/><text x="268" y="165">whole state = one count</text>
+  </g>
+  <!-- bottom: nothing to select on -->
+  <text x="30" y="258" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1" fill="#6E6E6E">NOTHING TO SELECT ON</text>
+  <rect x="40" y="276" width="120" height="70" fill="#FBEFD2" stroke="#B5740A" stroke-width="1.6"/>
+  <g fill="#B5740A"><circle cx="66" cy="300" r="5"/><circle cx="98" cy="300" r="5"/><circle cx="130" cy="300" r="5"/><circle cx="66" cy="324" r="5"/><circle cx="98" cy="324" r="5"/><circle cx="130" cy="324" r="5"/></g>
+  <path d="M160 311 H 196" fill="none" stroke="#6E6E6E" stroke-width="1.4" marker-end="url(#tok-blk)"/>
+  <text x="210" y="300" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A"><tspan fill="#0A47FF" font-weight="700">@select</tspan> needs a property —</text>
+  <text x="210" y="318" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">a pool has none.</text>
+  <text x="210" y="342" font-family="Inter" font-style="italic" font-size="11.5" fill="#6E6E6E">only the count is addressable</text>
+  <text x="210" y="360" font-family="Inter" font-style="italic" font-size="11.5" fill="#6E6E6E">(e.g. "are ≥ 4 units free?")</text>
+
+  <!-- ============ RIGHT · STRUCTURED / AGENTIC ============ -->
+  <text x="540" y="30" font-family="JetBrains Mono" font-size="12" font-weight="700" letter-spacing="1.5" fill="#0A0A0A">STRUCTURED · AN AGENT TOKEN</text>
+  <text x="540" y="48" font-family="JetBrains Mono" font-size="10.5" fill="#6E6E6E">one drug program</text>
+  <!-- the token, opened up -->
+  <rect x="548" y="70" width="232" height="150" fill="#fff" stroke="#0A0A0A" stroke-width="2"/>
+  <circle cx="566" cy="88" r="5" fill="#0A0A0A"/>
+  <text x="582" y="93" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#0A0A0A">ProjectToken</text>
+  <line x1="548" y1="104" x2="780" y2="104" stroke="#D6D6D6" stroke-width="1"/>
+  <g font-family="JetBrains Mono" font-size="11.5">
+    <text x="566" y="128" fill="#6E6E6E">phase</text><text x="770" y="128" text-anchor="end" fill="#0A47FF">:Phase2</text>
+    <text x="566" y="152" fill="#6E6E6E">npv_peak</text><text x="770" y="152" text-anchor="end" fill="#B5740A">1500</text>
+    <text x="566" y="176" fill="#6E6E6E">area</text><text x="770" y="176" text-anchor="end" fill="#0A0A0A">:onc</text>
+    <text x="566" y="200" fill="#6E6E6E">history</text><text x="770" y="200" text-anchor="end" fill="#0A8A84">Disc→Ph1→Ph2</text>
+  </g>
+  <!-- annotations -->
+  <g font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">
+    <rect x="800" y="92" width="9" height="9" fill="#0A0A0A"/><text x="818" y="101">carries its own state</text>
+    <rect x="800" y="124" width="9" height="9" fill="#0A0A0A"/><text x="818" y="133">remembers its history</text>
+    <rect x="800" y="156" width="9" height="9" fill="#0A0A0A"/><text x="818" y="165">a stable identity</text>
+  </g>
+  <!-- bottom: select / filter by state -->
+  <text x="540" y="258" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1" fill="#0A47FF">SELECT / FILTER BY STATE</text>
+  <!-- four source chips -->
+  <g font-family="JetBrains Mono" font-size="11" text-anchor="middle">
+    <rect x="540" y="276" width="58" height="32" fill="#fff" stroke="#D6D6D6" stroke-width="1.4"/><text x="569" y="296" fill="#9A9A9A">:Ph1</text>
+    <rect x="606" y="276" width="58" height="32" fill="#fff" stroke="#0A8A84" stroke-width="1.8"/><text x="635" y="296" fill="#0A8A84">:Ph2</text>
+    <rect x="672" y="276" width="58" height="32" fill="#fff" stroke="#0A8A84" stroke-width="1.8"/><text x="701" y="296" fill="#0A8A84">:Ph2</text>
+    <rect x="738" y="276" width="58" height="32" fill="#fff" stroke="#D6D6D6" stroke-width="1.4"/><text x="767" y="296" fill="#9A9A9A">:Ph3</text>
+  </g>
+  <!-- connectors into the filter -->
+  <path d="M569 308 V 336" fill="none" stroke="#9A9A9A" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <path d="M635 308 V 336" fill="none" stroke="#0A47FF" stroke-width="1.8"/>
+  <path d="M701 308 V 336" fill="none" stroke="#0A47FF" stroke-width="1.8"/>
+  <path d="M767 308 V 336" fill="none" stroke="#9A9A9A" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <!-- the filter -->
+  <rect x="540" y="336" width="256" height="26" fill="#fff" stroke="#0A47FF" stroke-width="1.6"/>
+  <text x="668" y="353" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0A47FF"><tspan font-weight="700">@select</tspan>(phase == :Phase2)</text>
+  <!-- result -->
+  <path d="M668 362 V 384" fill="none" stroke="#0A8A84" stroke-width="1.8" marker-end="url(#tok-blk)"/>
+  <text x="540" y="404" font-family="JetBrains Mono" font-size="11.5" fill="#0A8A84">→ binds the two Phase-2 programs</text>
+  <text x="540" y="421" font-family="Inter" font-style="italic" font-size="11" fill="#6E6E6E">the others are passed over — the predicate reads each token's state</text>
+</svg>

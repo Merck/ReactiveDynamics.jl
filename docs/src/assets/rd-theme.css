@@ -1,0 +1,316 @@
+/* ============================================================================
+   rd-theme.css — ReactiveDynamics.jl documentation brand overrides.
+
+   A thin layer over Documenter 1.x (Bulma-derived, `#documenter`-prefixed
+   selectors, light + `html.theme--documenter-dark` themes). It does NOT replace
+   the stock themes — it repaints the chrome to the house design language shared
+   with demo/bd_acquisition/presentation.html:
+
+     International Typographic Style — pitch-black ink, hairline-black rules as
+     the structural device, ONE accent (azure), and functional figure hues that
+     carry meaning (teal = people/capacity, amber = money/budget, rose = risk).
+
+   What this file changes, and nothing else:
+     · the navigation sidebar → an ink-black field (matches the presentation
+       masthead / colophon), mono labels, azure active-page marker;
+     · headings → Inter, tight tracking, an azure underline accent on h1 and a
+       hairline rule under h2;
+     · links / accents → azure;
+     · admonitions → recoloured to the semantic palette (note→azure,
+       warning→amber, danger→rose, tip→teal);
+     · code → flat field, hairline border, azure keywords.
+
+   Specificity notes (so overrides actually land): the stock light rules are
+   `#documenter .foo` (id+class); we match that exactly and win on source order
+   (Documenter injects `assets` AFTER the theme CSS). The dark rules add an
+   `html.theme--documenter-dark` prefix, so every dark override below repeats
+   that prefix to match specificity. Code glyphs stay on JuliaMono (full Julia
+   unicode coverage: →, ≥, α); JetBrains Mono is reserved for UI chrome.
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Palette aligned to the canonical Claude Design identity board
+     (spec/design_system.html): warm neutrals, azure accent, semantic figure hues. */
+  --rd-ink:      #0A0A0A;   /* pitch-black ink & hairlines            */
+  --rd-paper:    #FFFFFF;   /* pure white content ground              */
+  --rd-inset:    #F4F4F2;   /* warm neutral inset (code surround)     */
+  --rd-accent:   #0A47FF;   /* azure — events / decisions / the accent */
+  --rd-accent-d: #0A2FB0;   /* deep azure — link hover                */
+  --rd-accent-lt:#6A92FF;   /* azure reversed-out on black            */
+  --rd-teal:     #0A8A84;   /* people / capacity (scientists)         */
+  --rd-amber:    #B5740A;   /* money / budget                         */
+  --rd-rose:     #E5243B;   /* risk / failure / binding constraint    */
+  --rd-grey:     #6A6A68;   /* warm grey — subordinate metadata       */
+  --rd-grey-lt:  #9A9A98;   /* warm grey, lighter                     */
+  --rd-hair:     #C7C7C4;   /* warm hairline (faint internal divider) */
+
+  --rd-night:      #0A0A0A; /* the reversed-out field (sidebar)       */
+  --rd-night-edge: #3A3A3A; /* hairlines on black                     */
+  --rd-night-ink:  #F4F4F2; /* body text reversed out                 */
+  --rd-night-mut:  #9A9A98; /* muted reversed out                     */
+
+  --rd-display: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --rd-mono:    "JetBrains Mono", "JuliaMono", "SF Mono", ui-monospace, monospace;
+  --rd-code:    "JuliaMono", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ---------- body & headings ------------------------------------------------ */
+/* The stock theme sets Lato with !important, so we must also use !important. */
+#documenter .docs-main,
+#documenter .docs-main p,
+#documenter .docs-main li,
+#documenter .docs-main table {
+  font-family: var(--rd-display) !important;
+  letter-spacing: -0.004em;
+}
+html.theme--documenter-dark #documenter .docs-main { font-family: var(--rd-display) !important; }
+
+#documenter .docs-main h1,
+#documenter .docs-main h2,
+#documenter .docs-main h3,
+#documenter .docs-main h4 {
+  font-family: var(--rd-display) !important;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--rd-ink);
+}
+html.theme--documenter-dark #documenter .docs-main h1,
+html.theme--documenter-dark #documenter .docs-main h2,
+html.theme--documenter-dark #documenter .docs-main h3,
+html.theme--documenter-dark #documenter .docs-main h4 { color: #FFFFFF; }
+
+/* h1 — an azure underline accent (the presentation's kicker rule, distilled) */
+#documenter .docs-main h1 { position: relative; padding-bottom: 0.35rem; }
+#documenter .docs-main h1::after {
+  content: ""; display: block; width: 3rem; height: 3px;
+  background: var(--rd-accent); margin-top: 0.45rem;
+}
+/* h2 — a full-width hairline-black rule, the one structural device */
+#documenter .docs-main h2 {
+  border-bottom: 1px solid var(--rd-ink);
+  padding-bottom: 0.35rem;
+}
+html.theme--documenter-dark #documenter .docs-main h2 { border-bottom-color: var(--rd-night-edge); }
+
+/* ---------- links / accents ------------------------------------------------ */
+#documenter .docs-main a,
+#documenter .docs-main a code { color: var(--rd-accent); }
+#documenter .docs-main a:hover { color: var(--rd-accent-d); text-decoration: underline; }
+html.theme--documenter-dark #documenter .docs-main a,
+html.theme--documenter-dark #documenter .docs-main a code { color: var(--rd-accent-lt); }
+
+/* Heading text is wrapped in an `<a class="docs-heading-anchor">`; keep it the
+   heading's ink colour, NOT the azure link colour — azure stays the ONE accent
+   (the h1 underline + real links). */
+#documenter .docs-main h1 a.docs-heading-anchor,
+#documenter .docs-main h1 a.docs-heading-anchor:hover,
+#documenter .docs-main h2 a.docs-heading-anchor,
+#documenter .docs-main h2 a.docs-heading-anchor:hover,
+#documenter .docs-main h3 a.docs-heading-anchor,
+#documenter .docs-main h3 a.docs-heading-anchor:hover,
+#documenter .docs-main h4 a.docs-heading-anchor,
+#documenter .docs-main h4 a.docs-heading-anchor:hover {
+  color: var(--rd-ink);
+  text-decoration: none;
+}
+html.theme--documenter-dark #documenter .docs-main h1 a.docs-heading-anchor,
+html.theme--documenter-dark #documenter .docs-main h2 a.docs-heading-anchor,
+html.theme--documenter-dark #documenter .docs-main h3 a.docs-heading-anchor,
+html.theme--documenter-dark #documenter .docs-main h4 a.docs-heading-anchor { color: #FFFFFF; }
+
+/* ============================================================================
+   NAVIGATION SIDEBAR — the ink-black field. Applies in BOTH themes (the black
+   nav is a brand constant), so each rule has a base form and a dark-scoped twin.
+   ============================================================================ */
+#documenter .docs-sidebar {
+  background-color: var(--rd-night);
+  color: var(--rd-night-ink);
+  border-right: 1px solid var(--rd-night-edge);
+}
+html.theme--documenter-dark #documenter .docs-sidebar {
+  background-color: var(--rd-night);
+  color: var(--rd-night-ink);
+  border-right: 1px solid var(--rd-night-edge);
+}
+
+/* brand / package name — the masthead treatment */
+#documenter .docs-sidebar .docs-package-name {
+  border-bottom: 1px solid var(--rd-night-edge);
+  padding-bottom: 0.4rem;
+}
+#documenter .docs-sidebar .docs-package-name a,
+#documenter .docs-sidebar .docs-package-name a:hover,
+html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name a,
+html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name a:hover {
+  color: #FFFFFF;
+  font-family: var(--rd-mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* menu items — mono, muted, light on black */
+#documenter .docs-sidebar ul.docs-menu .tocitem,
+#documenter .docs-sidebar ul.docs-menu .tocitem:hover,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu .tocitem,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu .tocitem:hover {
+  color: var(--rd-night-mut);
+  background: var(--rd-night);
+  font-family: var(--rd-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+}
+/* section labels (non-link `span.tocitem`) — brighter, an eyebrow */
+#documenter .docs-sidebar ul.docs-menu > li > span.tocitem,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu > li > span.tocitem {
+  color: var(--rd-accent-lt);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+}
+
+#documenter .docs-sidebar ul.docs-menu a.tocitem:hover,
+#documenter .docs-sidebar ul.docs-menu label.tocitem:hover,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu a.tocitem:hover,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu label.tocitem:hover {
+  color: #FFFFFF;
+  background-color: #161616;
+}
+
+/* active page — azure left rule + white text, no boxed border */
+#documenter .docs-sidebar ul.docs-menu li.is-active,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active {
+  border-top: 0;
+  border-bottom: 0;
+  background-color: #161616;
+  border-left: 3px solid var(--rd-accent);
+}
+#documenter .docs-sidebar ul.docs-menu li.is-active > .tocitem,
+#documenter .docs-sidebar ul.docs-menu li.is-active > .tocitem:hover,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active > .tocitem,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active > .tocitem:hover {
+  background-color: #161616;
+  color: #FFFFFF;
+}
+/* in-page (internal) anchors under the active page */
+#documenter .docs-sidebar ul.docs-menu ul.internal .tocitem,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem {
+  color: var(--rd-night-mut);
+}
+#documenter .docs-sidebar ul.docs-menu ul.internal .tocitem:hover,
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem:hover {
+  color: #FFFFFF; background: #161616;
+}
+
+/* search button + version selector on the black field */
+#documenter .docs-sidebar #documenter-search-query,
+html.theme--documenter-dark #documenter .docs-sidebar #documenter-search-query {
+  background-color: #161616;
+  border: 1px solid var(--rd-night-edge);
+  color: var(--rd-night-mut);
+  font-family: var(--rd-mono);
+  border-radius: 0;
+}
+#documenter .docs-sidebar .docs-version-selector,
+html.theme--documenter-dark #documenter .docs-sidebar .docs-version-selector {
+  border-top: 1px solid var(--rd-night-edge);
+}
+
+/* ============================================================================
+   ADMONITIONS — recoloured to the semantic palette. Left border + header text
+   carry the hue; the body stays a flat neutral inset with square corners.
+   ============================================================================ */
+#documenter .docs-main .admonition {
+  border-radius: 0;
+  border-width: 1px;
+  background-color: var(--rd-inset);
+}
+#documenter .docs-main .admonition.is-info,
+#documenter .docs-main .admonition.is-note { border-color: var(--rd-accent); }
+#documenter .docs-main .admonition.is-info > .admonition-header,
+#documenter .docs-main .admonition.is-note > .admonition-header { color: var(--rd-accent); }
+
+#documenter .docs-main .admonition.is-warning { border-color: var(--rd-amber); }
+#documenter .docs-main .admonition.is-warning > .admonition-header { color: var(--rd-amber); }
+
+#documenter .docs-main .admonition.is-danger { border-color: var(--rd-rose); }
+#documenter .docs-main .admonition.is-danger > .admonition-header { color: var(--rd-rose); }
+
+#documenter .docs-main .admonition.is-success,
+#documenter .docs-main .admonition.is-tip { border-color: var(--rd-teal); }
+#documenter .docs-main .admonition.is-success > .admonition-header,
+#documenter .docs-main .admonition.is-tip > .admonition-header { color: var(--rd-teal); }
+
+#documenter .docs-main .admonition > .admonition-header {
+  font-family: var(--rd-mono);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   CODE — flat field, hairline border, square corners; azure keywords.
+   Code stays on JuliaMono for full Julia unicode glyph coverage.
+   ============================================================================ */
+#documenter .docs-main pre,
+#documenter .docs-main code {
+  font-family: var(--rd-code) !important;
+  border-radius: 0;
+}
+#documenter .docs-main pre {
+  border: 1px solid var(--rd-ink);
+  background-color: var(--rd-paper);
+}
+html.theme--documenter-dark #documenter .docs-main pre {
+  border-color: var(--rd-night-edge);
+}
+/* inline code — a light neutral chip */
+#documenter .docs-main p > code,
+#documenter .docs-main li > code {
+  background-color: var(--rd-inset);
+  color: var(--rd-ink);
+  padding: 0.1em 0.35em;
+}
+html.theme--documenter-dark #documenter .docs-main p > code,
+html.theme--documenter-dark #documenter .docs-main li > code {
+  background-color: #161616;
+  color: var(--rd-night-ink);
+}
+
+/* highlight.js tokens → the presentation's code palette (light touch) */
+#documenter .docs-main pre .hljs-keyword,
+#documenter .docs-main pre .hljs-meta,
+#documenter .docs-main pre .hljs-built_in { color: var(--rd-accent); font-weight: 700; }
+#documenter .docs-main pre .hljs-string  { color: var(--rd-teal); }
+#documenter .docs-main pre .hljs-number  { color: var(--rd-amber); }
+#documenter .docs-main pre .hljs-comment { color: var(--rd-grey); font-style: italic; }
+
+/* ---------- docstring headers — a hairline, mono-labelled band ------------- */
+#documenter .docs-main .docstring > header {
+  border-bottom: 1px solid var(--rd-ink);
+}
+html.theme--documenter-dark #documenter .docs-main .docstring > header {
+  border-bottom-color: var(--rd-night-edge);
+}
+
+/* ---------- inline SVG concept figures — center, cap width, breathe -------- */
+#documenter .docs-main .rd-figure {
+  margin: 1.8rem auto;
+  max-width: 900px;
+}
+#documenter .docs-main .rd-figure svg {
+  display: block; width: 100%; height: auto; overflow: visible;
+}
+#documenter .docs-main .rd-figure figcaption {
+  font-size: 0.9rem; color: var(--rd-grey); line-height: 1.5;
+  margin-top: 0.6rem; text-align: left;
+}
+html.theme--documenter-dark #documenter .docs-main .rd-figure figcaption { color: var(--rd-night-mut); }
+/* the figures are drawn on white; keep their surround white even in dark mode
+   so the hairline artwork stays legible */
+html.theme--documenter-dark #documenter .docs-main .rd-figure {
+  background: #FFFFFF; padding: 1rem; border: 1px solid var(--rd-night-edge);
+}
+
+/* selection + focus, house colours */
+#documenter ::selection { background: var(--rd-accent); color: #FFFFFF; }

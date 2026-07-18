@@ -52,7 +52,21 @@ end
 # ── Site ────────────────────────────────────────────────────────────────────────────────
 makedocs(;
     sitename = "ReactiveDynamics.jl",
-    format = Documenter.HTML(; prettyurls = get(ENV, "CI", "false") == "true", edit_link = "main"),
+    format = Documenter.HTML(;
+        prettyurls = get(ENV, "CI", "false") == "true", edit_link = "main",
+        # House brand overrides (International Typographic Style — ink-black nav,
+        # azure accent, semantic figure hues), a thin layer over the stock themes.
+        # See docs/src/assets/rd-theme.css for what it repaints and why. The sidebar
+        # logo (`assets/logo.svg` + `assets/logo-dark.svg`) is the "firing glyph"
+        # mark from the Claude Design identity board (spec/design_system.html),
+        # reversed-out because the sidebar is black in both themes.
+        assets = [
+            "assets/rd-theme.css",
+            # SVG favicon — `assets` infers class from extension and only knows css/js,
+            # so an .svg icon must be passed as an explicit :ico-class HTMLAsset.
+            asset("assets/favicon.svg"; class = :ico, islocal = true),
+        ],
+    ),
     modules = [ReactiveDynamics],
     warnonly = true,   # scaffold stage: don't fail on cross-references to pages not yet authored
     pages = [

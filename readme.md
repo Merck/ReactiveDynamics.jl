@@ -1,11 +1,13 @@
-# ReactiveDynamics.jl <br>
-
 <p align="center">
-  <img src="docs/src/assets/diagram1.png" alt="wiring diagram"> <br>
+  <img src="docs/src/assets/logo-wordmark.svg" alt="ReactiveDynamics.jl" width="440"> <br><br>
   <a href="#about">About</a> |
   <a href="#context-dynamics-of-value-evolution-dyve">Context</a> |
   <a href="#examples--demos">Examples & Demos</a> |
   <a href="#documentation">Documentation</a>
+</p>
+
+<p align="center">
+  <img src="docs/src/assets/figures/petri-anatomy.svg" alt="A labelled Petri net: a Phase-2 place holding program tokens, an arc into a transition bar, and an arc out to a Phase-3 place; two resource pools (scientists, budget) feed the transition." width="760">
 </p>
 
 > **Note.** This README is being refreshed alongside the ongoing engine rework (branch `rework`). The framing below reflects the current native discrete-event engine; the polished worked examples, onboarding tutorials, and API reference are being rewritten and are **coming in a follow-up documentation pass** (see [Examples & Demos](#examples--demos) and [Documentation](#documentation)). In the meantime, the runnable [`demo/`](demo) tours are the source of truth for current, working code.
