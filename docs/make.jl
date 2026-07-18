@@ -58,11 +58,11 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Tutorials" => [
-            "Introductory" => "tutorials/introductory.md",       # charter A1
-            "Advanced" => "tutorials/advanced.md",               # charter A2
-            "Expert" => "tutorials/expert.md",                   # charter A3
-            "Deep dive: serialization" => "deep_dives/serialization.md",  # charter A4
-            "Deep dive: composition" => "deep_dives/composition.md",      # charter A5
+            "Introductory: your first model" => "tutorials/introductory.md",        # charter A1
+            "Advanced: structured-token portfolios" => "tutorials/advanced.md",      # charter A2
+            "Expert: coupled heterogeneous systems" => "tutorials/expert.md",        # charter A3
+            "Deep dive: serialization" => "deep_dives/serialization.md",             # charter A4
+            "Deep dive: composition" => "deep_dives/composition.md",                 # charter A5
         ],
         "Case studies" => [                                      # charter B1–B3
             "Marginal eNPV of the Nth scientist" => "case_studies/marginal_scientist.md",
