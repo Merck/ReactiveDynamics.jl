@@ -1,10 +1,10 @@
 # Documentation & Tutorials Charter — ReactiveDynamics.jl
 
-> **The tracking spine for the documentation rework.** A standalone PR into `rework` (branch `docs-tutorials`). This is the durable "what are we building, in what order, and how do we know a piece is done" index for the docs effort, the counterpart to [STATUS.md](STATUS.md) for the engine. Last updated 2026-07-17. Re-verify any `file:line` before acting — line numbers drift.
+> **The tracking spine for the documentation rework.** A standalone PR into `rework` (branch `docs-tutorials`). This is the durable "what are we building, in what order, and how do we know a piece is done" index for the docs effort, the counterpart to [STATUS.md](STATUS.md) for the engine. Last updated 2026-07-18 (Workstreams A2–A5, B1–B3, C1/C2 landed; the full site builds green — remaining: Workstream D explanation/paper + E3 refined-HTML). Re-verify any `file:line` before acting — line numbers drift.
 
 ## 1. Why this exists and what "done" means
 
-The engine rework (§1–§15 of [CONTRACT_DRAFT.md](CONTRACT_DRAFT.md), ADRs 0001–0015) is implemented and green (801 pass / 0 broken). What is missing is the reader-facing surface: onboarding tutorials, applied case studies, and an API reference that match the post-ADR-0015 API. The current [docs/src/index.md](../docs/src/index.md) is a single stale API page referencing removed macros (`@ReactionNetwork`, `@optimize`, `@fit`, `@problematize`, `@plot`, `@import_network`, …), and [docs/make.jl](../docs/make.jl) still uses the deprecated `DocumenterMarkdown` backend (not even declared in `docs/Project.toml`). The seven runnable tours under [demo/](../demo) are the current source of truth for working code but are not wired into a published site.
+The engine rework (§1–§15 of [CONTRACT_DRAFT.md](CONTRACT_DRAFT.md), ADRs 0001–0015) is implemented and green (801 pass / 0 broken). What was missing was the reader-facing surface: onboarding tutorials, applied case studies, and an API reference matching the post-ADR-0015 API. As of 2026-07-18 that surface is largely built: the landing page is now an intent-router, `make.jl` runs a Documenter HTML + Literate build (replacing the deprecated `DocumenterMarkdown` backend), the seven runnable tours under [demo/](../demo) have been migrated in place as the site's Literate sources, and the reference is capability-organized off the real export surface. (The historical starting point: `docs/src/index.md` was a single stale API page referencing removed macros — `@ReactionNetwork`, `@optimize`, `@fit`, `@problematize`, `@plot`, `@import_network`, … — and the demos were not wired into a published site.) What remains is Workstream D (the explanation layer + arXiv paper) and E3/E4 (refined case-study HTML + the paper build).
 
 This PR closes that gap. **Done** for the whole PR means: a Documenter site, publishable to GitHub Pages, comprising three tiered tutorials, two focused deep-dives, three applied case studies, a complete API reference, and an explanation layer built on the contract and anchored by an arXiv-first academic paper — every code block executed against the current engine, every tutorial ending in a manager-actionable number, and the `demo/` sources migrated in as the single source of truth (no duplicated model code). The per-facet acceptance criteria are in §12; the progress tracker is in §10.
 
@@ -112,7 +112,7 @@ Learning-oriented, literate, didactic, on sample problems, framed as end-to-end 
 - **The number it ends on.** A treatment-effect Δ between two policies (e.g. a Series-B raise vs not) with a standard error — "the raise buys +Δ expected launches ± se."
 - **Source.** `agentic_pipeline` §0–§5 + `core_engine_tour` §3–§4; ensemble/`treatment_effect` from `introspection_tour` §4.
 - **Target length.** ~400–550 lines.
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (`docs/literate/tutorials/advanced.jl`, rendered; closes on a Series-B `treatment_effect` Δ +0.52 launches ± 0.24 SE). NB the migration surfaced a stale demo assumption: the `@rate(cycletime=0)` combination is now REJECTED at construction (the validator hard-errors), so the "silent free input" prose was corrected.
 
 ### A3 — Expert tutorial
 
@@ -122,19 +122,19 @@ Learning-oriented, literate, didactic, on sample problems, framed as end-to-end 
 - **The number it ends on.** A coupled-system read — e.g. the cash trajectory the finance sibling reconstructs off a wire, or a coarse-vs-refined aggregate-rNPV agreement within ensemble CI (the granularity-substitution guarantee).
 - **Source.** `aa_integration` + `wires_viz_tour` (drawn) + `refinement_tour` + `agentic_pipeline` §6–§7 + `introspection_tour` §7.
 - **Target length.** ~500–700 lines; may split across sub-pages.
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (`docs/literate/tutorials/expert.jl`, rendered; closes on the finance sibling reconstructing RD's cash off a wire, verifying the one-tick Jacobi lag exactly). Delivered as one page (~436 lines), not split.
 
 ### A4 — Deep-dive: serialization *(technical focus)*
 
 - **Scope.** A model IS data: the single eval-free JSON document; `from_json_model`/`to_json_model` round-trip; `validate` (clean vs a deliberately broken model → a `Diagnostic`, never an eval); the host-function registry (host Julia referenced by name, never carried in the document); the RCE boundary the design closes; the typed `ExprNode` IR. Structured genesis (`@structured(:Kind, …)`) as the eval-free RHS twin of `AddToken`.
 - **Source.** `agentic_pipeline` §4, §6; `serialization_ir.jl` tests; ADR 0005/0006.
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (`docs/literate/deep_dives/serialization.jl`, rendered; closes on byte-identical DSL-vs-JSON-reload trajectories + the broken model yielding a `Diagnostic` returned as data, never an eval).
 
 ### A5 — Deep-dive: composition & granularity *(technical focus)*
 
 - **Scope.** The granularity ladder: `@join`/`@equalize` (manual, no-port), `@compose`/`@pipeline`/`@process` (declared open ports, matched by FK-repoint), `refine`/`abstract` (boundary-matched FK-splice, plug-compatibility), `refinement_diagnostics` (advisory Σ-ct/Π-PoS checks). The authoring-time-only invariant (forbidden on a live model).
 - **Source.** `refinement_tour` + `core_engine_tour` §7; `refinement_composition.jl` tests; ADR 0009.
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (`docs/literate/deep_dives/composition.jl`, rendered; closes on the granularity-substitution guarantee — a plug-compatible sub-model's Σ-ct/Π-PoS matches the coarse transition and `refinement_diagnostics` passes clean, warns on a drifted sub-model).
 
 ## 6. Workstream B — Applied decision case studies
 
@@ -148,7 +148,7 @@ Understanding-oriented. **Question-titled, headline-number-first** (§2). In thi
 - **Hero visual.** The three-layer `exec_map` (`network_graph` → `draw_network` → `exec_map`) with the binding pool painted gold.
 - **Memo candidate.** Directly seeds a capacity/hiring memo.
 - **Source.** New model built on `introspection_tour` (exec map, ensemble) + `core_engine_tour` (allocator, modalities); calibrated so a resource genuinely binds (per the `bd_acquisition` calibration discipline).
-- **Status:** ⬜ not started.
+- **Status:** ✅ page delivered (`docs/literate/case_studies/marginal_scientist.jl`, rendered; leads with the shadow price of the 5th scientist ≈ +$19M ± $2.5M, the scientist bench genuinely binds, exec-map hero visual paints the binding pool). The refined-HTML presentation is tracked separately as E3.
 
 ### B2 — "What is this in-licensing asset worth to *this* pipeline?" *(BD/M&A, refined HTML)*
 
@@ -157,7 +157,7 @@ Understanding-oriented. **Question-titled, headline-number-first** (§2). In thi
 - **Mechanics exercised.** Structured tokens; `population[]`; the endogenous acquisition `Rule` (`Seq[AddToken, SetSpecies, SetParams]`, `fire_mode=:once`); `@compose` to splice the asset in for the "combined-company-from-t=0" view; a with/without ensemble comparison (`treatment_effect`); the per-program ledger.
 - **Memo candidate.** Directly reusable as a BD memo (gate-6 / salvage-value framing).
 - **Source.** `demo/bd_acquisition` (migrated), reframed question-first; its `MVP_BD_DEMO.md` is the design record.
-- **Status:** ⬜ scaffolded (demo exists); needs question-first reframe + HTML.
+- **Status:** ✅ page delivered (`docs/literate/case_studies/inlicensing_value.jl`, rendered; leads with the attributable Δ-rNPV +1947 ± 367 on a reduced 40-seed ensemble and the not-additive-under-contention verdict — cash binds, synergies are super-additive; honestly notes the reduced seed count vs the 160-seed demo). The refined-HTML presentation is tracked separately as E3.
 
 ### B3 — "When should you kill a program?"
 
@@ -165,7 +165,7 @@ Understanding-oriented. **Question-titled, headline-number-first** (§2). In thi
 - **The insight.** Demonstrates the endogenous decision channel — the capability hardest to fake in competing DES tools: the kill rule is *in the model*, state-contingent, and serializable, not host patch code.
 - **Mechanics exercised.** `Rule` with a state-contingent guard; `SetTokens`/`Deactivate`/soft-retire; `treatment_effect` across threshold variants; the per-program ledger for attributing the saved capital.
 - **Source.** New model built on `agentic_pipeline` (rules, structured tokens) + `introspection_tour` (`treatment_effect`).
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (`docs/literate/case_studies/kill_a_program.jl`, rendered; leads with the value-maximizing kill threshold θ\*=0.5 worth +48.5 ± 12.6 vs never-killing, with a genuine interior optimum — the endogenous kill Rule lives in the model, state-contingent and serializable).
 
 ## 7. Workstream C — API / reference documentation
 
@@ -173,7 +173,7 @@ Understanding-oriented. **Question-titled, headline-number-first** (§2). In thi
 - **Organize by capability**, mirroring the module map in [INVENTORY.md](../INVENTORY.md): *Authoring* (`@reaction_network`, `@push`, `@add_species`, `@mode`, `@aka`, `@name_transition`, cost/reward/valuation, `@prob_*`); *Structured tokens* (`@structured_token`, `register_structured_species!`, `@select`/`@advance`, `PopulationEntry`); *Rules & actions* (`Rule`, the `ActionStmt` family); *Construction & simulation* (`ReactionNetworkProblem`, `@agentize`, `simulate`, `reinit!`); *Composition* (`@join`, `@equalize`, `@compose`, `@pipeline`, `refine`, `abstract`); *Serialization* (`from_json_model`/`to_json_model`, `@import_model`/`@export_model`, `validate`, the `ExprNode` IR); *Analysis & viz* (`token_trajectory`, `ensemble`, `summarize`, `treatment_effect`, `export_run`, `network_graph`/`draw_network`/`exec_map`, the plot recipe types); *AA coupling* (`getobservable`, `add_wire!`, `ExternalRef`). Keep the attribute/shorthand tables (they are still accurate) and the rate-semantics note.
 - **The JSON model schema** documented as a reference page (the §8 serialization schema, with the ADR-0005 document shape).
 - **Docstring coverage.** src carries ~146 docstring blocks already; the reference is largely `@autodocs`/`@docs` assembly plus filling gaps flagged during assembly.
-- **Status:** ⬜ not started.
+- **Status:** ✅ delivered (C1 + C2). Nine capability-organized `@docs` pages under `docs/src/reference/` (authoring, structured tokens, rules & actions, construction & simulation, composition, serialization, analysis & viz, AA coupling) plus the JSON model-schema page; AA verbs (`simulate`/`reinit!`/`entangle!`/`add_wire!`/`getobservable`) documented in prose as reexported AlgebraicAgents functions; deprecated symbols excluded. Every `@docs` symbol resolves against the current export surface and the package precompiles clean. The gap-fill added docstrings to the closed action family + `Rule`, the `ReactionNetworkProblem` live-state type + constructor, the eval-free `ExprNode` IR + JSON (de)serializer, and `@append_transitions` (committed `0761cf3`; a concurrent src-review pass `dd8ce5d` backfilled the remaining legacy-file docstrings).
 
 ## 8. Workstream D — Explanation layer & the academic paper
 
@@ -234,7 +234,7 @@ Three artifacts, non-overlapping, so nothing drifts:
 - **GitHub Pages deploy** via `deploydocs` (repo already targets `github.com/Merck/ReactiveDynamics.jl.git`). No CI exists in-repo (no `.github/workflows/`); document the local build+deploy command, and note CI as an optional follow-up (also a JOSS gate, §8 D-future).
 - **Paper build (E4)** — when D3's format lands: either `latexmk` over `paper/*.tex` (LaTeX route) or a pandoc→LaTeX pass over the Markdown route. Deferred with the format decision (§8 D3).
 - **Formatter.** All Literate `.jl` sources pass Runic (`julia -m Runic --check .`), same as the rest of the tree.
-- **Status:** 🟡 E1/E2 landed this PR (site build green with A1); E3 (case-study HTML) and E4 (paper build) tracked.
+- **Status:** 🟡 E1/E2 fully landed — `make.jl` runs the Literate pre-pass over all eight tutorial/deep-dive/case-study sources and wires the complete nav (Tutorials, Case studies, Reference); `docs/Project.toml` carries the demo-union deps; the **full site builds green** (only expected warnings remain: forward-links to the not-yet-authored Workstream-D `explanation/*` pages, tolerated under `warnonly`). E3 (refined case-study HTML for B1/B2) and E4 (paper build) tracked.
 
 ## 10. Progress tracker
 
@@ -244,30 +244,30 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started.
 |---|---|---|---|---|
 | Charter | — | This document | — | ✅ |
 | Tutorials | A1 | Introductory (exemplar, rendered) | core_engine_tour | ✅ |
-| Tutorials | A2 | Advanced | agentic_pipeline + core §3-4 | ⬜ |
-| Tutorials | A3 | Expert | aa_integration + wires + refinement | ⬜ |
-| Tutorials | A4 | Deep-dive: serialization | agentic_pipeline §4,6 | ⬜ |
-| Tutorials | A5 | Deep-dive: composition | refinement_tour + core §7 | ⬜ |
-| Case study | B1 | Marginal eNPV of the Nth scientist (flagship, HTML) | new + introspection_tour | ⬜ |
-| Case study | B2 | In-licensing asset value (BD/M&A, HTML) | bd_acquisition | 🟡 (demo exists) |
-| Case study | B3 | When to kill a program | new + agentic_pipeline | ⬜ |
-| Reference | C1 | Capability-organized API pages | src docstrings | ⬜ |
-| Reference | C2 | JSON model schema page | CONTRACT §8 / ADR 0005 | ⬜ |
+| Tutorials | A2 | Advanced | agentic_pipeline + core §3-4 | ✅ (closes on Series-B Δ +0.52 launches ± 0.24) |
+| Tutorials | A3 | Expert | aa_integration + wires + refinement | ✅ (closes on the off-wire cash reconstruction, Jacobi lag) |
+| Tutorials | A4 | Deep-dive: serialization | agentic_pipeline §4,6 | ✅ (byte-identical DSL-vs-reload trajectory) |
+| Tutorials | A5 | Deep-dive: composition | refinement_tour + core §7 | ✅ (granularity-substitution Σct/ΠPoS match) |
+| Case study | B1 | Marginal eNPV of the Nth scientist (flagship, HTML) | new + introspection_tour | ✅ page (shadow price +$19M ± $2.5M); refined HTML = E3 |
+| Case study | B2 | In-licensing asset value (BD/M&A, HTML) | bd_acquisition | ✅ page (Δ-rNPV +1947 ± 367, not additive); refined HTML = E3 |
+| Case study | B3 | When to kill a program | new + agentic_pipeline | ✅ (θ\*=0.5 worth +48.5 ± 12.6 vs never-kill) |
+| Reference | C1 | Capability-organized API pages | src docstrings | ✅ (9 pages; every @docs symbol resolves) |
+| Reference | C2 | JSON model schema page | CONTRACT §8 / ADR 0005 | ✅ |
 | Explanation | D1 | Contract-as-explanation pages | CONTRACT_DRAFT.md | ⬜ |
 | Explanation | D2 | ADR reading surface | spec/adr | ⬜ |
 | Explanation | **D3** | **Academic paper (arXiv-first; outline §8 fixed, format TBD)** | CONTRACT §1–§15 + ADRs + case studies | ⬜ |
 | Explanation | D-future | JOSS `paper.md` + methods paper (gated: CI, release/DOI, CONTRIBUTING) | fed by D3 | ⬜ (parked) |
-| Build | E1 | make.jl (Documenter + Literate) | wires_viz_tour/build.jl | ✅ |
-| Build | E2 | docs/Project.toml (site build green) | — | ✅ |
-| Build | E3 | Refined-HTML render recipe (case studies) | bd_acquisition/build_presentation.jl | ⬜ |
+| Build | E1 | make.jl (Documenter + Literate) | wires_viz_tour/build.jl | ✅ (full nav wired: all 8 tutorials + 9 reference pages) |
+| Build | E2 | docs/Project.toml (site build green) | — | ✅ (demo-union deps; full site builds green) |
+| Build | E3 | Refined-HTML render recipe (case studies) | bd_acquisition/build_presentation.jl | ⬜ (B1/B2 Literate pages done; refined-HTML presentation pending) |
 | Build | E4 | Paper build (latexmk or pandoc) | — | ⬜ (with D3 format) |
 
 ## 11. Sequencing
 
 1. **Charter + exemplar + toolchain (this PR increment).** This document + the introductory tutorial (A1) authored in the target Literate style and rendered end-to-end, plus the `make.jl` + `docs/Project.toml` Documenter+Literate build (E1/E2), which builds the site green with A1 in place. *(done)*
-2. **Reference + explanation scaffolds (C1/C2, D1/D2).** Land the capability-organized reference and the contract-as-explanation pages so the site is navigable end-to-end.
-3. **Tutorial tiers (A2/A3) + deep-dives (A4/A5).** Migrate the remaining demos in.
-4. **Case studies (B1/B2/B3).** Flagship first; refined HTML for B1/B2 (E3). These become the paper's §13 worked evidence.
+2. **Reference (C1/C2) + explanation scaffolds (D1/D2).** Land the capability-organized reference and the contract-as-explanation pages so the site is navigable end-to-end. *(C1/C2 done; D1/D2 remain.)*
+3. **Tutorial tiers (A2/A3) + deep-dives (A4/A5).** Migrate the remaining demos in. *(done — all four rendered green.)*
+4. **Case studies (B1/B2/B3).** Flagship first; refined HTML for B1/B2 (E3). These become the paper's §13 worked evidence. *(Literate pages done — all three rendered green with their headline numbers; the E3 refined-HTML presentation for B1/B2 remains.)*
 5. **The paper (D3).** Once the case studies exist as evidence, decide the format (§8 D3), then author the arXiv paper against the fixed outline; wire its build (E4). Post the preprint for socialization. *(May run in parallel with 3–4 for the semantics sections, which do not depend on the case studies.)*
 6. **Polish + deploy.** Runic pass, link audit, GitHub Pages deploy, README refresh to point at the published site + the preprint. Optionally open the D-future gates (CI, tagged release + Zenodo DOI, `CONTRIBUTING`) toward a JOSS submission.
 
