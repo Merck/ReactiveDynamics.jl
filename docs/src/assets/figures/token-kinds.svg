@@ -7,7 +7,7 @@
   </style>
   <defs>
     <marker id="tok-blk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6E6E6E"/></marker>
-    <marker id="tok-az" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0A47FF"/></marker>
+    <marker id="tok-az" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0A8A84"/></marker>
   </defs>
   <!-- centre divider -->
   <line x1="500" y1="18" x2="500" y2="416" stroke="#D6D6D6" stroke-width="1"/>
@@ -36,7 +36,7 @@
   <rect x="40" y="276" width="120" height="70" fill="#FBEFD2" stroke="#B5740A" stroke-width="1.6"/>
   <g fill="#B5740A"><circle cx="66" cy="300" r="5"/><circle cx="98" cy="300" r="5"/><circle cx="130" cy="300" r="5"/><circle cx="66" cy="324" r="5"/><circle cx="98" cy="324" r="5"/><circle cx="130" cy="324" r="5"/></g>
   <path d="M160 311 H 196" fill="none" stroke="#6E6E6E" stroke-width="1.4" marker-end="url(#tok-blk)"/>
-  <text x="210" y="300" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A"><tspan fill="#0A47FF" font-weight="700">@select</tspan> needs a property —</text>
+  <text x="210" y="300" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A"><tspan fill="#0A8A84" font-weight="700">@select</tspan> needs a property —</text>
   <text x="210" y="318" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">a pool has none.</text>
   <text x="210" y="342" font-family="Inter" font-style="italic" font-size="11.5" fill="#6E6E6E">only the count is addressable</text>
   <text x="210" y="360" font-family="Inter" font-style="italic" font-size="11.5" fill="#6E6E6E">(e.g. "are ≥ 4 units free?")</text>
@@ -50,7 +50,7 @@
   <text x="582" y="93" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#0A0A0A">ProjectToken</text>
   <line x1="548" y1="104" x2="780" y2="104" stroke="#D6D6D6" stroke-width="1"/>
   <g font-family="JetBrains Mono" font-size="11.5">
-    <text x="566" y="128" fill="#6E6E6E">phase</text><text x="770" y="128" text-anchor="end" fill="#0A47FF">:Phase2</text>
+    <text x="566" y="128" fill="#6E6E6E">phase</text><text x="770" y="128" text-anchor="end" fill="#0A8A84">:Phase2</text>
     <text x="566" y="152" fill="#6E6E6E">npv_peak</text><text x="770" y="152" text-anchor="end" fill="#B5740A">1500</text>
     <text x="566" y="176" fill="#6E6E6E">area</text><text x="770" y="176" text-anchor="end" fill="#0A0A0A">:onc</text>
     <text x="566" y="200" fill="#6E6E6E">history</text><text x="770" y="200" text-anchor="end" fill="#0A8A84">Disc→Ph1→Ph2</text>
@@ -62,7 +62,7 @@
     <rect x="800" y="156" width="9" height="9" fill="#0A0A0A"/><text x="818" y="165">a stable identity</text>
   </g>
   <!-- bottom: select / filter by state -->
-  <text x="540" y="258" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1" fill="#0A47FF">SELECT / FILTER BY STATE</text>
+  <text x="540" y="258" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1" fill="#0A8A84">SELECT / FILTER BY STATE</text>
   <!-- four source chips -->
   <g font-family="JetBrains Mono" font-size="11" text-anchor="middle">
     <rect x="540" y="276" width="58" height="32" fill="#fff" stroke="#D6D6D6" stroke-width="1.4"/><text x="569" y="296" fill="#9A9A9A">:Ph1</text>
@@ -72,12 +72,12 @@
   </g>
   <!-- connectors into the filter -->
   <path d="M569 308 V 336" fill="none" stroke="#9A9A9A" stroke-width="1.2" stroke-dasharray="4 3"/>
-  <path d="M635 308 V 336" fill="none" stroke="#0A47FF" stroke-width="1.8"/>
-  <path d="M701 308 V 336" fill="none" stroke="#0A47FF" stroke-width="1.8"/>
+  <path d="M635 308 V 336" fill="none" stroke="#0A8A84" stroke-width="1.8"/>
+  <path d="M701 308 V 336" fill="none" stroke="#0A8A84" stroke-width="1.8"/>
   <path d="M767 308 V 336" fill="none" stroke="#9A9A9A" stroke-width="1.2" stroke-dasharray="4 3"/>
   <!-- the filter -->
-  <rect x="540" y="336" width="256" height="26" fill="#fff" stroke="#0A47FF" stroke-width="1.6"/>
-  <text x="668" y="353" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0A47FF"><tspan font-weight="700">@select</tspan>(phase == :Phase2)</text>
+  <rect x="540" y="336" width="256" height="26" fill="#fff" stroke="#0A8A84" stroke-width="1.6"/>
+  <text x="668" y="353" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0A8A84"><tspan font-weight="700">@select</tspan>(phase == :Phase2)</text>
   <!-- result -->
   <path d="M668 362 V 384" fill="none" stroke="#0A8A84" stroke-width="1.8" marker-end="url(#tok-blk)"/>
   <text x="540" y="404" font-family="JetBrains Mono" font-size="11.5" fill="#0A8A84">→ binds the two Phase-2 programs</text>

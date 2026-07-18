@@ -19,10 +19,10 @@
   <!-- transition bar -->
   <line x1="246" y1="120" x2="470" y2="120" stroke="#0A0A0A" stroke-width="1.6"/>
   <polygon points="470,120 462,116 462,124" fill="#0A0A0A"/>
-  <rect x="496" y="92" width="9" height="56" fill="#0A47FF" rx="0"/>
+  <rect x="496" y="92" width="9" height="56" fill="#0A8A84" rx="0"/>
   <line x1="514" y1="120" x2="752" y2="120" stroke="#0A0A0A" stroke-width="1.6"/>
   <polygon points="754,120 746,116 746,124" fill="#0A0A0A"/>
-  <text x="500" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#0A47FF" font-weight="700">advance</text>
+  <text x="500" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#0A8A84" font-weight="700">advance</text>
   <!-- resource pools below feeding the bar -->
   <circle cx="430" cy="250" r="26" fill="#fff" stroke="#0A8A84" stroke-width="1.8"/>
   <circle cx="424" cy="246" r="3.4" fill="#0A8A84"/><circle cx="436" cy="246" r="3.4" fill="#0A8A84"/><circle cx="430" cy="256" r="3.4" fill="#0A8A84"/>
