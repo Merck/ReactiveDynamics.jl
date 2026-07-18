@@ -32,7 +32,14 @@ const GEN_DIR = joinpath(HERE, "src")
 # charter's tutorial/case-study facets land.
 const LITERATE_TUTORIALS = [
     # (source relative to docs/literate,           output subdir under docs/src)
-    ("tutorials/introductory.jl", "tutorials"),
+    ("tutorials/introductory.jl", "tutorials"),         # charter A1
+    ("tutorials/advanced.jl", "tutorials"),             # charter A2
+    ("tutorials/expert.jl", "tutorials"),               # charter A3
+    ("deep_dives/serialization.jl", "deep_dives"),      # charter A4
+    ("deep_dives/composition.jl", "deep_dives"),        # charter A5
+    ("case_studies/marginal_scientist.jl", "case_studies"),  # charter B1 (flagship)
+    ("case_studies/inlicensing_value.jl", "case_studies"),   # charter B2
+    ("case_studies/kill_a_program.jl", "case_studies"),      # charter B3
 ]
 
 for (src, outsub) in LITERATE_TUTORIALS
@@ -51,13 +58,29 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Tutorials" => [
-            "Introductory" => "tutorials/introductory.md",
-            # "Advanced"  => "tutorials/advanced.md",     # charter A2
-            # "Expert"    => "tutorials/expert.md",       # charter A3
+            "Introductory" => "tutorials/introductory.md",       # charter A1
+            "Advanced" => "tutorials/advanced.md",               # charter A2
+            "Expert" => "tutorials/expert.md",                   # charter A3
+            "Deep dive: serialization" => "deep_dives/serialization.md",  # charter A4
+            "Deep dive: composition" => "deep_dives/composition.md",      # charter A5
         ],
-        # "Case studies" => [...],                         # charter B1–B3
-        # "Reference"    => [...],                         # charter C1–C2
-        # "Explanation"  => [...],                         # charter D1–D2
+        "Case studies" => [                                      # charter B1–B3
+            "Marginal eNPV of the Nth scientist" => "case_studies/marginal_scientist.md",
+            "In-licensing asset value" => "case_studies/inlicensing_value.md",
+            "When to kill a program" => "case_studies/kill_a_program.md",
+        ],
+        "Reference" => [                                         # charter C1–C2
+            "Authoring" => "reference/authoring.md",
+            "Structured tokens" => "reference/structured_tokens.md",
+            "Rules & actions" => "reference/rules_actions.md",
+            "Construction & simulation" => "reference/construction_simulation.md",
+            "Composition" => "reference/composition.md",
+            "Serialization" => "reference/serialization.md",
+            "JSON model schema" => "reference/json_schema.md",
+            "Analysis & visualization" => "reference/analysis_viz.md",
+            "AlgebraicAgents coupling" => "reference/aa_coupling.md",
+        ],
+        # "Explanation"  => [...],                             # charter D1–D2 (Workstream D, separate PR)
     ],
 )
 

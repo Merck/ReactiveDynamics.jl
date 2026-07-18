@@ -6,6 +6,7 @@ docs/site/
 docs/preview/
 docs/src/tutorials/
 docs/src/case_studies/
+docs/src/deep_dives/
 tmp.gif
 gks.*
 Manifest.toml
