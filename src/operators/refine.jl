@@ -187,7 +187,11 @@ function refine!(
     return spec
 end
 
-# non-mutating convenience
+"""
+    refine(spec, transition, submodel; ports = Dict(boundary_species => sub_port, …)) -> ReactionNetwork
+
+Non-mutating convenience over [`refine!`](@ref): splice `submodel` into the coarse `transition` of a `deepcopy` of `spec`, returning the refined copy and leaving `spec` untouched. Same port-matching semantics and authoring-time-only restriction as `refine!`.
+"""
 refine(spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork; kwargs...) =
     refine!(deepcopy(spec), transition, submodel; kwargs...)
 
@@ -225,6 +229,11 @@ function abstract_transitions(
     return spec
 end
 
+"""
+    abstract!(spec, transitions, into; lhs, rhs, attrs)
+
+Alias for [`abstract_transitions`](@ref): collapse a connected set of sub-transitions into one coarse transition named `into`. The inverse of [`refine!`](@ref).
+"""
 const abstract! = abstract_transitions
 
 # ── §C: advisory boundary-consistency diagnostics ────────────────────────────────────────────

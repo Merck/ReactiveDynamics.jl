@@ -127,6 +127,11 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 # behavior-preserving. It lives as a struct field (NOT a 7th SCHEMA object) precisely so it never
 # enters `propertynames(net.columns)` — the eight reflection loops in compilers/solvers/joins/
 # equalize keep iterating exactly the six original objects' columns, untouched.
+"""
+    ReactantSpec
+
+One row of the promoted transition↔species incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `species` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge species by structurally REPOINTING the `species` FK instead of doing string surgery on names. A legitimately dynamic reactant (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `species = 0` and stashes its original term in `expr`; a static reactant has `species ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_reactant_specs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`reactant_specs`](@ref).
+"""
 struct ReactantSpec
     trans::Int              # FK → :T
     species::Int            # FK → :S, or 0 for a dynamic (expr-carried) reactant
@@ -171,9 +176,18 @@ Base.@deprecate_binding ReactionNetworkSchema ReactionNetwork
 # The promoted incidence table. `populate_reactant_specs!` (serialize.jl) fills it from `:trans`;
 # `equalize!` keeps it FK-exact across a species merge. A caller that wants the table on a model
 # authored before promotion can call `populate_reactant_specs!(net)` first (equalize! does).
+"""
+    reactant_specs(net) -> Vector{ReactantSpec}
+
+The promoted transition↔species incidence table of `net` (ADR 0003 Phase 2) — the FK-exact [`ReactantSpec`](@ref) rows. `populate_reactant_specs!` fills it from the `:trans` column and [`equalize!`](@ref) keeps it FK-exact across a species merge; it is empty for a freshly-constructed or not-yet-promoted model, so a caller wanting the table on such a model calls `populate_reactant_specs!(net)` first (as `equalize!` does).
+"""
 reactant_specs(net::ReactionNetwork) = net.reactants
 
-# The :S species name at index `i` (the inverse of `find_index`), used to check FK targets.
+"""
+    specname(net, i) -> Symbol
+
+The `:S` species name at row index `i` — the inverse of `find_index`, used to resolve/check a `ReactantSpec` FK target back to a name.
+"""
 specname(net::ReactionNetwork, i::Integer) = net[i, :specName]
 
 # The :S index of a species name on the STATIC schema (the ReactionNetworkProblem overload lives in
@@ -186,9 +200,12 @@ end
 # ── ADR 0009 §A / CONTRACT §11.1 — open-port roles (a closed tag on the Species record) ────────
 const PORT_ROLES = (:private, :input, :output, :shared)
 
-# The role of species `i`, defaulting to :private (a species authored before roles existed, or one
-# whose specRole cell is unset, is internal/namespaced). Assign-defaults seeds :private, but read
-# defensively so `port_role` is correct on a not-yet-defaulted schema too.
+"""
+    port_role(net, i::Integer) -> Symbol
+    port_role(net, name::Symbol) -> Union{Symbol, Nothing}
+
+The open-port role of a species (ADR 0009 §A / CONTRACT §11.1), one of `:private`, `:input`, `:output`, `:shared`. `:private` (the default for a species authored before roles existed or whose `specRole` cell is unset) is namespaced on compose; `:input`/`:output` are the open ports matched by [`@compose`](@ref); `:shared` is identified by bare name. Indexed by row `i`, or by `name` (returning `nothing` if no such species). Set roles with [`set_port_role!`](@ref) / `@port`.
+"""
 function port_role(net::ReactionNetwork, i::Integer)
     r = net[i, :specRole]
     return (r === nothing || r === missing) ? :private : r

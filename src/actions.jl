@@ -15,9 +15,16 @@ export Rule, ActionStmt
 export SetSpecies, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq
 export apply_action!, fire_rules!, activate!, deactivate!, set_guard!
 
+"""
+Abstract supertype of the closed, serializable action whitelist (ADR 0010 §C / ADR 0011, CONTRACT §12). The concrete family is `{SetSpecies, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq}` (plus the internal `RawExpr` legacy bridge). An `ActionStmt` is a declarative, eval-free record of a state mutation; `apply_action!` dispatches on the concrete type to perform it, and the closed set is the trust boundary for eval-free (de)serialization. Actions are the payload of a `Rule` (the endogenous decision channel) or a transition post-action; `Seq` composes them.
+"""
 abstract type ActionStmt end
 
-# Write a plain-species pool column (`state.u`). mode ∈ {:set, :inc}.
+"""
+    SetSpecies(name, value, mode = :set)
+
+Action (`ActionStmt`) that writes a plain-species pool column of `state.u`: for species `name`, evaluate `value` (an `Expr`/literal, through the seeded closure path) and either set it (`mode = :set`) or increment it (`mode = :inc`).
+"""
 struct SetSpecies <: ActionStmt
     name::Symbol
     value::Any            # Expr / literal, evaluated via context_eval
@@ -25,53 +32,87 @@ struct SetSpecies <: ActionStmt
 end
 SetSpecies(name, value) = SetSpecies(name, value, :set)
 
-# Write one or more model params.
+"""
+    SetParams(assigns)
+
+Action (`ActionStmt`) that writes one or more model parameters in `state.p`. `assigns` is a vector of `name => value-expr` pairs; each value is evaluated through the seeded closure path.
+"""
 struct SetParams <: ActionStmt
     assigns::Vector{Pair{Symbol, Any}}   # name => value-expr
 end
 
-# Write a field on the FIRING transition instance's bound token(s) (ADR 0008 §D).
-# Transition post-action ONLY — a standalone Rule has no bound token (validated at build).
+"""
+    SetField(field, value)
+
+Action (`ActionStmt`) that writes `field` on the FIRING transition instance's bound token(s) (ADR 0008 §D), evaluating `value` in the firing context. This is a transition post-action ONLY — a standalone `Rule` has no bound token, so `apply_action!` errors on it; use `SetTokens` for a Rule (validated at build).
+"""
 struct SetField <: ActionStmt
     field::Symbol
     value::Any
 end
 
-# Write a field over a SELECTED token population (ADR 0011 §A). Carries its own predicate,
-# so it is legal in a Rule. `predicate` is a TokenPredicate (ADR 0008, Stage C); until Stage C
-# lands it may also be a (kind, clauses) tuple — `apply_action!` dispatches on what is present.
+"""
+    SetTokens(predicate, assigns)
+
+Action (`ActionStmt`) that writes `assigns` (`field => value-expr` pairs) over the token population selected by `predicate` — the population generalization of `SetField` (ADR 0011 §A). Because it carries its own predicate it is legal in a `Rule`. Matched tokens are iterated in the `(species, creation_index)` total order (§9.2), and each value is evaluated IN THE SELECTED TOKEN's context (so `@field(name)` reads that token's own current attribute). `predicate` is a `TokenPredicate` (ADR 0008); a `(kind, clauses)` tuple form is also accepted.
+"""
 struct SetTokens <: ActionStmt
     predicate::Any
     assigns::Vector{Pair{Symbol, Any}}
 end
 
-# Create a structured token of a registered kind (ADR 0006 §C); the acquisition lever.
+"""
+    AddToken(kind, fields)
+
+Action (`ActionStmt`) that creates a structured token of a registry-registered `kind` (ADR 0006 §C) — the acquisition lever. `fields` is a vector of `name => value-expr` pairs; the values are evaluated, passed to the kind's registered constructor, and the new token is entangled into the network's structured container.
+"""
 struct AddToken <: ActionStmt
     kind::Symbol
     fields::Vector{Pair{Symbol, Any}}
 end
 
-# Toggle a transition line (ADR 0004 soft gate). `transition` is matched by transName/hash.
+"""
+    Activate(transition)
+
+Action (`ActionStmt`) that soft-activates a transition line (ADR 0004 soft gate) by setting its latching `transActivated` flag true. `transition` is matched by `transName`/`transHash`. Lowers to `activate!`.
+"""
 struct Activate <: ActionStmt
     transition::Symbol
 end
+"""
+    Deactivate(transition)
+
+Action (`ActionStmt`) that soft-deactivates a transition line (ADR 0004 soft gate) by clearing its latching `transActivated` flag. `transition` is matched by `transName`/`transHash`. Lowers to `deactivate!`.
+"""
 struct Deactivate <: ActionStmt
     transition::Symbol
 end
 
-# General-code escape hatch (ADR 0011 §B): lowers to `registry[fn](state, transition, args…)`.
-# The file carries only the NAME; the body is host Julia (trusted, obligations O1–O4).
+"""
+    Invoke(fn, args = Any[])
+
+Action (`ActionStmt`) — the general-code escape hatch (ADR 0011 §B). Lowers to `registry[fn](state, transition, args…)`: the serialized action carries only the NAME `fn`, resolved against the per-network host-function registry (never `eval`'d); the body is trusted host Julia bound by obligations O1–O4. `args` value-exprs are evaluated before the call; the result is discarded.
+"""
 struct Invoke <: ActionStmt
     fn::Symbol
     args::Vector{Any}
 end
 Invoke(fn) = Invoke(fn, Any[])
 
+"""
+    Log(msg)
+
+Action (`ActionStmt`) that appends `msg` to the state log (via `log`). If `msg` is an `Expr`/`Symbol` it is evaluated in context first, otherwise it is logged as-is.
+"""
 struct Log <: ActionStmt
     msg::Any
 end
 
-# Compose actions; run in order.
+"""
+    Seq(stmts)
+
+Action (`ActionStmt`) that composes a vector of `ActionStmt`s, applied in order. The composite that lets one `Rule` or transition post-action perform several mutations.
+"""
 struct Seq <: ActionStmt
     stmts::Vector{ActionStmt}
 end
@@ -87,8 +128,11 @@ const ACTION_VERBS =
     (:set_species, :set_params, :set_field, :set_tokens, :add_token, :activate, :deactivate, :invoke, :log, :seq)
 
 # ── A Rule is the repaired Event (ADR 0010 §A) ──────────────────────────────────────────
-# guard resolves to Bool (fire once) or numeric v (fire rand(rng, Poisson(v)) times).
-# fire_mode ∈ {:every_tick, :once}; `enabled` is run-state reset by _reinit! (§4 D7).
+"""
+    Rule(id, guard, action; fire_mode = :every_tick, enabled = true)
+
+The endogenous decision channel (ADR 0010 §A, CONTRACT §12) — a `(guard, action, fire_mode)` triple evaluated once per tick at a fixed point in `_step!` (step 10, via `fire_rules!`). `guard` is an `Expr`/literal resolving to a `Bool` (fire once when true) or a numeric `v` (fire `rand(rng, Poisson(v))` times, so the RNG-threaded rate stays deterministic); `action` is any `ActionStmt`. `fire_mode ∈ {:every_tick, :once}` — an `:once` rule latches its `enabled` flag off after it first fires. `enabled` is run-state reset by `_reinit!` (§4 D7). Unlike a transition's stateless per-tick `guard`, a Rule has no bound token, so its action must be one of the population/global verbs (`SetTokens`, not `SetField`).
+"""
 mutable struct Rule
     id::Symbol
     guard::Any           # Expr / literal, resolves to Bool or numeric
@@ -109,22 +153,34 @@ function _transition_index(state::ReactionNetworkProblem, t::Symbol)
     return findfirst(i -> state.network[i, :transName] == t, row_ids(state, :T))
 end
 
+"""
+    activate!(state, t::Symbol)
+
+Soft-activate the transition line named `t` (matched by `transName`/`transHash`) on a live `state`, by setting its latching `transActivated` gate true (ADR 0004 soft gate). Errors if no transition matches. The imperative twin of the `Activate` action.
+"""
 function activate!(state::ReactionNetworkProblem, t::Symbol)
     ix = _transition_index(state, t)
     isnothing(ix) && error("activate!: no transition named $t")
     return state.transition_recipes[:transActivated][ix] = true
 end
 
+"""
+    deactivate!(state, t::Symbol)
+
+Soft-deactivate the transition line named `t` (matched by `transName`/`transHash`) on a live `state`, by clearing its latching `transActivated` gate (ADR 0004 soft gate). Errors if no transition matches. The imperative twin of the `Deactivate` action.
+"""
 function deactivate!(state::ReactionNetworkProblem, t::Symbol)
     ix = _transition_index(state, t)
     isnothing(ix) && error("deactivate!: no transition named $t")
     return state.transition_recipes[:transActivated][ix] = false
 end
 
-# Attach a stateless per-tick guard to a transition (ADR 0010 §B). `guard` is an Expr/literal
-# (e.g. `:(cash >= phase3_cost)`); it is compiled to the seeded closure and AND-ed with the
-# latching transActivated gate in sample_transitions!. A transition with a false guard makes
-# no genesis proposal that tick.
+# Attach a stateless per-tick guard to a transition (ADR 0010 §B).
+"""
+    set_guard!(state, t::Symbol, guard)
+
+Attach a stateless per-tick `guard` to the transition named `t` (ADR 0010 §B). `guard` is an `Expr`/literal (e.g. `:(cash >= phase3_cost)`) compiled to the seeded closure and AND-ed with the latching `transActivated` gate in `sample_transitions!` — a transition whose guard evaluates false makes no genesis proposal that tick. Errors if no transition matches.
+"""
 function set_guard!(state::ReactionNetworkProblem, t::Symbol, guard)
     ix = _transition_index(state, t)
     isnothing(ix) && error("set_guard!: no transition named $t")
@@ -155,6 +211,11 @@ function _eval_value(state::ReactionNetworkProblem, transition, v)
 end
 
 # ── apply_action! — the lowering table (ADR 0010 §C / ADR 0011 §C), all eval-free ───────
+"""
+    apply_action!(state, transition, a::ActionStmt)
+
+Perform the action `a` against `state`, dispatching on the concrete `ActionStmt` type — the eval-free lowering table for the closed action family (ADR 0010 §C / ADR 0011 §C). `transition` is the firing transition instance for a transition post-action, or `nothing` when the action comes from a `Rule`; it carries through to the seeded-closure value eval (params/observables/time/Sample). `SetField` requires a non-`nothing` `transition` (it writes bound tokens); `AddToken`/`Invoke` resolve their name against the per-network registry and never `eval`. `Seq` applies its statements in order.
+"""
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetSpecies)
     ix = find_index(a.name, state)
     isnothing(ix) && error("SetSpecies: unknown species $(a.name)")
@@ -238,6 +299,11 @@ apply_action!(state::ReactionNetworkProblem, transition, a::RawExpr) =
     (_eval_value(state, transition, a.expr); nothing)
 
 # ── Fire all rules once (ADR 0010 §A/§D) — invoked at _step! step 10 ────────────────────
+"""
+    fire_rules!(state)
+
+Evaluate every enabled `Rule` in `state.rules` once, in order — the endogenous decision channel, invoked at `_step!` step 10 (ADR 0010 §A/§D). For each rule, the guard is evaluated (`nothing` transition context): a `Bool` fires the action 0/1 times, a numeric `v` fires it `rand(state.rng, Poisson(v))` times (RNG-threaded for determinism). A `:once` rule that fired latches its `enabled` flag off (reset by `_reinit!`, §4 D7). Returns `state`.
+"""
 function fire_rules!(state::ReactionNetworkProblem)
     for r in state.rules
         r.enabled || continue

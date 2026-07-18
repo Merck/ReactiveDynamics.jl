@@ -11,6 +11,11 @@ export node_to_dict, node_from_dict, model_to_dict, build_network_from_dict
 export from_json_model, to_json_model
 
 # ── ExprNode ⟷ JSON dict (the recursive node-tagged union) ──────────────────────────────
+"""
+    node_to_dict(n::ExprNode) -> Dict{String, Any}
+
+Serialize one [`ExprNode`](@ref) to its node-tagged JSON dict — the recursive half of the eval-free (de)serialization. Each dict carries a `"node"` tag (`"const"`/`"ref"`/`"call"`/`"sample"`/`"timeref"`/`"choose"`/`"field"`/`"externalref"`) plus that node's fields, with child nodes serialized recursively; a `Symbol`-valued `Const` is flagged so [`node_from_dict`](@ref) can recover it as a Symbol rather than a string. Never emits a Julia source string. The inverse is [`node_from_dict`](@ref).
+"""
 node_to_dict(n::Const) = Dict{String, Any}(
     "node" => "const",
     "value" => n.value isa Symbol ? string(n.value) : n.value,
@@ -33,6 +38,11 @@ node_to_dict(n::Field) = Dict{String, Any}("node" => "field", "name" => string(n
 # the foreign-agent topology that fills it lives host-side in add_wire! (Invariant 4, eval-free).
 node_to_dict(n::ExternalRef) = Dict{String, Any}("node" => "externalref", "port" => string(n.port))
 
+"""
+    node_from_dict(d::AbstractDict) -> ExprNode
+
+Parse a node-tagged JSON dict back to the typed [`ExprNode`](@ref) it denotes — the inverse of [`node_to_dict`](@ref) and the recursive half of the eval-free deserialization. Dispatches on the `"node"` tag; child nodes are parsed recursively. NEVER `Meta.parse`/`eval`s — a `"const"` string is recovered as a Symbol only when its `"symbol"` flag is set (else Int/Float64/Bool per the JSON scalar), and an unknown tag is a hard `error`. An out-of-whitelist op/dist is NOT caught here (it round-trips as a Symbol) — `validate` is the whitelist gate.
+"""
 function node_from_dict(d::AbstractDict)
     tag = d["node"]
     if tag == "const"
@@ -75,6 +85,11 @@ _attr_node(x::AbstractString) = Const(Symbol(x))   # a string scalar is a litera
 # from reactants[] into the :trans reaction line (E4); for E2 a transition may carry an explicit
 # `reaction` string-free node-list, but the minimal path supports params + species + a transition
 # whose reactants[] are plain (no modality/predicate) — assembled by assemble_reaction_line (E4).
+"""
+    build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()) -> ReactionNetwork
+
+Build a static [`ReactionNetwork`](@ref) store from a parsed model dict `d`, eval-free. Reads the top-level `params[]`/`species[]`/`transitions[]`/`reactants[]`/`observables[]` arrays, lowering each attribute [`ExprNode`](@ref) (or bare literal) to the `Expr` column the constructor consumes via [`to_expr`](@ref) — param values are JSON numbers taken verbatim (never `eval`'d), and a transition's `reactants[]` assemble into its `:trans` reaction-line Expr. Assumes `d` has already passed `validate`; it is the structural core of [`from_json_model`](@ref) and the inverse of [`model_to_dict`](@ref). Host functions referenced by an action/genesis kind are resolved by NAME through `registry`, never carried in `d`.
+"""
 function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}())
     net = ReactionNetwork()
 
@@ -164,6 +179,11 @@ function include_model(path::AbstractString; registry = Dict{Symbol, Any}())
 end
 
 # ── from_json / to_json (the model envelope) ────────────────────────────────────────────
+"""
+    from_json_model(json::AbstractString; seed = nothing, registry = Dict{Symbol, Any}(), population = []) -> ReactionNetworkProblem
+
+Parse a single-JSON model document into a runnable [`ReactionNetworkProblem`](@ref) — the public IMPORT half of the round-trip (its inverse is [`to_json_model`](@ref)). Pipeline: `JSON.parse` → [`validate`](@ref) (gates on `isempty(diags)`, else a hard `error` listing the diagnostics) → [`build_network_from_dict`](@ref) → construct. Eval-free throughout: a model IS data. `meta.tspan` (the simulation horizon) is REQUIRED; `meta.seed` supplies `seed` when the kwarg is `nothing`. `rules[]` (ADR 0010) become typed `Rule`s and `inputs[]` (ADR 0012 §B1) become the declared external read ports + pre-wire defaults. Host functions named by an action/genesis `kind` are resolved through `registry`; the AA wiring that fills `inputs[]` ports is host-side, never in the document.
+"""
 function from_json_model(json::AbstractString; seed = nothing, registry = Dict{Symbol, Any}(), population = [])
     d = JSON.parse(json)
     diags = validate(d; registry = registry)
@@ -209,6 +229,11 @@ end
 # Expr's bare symbols are classified back to the right NodeRef kind (species vs param), matching
 # how the authoring DSL named them — exactly the inverse of to_expr's name→state.u[i]/state.p[:k]
 # substitution (ADR 0005 §66).
+"""
+    model_to_dict(net::ReactionNetwork; meta = Dict{String, Any}(), rules = [], inputs = Dict{Symbol, Any}()) -> Dict{String, Any}
+
+The EXPORT envelope: emit the JSON dict of a static [`ReactionNetwork`](@ref) — every top-level array [`build_network_from_dict`](@ref) reads back (`params[]`/`species[]`/`transitions[]`/`reactants[]`, plus `observables[]`/`rules[]`/`inputs[]` when present), and hence its structural inverse. Each stored attribute `Expr` is lowered back to an [`ExprNode`](@ref) dict via [`from_expr`](@ref), with the net's species/param NAME sets threaded through so a bare symbol classifies to the right `NodeRef` kind (matching how the DSL named it). `rules`/`inputs` are passed through by `to_json_model(::ReactionNetworkProblem)` since they live on the problem, not the net; legacy `:E` event rows and `RawExpr` actions are intentionally not emitted (not JSON-serializable). Called by [`to_json_model`](@ref).
+"""
 function model_to_dict(
         net::ReactionNetwork; meta = Dict{String, Any}(), rules = [],
         inputs = Dict{Symbol, Any}()
@@ -249,6 +274,12 @@ function model_to_dict(
     return d
 end
 
+"""
+    to_json_model(net::ReactionNetwork; meta = Dict{String, Any}()) -> String
+    to_json_model(prob::ReactionNetworkProblem; meta = Dict{String, Any}()) -> String
+
+Serialize a model to a single JSON string — the public EXPORT half of the round-trip (its inverse is [`from_json_model`](@ref); `to_json_model` ∘ `from_json_model` reconstructs an equivalent model). Delegates to [`model_to_dict`](@ref) then `JSON.json`. Given a constructed [`ReactionNetworkProblem`](@ref) it also round-trips the problem-level state the net does not carry: the typed `Rule`s (via `rules[]`), the declared external-input ports + defaults (via `inputs[]`), and — reconstructed into `meta` from the solver fields when the caller supplies none — `tspan`/`dt`/`seed`, so the exported document is COMPLETE and re-importable on its own (`from_json_model` requires `meta.tspan`). An explicit `meta` always wins. Host functions are referenced by NAME through the registry, never embedded.
+"""
 to_json_model(net::ReactionNetwork; meta = Dict{String, Any}()) =
     JSON.json(model_to_dict(net; meta = meta))
 # A constructed model also carries its typed Rules — round-trip them through rules[] — and its

@@ -349,6 +349,18 @@ function recursively_find_reactants!(reactants, pcs, ex)
     return ex
 end
 
+"""
+    @append_transitions net transitions
+
+Append a runtime-built collection of reaction lines to an existing `net`. `transitions` evaluates to a collection of strings, each one reaction line in the [`@reaction_network`](@ref) surface syntax; they are joined into a single `begin…end` block, parsed, and handed to `@push`. Use this when the set of transitions is assembled programmatically (a vector built in a loop, read from a table) rather than written literally — the literal-authoring path is `@push`.
+
+# Examples
+
+```julia
+lines = ["ν * I, I --> R, name => I2R", "γ, R --> S, name => R2S"]
+@append_transitions net lines
+```
+"""
 macro append_transitions(network, transitions)
     return quote
         transitions_expr = """

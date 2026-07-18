@@ -21,6 +21,11 @@ function get_eqs_ff(eq)
     end
 end
 
+"""
+    equalize!(net, eqs = []) -> ReactionNetwork
+
+Identify (collapse) sets of species in the static `net`, in place. Each block in `eqs` names species to merge — by exact `:S` index, by bare name, or by a `:catchall` name match (matching a `__`-namespaced suffix) — into a single surviving row aliased to the block's `:alias` (or its first entry). Missing attribute cells on the survivor are filled from the merged rows, every reference to a removed name is rewritten, and the removed rows are dropped by swap-and-pop; the promoted [`ReactantSpec`](@ref) table is then rebuilt so each reactant's `species` FK is repointed structurally onto the survivor (§7.4/J7, ADR 0003 Phase 2). Authoring-time only — FORBIDDEN on a live/stepping model, since it reindexes. [`@equalize`](@ref) is the declarative macro form.
+"""
 function equalize!(net::ReactionNetwork, eqs = [])
     specmap = Dict()
     for block in eqs

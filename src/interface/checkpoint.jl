@@ -14,6 +14,11 @@
 
 export StateDump, dump_state, restore
 
+"""
+    StateDump
+
+An eval-free, JSON-representable snapshot of a live run at a TICK BOUNDARY (ADR 0007 §C / CONTRACT §10.5), produced by [`dump_state`](@ref) and consumed by [`restore`](@ref). It holds the declarative initial marking (§B) PLUS the dynamic run state: the model hash, the clock (`t`, `tspan`, `dt`), the RNG state (Xoshiro `s0..s4`), the creation counters and `name → creation_index` map, the plain-species column vector `u`, the full token population as `(species, name, creation_index, fields, bound)` tuples with CURRENT field values, and the `once`-rule enabled latches. Eval-free by construction: tokens carry field VALUES + a kind NAME resolved through the host registry on restore, never Julia source (§8.4 S4 / ADR 0006 §B). A zero-tick dump with nothing in flight IS an initial marking — the "initial marking = checkpoint" identity (§C).
+"""
 struct StateDump
     model_hash::UInt64
     t::Float64
@@ -35,6 +40,13 @@ const _PROTOCOL_FIELDS = (
 )
 _token_attr_fields(tok) = filter(f -> !(f in _PROTOCOL_FIELDS), fieldnames(typeof(tok)))
 
+"""
+    dump_state(problem) -> StateDump
+
+Serialize a live `problem` into an eval-free [`StateDump`](@ref) for halt/resume or the zero-tick "dump == initial marking" identity (ADR 0007 §C / CONTRACT §10.5). Captures the clock, RNG state, creation counters, plain-species `u`, the token population with each token's CURRENT field values, and the `once`-rule latches; pair with [`restore`](@ref) to reconstruct the run.
+
+DELIBERATE DEFERRAL (Milestone-1): `dump_state` requires a CLEAN TICK BOUNDARY — an empty `ongoing` transition set — and `error`s otherwise. Mid-cycle in-flight `Transition` instances (their frozen sampled-attr dicts and bound-token relink-by-uuid — the §C open question) are NOT serialized; the heavier mid-cycle resume is deferred. Step to a boundary where no instance is mid-cycle (or `reinit!`) before dumping.
+"""
 function dump_state(problem::ReactionNetworkProblem)
     isempty(problem.ongoing_transitions) || error(
         "dump_state: $(length(problem.ongoing_transitions)) in-flight transition(s) — dump is " *
@@ -70,10 +82,11 @@ function dump_state(problem::ReactionNetworkProblem)
     )
 end
 
-# Restore is construction with overlays (ADR 0007 §C): build a fresh problem from the spec, then
-# overlay the dumped clock/RNG/counters/u and rebuild the token population from the dump (each
-# token's kind resolved via the registry, fields set to the dumped literal values). The structured
-# u columns are re-derived by update_u_structured! from the restored population, not copied.
+"""
+    restore(spec, dump::StateDump; registry = Dict{Symbol, Any}(), kwargs...) -> ReactionNetworkProblem
+
+Reconstruct a live run from a [`StateDump`](@ref) — construction with overlays (ADR 0007 §C). Builds a fresh `ReactionNetworkProblem` from `spec`, then overlays the dumped clock/RNG/creation-counters/`u` and rebuilds the token population in creation-index order — each token's kind resolved via the `registry` to a host constructor, its fields set to the dumped literal values (eval-free; no Julia source is carried). Structured `u` columns are re-derived from the restored population, not copied. Warns on a model-hash mismatch (restoring against a different `spec` is ill-defined). `kwargs` are forwarded to the `ReactionNetworkProblem` constructor.
+"""
 function restore(spec, dump::StateDump; registry = Dict{Symbol, Any}(), kwargs...)
     hash(spec) == dump.model_hash || @warn "restore: model hash mismatch — restoring a dump " *
         "against a different spec is ill-defined (ADR 0007 §C open question)."

@@ -9,6 +9,11 @@ using Random
 # bound to finished successfully; `valuation` is its current mark-to-market; `entries` is the
 # append-only `(t, kind, amount, transition_name)` audit trail. See ledger.jl for the attribution
 # rule and its documented boundary.
+"""
+    ProgramLedger(species, creation_index)
+
+Per-program (per-structured-token) ledger accumulator (CONTRACT §12, MVP finding D — the attribution logic lives in `src/ledger.jl`). Tracks one structured token's running economics: `cost_incurred` (capital burned on its behalf), `reward_realized` (reward credited when a transition it was bound to finished successfully), `valuation` (current mark-to-market), and `entries` — the append-only `(t, kind, amount, transition_name)` audit trail. `species`/`creation_index` identify the program. Per-program rows plus the state's `unattributed_cost`/`unattributed_reward` buckets sum exactly to the aggregate ledger rows.
+"""
 mutable struct ProgramLedger
     species::Symbol
     creation_index::Int
@@ -60,6 +65,9 @@ Base.setindex!(state::Transition, val, key) = state.trans[key] = val
     sampled::Any
 end
 
+"""
+The live simulation state — an AlgebraicAgents `@aagent`, so a running network is itself a node in a larger heterogeneous AA hierarchy (an `AbstractAlgebraicAgent`). It is constructed from a static authoring store by the `ReactionNetworkProblem(net; …)` outer constructor and advanced by the `_step!` loop. Key fields: `.network` (the static `ReactionNetwork` IR store the run was compiled from), `.u` (the current plain-species marking vector), `.p` (parameters), `.t`/`.tspan`/`.dt` (time control), `.sol` (the per-step marking log as a `DataFrame`), `.log` (the event/message log), `.observables`, `.ongoing_transitions` (in-flight transition instances), `.program_ledgers` (per-program economics, §12), and `.token_trajectory` (per-token trajectory log, §14.1). Determinism is contractual (§4): `.rng` is the state-owned RNG that is the SOLE source of randomness in the step loop, `.seed` records the realized construction seed, and `.initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly. The endogenous decision channel lives in `.rules`/`.registry`; the runtime store is append-only (ADR 0004), so compiled attribute closures may position-index it safely.
+"""
 @aagent struct ReactionNetworkProblem
     network::ReactionNetwork
 

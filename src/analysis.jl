@@ -482,6 +482,11 @@ end
 export MarkingPlot, SaturationPlot, ValuationPlot, LedgerPlot,
     TokenTrajectoryPlot, EnsembleBar, TreatmentEffectPlot, ThroughputPlot
 
+"""
+    MarkingPlot(prob; vars = all species)
+
+Plot spec (ADR 0014 recipe 1) for species/token COUNTS over time — the marking trajectory of the named `vars` across a finished run's `prob.sol`. Realized by a `@recipe` in `RDPlotsExt`; `plot(MarkingPlot(prob))` needs `Plots` loaded.
+"""
 struct MarkingPlot              # recipe 1 — species/token counts over time (generalizes _draw)
     prob::ReactionNetworkProblem
     vars::Vector{String}
@@ -489,6 +494,11 @@ end
 MarkingPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :specName])) =
     MarkingPlot(prob, collect(String.(vars)))
 
+"""
+    SaturationPlot(prob; vars = all species)
+
+Plot spec (ADR 0014 recipe 2) for RESOURCE UTILIZATION over time — the troughs of the named resource pools `vars` across a finished run, showing when a `@conserved`/`@rate` resource is drawn down (saturated). Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct SaturationPlot           # recipe 2 — resource utilization / pool troughs
     prob::ReactionNetworkProblem
     vars::Vector{String}
@@ -496,14 +506,29 @@ end
 SaturationPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :specName])) =
     SaturationPlot(prob, collect(String.(vars)))
 
+"""
+    ValuationPlot(prob)
+
+Plot spec (ADR 0014 recipe 3) for the portfolio VALUATION curve — the cumulative cost/reward/valuation series the ledger logged over a finished run. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct ValuationPlot            # recipe 3 — portfolio valuation / cost / reward curve
     prob::ReactionNetworkProblem
 end
 
+"""
+    LedgerPlot(prob)
+
+Plot spec (ADR 0014 recipe 4) for PER-PROGRAM cost/reward bars — the final per-program totals from `program_ledger(prob)`, one bar group per program. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct LedgerPlot               # recipe 4 — per-program cost/reward bars from program_ledger
     prob::ReactionNetworkProblem
 end
 
+"""
+    TokenTrajectoryPlot(prob, field; pred = nothing)
+
+Plot spec (ADR 0014 recipe 5) for one logged `field`'s PER-TOKEN paths over time, overlaid with the cohort's typical envelope band (median + IQR, from [`trajectory_envelope`](@ref)). The cohort is all opted-in tokens, or those matching the `TokenPredicate` `pred`. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct TokenTrajectoryPlot      # recipe 5 — a field's per-token paths + the typical envelope band
     prob::ReactionNetworkProblem
     field::Symbol
@@ -512,17 +537,32 @@ end
 TokenTrajectoryPlot(prob::ReactionNetworkProblem, field::Symbol; pred = nothing) =
     TokenTrajectoryPlot(prob, field, pred)
 
+"""
+    EnsembleBar(ens, metric)
+
+Plot spec (ADR 0014 recipe 6a) for the DISTRIBUTION of a per-run scalar `metric(member) -> Real` across an ensemble's members — a histogram of the metric over the [`ensemble`](@ref) runs. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct EnsembleBar              # recipe 6a — per-run metric distribution (histogram) across members
     ens::EnsembleProblem
     metric::Any
 end
 
+"""
+    TreatmentEffectPlot(baseline, deal, metric)
+
+Plot spec (ADR 0014 recipe 6b) for an A/B comparison: the `metric` distributions of the `baseline` and `deal` ensembles side by side, with the treatment effect Δ (see [`treatment_effect`](@ref)) annotated. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct TreatmentEffectPlot      # recipe 6b — baseline vs deal metric distributions, Δ annotated
     baseline::EnsembleProblem
     deal::EnsembleProblem
     metric::Any
 end
 
+"""
+    ThroughputPlot(prob)
+
+Plot spec (ADR 0014 recipe 7) for THROUGHPUT over time — the number of transition firings and terminations per tick across a finished run. Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
+"""
 struct ThroughputPlot           # recipe 7 — firings / terminations per tick
     prob::ReactionNetworkProblem
 end

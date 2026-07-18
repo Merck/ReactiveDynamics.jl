@@ -6,33 +6,73 @@
 # The runtime hot path is untouched — this is purely the authoring/serialization boundary, so the
 # closed whitelists below are the only Julia ever produced from an inert model document.
 
+"""
+    ExprNode
+
+Abstract supertype of the closed, eval-free expression IR (ADR 0005). Every time-varying attribute (rate, stoich, cycletime, prob_of_success, priority, …) and action value is authored — by a human or an LLM — as a tagged-union tree of `ExprNode`s, NEVER as a Julia source string. The union is CLOSED (the concrete leaves/nodes below) and its operator/distribution/reference vocabulary is fixed by the [`OP_WHITELIST`](@ref)/[`DIST_WHITELIST`](@ref)/[`REF_KINDS`](@ref) whitelists, so a model can be (de)serialized and validated without ever `Meta.parse`/`eval`-ing a field — those whitelists are the only Julia ever produced from an inert model document (the trust boundary). [`to_expr`](@ref) lowers a tree to EXACTLY the `Expr` the DSL produces (compiled to a closure ONCE at construction); [`from_expr`](@ref) is the structural inverse. The runtime hot path is untouched — this is purely the authoring/serialization boundary.
+"""
 abstract type ExprNode end
 
 # Scalar leaves and the arithmetic/comparison core.
+"""
+    Const(value)
+
+A scalar literal leaf: a `Float64`, `Int`, `Bool`, or `Symbol`. Evaluates to `value` — a `Symbol` lowers to a `QuoteNode` (a literal like `:Phase2`, e.g. a lifecycle phase), everything else to the bare value.
+"""
 struct Const <: ExprNode
     value::Union{Float64, Int, Bool, Symbol}   # Symbol ⇒ a literal like :Phase2 (lowers to a QuoteNode)
 end
+"""
+    NodeRef(kind, name)
+
+A named reference to a declared model entity — `kind ∈ `[`REF_KINDS`](@ref)` (:species/:param/:obs) selects which namespace `name` lives in. Lowers to the bare `name` Symbol; `wrap_fun`/`compile_attrs` then substitute a species → `state.u[i]` and a param → `state.p[:name]` at compile time. It is `NodeRef`, NOT `Ref` — a distinct IR leaf, not Julia's `Base.Ref`.
+"""
 struct NodeRef <: ExprNode
     kind::Symbol   # ∈ REF_KINDS — what `name` refers to
     name::Symbol
 end
+"""
+    Call(op, args)
+
+A whitelisted operator application: `op ∈ `[`OP_WHITELIST`](@ref) over child-`ExprNode` `args`. Evaluates to `op(args...)`. Short-circuit boolean ops (`:&&`/`:||`) lower to an `Expr` HEAD (and take exactly two args); every other op lowers to an ordinary `:call`.
+"""
 struct Call <: ExprNode
     op::Symbol     # ∈ OP_WHITELIST
     args::Vector{ExprNode}
 end
 
 # Distribution draw, time reference, and weighted choice (the stochastic / dynamic core, E3).
+"""
+    Sample(dist, args)
+
+A distribution draw: `dist ∈ `[`DIST_WHITELIST`](@ref) with `ExprNode` parameter `args`. Lowers to `rand(state.rng, dist(args...))`, so the draw routes through the state-owned RNG (§4 D5) — the stochastic core stays deterministic under `(model, seed)`.
+"""
 struct Sample <: ExprNode
     dist::Symbol   # ∈ DIST_WHITELIST
     args::Vector{ExprNode}
 end
+"""
+    TimeRef()
+
+The current-simulation-time leaf. Lowers to the reserved `@t()` macrocall, which `wrap_fun` rewrites to `t(state)`.
+"""
 struct TimeRef <: ExprNode end
+"""
+    Choose(alts)
+
+A weighted choice over `(weight, value)` alternatives (`alts::Vector{Tuple{Float64, ExprNode}}`). Lowers to the `@choose((w1, v1), (w2, v2), …)` macrocall the reaction-line resolver consumes.
+"""
 struct Choose <: ExprNode
     alts::Vector{Tuple{Float64, ExprNode}}   # (weight, value) alternatives
 end
 
 # Bound-token field read (ADR 0008 §D) — resolved against the firing instance's bound token at
 # apply time; legal only in a SetField/@advance value context (validate rule 7).
+"""
+    Field(name)
+
+A bound-token field read (ADR 0008 §D): resolved against the firing instance's bound token at apply time. Lowers to `@field(name)`. Legal ONLY in a `SetField`/`@advance` value context (validate rule 7) — there is no bound token elsewhere.
+"""
 struct Field <: ExprNode
     name::Symbol
 end
@@ -44,6 +84,11 @@ end
 # RNG-free: it returns the value pinned at `_prestep!` (the source's previous-tick-boundary
 # projection), so a rate and a guard reading the same port in one tick agree (Invariant 2). An
 # undeclared port is a `validate` rule-8 diagnostic, never an eval.
+"""
+    ExternalRef(port)
+
+A latched read of a declared `inputs[]` `port` (ADR 0012 §B2) — a closed leaf, sibling of `NodeRef`/`TimeRef`. Lowers to `state.external_inputs[:port]`, returning the value pinned at `_prestep!` (the foreign source's previous-tick-boundary projection), so it is `𝓕ₜ`-measurable and RNG-free and a rate and a guard reading the same port in one tick agree (Invariant 2). The `port` is a NAME only; the foreign-agent topology that fills it lives host-side in `add_wire!`, never in the RD document (Invariant 4). An undeclared port is a `validate` rule-8 diagnostic, never an eval.
+"""
 struct ExternalRef <: ExprNode
     port::Symbol   # a declared inputs[] port name; reads state.external_inputs[port]
 end
@@ -55,12 +100,27 @@ Base.:(==)(a::ExprNode, b::ExprNode) =
 Base.hash(n::ExprNode, h::UInt) =
     foldr((f, acc) -> hash(getfield(n, f), acc), fieldnames(typeof(n)); init = hash(typeof(n), h))
 
+"""
+    OP_WHITELIST
+
+The closed tuple of operator Symbols a [`Call`](@ref) node may carry (arithmetic, comparison, boolean, and a few unary math functions). Part of the eval-free trust boundary: `to_expr` refuses any `Call` op outside this set, and `from_expr`/`validate` reject an unknown op — so no arbitrary Julia function can enter a model from an inert document.
+"""
 const OP_WHITELIST = (
     :+, :-, :*, :/, :^, :>, :<, :>=, :<=, :(==), :!=, :&&, :||, :!,
     :min, :max, :exp, :log, :floor, :ceil, :abs,
 )
+"""
+    DIST_WHITELIST
+
+The closed tuple of distribution Symbols a [`Sample`](@ref) node may draw from. Part of the eval-free trust boundary: `to_expr` refuses any `Sample` dist outside this set, and `from_expr`/`validate` reject an unknown dist — the only distributions a model document can name.
+"""
 const DIST_WHITELIST =
     (:Poisson, :Binomial, :Normal, :Uniform, :Exponential, :Bernoulli, :LogNormal, :Gamma, :Beta)
+"""
+    REF_KINDS
+
+The closed tuple of reference kinds a [`NodeRef`](@ref) may carry: `:species`, `:param`, `:obs`. `validate` checks a ref's kind is in this set AND that its name is declared in the corresponding pool — part of the eval-free trust boundary.
+"""
 const REF_KINDS = (:species, :param, :obs)
 # Short-circuit boolean ops use an Expr HEAD (not a :call); the rest are ordinary calls.
 const _SHORTCIRCUIT_OPS = (:&&, :||)
@@ -69,6 +129,11 @@ export ExprNode, Const, NodeRef, Call, Sample, TimeRef, Choose, Field, ExternalR
 export OP_WHITELIST, DIST_WHITELIST, REF_KINDS, to_expr, from_expr
 
 # ── to_expr: lower a typed node to the exact Expr the DSL/compilers consume ──────────────
+"""
+    to_expr(n::ExprNode)
+
+Lower a typed IR node to EXACTLY the Julia `Expr` (or bare literal/Symbol) the `@reaction_network` DSL and `compile_attrs` consume — the only place Julia is produced from an inert model, and hence the eval-free trust boundary. Each concrete node lowers as documented on its type: [`Const`](@ref) → literal/`QuoteNode`, [`NodeRef`](@ref) → bare Symbol, [`Call`](@ref) → whitelisted call/short-circuit `Expr`, [`Sample`](@ref) → `rand(state.rng, …)`, [`TimeRef`](@ref) → `@t()`, [`Choose`](@ref) → `@choose(…)`, [`Field`](@ref) → `@field(name)`, [`ExternalRef`](@ref) → `state.external_inputs[:port]`. A `Call`/`Sample` whose op/dist is not in [`OP_WHITELIST`](@ref)/[`DIST_WHITELIST`](@ref) is a hard `error`. The structural inverse is [`from_expr`](@ref).
+"""
 to_expr(n::Const) = n.value isa Symbol ? QuoteNode(n.value) : n.value
 to_expr(n::NodeRef) = n.name   # a bare Symbol; wrap_fun substitutes species→state.u[i], param→state.p[:name]
 
@@ -112,6 +177,11 @@ to_expr(n::ExternalRef) = :(state.external_inputs[$(QuoteNode(n.port))])
 
 # ── from_expr: structural inverse, classifying bare symbols via the known species/param sets ──
 # Used to lower a DSL-authored attribute Expr back to a typed tree (for to_json of a DSL model).
+"""
+    from_expr(ex; species = Set{Symbol}(), params = Set{Symbol}()) -> ExprNode
+
+Structural inverse of [`to_expr`](@ref): lower a DSL-authored attribute `Expr` back to a typed [`ExprNode`](@ref) tree (so a DSL/loaded model can be serialized to JSON). Bare symbols are classified via the known `species`/`params` name sets — a symbol in `params` becomes a `NodeRef(:param, …)`, otherwise a `NodeRef(:species, …)` (the default for an unclassified bare symbol). Recognizes the exact lowered shapes `to_expr` emits — `rand(state.rng, Dist(…))` → [`Sample`](@ref), `state.external_inputs[:port]` → [`ExternalRef`](@ref), the `@t`/`@field`/`@choose` macrocalls, short-circuit boolean heads — and rejects a call head outside [`OP_WHITELIST`](@ref). Result nodes are [`NodeRef`](@ref)s (not Julia `Ref`s).
+"""
 function from_expr(ex; species::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} = Set{Symbol}())
     if ex isa Bool
         return Const(ex)

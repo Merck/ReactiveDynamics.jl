@@ -909,6 +909,13 @@ function validate_modalities(net::ReactionNetwork)
     return net
 end
 
+"""
+    ReactionNetworkProblem(net::ReactionNetwork, u0 = Dict(), p = Dict(); name = "reaction_network", seed = nothing, tspan, dt = 1, kwargs...)
+
+Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-species initial markings by name (defaulting to each species' `specInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
+
+The `seed` kwarg owns the per-run RNG (CONTRACT §4): it fixes the state-owned stream so a run is fully determined by `(model, seed)`; absent, a fresh seed is drawn from system entropy and the REALIZED value stored on `.seed`, so any run stays replayable. `initial_rng` snapshots the stream at t=0 for `_reinit!`.
+"""
 function ReactionNetworkProblem(
         net::ReactionNetwork,
         u0 = Dict(),
