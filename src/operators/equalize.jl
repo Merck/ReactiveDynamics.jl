@@ -1,5 +1,9 @@
 export equalize!, @equalize
 
+# Parse one entry of an `@equalize` equation into a `(qualifier, name)` pair: a `@catchall`/`@alias`
+# macrocall yields `(:catchall, name)`/`(:alias, name)`, a bare species yields `(nothing, name)`.
+# Dotted names are flattened by `underscorize`. The "_ff" suffix distinguishes it from the join
+# operators' `get_eqs`.
 expand_name_ff(ex) =
 if ex isa Expr && isexpr(ex, :macrocall)
     (macroname(ex), underscorize(ex.args[end]))
@@ -8,7 +12,9 @@ else
 end
 
 """
-Parse species equation blocks.
+Flatten one `@equalize` equation block into the list of `(qualifier, name)` pairs to be merged.
+Recurses through a chained `A = B = C` (right-nested `:(=)` Exprs) so every member of the chain is
+collected, tagging each via [`expand_name_ff`](@ref). Consumed by the [`@equalize`](@ref) macro.
 """
 function get_eqs_ff(eq)
     return if eq isa Expr && isexpr(eq, :(=))
@@ -81,19 +87,20 @@ function equalize!(net::ReactionNetwork, eqs = [])
 end
 
 """
-Identify (collapse) a set of species in a model.
+Identify (collapse) sets of species in a model — each equation names species to merge into one, so a
+downstream species can be fused with an upstream one (the FK-repoint of §7.4/J7, not string surgery).
 
 # Examples
 
 ```julia
-@join net acs1.A = acs2.A B = C
+@equalize net A = B C = D
 ```
 """
-macro equalize(acsex, exs...)
+macro equalize(netex, exs...)
     exs = collect(exs)
     foreach(i -> (exs[i] = MacroTools.striplines(exs[i])), 1:length(exs))
     eqs = []
     foreach(ex -> ex isa Expr && merge_eqs!(eqs, get_eqs_ff(ex)), exs)
 
-    return :(equalize!($(esc(acsex)), $eqs))
+    return :(equalize!($(esc(netex)), $eqs))
 end

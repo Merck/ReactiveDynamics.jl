@@ -5,54 +5,62 @@ using MacroTools
 using MacroTools: prewalk
 
 """
-Merge `acs2` into `acs1`, the attributes in `acs2` taking precedence. Identify respective species given `eqs`, renaming species in `acs2`.
-"""
-function merge_networks!(acs1, acs2, name = gensym("net"), eqs = [])
-    acs2 = deepcopy(acs2)
-    prepend!(acs2, name, eqs)
+    merge_networks!(net1, net2, name = gensym("net"), eqs = []) -> ReactionNetwork
 
-    for i in row_ids(acs2, :S)
-        inc = find_rows(acs1, acs2[i, :specName], :specName)
+Merge `net2` into `net1` IN PLACE and return `net1`. `net2` is deep-copied and its species namespaced
+under `name` (via [`prepend!`](@ref)) before merging, so the two fragments' private species stay
+distinct; a species already present in `net1` is identified by name and its attribute cells overwritten
+from `net2` (later fragment wins), with modality sets unioned. Transitions, params, metadata, events
+(`:E`) and observables (`:obs`) are all carried across — `:E`/`:obs` STRUCTURALLY (appended, never
+deduplicated). The `eqs` equation blocks drive species identification across fragments (see
+[`normalize_name`](@ref)). The engine behind [`@join`](@ref).
+"""
+function merge_networks!(net1, net2, name = gensym("net"), eqs = [])
+    net2 = deepcopy(net2)
+    prepend!(net2, name, eqs)
+
+    for i in row_ids(net2, :S)
+        inc = find_rows(net1, net2[i, :specName], :specName)
 
         if isempty(inc)
-            inc = add_row!(acs1, :S; specName = acs2[i, :specName])
-            assign_defaults!(acs1)
+            inc = add_row!(net1, :S; specName = net2[i, :specName])
+            assign_defaults!(net1)
         end
 
-        union!(acs1[first(inc), :specModality], acs2[i, :specModality])
+        union!(net1[first(inc), :specModality], net2[i, :specModality])
 
-        for attr in propertynames(acs1.columns)
+        for attr in propertynames(net1.columns)
             !occursin("spec", string(attr)) && continue
-            !ismissing(acs2[i, attr]) && (acs1[first(inc), attr] = acs2[i, attr])
+            !ismissing(net2[i, attr]) && (net1[first(inc), attr] = net2[i, attr])
         end
     end
 
-    new_trans_ix = add_rows!(acs1, :T, nrows(acs2, :T))
-    for attr in propertynames(acs2.columns)
+    new_trans_ix = add_rows!(net1, :T, nrows(net2, :T))
+    for attr in propertynames(net2.columns)
         !occursin("trans", string(attr)) && continue
         for (ix1, ix2) in enumerate(new_trans_ix)
-            acs1[ix2, attr] = acs2[ix1, attr]
+            net1[ix2, attr] = net2[ix1, attr]
         end
     end
 
     foreach(
         i -> (
-            acs1[i, :transName] =
-                normalize_name(Symbol(coalesce(acs1[i, :transName], i)), name)
+            net1[i, :transName] =
+                normalize_name(Symbol(coalesce(net1[i, :transName], i)), name)
         ),
         new_trans_ix,
     )
 
-    for i in row_ids(acs2, :P)
-        inc = find_rows(acs1, acs2[i, :prmName], :prmName)
-        isempty(inc) && (inc = add_row!(acs1, :P; prmName = acs2[i, :prmName]))
-        !ismissing(acs2[i, :prmVal]) && (acs1[first(inc), :prmVal] = acs2[i, :prmVal])
+    for i in row_ids(net2, :P)
+        inc = find_rows(net1, net2[i, :prmName], :prmName)
+        isempty(inc) && (inc = add_row!(net1, :P; prmName = net2[i, :prmName]))
+        !ismissing(net2[i, :prmVal]) && (net1[first(inc), :prmVal] = net2[i, :prmVal])
     end
 
-    for i in row_ids(acs2, :M)
-        inc = find_rows(acs1, acs2[i, :metaKeyword], :metaKeyword)
-        isempty(inc) && (inc = add_row!(acs1, :M; metaKeyword = acs2[i, :metaKeyword]))
-        !ismissing(acs2[i, :metaVal]) && (acs1[first(inc), :metaVal] = acs2[i, :metaVal])
+    for i in row_ids(net2, :M)
+        inc = find_rows(net1, net2[i, :metaKeyword], :metaKeyword)
+        isempty(inc) && (inc = add_row!(net1, :M; metaKeyword = net2[i, :metaKeyword]))
+        !ismissing(net2[i, :metaVal]) && (net1[first(inc), :metaVal] = net2[i, :metaVal])
     end
 
     # Events (:E) and observables (:obs) are STRUCTURAL — appended, never deduplicated (like :T,
@@ -61,27 +69,33 @@ function merge_networks!(acs1, acs2, name = gensym("net"), eqs = [])
     # (above) already namespaced the species referenced inside each event's trigger/action Expr and
     # inside each observable's option-Exprs (via prepend_obs), so both merges are pure structural
     # copies of already-namespaced rows.
-    for i in row_ids(acs2, :E)
+    for i in row_ids(net2, :E)
         add_row!(
-            acs1,
+            net1,
             :E;
-            eventTrigger = acs2[i, :eventTrigger],
-            eventAction = acs2[i, :eventAction],
+            eventTrigger = net2[i, :eventTrigger],
+            eventAction = net2[i, :eventAction],
         )
     end
 
-    for i in row_ids(acs2, :obs)
-        add_row!(acs1, :obs; obsName = acs2[i, :obsName], obsOpts = acs2[i, :obsOpts])
+    for i in row_ids(net2, :obs)
+        add_row!(net1, :obs; obsName = net2[i, :obsName], obsOpts = net2[i, :obsOpts])
     end
 
-    return acs1
+    return net1
 end
 
 # Deprecated ACSets-vocabulary alias (ADR 0015 Tier 2): `union_acs!` → `merge_networks!`.
 @deprecate union_acs!(net1, net2, name = gensym("net"), eqs = []) merge_networks!(net1, net2, name, eqs)
 
 """
-Prepend species names with a model identifier (unless a global species name).
+Namespace `net`'s species in place: rename each `X → name__X` and rewrite every reference to it across
+all attribute columns (and, structurally, inside observable option Exprs via [`prepend_obs!`](@ref)), so
+merging two fragments cannot conflate their private species. A `:shared`-role species (the first-class
+`@catchall`, ADR 0009 §A / CONTRACT §11.1) is identified by BARE name and left un-namespaced; `:private`
+(default) and the open `:input`/`:output` ports namespace here, with [`@compose`](@ref) re-identifying
+the open ports afterwards by FK-repoint. `eqs` drives cross-fragment identification via
+[`normalize_name`](@ref). Called by [`merge_networks!`](@ref) before it copies rows across.
 """
 function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
     specmap = Dict()
@@ -145,7 +159,14 @@ normalize_name(name::Symbol, parent_name) = Symbol("$(parent_name)__$name")
 normalize_name(name::String, parent_name) = "$(parent_name)__$name"
 normalize_name(name, parent_name) = Symbol(parent_name, "__", name)
 
-function normalize_name(acs_name, i::Int, name::Symbol, eqs = [])
+"""
+The namespaced name for the `i`-th species (named `name`) of the fragment `parent`, honoring the
+identification blocks in `eqs`: if the species is named by a block — by exact `:S` index, by a
+`:catchall` name match, or by a `parent`-qualified name match — it collapses to that block's alias (its
+`:alias` entry, else a generated `shared_species_N`); otherwise it namespaces to `parent__name`. This is
+what lets `@equalize`/`@join` fuse species across fragments. Used by [`prepend!`](@ref).
+"""
+function normalize_name(parent, i::Int, name::Symbol, eqs = [])
     for (block_ix, block) in enumerate(eqs)
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = if !isnothing(block_alias)
@@ -158,21 +179,25 @@ function normalize_name(acs_name, i::Int, name::Symbol, eqs = [])
                 (i == e[2]) ||
                     (
                     e[1] == :catchall &&
-                        (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
+                        (normalize_name(e[2], parent) == normalize_name(name, parent))
                 ) ||
                     (
-                    e[1] == acs_name &&
-                        (normalize_name(e[2], acs_name) == normalize_name(name, acs_name))
+                    e[1] == parent &&
+                        (normalize_name(e[2], parent) == normalize_name(name, parent))
                 )
             ) && return block_alias
         end
     end
 
-    return normalize_name(name, acs_name)
+    return normalize_name(name, parent)
 end
 
+# The two names a species may match after a join: its bare `name` and its namespaced `parent__name`.
 matching_name(name::Symbol, parent_name) = [name, Symbol("$(parent_name)__$name")]
 
+# Parse one side of a `@join`/`@equalize` equation into `(qualifier, name)` tuples: a dotted `net.X`
+# reconstructs to `(net, X)`, an `@alias(X)` yields `(:alias, X)`, any other macrocall yields both a
+# `:catchall` and an `:alias` entry, and a bare symbol is a `:catchall`.
 expand_name(ex) =
 if isexpr(ex, :.)
     reconstruct(ex)
@@ -188,9 +213,12 @@ else
     (:catchall, ex)
 end
 
+# Flatten a dotted access `a.b.c` into the symbol list `[a, b, c]` (the leaves of the `:.` Expr tree).
 function recursively_get_syms(ex)
     return isexpr(ex, :.) ? [recursively_get_syms(ex.args[1]); ex.args[2].value] : ex
 end
+# Reconstruct a dotted name into a `(parent, name)` pair: `net.X` → `(net, :X)`, `net.A.B` →
+# `(net, :A__B)`; a bare symbol stays a 1-tuple. The dotted-syntax counterpart of `expand_name`.
 function reconstruct(ex)
     return if ex isa Symbol
         (ex,)
@@ -200,7 +228,9 @@ function reconstruct(ex)
 end
 
 """
-Parse species equation blocks.
+Flatten one `@join` equation (a possibly-chained `A = B = C`) into its full list of `(qualifier, name)`
+pairs via [`expand_name`](@ref), recursing through the right-nested `:(=)` Exprs. Consumed by
+[`merge_eqs!`](@ref) to build the identification blocks the [`@join`](@ref) macro passes on.
 """
 function get_eqs(eq)
     return if isexpr(eq, :macrocall)
@@ -215,6 +245,8 @@ function get_eqs(eq)
     end
 end
 
+# Merge `eqblock` into the accumulated identification blocks `eqs`, coalescing any existing blocks that
+# share a member with it into one (so `A=B` then `B=C` fuse into a single `{A,B,C}` block). Mutates `eqs`.
 function merge_eqs!(eqs, eqblock)
     eqs_ = []
     for s in eqblock
@@ -239,13 +271,13 @@ Model variables / parameter values and metadata are propagated; the last model t
 # Examples
 
 ```julia
-@join acs1 acs2 @catchall(A) = acs2.Z @catchall(XY) @catchall(B)
+@join net1 net2 @catchall(A) = net2.Z @catchall(XY) @catchall(B)
 ```
 """
 macro join(exs...)
     callex = :(
         begin
-            acs_new = ReactionNetwork()
+            merged = ReactionNetwork()
         end
     )
     exs = collect(exs)
@@ -261,22 +293,22 @@ macro join(exs...)
         ix += 1
     end
 
-    for acsex in exs
-        (acsex, symex) = if isexpr(acsex, :macrocall)
+    for netex in exs
+        (netex, symex) = if isexpr(netex, :macrocall)
             str_inc = string(
-                isexpr(acsex.args[3], :(=)) ? acsex.args[3].args[2] : acsex.args[3],
+                isexpr(netex.args[3], :(=)) ? netex.args[3].args[2] : netex.args[3],
             )
-            if isexpr(acsex.args[3], :(=))
-                (:(include_model($str_inc)), acsex.args[3].args[1])
+            if isexpr(netex.args[3], :(=))
+                (:(include_model($str_inc)), netex.args[3].args[1])
             else
                 (:(include_model($str_inc)), gensym(:net))
             end
         else
-            (acsex, acsex)
+            (netex, netex)
         end
-        push!(callex.args, :(merge_networks!(acs_new, $(esc(acsex)), $(QuoteNode(symex)), $eqs)))
+        push!(callex.args, :(merge_networks!(merged, $(esc(netex)), $(QuoteNode(symex)), $eqs)))
     end
-    push!(callex.args, :(acs_new))
+    push!(callex.args, :(merged))
 
     return callex
 end

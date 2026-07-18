@@ -39,7 +39,7 @@ Declarative sugar for `set_port_role!`: tag species with a port role via `specie
 (role ∈ input/output/shared; anything unlisted keeps its default :private). Each pair is written with
 `=>` (not `=`, which macro-call syntax parses as a keyword argument).
 """
-macro port(acsex, pairs...)
+macro port(netex, pairs...)
     call = Expr(:block)
     valid = (:input, :output, :shared, :private)
     for p in pairs
@@ -48,9 +48,9 @@ macro port(acsex, pairs...)
         sp = p.args[2]
         role = p.args[3]
         role in valid || error("@port: role must be one of $(valid), got $(role)")
-        push!(call.args, :(set_port_role!($(esc(acsex)), $(QuoteNode(sp)) => $(QuoteNode(role)))))
+        push!(call.args, :(set_port_role!($(esc(netex)), $(QuoteNode(sp)) => $(QuoteNode(role)))))
     end
-    push!(call.args, :($(esc(acsex))))
+    push!(call.args, :($(esc(netex))))
     return call
 end
 
@@ -82,10 +82,10 @@ function compose(fragments::ReactionNetwork...)
         end
     end
 
-    acs_new = ReactionNetwork()
+    merged = ReactionNetwork()
     # union each fragment under its own namespace. prepend! leaves `shared` species bare; open ports
     # (input/output) are namespaced here, then re-identified below by matching the ORIGINAL name.
-    portmap = Dict{Symbol, Vector{Symbol}}()   # original port name → its namespaced aliases in acs_new
+    portmap = Dict{Symbol, Vector{Symbol}}()   # original port name → its namespaced aliases in merged
     for (k, f) in enumerate(fragments)
         name = Symbol("f", k)
         # remember each fragment's open-port original names → their namespaced form
@@ -96,7 +96,7 @@ function compose(fragments::ReactionNetwork...)
                 push!(get!(portmap, orig, Symbol[]), normalize_name(orig, name))
             end
         end
-        merge_networks!(acs_new, f, name)
+        merge_networks!(merged, f, name)
     end
 
     # Identify open ports that appear (as the same original name) in ≥2 fragments: their namespaced
@@ -111,10 +111,10 @@ function compose(fragments::ReactionNetwork...)
         end
         push!(eqs, block)
     end
-    isempty(eqs) || equalize!(acs_new, eqs)
+    isempty(eqs) || equalize!(merged, eqs)
 
-    populate_reactant_specs!(acs_new)
-    return acs_new
+    populate_reactant_specs!(merged)
+    return merged
 end
 
 """

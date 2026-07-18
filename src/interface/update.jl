@@ -15,7 +15,13 @@ export @register
 using DataFrames
 using MacroTools: striplines
 
-function push_to_acs!(acsex, exs...)
+"""
+Build the expression that appends reactions/attributes to the network bound to `netex`. Accepts either a
+`begin … end` block of reaction lines or a single line with trailing `key = value` attributes (folded
+into `key => value` pairs), then splices the parsed data into a `merge_network!` call. The shared engine
+behind [`@push`](@ref) and [`@periodic`](@ref).
+"""
+function push_to_network!(netex, exs...)
     if isexpr(exs[1], :block)
         ex = striplines(exs[1])
     else
@@ -32,25 +38,25 @@ function push_to_acs!(acsex, exs...)
 
     return quote
         ex = blockize($(QuoteNode(ex)))
-        merge_network!($(esc(acsex)), get_data(ex)...)
+        merge_network!($(esc(netex)), get_data(ex)...)
     end
 end
 
 """
-Add reactions to an network.
+Add reactions to a network.
 
 # Examples
 
 ```julia
-@push sir_acs β * S * I * tdecay(@time()) S + I --> 2I name => SI2I
-@push sir_acs begin
+@push sir β * S * I * tdecay(@time()) S + I --> 2I name => SI2I
+@push sir begin
     ν * I, I --> R, name => I2R
     γ, R --> S, name => R2S
 end
 ```
 """
-macro push(acsex, exs...)
-    return push_to_acs!(acsex, exs...)
+macro push(netex, exs...)
+    return push_to_network!(netex, exs...)
 end
 
 """
@@ -64,16 +70,16 @@ Set name of a transition in the model.
 @name_transition net "name" = "transition_name"
 ```
 """
-macro name_transition(acsex, exs...)
+macro name_transition(netex, exs...)
     call = :(
         begin end
     )
     for ex in exs
         call_ = if ex.args[1] isa Number
-            :($(esc(acsex))[$(ex.args[1]), :transName] = $(QuoteNode(ex.args[2])))
+            :($(esc(netex))[$(ex.args[1]), :transName] = $(QuoteNode(ex.args[2])))
         else
             quote
-                net = $(esc(acsex))
+                net = $(esc(netex))
                 ixs = findall(
                     i -> string(net[i, :transName]) == $(string(ex.args[1])),
                     row_ids(net, :T),
@@ -88,6 +94,11 @@ macro name_transition(acsex, exs...)
     return call
 end
 
+"""
+Row indices of `attr` whose stringified value matches `pattern` in FULL (the regex must span the whole
+name, not just a substring). The regex-valued analogue of [`find_rows`](@ref), used by [`mode!`](@ref) to
+apply a modality to every species whose name matches a pattern.
+"""
 function incident_pattern(pattern, attr)
     ix = []
     for i in 1:length(attr)
@@ -102,6 +113,12 @@ function incident_pattern(pattern, attr)
     return ix
 end
 
+"""
+Union the modality tags in `dict` (`species-or-regex => modalities`) into each matching species'
+`specModality` set, in place. A plain key matches one species by name ([`find_rows`](@ref)); a `Regex`
+key matches every species whose name matches ([`incident_pattern`](@ref)). The runtime behind
+[`@mode`](@ref).
+"""
 function mode!(net, dict)
     for (spex, mods) in dict
         i = if spex isa Regex
@@ -135,7 +152,7 @@ Set species modality.
 @mode net S conserved
 ```
 """
-macro mode(acsex, spexs, mexs)
+macro mode(netex, spexs, mexs)
     mods = !isa(mexs, Expr) ? [mexs] : collect(mexs.args)
     spexs = isexpr(spexs, :tuple) ? spexs.args : [spexs]
     exs = map(ex -> striplines(ex), spexs)
@@ -151,10 +168,16 @@ macro mode(acsex, spexs, mexs)
             exs__,
         )
 
-        mode!($(esc(acsex)), dictcall)
+        mode!($(esc(netex)), dictcall)
     end
 end
 
+"""
+Set the `valuation_type` economic attribute (`:cost`/`:reward`/`:valuation` → the `specCost`/`specReward`/
+`specValuation` column) of each species named in `dict` (`species-or-regex => value`), in place. Matches
+by name ([`find_rows`](@ref)) or, for a `Regex` key, by pattern ([`incident_pattern`](@ref)). The runtime
+behind the `@cost`/`@reward`/`@valuation` macros.
+"""
 function set_valuation!(net, dict, valuation_type)
     for (spex, val) in dict
         i = if spex isa Regex
@@ -186,7 +209,7 @@ for valuation_type in (:cost, :reward, :valuation)
             @$($(string(valuation_type))) model experimental1=2 experimental2=3
             ```
             """
-            macro $valuation_type(acsex, exs...)
+            macro $valuation_type(netex, exs...)
                 dictcall = Dict()
                 exs_ = []
                 foreach(s -> push!(exs_, striplines(blockize(s))), exs)
@@ -201,7 +224,7 @@ for valuation_type in (:cost, :reward, :valuation)
                 )
                 return :(
                     set_valuation!(
-                        $(esc(acsex)),
+                        $(esc(netex)),
                         $dictcall,
                         $(QuoteNode($(QuoteNode(valuation_type)))),
                     )
@@ -220,7 +243,7 @@ Add new species to a model.
 @add_species net S I R
 ```
 """
-macro add_species(acsex, exs...)
+macro add_species(netex, exs...)
     call = :(
         begin end
     )
@@ -228,17 +251,19 @@ macro add_species(acsex, exs...)
     foreach(s -> push!(spexs_, s), exs)
 
     for ex in recursively_expand_dots.(spexs_)
-        push!(call.args, :(add_row!($(esc(acsex)), :S; specName = $(QuoteNode(ex)))))
+        push!(call.args, :(add_row!($(esc(netex)), :S; specName = $(QuoteNode(ex)))))
     end
 
-    push!(call.args, :(assign_defaults!($(esc(acsex)))))
+    push!(call.args, :(assign_defaults!($(esc(netex)))))
     return call
 end
 
+# Resolve a species/param selector to a matcher: an `r"…"` regex-string macrocall becomes the compiled
+# `Regex` (so callers can pattern-match names), anything else passes through as the literal name.
 get_pattern(ex) = ex isa Expr && (macroname(ex) == :r_str) ? eval(ex) : ex
 
 """
-Set initial values of species in an network.
+Set initial values of species in a network.
 
 # Examples
 
@@ -247,11 +272,11 @@ Set initial values of species in an network.
 @prob_init net [1.0, 2.0, 3.0]
 ```
 """
-macro prob_init(acsex, exs...)
+macro prob_init(netex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
     return if length(exs) == 1 && (isexpr(exs[1], :vect) || (exs[1] isa Symbol))
-        :(init!($(esc(acsex)), $(esc(exs[1]))))
+        :(init!($(esc(netex)), $(esc(exs[1]))))
     else
         quote
             dictcall = Dict()
@@ -267,16 +292,21 @@ macro prob_init(acsex, exs...)
                 exs__,
             )
 
-            init!($(esc(acsex)), dictcall)
+            init!($(esc(netex)), dictcall)
         end
     end
 end
 
 # deprecate
-macro prob_init_from_vec(acsex, vecex)
-    return :(init!($(esc(acsex)), $(esc(vecex))))
+macro prob_init_from_vec(netex, vecex)
+    return :(init!($(esc(netex)), $(esc(vecex))))
 end
 
+"""
+Set species initial values (`specInitVal`) from `inits`, in place. A vector matching the species count is
+assigned positionally; a dict maps `index-or-name-or-regex => value` (a `Regex` key sets every matching
+species). The runtime behind [`@prob_init`](@ref).
+"""
 function init!(net, inits)
     if inits isa AbstractVector && length(inits) == nrows(net, :S)
         column(net, :specInitVal) .= inits
@@ -301,7 +331,7 @@ function init!(net, inits)
 end
 
 """
-Set uncertainty in initial values of species in an network (stderr).
+Set uncertainty in initial values of species in a network (stderr).
 
 # Examples
 
@@ -310,11 +340,11 @@ Set uncertainty in initial values of species in an network (stderr).
 @prob_uncertainty net [0.1, 0.2]
 ```
 """
-macro prob_uncertainty(acsex, exs...)
+macro prob_uncertainty(netex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
     return if length(exs) == 1 && (isexpr(exs[1], :vect) || (exs[1] isa Symbol))
-        :(uncinit!($(esc(acsex)), $(esc(exs[1]))))
+        :(uncinit!($(esc(netex)), $(esc(exs[1]))))
     else
         quote
             dictcall = Dict()
@@ -330,11 +360,16 @@ macro prob_uncertainty(acsex, exs...)
                 exs__,
             )
 
-            uncinit!($(esc(acsex)), dictcall)
+            uncinit!($(esc(netex)), dictcall)
         end
     end
 end
 
+"""
+Set species initial-value uncertainty (`specInitUncertainty`, a stderr) from `inits`, in place — the
+uncertainty counterpart of [`init!`](@ref), with the same vector/dict/regex handling. The runtime behind
+[`@prob_uncertainty`](@ref).
+"""
 function uncinit!(net, inits)
     inits isa AbstractVector &&
         length(inits) == nrows(net, :S) &&
@@ -357,6 +392,11 @@ function uncinit!(net, inits)
     return net
 end
 
+"""
+Set parameter values (`prmVal`) from the dict `params` (`name-or-regex => value`), in place, ADDING a
+`:P` row for a plain name that does not yet exist. A `Regex` key sets every matching existing param. The
+runtime behind [`@prob_params`](@ref).
+"""
 function set_params!(net, params)
     return params isa AbstractDict && for (k, init_val) in params
         k = get_pattern(k)
@@ -372,7 +412,7 @@ function set_params!(net, params)
 end
 
 """
-Set parameter values in an network.
+Set parameter values in a network.
 
 # Examples
 
@@ -380,7 +420,7 @@ Set parameter values in an network.
 @prob_params net α = 1.0 β = 2.0
 ```
 """
-macro prob_params(acsex, exs...)
+macro prob_params(netex, exs...)
     exs = map(ex -> striplines(ex), exs)
 
     return quote
@@ -397,10 +437,15 @@ macro prob_params(acsex, exs...)
             exs__,
         )
 
-        set_params!($(esc(acsex)), dictcall)
+        set_params!($(esc(netex)), dictcall)
     end
 end
 
+"""
+Set network metadata (`:M` rows) from the dict `metas` (`keyword => value`), in place, adding a row for
+an unseen keyword and overwriting an existing one. The runtime behind [`@prob_meta`](@ref) and
+[`@aka`](@ref).
+"""
 meta!(net, metas) =
     for (k, metaval) in metas
     i = find_rows(net, k, :metaKeyword)
@@ -415,18 +460,18 @@ Set model metadata (e.g. solver arguments)
 
 ```julia
 @prob_meta net tspan = (0, 100.0) schedule = schedule_weighted!
-@prob_meta sir_acs tspan = 250 dt = 1   # `tstep` is a deprecated alias for `dt`
+@prob_meta sir tspan = 250 dt = 1   # `tstep` is a deprecated alias for `dt`
 ```
 """
-macro prob_meta(acsex, exs...)
+macro prob_meta(netex, exs...)
     dictcall = :(Dict([]))
     foreach(ex -> push!(dictcall.args[2].args, (ex.args[1] => eval(ex.args[2]))), exs)
 
-    return :(meta!($(esc(acsex)), $dictcall))
+    return :(meta!($(esc(netex)), $dictcall))
 end
 
 """
-Alias object name in an net.
+Alias an object name in a network.
 
 # Default names
 
@@ -445,7 +490,7 @@ Alias object name in an net.
 @aka net species = resource transition = reaction
 ```
 """
-macro aka(acsex, exs...)
+macro aka(netex, exs...)
     dictcall = :(Dict([]))
     foreach(
         ex -> push!(
@@ -454,7 +499,7 @@ macro aka(acsex, exs...)
         ),
         exs,
     )
-    return :(meta!($(esc(acsex)), $dictcall))
+    return :(meta!($(esc(netex)), $dictcall))
 end
 
 alias_default = Dict(
@@ -466,6 +511,10 @@ alias_default = Dict(
     :M => :meta,
 )
 
+"""
+The display alias for object `ob` (`:S`/`:T`/`:A`/`:E`/`:P`/`:M`) — a user-set `alias_<ob>` metadata
+value if one was authored via [`@aka`](@ref), else the built-in default from `alias_default`.
+"""
 function get_alias(net, ob)
     return (
         i = find_rows(net, Symbol(:alias_, ob), :metaKeyword);
@@ -487,8 +536,8 @@ Add a periodic callback to a model.
 @periodic net 1.0 X += 1
 ```
 """
-macro periodic(acsex, pex, acex)
-    return push_to_acs!(acsex, Expr(:&&, :(@periodic($pex)), acex))
+macro periodic(netex, pex, acex)
+    return push_to_network!(netex, Expr(:&&, :(@periodic($pex)), acex))
 end
 
 """
@@ -500,17 +549,19 @@ Add a jump process (with specified Poisson intensity per unit time step) to a mo
 @jump net λ Z += rand(state.rng, Poisson(1.0))
 ```
 """
-macro jump(acsex, inex, acex)
+macro jump(netex, inex, acex)
     # The Poisson intensity draws from the state-owned RNG (§4 D2/D5); `state` is in scope
     # because the generated trigger is compiled into a (state, transition) closure.
-    return push_to_acs!(
-        acsex,
+    return push_to_network!(
+        netex,
         Expr(:&&, Expr(:call, :rand, :(state.rng), :(Poisson(max(state.dt * $inex, 0)))), acex),
     )
 end
 
 """
-Evaluate expression in ReactiveDynamics scope.
+Register a host function/definition into `ReactiveDynamics` scope so model expressions may call it by
+name (e.g. a custom rate/guard helper). Evaluates `ex` at macro-expansion time — an AUTHORING-time escape
+hatch, distinct from the eval-free runtime; do not use it to inject per-run data.
 
 # Examples
 

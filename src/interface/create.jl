@@ -93,6 +93,12 @@ macro ReactionNetworkSchema(args...)
     )
 end
 
+"""
+Build the expression that constructs a [`ReactionNetwork`](@ref) from a `@reaction_network` body `ex`:
+flatten the block ([`unblock_shallow!`](@ref)) and splice the parsed `(transitions, reactants, obs,
+events)` from [`get_data`](@ref) into the constructor call. The core of the [`@reaction_network`](@ref)
+macro.
+"""
 function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
     blockex = unblock_shallow!(ex)
 
@@ -100,6 +106,11 @@ function make_ReactionNetwork(ex::Expr; eval_module = @__MODULE__)
 end
 
 ### Functions that process the input and rephrase it as a reaction system ###
+
+"""
+Recursively replace each interpolation `\$(x)` in `ex` with an `esc`aped reference, so a value from the
+macro call site is spliced into the generated network unchanged. Mutates and returns `ex`.
+"""
 function esc_dollars!(ex)
     if ex isa Expr
         if ex.head == :$
@@ -113,8 +124,15 @@ function esc_dollars!(ex)
     return ex
 end
 
+# Turn a binary-op Expr `a op b` into the pair `a => b` (used for `key => value` attribute terms);
+# a bare number passes through unchanged.
 symbolize(pairex) = pairex isa Number ? pairex : (pairex.args[2] => pairex.args[3])
 
+"""
+Parse a `@reaction_network`/`@push` body `ex` into `(transitions, reactants, pcs, events)` — the tuple
+the network constructor consumes. Splits a `begin … end` block line-by-line (or handles a single line),
+dispatching each to [`get_data!`](@ref). `pcs` collects the lifted `@register` computed-value declarations.
+"""
 function get_data(ex)
     trans = []
     evs = []
@@ -134,6 +152,11 @@ function get_data(ex)
     return trans, reactants, pcs, evs
 end
 
+"""
+Route one parsed line into the right bucket: an `if`/conditional line becomes an event
+([`get_events!`](@ref)), anything else a transition ([`get_transitions!`](@ref)). Accumulates into the
+caller's `trans`/`reactants`/`pcs`/`evs` collections. Called per line by [`get_data`](@ref).
+"""
 function get_data!(trans, reactants, pcs, evs, exs)
     length(exs) == 0 && return
 
@@ -144,6 +167,11 @@ function get_data!(trans, reactants, pcs, evs, exs)
     end
 end
 
+"""
+Append the event(s) from a conditional line to `evs`: a `trigger && action` line becomes one
+[`Event`](@ref) directly, while an `if/elseif/else` chain is expanded into one guarded `Event` per branch
+(with the negated preceding conditions AND-ed in) via [`recursively_expand_actions!`](@ref).
+"""
 get_events!(evs, ex) =
 if ex.head == :&&
     push!(evs, Event(ex.args...))
@@ -151,6 +179,12 @@ else
     recursively_expand_actions!(evs, Expr(:call, :&), ex)
 end
 
+"""
+Expand an `if/elseif/else` chain `event` into one guarded [`Event`](@ref) per branch, threading the
+accumulated condition `condex`: each branch fires under (all previous conditions negated) AND its own
+condition, and the recursion carries the negation forward into the `else`. The event-side counterpart of
+lowering a conditional. Appends to `evs`.
+"""
 function recursively_expand_actions!(evs, condex, event)
     return if isexpr(event, :if)
         condex_ = deepcopy(condex)
@@ -163,6 +197,12 @@ function recursively_expand_actions!(evs, condex, event)
     end
 end
 
+"""
+Lower a transition's authored rate into its genesis-intensity Expr: by default wrap it as a Poisson draw
+from the state-owned RNG (`rand(state.rng, Poisson(state.dt * rate))`, §4), UNLESS it is `@deterministic(r)`
+(then use `r` verbatim). Also rewrites an inline `@ct(x)` cycle-time macro to `1/x`. Called by
+[`get_transitions!`](@ref).
+"""
 function expand_rate(rate)
     rate = if !(isexpr(rate, :macrocall) && (macroname(rate) == :deterministic))
         # Genesis intensity draws from the state-owned RNG (§4 D2/D5); `state` is in scope
@@ -181,6 +221,12 @@ function expand_rate(rate)
     end
 end
 
+"""
+Parse one transition line `exs` (`rate, reaction_line, key => value…`) into `trans`: prune the reaction
+line into reactant terms ([`prune_reaction_line!`](@ref)), lower the rate ([`expand_rate`](@ref)), and
+fold the trailing attributes (resolving their pretty-name aliases against `prettynames`, defaults from
+`defargs[:T]`) into the transition's attribute dict. Appends `(rate, rxs) => args` entries.
+"""
 function get_transitions!(trans, reactants, pcs, exs)
     args = empty(defargs[:T])
 
@@ -208,12 +254,22 @@ function get_transitions!(trans, reactants, pcs, exs)
     return trans
 end
 
+"""
+Substitute sub-expressions throughout `expr` by the `old => new` `pairs`, replacing every occurrence
+(via `prewalk`). Used to resolve a bidirectional-arrow reaction line into its forward/backward variants.
+"""
 function replace_in_expr(expr, pairs...)
     dict = Dict(pairs...)
 
     return prewalk(ex -> haskey(dict, ex) ? dict[ex] : ex, expr)
 end
 
+"""
+Hoist inline `@register(expr)` computed-value declarations out of `expr` into the `pcs` accumulator,
+rewriting each site to a `@take` of a generated name so the transition reads the registered value. The
+per-expression worker behind [`register_observables`](@ref). Mutates `expr`/`pcs` and returns the walked
+`expr`.
+"""
 function normalize_pcs!(pcs, expr)
     return postwalk(expr) do ex
         isexpr(ex, :macrocall) &&
@@ -238,16 +294,12 @@ function normalize_pcs!(pcs, expr)
     end
 end
 
-function get_reaction_line(expr)
-    biarrow = nothing
-    prewalk(ex --> (ex ∈ double_arrows && (biarrow = ex); ex), expr)
-    return if !isnothing(biarrow)
-        [expr]
-    else
-        [replace_in_expr(expr, biarrow => :⟶), replace_in_expr(expr, biarrow => :⟵)]
-    end
-end
-
+"""
+Normalize a reaction `line` and collect its species into `reactants`: rewrite `-->` to the canonical
+`→`, split a bidirectional `⟷` line into its forward/backward pair, and descend into the LHS/RHS to
+register reactant names ([`recursively_find_reactants!`](@ref)). Also threads the `pcs` computed-value
+accumulator through. Returns the normalized line(s). Called by [`get_transitions!`](@ref).
+"""
 function prune_reaction_line!(pcs, reactants, line)
     line isa Expr &&
         (line.head == :-->) &&
@@ -294,6 +346,14 @@ function prune_reaction_line!(pcs, reactants, line)
     return line
 end
 
+"""
+Walk one side of a reaction line at AUTHORING time and register each species NAME into `reactants`
+(distributing `*`/`+`, and descending into `@choose` alternatives). RHS macrocalls are handled specially:
+`@structured` is validated to the named `(:Kind, field=value…)` form and left intact (the raw
+constructor form is rejected so the IR stays eval-free), `@move`/`@advance` pass through, and `@select`
+registers only its KIND as a species (its clause fields are token attributes, not species). The
+authoring-time twin of the runtime [`recursive_find_reactants!`](@ref) in reaction_parser.jl.
+"""
 function recursively_find_reactants!(reactants, pcs, ex)
     if typeof(ex) != Expr || isexpr(ex, :.) || (ex.head == :escape)
         if (ex == 0 || in(ex, empty_set))

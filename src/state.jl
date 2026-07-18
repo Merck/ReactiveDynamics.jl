@@ -37,7 +37,13 @@ UnfoldedReactant(index, species, stoich, modality) =
     UnfoldedReactant(index, species, stoich, modality, nothing)
 
 """
-Ongoing transition auxiliary structure.
+One in-flight transition instance — an AlgebraicAgents `@aagent`, so a live transition is itself a node
+in the AA hierarchy. Spawned when a transition fires and held in the state's `ongoing_transitions` until
+its cycle time elapses, whereupon it completes (with its terminal probability-of-success) and emits its
+RHS products. `i` is the originating `:T` row; `trans` is the per-instance attribute dict (cycle time,
+priority, …); `bound_structured_agents`/`nonblock_structured_agents`/`structured_to_agents` hold the
+tokens this instance occupies; `t` is its spawn time, `q` its allocated quantity, and `state` its
+progress through the cycle.
 """
 @aagent struct Transition
     i::Int
@@ -56,6 +62,14 @@ end
 Base.getindex(state::Transition, key) = state.trans[key]
 Base.setindex!(state::Transition, val, key) = state.trans[key] = val
 
+"""
+The live, runtime form of a named observable (CONTRACT §9.4) — an AlgebraicAgents `@aagent`. Compiled by
+[`compile_observables`](@ref) from the static [`FoldedObservable`](@ref) authoring form, it is resampled
+each step and read inside rate/guard expressions via the `@obs(x)` query metalanguage (and exported to AA
+through `getobservable`). `last` is the last sampling time; `range` holds the (weighted) values to sample
+from; `every` is the sampling period; `on` are the compiled trigger closures; `sampled` is the current
+value.
+"""
 @aagent struct Observable
     last::Float64 # last sampling time
     range::Vector{Union{Tuple{Float64, SampleableValues}, SampleableValues}}

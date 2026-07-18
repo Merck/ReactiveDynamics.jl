@@ -967,7 +967,7 @@ function ReactionNetworkProblem(
     rng = Random.Xoshiro(seed)
     initial_rng = copy(rng)
 
-    net = remove_choose(net)
+    net = register_observables(net)
 
     structured_token_names =
         net[filter(i -> net[i, :specStructured], 1:nrows(net, :S)), :specName]

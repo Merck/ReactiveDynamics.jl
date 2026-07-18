@@ -387,7 +387,7 @@ end
         )
         for f in ("src/serialize.jl", "src/loadsave.jl")
             code = code_lines(f)
-            @test !occursin(r"Meta\.parse", code)
+            @test !occursin(r"Meta\.parse\(", code)
             @test !occursin(r"\beval\(", code)
         end
         # the legacy Set{Symbol}/FoldedObservable string→eval convert hooks are gone

@@ -1,19 +1,36 @@
-# parts of the code were taken from Catalyst.jl and adapted
+# Reaction-line parsing helpers. Parts of this file were originally adapted from Catalyst.jl.
 
+"""
+Flatten dotted notation `A.B` into the single species symbol `Symbol("A__B")` (an alias for
+[`underscorize`](@ref)). Applied to reactant terms so a dotted species name becomes one atomic symbol.
+"""
 recursively_expand_dots(ex) = underscorize(ex)
 
-# Returns the length of a expression tuple, or 1 if it is not an expression tuple (probably a  Symbol/Numerical).
+"""
+The number of elements in a tuple expression, or `1` for a non-tuple `ex` (a bare Symbol/number is
+treated as a length-1 "tuple"). Paired with [`get_tup_arg`](@ref) to read stoichiometry/multiplicity
+terms uniformly whether or not they are written as a tuple.
+"""
 function tup_leng(ex::SampleableValues)
     (typeof(ex) == Expr && ex.head == :tuple) && (return length(ex.args))
     return 1
 end
 
-#Gets the ith element in a expression tuple, or returns the input itself if it is not an expression tuple (probably a  Symbol/Numerical).
+"""
+The `i`-th element of a tuple expression, or `ex` itself if it is not a tuple (a bare Symbol/number).
+The accessor counterpart of [`tup_leng`](@ref).
+"""
 function get_tup_arg(ex::SampleableValues, i::Int)
     (tup_leng(ex) == 1) && (return ex)
     return ex.args[i]
 end
 
+"""
+Combine a base multiplicity `mult` with additional factors `mults...` into a single stoichiometry term,
+folding all numeric factors into one constant and preserving symbolic ones as a `*` product. A purely
+numeric set multiplies to a number; otherwise returns the simplified product Expr (dropping a redundant
+`1` coefficient). Flattens nested `*` products via [`recursively_find_mults!`](@ref).
+"""
 function multiplex(mult, mults...)
     all(m -> isa(m, Number), [mult] ∪ mults) && return mult * prod(mults; init = 1.0)
     multarray = SampleableValues[]
@@ -30,6 +47,10 @@ function multiplex(mult, mults...)
     return mult
 end
 
+"""
+Collect the leaf factors of a (possibly nested) `*` product into `multarray`, descending into any
+`*`-headed subexpression so `a * (b * c)` flattens to `[a, b, c]`. The recursion behind [`multiplex`](@ref).
+"""
 function recursively_find_mults!(multarray, mults...)
     for m in mults
         if isa(m, Expr) && m.args[1] == :*
