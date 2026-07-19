@@ -54,6 +54,7 @@
   --rd-nav-bg-dk:   #1B1B19; /* dark: warm near-black panel            */
   --rd-nav-hover-dk:#262624; /* dark: hover / active fill              */
   --rd-nav-edge-dk: #3A3A38; /* dark: right border + dividers          */
+  --rd-code-bg-dk:  #282F2F; /* dark: code-block field (== stock dark) */
 
   --rd-night:      #0A0A0A; /* the reversed-out field                 */
   --rd-night-edge: #3A3A3A; /* hairlines on black                     */
@@ -226,17 +227,22 @@ html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active 
   background-color: var(--rd-nav-hover-dk);
   color: #FFFFFF;
 }
-/* in-page (internal) anchors under the active page */
-#documenter .docs-sidebar ul.docs-menu ul.internal .tocitem {
+/* in-page (internal) anchors under the active page. The stock theme paints these
+   `#fff` via a DESCENDANT rule (`li.is-active .tocitem`), which clashes with the
+   off-white panel — so clear the fill to transparent (they ride the active li's
+   subtle tint) and repeat `li.is-active` here to out-specify the stock rule. */
+#documenter .docs-sidebar ul.docs-menu li.is-active ul.internal .tocitem {
   color: var(--rd-grey);
+  background-color: transparent;
 }
-html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem {
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active ul.internal .tocitem {
   color: var(--rd-night-mut);
+  background-color: transparent;
 }
-#documenter .docs-sidebar ul.docs-menu ul.internal .tocitem:hover {
+#documenter .docs-sidebar ul.docs-menu li.is-active ul.internal .tocitem:hover {
   color: var(--rd-ink); background: var(--rd-nav-hover);
 }
-html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem:hover {
+html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active ul.internal .tocitem:hover {
   color: #FFFFFF; background: var(--rd-nav-hover-dk);
 }
 
@@ -304,8 +310,13 @@ html.theme--documenter-dark #documenter .docs-sidebar .docs-version-selector {
   border: 1px solid var(--rd-ink);
   background-color: var(--rd-paper);
 }
+/* Dark mode: the unscoped white `pre` background above out-specifies the stock dark
+   theme (id+class beats html.theme--… pre), so restore a dark code field explicitly —
+   otherwise light syntax-highlight text renders on white and is unreadable. */
 html.theme--documenter-dark #documenter .docs-main pre {
   border-color: var(--rd-night-edge);
+  background-color: var(--rd-code-bg-dk);
+  color: var(--rd-night-ink);
 }
 /* inline code — a light neutral chip */
 #documenter .docs-main p > code,
