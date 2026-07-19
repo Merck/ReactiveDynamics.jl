@@ -1,58 +1,103 @@
 <p align="center">
-  <img src="docs/src/assets/logo-wordmark.svg" alt="ReactiveDynamics.jl" width="440"> <br><br>
-  <a href="#about">About</a> |
-  <a href="#context-dynamics-of-value-evolution-dyve">Context</a> |
-  <a href="#examples--demos">Examples & Demos</a> |
-  <a href="#documentation">Documentation</a>
+  <img src="docs/src/assets/logo-wordmark.svg" alt="ReactiveDynamics.jl" width="460">
+</p>
+
+<p align="center">
+  <em>A timed, stochastic, resource-constrained Petri-net engine for modeling business &amp; R&amp;D processes as living systems — budgets, portfolios, what-ifs, rNPV.</em>
+</p>
+
+<p align="center">
+  <a href="https://merck.github.io/ReactiveDynamics.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-0A8A84.svg" alt="Documentation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0A8A84.svg" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/Julia-%E2%89%A5%201.12-9558B2.svg" alt="Julia 1.12+">
 </p>
 
 <p align="center">
   <img src="docs/src/assets/figures/petri-anatomy.svg" alt="A labelled Petri net: a Phase-2 place holding program tokens, an arc into a transition bar, and an arc out to a Phase-3 place; two resource pools (scientists, budget) feed the transition." width="760">
 </p>
 
-> **Note.** This README is being refreshed alongside the ongoing engine rework (branch `rework`). The framing below reflects the current native discrete-event engine; the polished worked examples, onboarding tutorials, and API reference are being rewritten and are **coming in a follow-up documentation pass** (see [Examples & Demos](#examples--demos) and [Documentation](#documentation)). In the meantime, the runnable [`demo/`](demo) tours are the source of truth for current, working code.
+ReactiveDynamics.jl (RD) models a decision as a **living system** — finite people and cash, random outcomes, and levers that fire mid-course — and runs it directly. It is a **timed, stochastic, resource-constrained Petri net / discrete-event engine** for system-dynamics-style modeling of business and R&D processes: budgeting, ledgers, what-if analysis, rNPV. Despite the reaction-network DSL surface, it is *not* a chemical reaction network — chemical kinetics is just the archetypal instance of the underlying ontology.
 
-## About
+## Installation
 
-ReactiveDynamics.jl (RD) is a **timed, stochastic, resource-constrained Petri net / discrete-event engine** for system-dynamics-style modeling of business and R&D processes — budgeting, ledgers, what-if analysis, rNPV. Despite the reaction-network DSL surface, it is *not* a chemical reaction network: chemical kinetics is just the archetypal instance of the underlying ontology.
+```julia
+using Pkg
+Pkg.add(url = "https://github.com/Merck/ReactiveDynamics.jl")
+```
 
-The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resources** (species) over a cycle time, and completes with a terminal probability-of-success that emits its right-hand-side products. A **reaction network** is then a set of transitions acting on a set of resource classes; the simultaneous action of the transitions evolves the system over a single discrete clock.
+Requires Julia ≥ 1.12. RD sits on top of [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl), which is installed automatically.
 
-<img src="docs/src/assets/diagram2.png" align="right" alt="wiring diagram"></a>
-<p>Transitions are <b>stateful</b> (they act over a cycle time) and <b>parametric</b> — you set the period over which an instance acts, its maximal lifetime, a per-class priority for resource allocation, a probability of successful completion, and so on. A transition takes the form <code>rate, a*A + b*B + ... --> c*C + ..., prm =&gt; val, ...</code>, where <code>rate</code> gives the expected batch size per time unit and the coefficients are generalized stoichiometry. Both the rate and the coefficients may be given by functions of the system's instantaneous (stochastic) state.</p>
+## Quick start
 
-Each consumed (left-hand-side) resource carries a **modality** governing how it is claimed against the pool: `@conserved` (held for the instance's lifetime and returned on completion), `@rate` (drawn per in-flight tick), or `@nonblock` (claimed, not held). A priority-weighted progressive-fill allocator rations scarce resources under contention, and a cost/reward/valuation **ledger** accrues into a per-step log.
+A plain-species SIR epidemic, end to end — the metalanguage, a seeded run, and reading the solution by name:
 
-<img src="docs/src/assets/diagram3.png" align="left" alt="attributes diagram"></a>
+```julia
+using ReactiveDynamics
 
-Beyond plain scalar resources, RD supports **structured/agentic tokens**: a resource can be a first-class entity with attributes, a stable identity, and lifecycle history (a "project" carrying its `phase`, `npv`, cost-to-date, …). Tokens can be instantiated, selected by predicate, advanced through lifecycle phases, and audited per-program — the basis for portfolio- and pipeline-style models. A model is a pure, **eval-free typed data artifact**: it round-trips through a single JSON serialization with schema validation, so models can be authored, checked, and exchanged as data (host Julia functions are referenced by name through a registry, never embedded as code).
+sir = @reaction_network begin
+    α * S * I, S + I --> 2I, name => infection   # a bare numeric rate is a stochastic (Poisson) intensity
+    β * I,     I     --> R,  name => recovery
+end
+@prob_init   sir S = 999 I = 10 R = 0
+@prob_params sir α = 0.0001 β = 0.01
+@prob_meta   sir tspan = 250 dt = 0.1
 
-Internally, the reaction network is stored as a dependency-free typed struct-of-columns (see [ADR 0003](spec/adr/0003-data-store.md)); the engine itself is the native `ReactionNetworkProblem` type, stepped through [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl).
+prob = ReactionNetworkProblem(sir; seed = 1)   # seed= owns the per-run RNG — the only route to reproducibility
+simulate(prob)
+prob.sol[!, "I"]                               # read solution columns BY NAME (order is construction order)
+```
 
-## Context: Dynamics of Value Evolution (DyVE)
+The [introductory tutorial](https://merck.github.io/ReactiveDynamics.jl/dev/tutorials/introductory/) takes this from here to a computed, decision-relevant quantity.
 
-The package is an integral part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business.
+## The core idea
 
-As the framework evolves, multiple functionalities have matured enough to become standalone packages. One such package is **[AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl)**, a lightweight package enabling hierarchical, heterogeneous dynamical-systems co-integration. A `ReactionNetworkProblem` **is** an AlgebraicAgents agent, so a reaction network is a node in a larger heterogeneous AA hierarchy — it can be co-integrated with, e.g., a stochastic differential equation or an agent-based model, reading and writing sibling state through declared wires.
+The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resources** (species) over a cycle time, and completes with a terminal probability-of-success that emits its right-hand-side products. A transition takes the form `rate, a*A + b*B + … --> c*C + …, prm => val, …`, where `rate` is the expected batch size per time unit and the coefficients are generalized stoichiometry; both may be functions of the system's instantaneous stochastic state. A **reaction network** is a set of transitions acting on shared resource classes, evolved over a single discrete clock.
 
-## Examples & Demos
+Two ideas make it expressive enough for real decisions:
 
-> **Worked README examples are coming in a follow-up documentation pass.** The previous SIR / toy-pharma / universal-differential-equations sketches were written against an earlier (SciML/Catlab) API surface that the rework has replaced, so they have been removed rather than left stale. Refreshed, tested examples will be added here.
+- **Resource modalities.** Each consumed resource carries a modality governing how it is claimed against the pool: `@conserved` (held for the instance's lifetime, returned on completion — e.g. scientists), `@rate` (drawn per in-flight tick — e.g. a burn rate), or `@nonblock` (claimed, not held). A priority-weighted progressive-fill allocator rations scarce resources under contention, and a cost/reward/valuation **ledger** accrues into a per-step log.
+- **Structured / agentic tokens.** Beyond scalar pools, a resource can be a first-class entity with attributes, a stable identity, and lifecycle history — a "project" carrying its `phase`, `npv`, cost-to-date. Tokens can be instantiated, selected by predicate (`@select`), advanced through phases, and audited per-program. That is the basis for portfolio- and pipeline-style models.
 
-For self-contained, runnable examples against the current engine, see the **[demos](demo)** — each is its own literate tour with a README:
+<p align="center">
+  <img src="docs/src/assets/figures/token-kinds.svg" alt="Two kinds of token: a fungible pool quantity with nothing to select on, versus a structured agent token carrying phase, value, area, and history that @select can filter by state." width="820">
+</p>
 
-- [`demo/core_engine_tour`](demo/core_engine_tour) — the modeling metalanguage, resource modalities, the priority allocator, composition, and seeded ensembles.
-- [`demo/agentic_pipeline`](demo/agentic_pipeline) — structured tokens, in-model decision rules, eval-free JSON models, and checkpointing.
-- [`demo/introspection_tour`](demo/introspection_tour) — the analysis/observability layer: token trajectories, ensembles, exports, and result plots.
-- [`demo/refinement_tour`](demo/refinement_tour) — hierarchical refinement and open-port composition.
-- [`demo/aa_integration`](demo/aa_integration) — co-integrating a reaction network with other AlgebraicAgents models.
-- [`demo/wires_viz_tour`](demo/wires_viz_tour) — drawing networks, AA wiring diagrams, and exec maps.
-- [`demo/bd_acquisition`](demo/bd_acquisition) — an end-to-end business-development acquisition-impact case study (rNPV counterfactual on a living pipeline).
+A model is a pure, **eval-free typed data artifact**: it round-trips through a single JSON serialization with schema validation, so models can be authored, checked, and exchanged as data (host Julia functions are referenced by name through a registry, never embedded as code). Internally the network is a dependency-free typed struct-of-columns (see [ADR 0003](spec/adr/0003-data-store.md)); the engine is the native `ReactionNetworkProblem` type, stepped through [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl) — so a network **is** an AA agent, a node in a larger heterogeneous hierarchy that can be co-integrated with, e.g., an SDE or an agent-based model through declared wires.
+
+## What it's for
+
+The framework earns its keep on decisions a spreadsheet flattens. The [applied case studies](https://merck.github.io/ReactiveDynamics.jl/dev/case_studies/marginal_scientist/) are decision memos, each led by a headline number:
+
+- **[What is the marginal value of the *N*th scientist?](https://merck.github.io/ReactiveDynamics.jl/dev/case_studies/marginal_scientist/)** — the shadow price of the binding resource: on the modeled portfolio, the fifth scientist is worth ≈ **+\$19M** in expected NPV, far more than their salary line.
+- **[What is an in-licensing asset worth to *this* pipeline?](https://merck.github.io/ReactiveDynamics.jl/dev/case_studies/inlicensing_value/)** — value is contextual, not a number you look up: the same asset is worth different amounts depending on the contention it lands in.
+- **[When should you kill a program?](https://merck.github.io/ReactiveDynamics.jl/dev/case_studies/kill_a_program/)** — an interior optimum in the culling threshold, where freeing contended capacity is worth more than the program you shelve.
 
 ## Documentation
 
-> **API documentation is being rewritten** and will be published to GitHub Pages. The design records and normative specification that document the engine's behavior today live under [`spec/`](spec):
->
-> - [`spec/STATUS.md`](spec/STATUS.md) — the single "what is the state, what is left" index. Start here.
-> - [`spec/CONTRACT_DRAFT.md`](spec/CONTRACT_DRAFT.md) — the normative operational-semantics specification (§1–§15).
-> - [`spec/adr/`](spec/adr) — the Architecture Decision Records (0001–0015).
+Full documentation — tiered tutorials, applied case studies, an API reference organized by capability, and an explanation layer promoting the operational-semantics contract — is published at **[merck.github.io/ReactiveDynamics.jl](https://merck.github.io/ReactiveDynamics.jl/dev/)**.
+
+- **[Tutorials](https://merck.github.io/ReactiveDynamics.jl/dev/tutorials/introductory/)** — *introductory* (author, simulate, and read your first model), *advanced* (structured tokens, modalities, in-model decision rules), and *expert* (composition, AlgebraicAgents coupling, checkpointing).
+- **[Case studies](https://merck.github.io/ReactiveDynamics.jl/dev/case_studies/marginal_scientist/)** — the decision memos above, each a runnable, reproducible model.
+- **[Reference](https://merck.github.io/ReactiveDynamics.jl/dev/reference/authoring/)** — authoring, structured tokens, rules & actions, construction & simulation, composition, serialization, the JSON model schema, analysis & visualization, and AA coupling.
+
+The normative engineering artifacts live under [`spec/`](spec): [`STATUS.md`](spec/STATUS.md) (state and remaining work — start here), the operational-semantics [`CONTRACT_DRAFT.md`](spec/CONTRACT_DRAFT.md) (§1–§15), and the Architecture Decision Records under [`spec/adr/`](spec/adr).
+
+## Demos
+
+Each [`demo/`](demo) is a self-contained, runnable literate tour with its own README:
+
+- [`core_engine_tour`](demo/core_engine_tour) — the modeling metalanguage, resource modalities, the priority allocator, composition, and seeded ensembles.
+- [`agentic_pipeline`](demo/agentic_pipeline) — structured tokens, in-model decision rules, eval-free JSON models, and checkpointing.
+- [`introspection_tour`](demo/introspection_tour) — the analysis/observability layer: token trajectories, ensembles, exports, and result plots.
+- [`refinement_tour`](demo/refinement_tour) — hierarchical refinement and open-port composition.
+- [`aa_integration`](demo/aa_integration) — co-integrating a reaction network with other AlgebraicAgents models.
+- [`wires_viz_tour`](demo/wires_viz_tour) — drawing networks, AA wiring diagrams, and exec maps.
+- [`bd_acquisition`](demo/bd_acquisition) — an end-to-end business-development acquisition-impact case study (rNPV counterfactual on a living pipeline).
+
+## Context: Dynamics of Value Evolution (DyVE)
+
+RD is part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business. As the framework matures, functionalities graduate into standalone packages — chief among them [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl), the lightweight substrate for hierarchical, heterogeneous dynamical-systems co-integration on which RD is built.
+
+## License
+
+[MIT](LICENSE) © 2023 Merck &amp; Co., Inc., Rahway, NJ, USA and its affiliates.
