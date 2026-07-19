@@ -49,17 +49,28 @@ for (src, outsub) in LITERATE_TUTORIALS
     )
 end
 
+# ── Pin the offered themes ────────────────────────────────────────────────────────────────
+# Documenter ships six themes and offers all of them (the theme picker + the copied CSS both
+# read the hardcoded `HTMLWriter.THEMES` vector — there is no `HTML(; themes=…)` kwarg in 1.x).
+# Our brand layer (assets/rd-theme.css) only repaints `documenter-light` and
+# `.theme--documenter-dark`; the four catppuccin flavours would render correct but UN-branded.
+# THEMES is a mutable Vector shared by every theme code path, so we filter it in place to keep
+# only the two we style — this drops the catppuccin CSS from the build and from the picker.
+let keep = ("documenter-light", "documenter-dark")
+    filter!(in(keep), Documenter.HTMLWriter.THEMES)
+end
+
 # ── Site ────────────────────────────────────────────────────────────────────────────────
 makedocs(;
     sitename = "ReactiveDynamics.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true", edit_link = "main",
-        # House brand overrides (International Typographic Style — ink-black nav,
-        # azure accent, semantic figure hues), a thin layer over the stock themes.
-        # See docs/src/assets/rd-theme.css for what it repaints and why. The sidebar
-        # logo (`assets/logo.svg` + `assets/logo-dark.svg`) is the "firing glyph"
-        # mark from the Claude Design identity board (spec/design_system.html),
-        # reversed-out because the sidebar is black in both themes.
+        # House brand overrides (International Typographic Style — teal accent, off-white
+        # nav, semantic figure hues), a thin layer over the two stock themes. See
+        # docs/src/assets/rd-theme.css for what it repaints and why. The sidebar logo flips
+        # by theme — `assets/logo.svg` (ink mark, light off-white nav) and
+        # `assets/logo-dark.svg` (reversed-out, dark nav) — both the "firing glyph" from
+        # the Claude Design identity board (spec/design_system.html).
         assets = [
             "assets/rd-theme.css",
             # SVG favicon — `assets` infers class from extension and only knows css/js,
