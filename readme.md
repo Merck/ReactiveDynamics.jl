@@ -100,11 +100,8 @@ RD is part of the **Dynamics of Value Evolution (DyVE)** computational framework
 
 ## Contributing
 
-Thanks for taking the time to contribute — we appreciate it very much! We welcome contributions to the core engine (refining and extending the modeling metalanguage, the allocator, and the analysis layer) as well as to the documentation and worked case studies.
+Contributions to the engine, the documentation, and the worked case studies are welcome — via pull requests, or by reporting bugs and suggesting enhancements in [GitHub Issues](https://github.com/Merck/ReactiveDynamics.jl/issues). See [`CONTRIBUTING.md`](CONTRIBUTING.md) for where to start (the `spec/` design records), the project conventions, and how to run the test suite and formatter.
 
-The design records under [`spec/`](spec) are the place to start: [`STATUS.md`](spec/STATUS.md) for the current state and remaining work, the operational-semantics [`CONTRACT_DRAFT.md`](spec/CONTRACT_DRAFT.md) (§1–§15) for the normative behavior, the [Architecture Decision Records](spec/adr) for *why* the engine is the way it is, and [`INVENTORY.md`](INVENTORY.md) for the current-source map (module map, public-API audit, stepping trace, AA touchpoints). Decisions are changed by adding a new ADR, not by rewriting history; when docs and code disagree, the code is the truth.
+## License
 
-Contributions are welcome in the following forms:
-
-- Modifying the code or documentation via a pull request. Run the test suite (`julia --project=. -e 'using Pkg; Pkg.test()'`) and the [Runic](https://github.com/fredrikekre/Runic.jl) formatter before submitting.
-- Reporting bugs or suggesting enhancements in the project's [GitHub Issues](https://github.com/Merck/ReactiveDynamics.jl/issues). If you propose a feature for future development, we are happy to discuss and take on the implementation.
+ReactiveDynamics.jl is released under the [MIT License](LICENSE) © 2023 Merck &amp; Co., Inc., Rahway, NJ, USA and its affiliates. See [`LICENSES_THIRD_PARTY`](LICENSES_THIRD_PARTY) for third-party dependency licenses.
