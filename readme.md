@@ -98,6 +98,13 @@ Each [`demo/`](demo) is a self-contained, runnable literate tour with its own RE
 
 RD is part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business. As the framework matures, functionalities graduate into standalone packages — chief among them [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl), the lightweight substrate for hierarchical, heterogeneous dynamical-systems co-integration on which RD is built.
 
-## License
+## Contributing
 
-[MIT](LICENSE) © 2023 Merck &amp; Co., Inc., Rahway, NJ, USA and its affiliates.
+Thanks for taking the time to contribute — we appreciate it very much! We welcome contributions to the core engine (refining and extending the modeling metalanguage, the allocator, and the analysis layer) as well as to the documentation and worked case studies.
+
+The design records under [`spec/`](spec) are the place to start: [`STATUS.md`](spec/STATUS.md) for the current state and remaining work, the operational-semantics [`CONTRACT_DRAFT.md`](spec/CONTRACT_DRAFT.md) (§1–§15) for the normative behavior, the [Architecture Decision Records](spec/adr) for *why* the engine is the way it is, and [`INVENTORY.md`](INVENTORY.md) for the current-source map (module map, public-API audit, stepping trace, AA touchpoints). Decisions are changed by adding a new ADR, not by rewriting history; when docs and code disagree, the code is the truth.
+
+Contributions are welcome in the following forms:
+
+- Modifying the code or documentation via a pull request. Run the test suite (`julia --project=. -e 'using Pkg; Pkg.test()'`) and the [Runic](https://github.com/fredrikekre/Runic.jl) formatter before submitting.
+- Reporting bugs or suggesting enhancements in the project's [GitHub Issues](https://github.com/Merck/ReactiveDynamics.jl/issues). If you propose a feature for future development, we are happy to discuss and take on the implementation.
