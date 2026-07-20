@@ -19,7 +19,7 @@
 # — runs 160 seeds, which is what it takes to resolve the *fine* ranking of the individual synergies.)
 #
 # The underlying semantics — structured tokens, the endogenous decision channel, resource modalities,
-# the per-program ledger — live in the [explanation layer](../explanation/contract.md); here we use them.
+# the per-program ledger — are specified in the normative [operational-semantics contract](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md); here we use them.
 
 using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!,

@@ -16,8 +16,9 @@
 # **reindexes** the store as it does so. That makes the whole layer *forbidden on a live,
 # stepping model* — you compose, refine, and abstract a network, and only then hand the
 # result to `ReactionNetworkProblem`. The theory (open-port semantics, the FK-repoint that
-# makes species-identification cheap, the plug-compatibility invariants) lives in the
-# [explanation layer](../explanation/composition.md); here we exercise the operators.
+# makes species-identification cheap, the plug-compatibility invariants) lives in the normative
+# [operational-semantics contract §11](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md)
+# and [ADR 0009](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/adr/0009-refinement-and-composition.md); here we exercise the operators.
 
 using ReactiveDynamics
 using Printf

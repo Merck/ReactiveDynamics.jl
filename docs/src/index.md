@@ -12,14 +12,14 @@ The central concept is a **transition**: a stateful recipe that spawns in-flight
 ```
 
 !!! note "Documentation in progress"
-    This site is being built out under the documentation rework (branch `docs-tutorials`). The [introductory tutorial](tutorials/introductory.md) is the first published page and the quality bar for the rest. The full structure — tiered tutorials, applied case studies, API reference, and the explanation layer — is chartered in [`spec/DOCS_CHARTER.md`](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/DOCS_CHARTER.md). Until a page lands here, the runnable [`demo/`](https://github.com/Merck/ReactiveDynamics.jl/tree/rework/demo) tours are the source of truth for working code.
+    This site is being built out under the documentation rework (branch `docs-tutorials`). The [introductory tutorial](tutorials/introductory.md) is the first published page and the quality bar for the rest. The full structure — tiered tutorials, applied case studies, and an API reference, with the "why" carried by the normative spec and two companion papers rather than re-hosted here — is chartered in [`spec/DOCS_CHARTER.md`](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/DOCS_CHARTER.md). Until a page lands here, the runnable [`demo/`](https://github.com/Merck/ReactiveDynamics.jl/tree/rework/demo) tours are the source of truth for working code.
 
 ## Find your way by intent
 
 - **New here?** Start with the **[introductory tutorial](tutorials/introductory.md)** — author, simulate, and read your first model end to end, closing on a computed, decision-relevant quantity. Then the *advanced* tutorial (structured tokens, resource modalities, in-model decision rules) and the *expert* tutorial (composition, AlgebraicAgents coupling, checkpointing).
 - **What can it do for my decision?** The **applied case studies** are decision memos with a headline number: *"What is the marginal eNPV of the Nth scientist?"*, *"What is this in-licensing asset worth to this pipeline?"*, and *"When should you kill a program?"*.
 - **How do I call X?** The **API reference**, organized by capability (authoring, structured tokens, rules & actions, construction & simulation, composition, serialization, analysis & visualization, AlgebraicAgents coupling).
-- **Why does it behave this way?** The **explanation layer** promotes the normative operational-semantics contract (§1–§15) and the Architecture Decision Records — the modality truth table, the single-clock time model, and the determinism/seeding obligations.
+- **Why does it behave this way?** The normative [operational-semantics contract](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md) (§1–§15) and the [Architecture Decision Records](https://github.com/Merck/ReactiveDynamics.jl/tree/rework/spec/adr) are the source of truth — the modality truth table, the single-clock time model, and the determinism/seeding obligations. Two companion papers argue the *why* in scholarly and executive registers (see [`spec/DOCS_CHARTER.md`](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/DOCS_CHARTER.md) §8).
 
 ## How the engine thinks
 

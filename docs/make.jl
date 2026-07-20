@@ -2,7 +2,7 @@
 # make.jl — build the ReactiveDynamics.jl documentation site.
 #
 #   docs/literate/**/*.jl  (Literate sources, migrated from demo/)  →  docs/src/**/*.md
-#   docs/src/**/*.md        (+ autodocs/explanation)                 →  docs/build/  (HTML)
+#   docs/src/**/*.md        (+ autodocs)                             →  docs/build/  (HTML)
 #
 # This replaces the old DocumenterMarkdown backend. The Literate pre-pass runs FIRST, with
 # `execute = false` here (Documenter re-executes the generated `@example` blocks at HTML-build
@@ -14,8 +14,10 @@
 #   Build:       julia --project=docs docs/make.jl
 #
 # NB: this is the site scaffold the DOCS_CHARTER.md tracker (facet E1) builds toward. As
-# tutorials/case-studies/reference/explanation pages land, extend LITERATE_TUTORIALS and the
-# `pages` tree below; the charter's §10 tracker is the source of truth for what is wired yet.
+# tutorials/case-studies/reference pages land, extend LITERATE_TUTORIALS and the `pages` tree
+# below; the charter's §10 tracker is the source of truth for what is wired yet. There is no
+# on-site explanation quadrant: the "why" links out to the normative spec/ and the two papers
+# (charter D1/D2 dropped 2026-07-21; see §8).
 # ════════════════════════════════════════════════════════════════════════════════════════
 
 using Documenter, Literate
@@ -117,7 +119,8 @@ makedocs(;
             "Analysis & visualization" => "reference/analysis_viz.md",
             "AlgebraicAgents coupling" => "reference/aa_coupling.md",
         ],
-        # "Explanation"  => [...],                             # charter D1–D2 (Workstream D, separate PR)
+        # No "Explanation" nav: charter D1/D2 dropped 2026-07-21 — the "why" links out to the
+        # normative spec/CONTRACT_DRAFT.md + spec/adr/ and the two companion papers (charter §8).
     ],
 )
 
