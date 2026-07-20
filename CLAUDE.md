@@ -10,13 +10,12 @@ ReactiveDynamics.jl (RD) is a timed, stochastic, resource-constrained Petri net 
 
 The durable engineering artifacts live under top-level **`spec/`**, kept separate from **`docs/`** — which is reserved for the Documenter.jl static-pages site (`docs/make.jl`, `docs/src/`, generated `docs/build/`). Do not put spec material in `docs/`.
 
-- **`spec/STATUS.md`** — the single "what is the state, what is left" index. Start here.
-- **`spec/CONTRACT_DRAFT.md`** — the normative operational-semantics spec (§1–§15). The durable spine.
-- **`spec/adr/`** — Architecture Decision Records 0001–0015 (append-only), with the status table in `spec/adr/README.md`. To change a decision, add a new ADR; do not rewrite history.
-- **`spec/PR_DRAFT.md`** — the draft PR narrative for the rework.
-- **`spec/INVENTORY.md`** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints).
-- **`readme.md`** — the user-facing package README (about + demos).
-- The BD acquisition demo design doc that drove §12 lives with its demo: **`demo/bd_acquisition/MVP_BD_DEMO.md`**. Superseded handoff plans are archived under `spec/history/`. The origin-story review (`REVIEW.md`) and the Phase-0 sign-off record (`PHASE0_REVIEW.md`) were retired in the 2026-07-17 consolidation (superseded by `spec/STATUS.md` + the ADRs; both remain in git history).
+**[`spec/STATUS.md`](spec/STATUS.md) is the single entry point — start there.** It carries the authoritative catalog of every durable artifact (CONTRACT_DRAFT, adr/, PR_DRAFT, DOCS_CHARTER, INVENTORY, the retired/archived docs) so this guide need not duplicate it. The three you touch most:
+
+- **`spec/STATUS.md`** — "what is the state, what is left." The dashboard: feature→commit table, test tally, deferred items with gates.
+- **`spec/CONTRACT_DRAFT.md`** — the normative operational-semantics spec (§1–§15). The durable spine: *what the engine must do*.
+- **`spec/INVENTORY.md`** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints): *where it lives in the source*.
+- **`spec/adr/`** — Architecture Decision Records (append-only), status table in `spec/adr/README.md`. To change a decision, add a new ADR; do not rewrite history.
 
 ## Current architecture (post-ADR-0015)
 
