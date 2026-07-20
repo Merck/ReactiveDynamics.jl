@@ -7,18 +7,18 @@
    with demo/bd_acquisition/presentation.html:
 
      International Typographic Style — pitch-black ink, hairline-black rules as
-     the structural device, ONE accent (azure), and functional figure hues that
+     the structural device, ONE accent (teal), and functional figure hues that
      carry meaning (teal = people/capacity, amber = money/budget, rose = risk).
 
    What this file changes, and nothing else:
-     · the navigation sidebar → an ink-black field (matches the presentation
-       masthead / colophon), mono labels, azure active-page marker;
-     · headings → Inter, tight tracking, an azure underline accent on h1 and a
+     · the navigation sidebar → a near-white field (matches the presentation
+       masthead / colophon), mono labels, teal active-page marker;
+     · headings → Inter, tight tracking, a teal underline accent on h1 and a
        hairline rule under h2;
-     · links / accents → azure;
-     · admonitions → recoloured to the semantic palette (note→azure,
+     · links / accents → teal;
+     · admonitions → recoloured to the semantic palette (note→teal,
        warning→amber, danger→rose, tip→teal);
-     · code → flat field, hairline border, azure keywords.
+     · code → flat field, hairline border, teal keywords.
 
    Specificity notes (so overrides actually land): the stock light rules are
    `#documenter .foo` (id+class); we match that exactly and win on source order
@@ -32,7 +32,7 @@
 
 :root {
   /* Palette aligned to the canonical Claude Design identity board
-     (spec/design_system.html): warm neutrals, azure accent, semantic figure hues. */
+     (spec/design_system.html): warm neutrals, teal accent, semantic figure hues. */
   --rd-ink:      #0A0A0A;   /* pitch-black ink & hairlines            */
   --rd-paper:    #FFFFFF;   /* pure white content ground              */
   --rd-inset:    #F4F4F2;   /* warm neutral inset (code surround)     */
@@ -46,11 +46,14 @@
   --rd-grey-lt:  #9A9A98;   /* warm grey, lighter                     */
   --rd-hair:     #C7C7C4;   /* warm hairline (faint internal divider) */
 
-  /* navigation sidebar — a warm off-white panel in light mode, a warm dark
-     panel in dark mode (was pitch-black; softened per house review). */
-  --rd-nav-bg:      #EDEDEA; /* light: off-white warm grey             */
-  --rd-nav-hover:   #E2E2DE; /* light: hover / active fill             */
-  --rd-nav-edge:    #C7C7C4; /* light: right border + dividers         */
+  /* navigation sidebar — a near-white panel in light mode, a warm dark
+     panel in dark mode (was pitch-black, then creamy off-white; lifted to
+     near-white per house review). The panel sits a touch below the pure-white
+     content ground so the sidebar reads as a distinct panel that anchors the
+     logo — at #FBFBFA it was ~1pt off #FFFFFF and the logo floated. */
+  --rd-nav-bg:      #F3F3F1; /* light: near-white panel (vs #FFFFFF content) */
+  --rd-nav-hover:   #E7E7E3; /* light: hover / active fill             */
+  --rd-nav-edge:    #D9D9D5; /* light: right border + dividers         */
   --rd-nav-bg-dk:   #1B1B19; /* dark: warm near-black panel            */
   --rd-nav-hover-dk:#262624; /* dark: hover / active fill              */
   --rd-nav-edge-dk: #3A3A38; /* dark: right border + dividers          */
@@ -91,7 +94,7 @@ html.theme--documenter-dark #documenter .docs-main h2,
 html.theme--documenter-dark #documenter .docs-main h3,
 html.theme--documenter-dark #documenter .docs-main h4 { color: #FFFFFF; }
 
-/* h1 — an azure underline accent (the presentation's kicker rule, distilled) */
+/* h1 — a teal underline accent (the presentation's kicker rule, distilled) */
 #documenter .docs-main h1 { position: relative; padding-bottom: 0.35rem; }
 #documenter .docs-main h1::after {
   content: ""; display: block; width: 3rem; height: 3px;
@@ -112,7 +115,7 @@ html.theme--documenter-dark #documenter .docs-main a,
 html.theme--documenter-dark #documenter .docs-main a code { color: var(--rd-accent-lt); }
 
 /* Heading text is wrapped in an `<a class="docs-heading-anchor">`; keep it the
-   heading's ink colour, NOT the azure link colour — azure stays the ONE accent
+   heading's ink colour, NOT the teal link colour — teal stays the ONE accent
    (the h1 underline + real links). */
 #documenter .docs-main h1 a.docs-heading-anchor,
 #documenter .docs-main h1 a.docs-heading-anchor:hover,
@@ -147,24 +150,63 @@ html.theme--documenter-dark #documenter .docs-sidebar {
   border-right: 1px solid var(--rd-nav-edge-dk);
 }
 
-/* brand / package name — the masthead treatment */
+/* brand lockup — the firing-glyph mark stacked above the wordmark. The stock
+   theme sizes `.docs-logo > img` at max-height 6rem, which nearly spans the
+   18rem sidebar edge-to-edge; 4.5rem gives the glyph a bold presence that fills
+   the width without reading as a banner.
+
+   SPECIFICITY: the stock light rule is `#documenter … .docs-logo>img` (1,2,1),
+   which our unscoped rule ties and beats on source order. But the dark AND
+   catppuccin themes emit the SAME rule PREFIXED with `html.theme--…` (1,3,2),
+   which out-specifies us — so the logo stayed at 6rem on those two themes (bigger
+   than light). We therefore repeat the cap under each theme prefix to match that
+   specificity and win on source order. (Only these three themes ship — the theme
+   list is filtered to them in docs/make.jl.) */
+#documenter .docs-sidebar .docs-logo > img,
+html.theme--documenter-dark #documenter .docs-sidebar .docs-logo > img,
+html.theme--catppuccin-latte #documenter .docs-sidebar .docs-logo > img {
+  max-height: 4.5rem;
+  margin-top: 0.6rem;
+}
+
+/* brand / package name — the masthead treatment. Set in the Inter display face
+   (NOT the mono UI face) so the wordmark matches spec/design_system.html; the
+   `.jl` extension is wrapped by rd-logo.js and tinted teal below. */
 #documenter .docs-sidebar .docs-package-name {
   border-bottom: 1px solid var(--rd-nav-edge);
-  padding-bottom: 0.4rem;
 }
 html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name {
   border-bottom-color: var(--rd-nav-edge-dk);
 }
+/* SPECIFICITY (same trap as the logo cap above): stock `.docs-package-name`
+   sets `font-size:1.5rem` — unscoped on light (our unscoped rule ties + wins on
+   order) but PREFIXED with `html.theme--…` on dark/catppuccin, which out-specifies
+   an unscoped override. So a plain `font-size:1.1rem` only shrank the wordmark on
+   light; it stayed 1.5rem on dark/catppuccin. Repeat the size under each shipped
+   theme prefix so the wordmark is uniform across all three. */
+#documenter .docs-sidebar .docs-package-name,
+html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name,
+html.theme--catppuccin-latte #documenter .docs-sidebar .docs-package-name {
+  padding-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
 #documenter .docs-sidebar .docs-package-name a,
 #documenter .docs-sidebar .docs-package-name a:hover {
   color: var(--rd-ink);
-  font-family: var(--rd-mono);
+  font-family: var(--rd-display);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.02em;
 }
 html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name a,
 html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name a:hover {
   color: #FFFFFF;
+}
+/* the `.jl` extension, wrapped in `<span class="rd-jl">` by rd-logo.js — the
+   ONE teal accent on the wordmark, echoing the identity board's `.jl` treatment.
+   Reversed out to the light-teal on the dark nav. */
+#documenter .docs-sidebar .docs-package-name a .rd-jl { color: var(--rd-accent); }
+html.theme--documenter-dark #documenter .docs-sidebar .docs-package-name a .rd-jl {
+  color: var(--rd-accent-lt);
 }
 
 /* menu items — mono, muted */
@@ -204,16 +246,18 @@ html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu label.tocitem
   background-color: var(--rd-nav-hover-dk);
 }
 
-/* active page — teal left rule + ink text, subtle fill, no boxed border */
+/* active page — the selected group of headers reads as a boxed band: a hairline
+   top + bottom rule (like the stock/Catppuccin active group) with the teal left
+   rule marking it as current, over a subtle fill. */
 #documenter .docs-sidebar ul.docs-menu li.is-active {
-  border-top: 0;
-  border-bottom: 0;
+  border-top: 1px solid var(--rd-nav-edge);
+  border-bottom: 1px solid var(--rd-nav-edge);
   background-color: var(--rd-nav-hover);
   border-left: 3px solid var(--rd-accent);
 }
 html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu li.is-active {
-  border-top: 0;
-  border-bottom: 0;
+  border-top: 1px solid var(--rd-nav-edge-dk);
+  border-bottom: 1px solid var(--rd-nav-edge-dk);
   background-color: var(--rd-nav-hover-dk);
   border-left: 3px solid var(--rd-accent-lt);
 }
@@ -298,7 +342,7 @@ html.theme--documenter-dark #documenter .docs-sidebar .docs-version-selector {
 }
 
 /* ============================================================================
-   CODE — flat field, hairline border, square corners; azure keywords.
+   CODE — flat field, hairline border, square corners; teal keywords.
    Code stays on JuliaMono for full Julia unicode glyph coverage.
    ============================================================================ */
 #documenter .docs-main pre,

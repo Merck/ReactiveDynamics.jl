@@ -49,15 +49,23 @@ for (src, outsub) in LITERATE_TUTORIALS
     )
 end
 
-# ── Pin the offered themes ────────────────────────────────────────────────────────────────
+# ── Pin & order the offered themes ──────────────────────────────────────────────────────────
 # Documenter ships six themes and offers all of them (the theme picker + the copied CSS both
 # read the hardcoded `HTMLWriter.THEMES` vector — there is no `HTML(; themes=…)` kwarg in 1.x).
-# Our brand layer (assets/rd-theme.css) only repaints `documenter-light` and
-# `.theme--documenter-dark`; the four catppuccin flavours would render correct but UN-branded.
-# THEMES is a mutable Vector shared by every theme code path, so we filter it in place to keep
-# only the two we style — this drops the catppuccin CSS from the build and from the picker.
-let keep = ("documenter-light", "documenter-dark")
-    filter!(in(keep), Documenter.HTMLWriter.THEMES)
+# Our brand layer (assets/rd-theme.css) repaints all three themes we keep; the darker catppuccin
+# flavours are dropped. ORDER MATTERS: Documenter marks `THEMES[1]` as the primary (default,
+# light-preference) theme and `THEMES[2]` as the primary-dark (dark-OS-preference) fallback
+# (HTMLWriter.jl ~L1137). We keep the BRANDED warm `documenter-light` as the default — it coheres
+# with the whole warm-neutral identity system (spec/design_system.html; the teal/amber/rose
+# figure hues are tuned against warm paper, not catppuccin's cool blue-grey) — with
+# `documenter-dark` as the dark fallback and `catppuccin-latte` offered as an alternative in the
+# picker. We OVERWRITE the vector in that exact order (a plain `filter!` preserves the stock
+# light→dark→latte order, which happens to give the same default, but being explicit documents
+# the intent). THEMES is a mutable Vector shared by every theme code path, so assigning into it
+# in place also drops the unused catppuccin CSS from the build.
+let want = ["documenter-light", "documenter-dark", "catppuccin-latte"]
+    empty!(Documenter.HTMLWriter.THEMES)
+    append!(Documenter.HTMLWriter.THEMES, want)
 end
 
 # ── Site ────────────────────────────────────────────────────────────────────────────────
@@ -73,6 +81,10 @@ makedocs(;
         # the Claude Design identity board (spec/design_system.html).
         assets = [
             "assets/rd-theme.css",
+            # Tints the ".jl" extension of the sidebar wordmark teal — Documenter
+            # emits the sitename as a bare text node, so a tiny script splits off
+            # the ".jl" suffix into a `.rd-jl` span that rd-theme.css paints.
+            "assets/rd-logo.js",
             # SVG favicon — `assets` infers class from extension and only knows css/js,
             # so an .svg icon must be passed as an explicit :ico-class HTMLAsset.
             asset("assets/favicon.svg"; class = :ico, islocal = true),
