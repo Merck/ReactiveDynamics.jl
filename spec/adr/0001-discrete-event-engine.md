@@ -2,7 +2,7 @@
 
 - Status: Accepted (maintainer-confirmed 2026-06-17)
 - Deciders: maintainer + rework
-- Relates to: rework brief Workstream D ("Engine / SciML embedding"); supersedes REVIEW.md's `DiscreteProblem`-era framing; see [INVENTORY.md](../../INVENTORY.md) for current source map.
+- Relates to: rework brief Workstream D ("Engine / SciML embedding"); supersedes REVIEW.md's `DiscreteProblem`-era framing; see [INVENTORY.md](../INVENTORY.md) for current source map.
 
 ## Context
 

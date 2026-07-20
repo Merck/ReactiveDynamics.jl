@@ -10,7 +10,7 @@ The durable engineering artifacts live under top-level **`spec/`** (this directo
 - **[adr/](adr/)** — one Architecture Decision Record per real decision (0001–0015), append-only, with a status table in [adr/README.md](adr/README.md). ADRs record context/decision/consequences/rejected-options; the CONTRACT records the resulting semantics.
 - **[PR_DRAFT.md](PR_DRAFT.md)** — the draft PR narrative for the rework (the headline changes, tiered against the ADRs).
 - **[DOCS_CHARTER.md](DOCS_CHARTER.md)** — the tracking charter for the documentation/tutorials rework (the standalone PR into `rework`, branch `docs-tutorials`): the Diátaxis structure, the demo→docs migrate-in-place mapping, the tiered-tutorial + case-study scope, and the per-facet progress tracker. The docs counterpart to this file.
-- **[../INVENTORY.md](../INVENTORY.md)** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints). Verified against the `ref-agents` tree.
+- **[INVENTORY.md](INVENTORY.md)** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints). Verified against the `ref-agents` tree.
 - **[../readme.md](../readme.md)** — the user-facing package README (about + demos).
 - **[../CLAUDE.md](../CLAUDE.md)** — the agent-facing guide (what the project is, current post-ADR-0015 architecture, build/test commands, dev-loop gotchas).
 

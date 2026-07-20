@@ -7,7 +7,7 @@ Please start with the design records under [`spec/`](spec), which document the e
 - [`spec/STATUS.md`](spec/STATUS.md) — the single "what is the state, what is left" index. Start here.
 - [`spec/CONTRACT_DRAFT.md`](spec/CONTRACT_DRAFT.md) — the normative operational-semantics specification (§1–§15).
 - [`spec/adr/`](spec/adr) — the Architecture Decision Records: *why* the engine is the way it is.
-- [`INVENTORY.md`](INVENTORY.md) — the current-source map (module map, public-API audit, stepping trace, AlgebraicAgents touchpoints).
+- [`spec/INVENTORY.md`](spec/INVENTORY.md) — the current-source map (module map, public-API audit, stepping trace, AlgebraicAgents touchpoints).
 
 Two conventions matter. Decisions are changed by **adding a new ADR**, not by rewriting an existing one — the record is append-only. And when documentation and code disagree, **the code is the source of truth**; fix the docs to match, or open an issue if the code looks wrong.
 

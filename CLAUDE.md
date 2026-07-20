@@ -14,7 +14,7 @@ The durable engineering artifacts live under top-level **`spec/`**, kept separat
 - **`spec/CONTRACT_DRAFT.md`** — the normative operational-semantics spec (§1–§15). The durable spine.
 - **`spec/adr/`** — Architecture Decision Records 0001–0015 (append-only), with the status table in `spec/adr/README.md`. To change a decision, add a new ADR; do not rewrite history.
 - **`spec/PR_DRAFT.md`** — the draft PR narrative for the rework.
-- **`INVENTORY.md`** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints).
+- **`spec/INVENTORY.md`** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints).
 - **`readme.md`** — the user-facing package README (about + demos).
 - The BD acquisition demo design doc that drove §12 lives with its demo: **`demo/bd_acquisition/MVP_BD_DEMO.md`**. Superseded handoff plans are archived under `spec/history/`. The origin-story review (`REVIEW.md`) and the Phase-0 sign-off record (`PHASE0_REVIEW.md`) were retired in the 2026-07-17 consolidation (superseded by `spec/STATUS.md` + the ADRs; both remain in git history).
 
