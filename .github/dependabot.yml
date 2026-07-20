@@ -1,0 +1,11 @@
+# Keep the GitHub Actions themselves current (CompatHelper handles Julia package deps; this
+# handles the `uses:` action versions in .github/workflows/).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
