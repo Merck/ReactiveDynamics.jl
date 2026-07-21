@@ -1,9 +1,9 @@
-# BD acquisition-impact demo — export the canonical ensemble to JSON for the HTML brief.
+# BD acquisition-impact demo — export the canonical ensemble to JSON.
 #
 # Runs the SAME S0–S5 grid as run_demo.jl / figures.jl (160 seeds, root 2026) and writes the
-# per-seed metric vectors + summary stats to presentation_data.json, which is inlined into the
-# static HTML presentation (figures rendered client-side as SVG from the real numbers — no faked
-# distributions). Dependency-free JSON emission (manual string building) to avoid a JSON dep.
+# per-seed metric vectors + summary stats to presentation_data.json — the real numbers behind the
+# result figures, suitable for downstream client-side rendering (no faked distributions).
+# Dependency-free JSON emission (manual string building) to avoid a JSON dep.
 #
 # Run:  julia --project=. demo/bd_acquisition/export_data.jl
 

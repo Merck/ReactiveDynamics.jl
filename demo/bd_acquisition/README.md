@@ -14,8 +14,8 @@ Then any script (the same `--project` resolves all of them):
 
 ```bash
 julia --project=demo/bd_acquisition demo/bd_acquisition/run_demo.jl       # the scenario grid + report
-julia --project=demo/bd_acquisition demo/bd_acquisition/figures.jl        # the four presentation PNGs
-julia --project=demo/bd_acquisition demo/bd_acquisition/export_data.jl    # the 160-seed JSON for the HTML
+julia --project=demo/bd_acquisition demo/bd_acquisition/figures.jl        # the four result figures (PNG)
+julia --project=demo/bd_acquisition demo/bd_acquisition/export_data.jl    # the 160-seed ensemble as JSON
 ```
 
 (`run_demo.jl`/`export_data.jl` need no plotting and also run under the bare `--project=.`; `figures.jl` needs `Plots`, hence the demo env. Or, against the dev test server, `dev/run.sh demo/bd_acquisition/run_demo.jl`.)
@@ -62,9 +62,8 @@ Three reads a BD partner takes away:
 - [`analysis.jl`](analysis.jl) — the rNPV roll-up and the per-program-ledger views (`program_ledger_summary`/`program_economics`/`ledger_reconciliation`, which read the engine-level **per-program ledger** — MVP finding D, now resolved for cost — and cross-check it against the aggregate row and the post-hoc rNPV roll-up). The ensemble fan-out / cross-run `summarize` / unpaired `treatment_effect` are now **thin wrappers over the engine APIs** (`RD.ensemble`/`RD.summarize`/`RD.treatment_effect`, ADR 0013 §14.2) — the hand-rolled versions this demo originally carried were promoted into `src/analysis.jl`, so each scenario is now an `EnsembleProblem` (a readable AA node) and the only demo-specific bit left is netting the acquisition price into the rNPV metric. Discounting/valuation stay pure post-processing; the engine does no discounting (MVP §5 / finding D's documented boundary).
 - [`run_demo.jl`](run_demo.jl) — the scenario grid (S0–S5) + driver + report (default 160 seeds; the table prints Δ-rNPV ± SE, the financing dip, the cash/scientist low-water marks, and the marginal synergy decomposition).
 - [`model.rdj.json`](model.rdj.json) — the same pipeline as an **eval-free JSON model** (ADR 0005, Stage E). `from_json_model(read("model.rdj.json", String); registry = PROJECT_REGISTRY)` builds a model byte-for-byte identical to the in-Julia DSL under the same seed (verified, `serialization_ir.jl::E8`). The host `ProjectToken` type + registry stay host Julia (referenced by name); the JSON carries no code.
-- [`figures.jl`](figures.jl) → [`figures/`](figures/) — the presentation charts (Δ-rNPV waterfall, synergy decomposition with ±SE bars, rNPV distribution, binding-cash-constraint view), generated from the same engine run.
-- [`BRIEF.md`](BRIEF.md) — the one-page technical-executive brief tying the figures to the engine mechanisms.
-- [`presentation.html`](presentation.html) — a self-contained static HTML walkthrough (no server, no build step to view) structured as an HBR-style technical paper: it leads with **the framework as reusable architecture** for rapid valuation/impact modeling, then uses the BD acquisition as one worked case (assume → declare → simulate → read out) with an interactive counterfactual console and charts rendered client-side as SVG from the real 160-seed ensemble. [`export_data.jl`](export_data.jl) dumps that ensemble to `presentation_data.json`; [`build_presentation.jl`](build_presentation.jl) inlines it into the page. Regenerate with `julia --project=demo/bd_acquisition demo/bd_acquisition/export_data.jl && julia --project=demo/bd_acquisition demo/bd_acquisition/build_presentation.jl`.
+- [`figures.jl`](figures.jl) — regenerates the four result figures (Δ-rNPV waterfall, synergy decomposition with ±SE bars, rNPV distribution, binding-cash-constraint view) into a local `figures/` directory, from the same engine run.
+- [`export_data.jl`](export_data.jl) — runs the same S0–S5 grid (160 seeds) and dumps the per-seed metric vectors + summary stats to a local `presentation_data.json` (dependency-free JSON emission), for downstream client-side rendering.
 
 ## Milestone-1 caveats (deliberate)
 

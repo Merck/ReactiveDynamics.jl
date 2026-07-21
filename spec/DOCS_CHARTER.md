@@ -87,9 +87,9 @@ paper/                           # [ ] the two peer papers (Workstream D) — fo
 | `refinement_tour` | script, thin demo-local env | **composition deep-dive** (granularity ladder) + **expert** | Structural; `@pipeline`/`@compose`/`refine`/`abstract`. |
 | `aa_integration` | script, `--project=.` | **expert** tutorial (AA hierarchy node, wires, `_prestep!` Jacobi lag) | Prose/`println` twin of `wires_viz_tour`. |
 | `wires_viz_tour` | **Literate + HTML** (`build.jl`) | **expert** tutorial (drawn) + toolchain precedent | Already the target format; its `build.jl` is the render recipe to generalize. |
-| `bd_acquisition` | scripts + JSON model + HTML presentation | **flagship + in-licensing case studies** (refined HTML) | Its `MVP_BD_DEMO.md` design doc defines the decision-case-study DNA; its `presentation.html` is the refined-HTML precedent. |
+| `bd_acquisition` | scripts + JSON model | **flagship + in-licensing case studies** (refined HTML) | Its `MVP_BD_DEMO.md` design doc defines the decision-case-study DNA. |
 
-**Refined HTML for case studies.** The flagship case study (and the in-licensing one) get a refined, self-contained HTML presentation beyond the Documenter page, following the existing `demo/bd_acquisition/presentation.html` precedent (client-side SVG charts from a real ensemble dump, HBR-style narrative). The [HTML→PDF recipe](../demo/bd_acquisition) (headless Chrome, print stylesheet) remains available for a PDF artifact.
+**Refined HTML for case studies.** The flagship case study (and the in-licensing one) get a refined, self-contained HTML presentation beyond the Documenter page: client-side SVG charts from a real ensemble dump, narrative-led. A headless-Chrome + print-stylesheet pass remains available for a PDF artifact.
 
 ## 5. Workstream A — Tiered onboarding tutorials
 
@@ -247,7 +247,7 @@ Three roles, non-overlapping, so nothing drifts:
 
 - **`docs/make.jl`** rewritten for Documenter HTML + a Literate pre-pass over `docs/literate/**`. Replaces `DocumenterMarkdown`.
 - **`docs/Project.toml`** gains `Documenter`, `Literate` (and `Plots`/`Arrow`/`DataFrames`/`Distributions` for the case-study renders, mirroring the demo-local envs). `ReactiveDynamics` path-dev'd.
-- **Self-contained HTML render recipe** for the case studies generalized from `demo/wires_viz_tour/build.jl` (executed Literate → markdown → inlined-SVG HTML) and `demo/bd_acquisition/build_presentation.jl`.
+- **Self-contained HTML render recipe** for the case studies generalized from `demo/wires_viz_tour/build.jl` (executed Literate → markdown → inlined-SVG HTML).
 - **GitHub Pages deploy** via `deploydocs` (repo already targets `github.com/Merck/ReactiveDynamics.jl.git`). No CI exists in-repo (no `.github/workflows/`); document the local build+deploy command, and note CI as an optional follow-up (also a JOSS gate, §8 D-future).
 - **Paper builds (E4)** — when each paper's format lands: either `latexmk` over `paper/<name>/*.tex` (LaTeX route) or a pandoc→LaTeX pass over the Markdown route, per paper (D3a and D3b build independently). Deferred with the format decision (§8 D3).
 - **Formatter.** All Literate `.jl` sources pass Runic (`julia -m Runic --check .`), same as the rest of the tree.
@@ -277,7 +277,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started.
 | Explanation | D-future | JOSS `paper.md` + methods paper (gates: CI scaffold ✅, release/DOI ⬜, CONTRIBUTING ✅) | fed by D3a | ⬜ (parked) |
 | Build | E1 | make.jl (Documenter + Literate) | wires_viz_tour/build.jl | ✅ (full nav wired: all 8 tutorials + 9 reference pages) |
 | Build | E2 | docs/Project.toml (site build green) | — | ✅ (demo-union deps; full site builds green; explanation links retargeted to `spec/`) |
-| Build | E3 | Refined-HTML render recipe (case studies) | bd_acquisition/build_presentation.jl | ⬜ (B1/B2 Literate pages done; refined-HTML presentation pending — companion to D3b) |
+| Build | E3 | Refined-HTML render recipe (case studies) | wires_viz_tour/build.jl | ⬜ (B1/B2 Literate pages done; refined-HTML presentation pending — companion to D3b) |
 | Build | E4 | Paper builds (latexmk or pandoc), one per paper | — | ⬜ (with D3a/D3b formats) |
 
 ## 11. Sequencing
