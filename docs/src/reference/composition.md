@@ -24,3 +24,13 @@ port_role
 refinement_diagnostics
 compose
 ```
+
+## Namespacing internals
+
+The merge operators namespace each fragment's private species before copying rows, so two fragments cannot conflate their state. These helpers are internal (unexported), documented here because the composition docstrings reference them.
+
+```@docs
+prepend!
+prepend_obs!
+normalize_name
+```

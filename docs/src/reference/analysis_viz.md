@@ -39,3 +39,17 @@ ThroughputPlot
 ```
 
 The `@export_solution_as_table` / `@export_solution_as_csv` macros are the older, solution-output path predating the [`export_run`](@ref) bundle; prefer `export_run`/`export_ensemble` for new work.
+
+```@docs
+@export_solution_as_table
+@export_solution_as_csv
+```
+
+## AlgebraicAgents observable surface
+
+`ReactiveDynamics` overloads the AlgebraicAgents read verbs for its problem and ensemble nodes, so a network's exported observables are readable by name (or canonical index) through the standard AA interface.
+
+```@docs
+observables
+getobservable
+```

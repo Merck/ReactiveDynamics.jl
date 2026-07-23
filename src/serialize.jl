@@ -677,6 +677,11 @@ end
 # (a TVE=no attribute must be a literal, not a non-trivial tree).
 _is_literal(x) = !(x isa AbstractDict) || get(x, "node", "") == "const"
 
+"""
+    validate(d::AbstractDict; registry = Dict{Symbol, Any}()) -> Vector{Diagnostic}
+
+Statically check a parsed model dict `d` against the closed, eval-free IR and return a `Vector{Diagnostic}` — it never runs a model field, so it is the trust boundary [`from_json_model`](@ref) gates on (construction proceeds only when the returned vector is empty). Checks include: every [`NodeRef`](@ref) names a declared species/param/observable, every [`Call`](@ref) op is in [`OP_WHITELIST`](@ref) and every [`Sample`](@ref) distribution in [`DIST_WHITELIST`](@ref), reference kinds are in [`REF_KINDS`](@ref), and a non-time-varying attribute is a bare literal rather than a non-trivial tree. Host functions named by an action/genesis `kind` are resolved by name through `registry`. Unexported; call it as `ReactiveDynamics.validate(dict)` to inspect a document directly.
+"""
 function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
     diags = Diagnostic[]
     species = Set(Symbol(s["name"]) for s in get(d, "species", []))

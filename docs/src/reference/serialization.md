@@ -15,6 +15,7 @@ from_json_model
 to_json_model
 @import_model
 @export_model
+validate
 node_to_dict
 node_from_dict
 model_to_dict

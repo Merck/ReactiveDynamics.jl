@@ -15,3 +15,14 @@ BaseStructuredToken
 PopulationEntry
 log_token_fields
 ```
+
+## Runtime token instances
+
+A `Transition` is a live in-flight instance of a transition recipe; the tokens it occupies are its bound structured agents. `ReactantSpec` is the promoted transition↔species incidence row — the typed, foreign-key-exact form of a reaction line that structured-token binding and species merges repoint against.
+
+```@docs
+Transition
+ReactantSpec
+reactant_specs
+specname
+```

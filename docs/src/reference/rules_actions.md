@@ -25,3 +25,13 @@ activate!
 deactivate!
 set_guard!
 ```
+
+## Per-program ledger
+
+Cost/reward/valuation actions accumulate into a per-program ledger — the model's accounting side. These read the ledger a finished (or in-progress) run has built up.
+
+```@docs
+ProgramLedger
+program_ledger
+program_ledger_entries
+```

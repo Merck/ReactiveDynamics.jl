@@ -75,6 +75,23 @@ makedocs(;
     sitename = "ReactiveDynamics.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true", edit_link = "main",
+        # The flagship case studies and the advanced tutorial embed executed simulation output
+        # and inline SVG exec-maps, so a few generated pages legitimately run large. Raise the
+        # HTML-size warn/hard limits above Documenter's 100/200 KiB defaults (largest page is
+        # ~190 KiB) so a rich-but-intentional page does not warn or fail the build. See the
+        # size-threshold docs: https://documenter.juliadocs.org/stable/man/guide/#Page-Size-Threshold.
+        size_threshold = 300 * 1024,
+        size_threshold_warn = 250 * 1024,
+        # DELIBERATELY LOW — do NOT raise to silence the residual example-size warning. A Plots
+        # figure advertises BOTH a fat `text/html` MIME rep (~65 KiB, a plotly-style raster) and
+        # an `image/svg+xml` rep; the executed figures here render to 80–156 KiB of SVG. With this
+        # threshold Documenter finds `text/html` over the limit and writes each figure out to a
+        # standalone `.svg` FILE (data-uri only for the small ones), which is exactly what keeps the
+        # page HTML lean. Raising it above the figures would make Documenter inline the fat raster
+        # rep straight into the pages instead — tripping the page `size_threshold` above. The cost
+        # is one aggregated, purely-informational `@warn` ("N @example blocks … using the image
+        # fallback"); it is NOT a page-size violation and does not fail the docs job.
+        example_size_threshold = 32 * 1024,
         # House brand overrides (International Typographic Style — teal accent, off-white
         # nav, semantic figure hues), a thin layer over the two stock themes. See
         # docs/src/assets/rd-theme.css for what it repaints and why. The sidebar logo flips
@@ -93,6 +110,10 @@ makedocs(;
         ],
     ),
     modules = [ReactiveDynamics],
+    # Only the exported public API must appear in the manual; the ~80 internal helpers with
+    # docstrings (parser/compiler/allocator internals) are intentionally not surfaced as
+    # reference entries. Without this, checkdocs defaults to :all and warns on every one.
+    checkdocs = :exports,
     warnonly = true,   # scaffold stage: don't fail on cross-references to pages not yet authored
     pages = [
         "Home" => "index.md",

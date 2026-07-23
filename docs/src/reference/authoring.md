@@ -7,6 +7,7 @@ CurrentModule = ReactiveDynamics
 The authoring surface is the `@reaction_network` DSL and the macros that populate a network with transitions, species, attributes, and the initial-state / parameter / solver metadata a run needs. A network authored here is a pure typed data artifact — no host code is captured — that is later handed to [`ReactionNetworkProblem`](@ref) for simulation.
 
 ```@docs
+ReactionNetwork
 @reaction_network
 @push
 @add_species

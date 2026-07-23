@@ -141,12 +141,11 @@ struct ReactantSpec
     expr::Union{Nothing, Expr, Symbol}   # escape-hatch term for a dynamic reactant, else nothing
 end
 
-# The static network container `ReactionNetwork` (ADR 0015: renamed from the ACSets-lineage
-# `ReactionNetworkSchema` — it is a populated network INSTANCE, not the schema; the type-level
-# object model is `const SCHEMA`). `counts` counts rows per object; `columns` is the NamedTuple of
-# typed columns in ALLATTRS order; `reactants` is the promoted ReactantSpec incidence table (ADR
-# 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted
-# model — the runtime never reads it).
+"""
+    ReactionNetwork
+
+The static network container (ADR 0015: renamed from the ACSets-lineage `ReactionNetworkSchema` — it is a populated network INSTANCE, not the schema; the type-level object model is `const SCHEMA`). It is the inert, typed struct-of-columns store an authored model compiles to before it is handed to [`ReactionNetworkProblem`](@ref) for simulation. `counts` counts rows per object; `columns` is the NamedTuple of typed columns in `ALLATTRS` order; `reactants` is the promoted [`ReactantSpec`](@ref) incidence table (ADR 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted model — the runtime never reads it).
+"""
 struct ReactionNetwork
     counts::Dict{Symbol, Int}
     columns::NamedTuple
