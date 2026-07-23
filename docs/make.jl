@@ -124,4 +124,4 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo = "github.com/Merck/ReactiveDynamics.jl.git")
+deploydocs(; repo = "github.com/Merck/ReactiveDynamics.jl.git", push_preview = true)
