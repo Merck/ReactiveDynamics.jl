@@ -2,8 +2,8 @@
   <!-- Favicon — the Firing Glyph compressed to a square field, tuned to read at 16px:
        a single place → azure transition bar → place, from the Claude Design identity
        board (spec/design_system.html). Larger radii + heavier bar than the wide mark so
-       the three elements survive downscaling. -->
-  <rect width="48" height="48" fill="#FFFFFF"/>
+       the three elements survive downscaling. Background is transparent (matches
+       logo.svg / logo-dark.svg / logo-mark.svg) so the tab bar shows through. -->
   <circle cx="9" cy="24" r="6" fill="none" stroke="#0A0A0A" stroke-width="2.4"/>
   <line x1="15" y1="24" x2="21" y2="24" stroke="#0A0A0A" stroke-width="2.4"/>
   <rect x="22" y="12" width="5" height="24" fill="#0A8A84"/>
