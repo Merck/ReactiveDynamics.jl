@@ -49,7 +49,7 @@ sir = @reaction_network begin
     β * I,     I     --> R,  name => recovery
 end
 @prob_init   sir S = 999 I = 10 R = 0
-@prob_params sir α = 0.0001 β = 0.01
+@prob_params sir α = 0.0001 β = 0.01           # α is per-encounter: rates are literal, so βSI/N means α = β/N
 @prob_meta   sir tspan = 250 dt = 0.1
 
 prob = ReactionNetworkProblem(sir; seed = 1)   # seed= owns the per-run RNG — the only route to reproducibility

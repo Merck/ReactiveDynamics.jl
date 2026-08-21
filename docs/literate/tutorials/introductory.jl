@@ -33,6 +33,14 @@ using Plots                     # inline figures
 #   is a *stochastic (Poisson)* intensity.
 # - `I --> R` — an infected recovers, at rate `β*I`.
 #
+# **Watch the units of `α`.** The rate expression is evaluated *literally* — the engine
+# never divides by the population size, so `α` is a per-encounter coefficient, not the
+# textbook transmission rate. The classical force of infection `β·S·I/N` is authored with
+# `α = β/N`: a transmission rate of ≈ 0.1 per contact against N ≈ 1000 individuals is the
+# `α = 0.0001` we set below. Passing a literature `β` in directly (here 1000× too large)
+# is the classic first-model mistake — the epidemic then burns out in a couple of steps
+# instead of unfolding over the horizon.
+#
 # No individual is created or destroyed outright, so `S + I + R` is a structural
 # **invariant** — a built-in sanity check the engine must preserve exactly.
 
@@ -50,7 +58,7 @@ end
 # - `@prob_meta` — the simulation horizon `tspan` and the time step `dt`.
 
 @prob_init sir S = 999 I = 10 R = 0
-@prob_params sir α = 0.0001 β = 0.01
+@prob_params sir α = 0.0001 β = 0.01   # α is per-encounter: βₜᵣₐₙₛ/N, not βₜᵣₐₙₛ
 @prob_meta sir tspan = 250 dt = 0.1
 
 # `ReactionNetworkProblem(model; seed = …)` compiles the authored network into a runnable
