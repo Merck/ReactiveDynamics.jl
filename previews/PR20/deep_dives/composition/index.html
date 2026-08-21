@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Deep dive: composition · ReactiveDynamics.jl</title><meta name="title" content="Deep dive: composition · ReactiveDynamics.jl"/><meta property="og:title" content="Deep dive: composition · ReactiveDynamics.jl"/><meta property="twitter:title" content="Deep dive: composition · ReactiveDynamics.jl"/><meta name="description" content="Documentation for ReactiveDynamics.jl."/><meta property="og:description" content="Documentation for ReactiveDynamics.jl."/><meta property="twitter:description" content="Documentation for ReactiveDynamics.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/rd-theme.css" rel="stylesheet" type="text/css"/><script src="../../assets/rd-logo.js"></script><link href="../../assets/favicon.svg" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img class="docs-light-only" src="../../assets/logo.svg" alt="ReactiveDynamics.jl logo"/><img class="docs-dark-only" src="../../assets/logo-dark.svg" alt="ReactiveDynamics.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ReactiveDynamics.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../tutorials/introductory/">Introductory: your first model</a></li><li><a class="tocitem" href="../../tutorials/advanced/">Advanced: structured-token portfolios</a></li><li><a class="tocitem" href="../../tutorials/expert/">Expert: coupled heterogeneous systems</a></li><li><a class="tocitem" href="../serialization/">Deep dive: serialization</a></li><li class="is-active"><a class="tocitem" href>Deep dive: composition</a><ul class="internal"><li><a class="tocitem" href="#1.-Manual-composition:-@join-and-@equalize"><span>1. Manual composition: <code>@join</code> and <code>@equalize</code></span></a></li><li><a class="tocitem" href="#2.-Declared-open-ports:-@process-/-@port-/-@compose"><span>2. Declared open ports: <code>@process</code> / <code>@port</code> / <code>@compose</code></span></a></li><li><a class="tocitem" href="#3.-The-coarse-portfolio-in-ONE-block:-@pipeline"><span>3. The coarse portfolio in ONE block: <code>@pipeline</code></span></a></li><li><a class="tocitem" href="#4.-Zooming-in:-refine-one-transition,-plug-compatibly"><span>4. Zooming in: <code>refine</code> one transition, plug-compatibly</span></a></li><li><a class="tocitem" href="#5.-It&#39;s-just-a-ReactionNetwork:-construct-and-simulate-the-refined-pipeline"><span>5. It&#39;s just a <code>ReactionNetwork</code>: construct and simulate the refined pipeline</span></a></li><li><a class="tocitem" href="#6.-The-granularity-substitution-guarantee"><span>6. The granularity-substitution guarantee</span></a></li><li><a class="tocitem" href="#Recap"><span>Recap</span></a></li></ul></li></ul></li><li><span class="tocitem">Case studies</span><ul><li><a class="tocitem" href="../../case_studies/marginal_scientist/">Marginal eNPV of the Nth scientist</a></li><li><a class="tocitem" href="../../case_studies/inlicensing_value/">In-licensing asset value</a></li><li><a class="tocitem" href="../../case_studies/kill_a_program/">When to kill a program</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../reference/authoring/">Authoring</a></li><li><a class="tocitem" href="../../reference/structured_tokens/">Structured tokens</a></li><li><a class="tocitem" href="../../reference/rules_actions/">Rules &amp; actions</a></li><li><a class="tocitem" href="../../reference/construction_simulation/">Construction &amp; simulation</a></li><li><a class="tocitem" href="../../reference/composition/">Composition</a></li><li><a class="tocitem" href="../../reference/serialization/">Serialization</a></li><li><a class="tocitem" href="../../reference/json_schema/">JSON model schema</a></li><li><a class="tocitem" href="../../reference/analysis_viz/">Analysis &amp; visualization</a></li><li><a class="tocitem" href="../../reference/aa_coupling/">AlgebraicAgents coupling</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Deep dive: composition</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Deep dive: composition</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl/blob/main/docs/literate/deep_dives/composition.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Composition-and-granularity-—-the-granularity-ladder"><a class="docs-heading-anchor" href="#Composition-and-granularity-—-the-granularity-ladder">Composition &amp; granularity — the granularity ladder</a><a id="Composition-and-granularity-—-the-granularity-ladder-1"></a><a class="docs-heading-anchor-permalink" href="#Composition-and-granularity-—-the-granularity-ladder" title="Permalink"></a></h1><p><strong>What this covers.</strong> How a model is assembled from smaller models, and how one coarse transition is <em>substituted</em> by a finer sub-model without the rest of the network noticing. This is the <em>vertical</em> axis the flat authoring surface (transitions, modalities, the allocator) is silent on: <strong>compositionality</strong> and <strong>levels of granularity</strong>. We author a pharma R&amp;D pipeline coarsely for fast what-if, then zoom into one bottleneck when we need fidelity there — and we finish on the guarantee that makes the zoom trustworthy.</p><p><strong>Who this is for.</strong> Readers comfortable with the <a href="../../tutorials/introductory/">introductory tutorial</a> who want the structural operators. We stay in the <em>classical</em> regime — every phase is a plain counted pool — so the refinement mechanics are the star and every block runs fast.</p><p><strong>The one invariant to hold onto.</strong> Every operator here is <strong>authoring-time</strong>: it rewrites a static <code>ReactionNetwork</code> before it is constructed into a runnable problem, and it <strong>reindexes</strong> the store as it does so. That makes the whole layer <em>forbidden on a live, stepping model</em> — you compose, refine, and abstract a network, and only then hand the result to <code>ReactionNetworkProblem</code>. The theory (open-port semantics, the FK-repoint that makes species-identification cheap, the plug-compatibility invariants) lives in the normative <a href="https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md">operational-semantics contract §11</a> and <a href="https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/adr/0009-refinement-and-composition.md">ADR 0009</a>; here we exercise the operators.</p><pre><code class="language-julia hljs">using ReactiveDynamics
+using Printf
+using Plots                     # inline figures</code></pre><p>A handful of <em>internal</em> store accessors let us look inside a network to check our work. They are not part of the modeling surface — they read the typed struct-of-columns store (row ids, the promoted reactant-incidence table) so we can assert an operator did what it claims. We import them explicitly to keep that boundary visible.</p><pre><code class="language-julia hljs">using ReactiveDynamics: nrows, row_ids, find_index, reactant_specs, specname,
+    populate_reactant_specs!, port_role
+const RD = ReactiveDynamics</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ReactiveDynamics</code></pre><p>The <strong>structural signature</strong> of a named transition — its cycletime, probability-of-success, and the reactant rows read off the promoted incidence table as <code>(species name, side, stoich)</code>. Two transitions with equal signatures are structurally identical; keying by transition <em>name</em> (not row index) makes the comparison robust to the row-reordering that composition and refinement perform. We use it to <em>prove</em> plug-compatibility in §4.</p><pre><code class="language-julia hljs">function trans_signature(m, tname)
+    ti = findfirst(i -&gt; m[i, :transName] === tname, collect(row_ids(m, :T)))
+    ti === nothing &amp;&amp; return nothing
+    rows = sort(
+        [
+            (string(specname(m, r.species)), r.side, r.stoich)
+                for r in reactant_specs(m) if r.trans == ti &amp;&amp; r.species &gt; 0
+        ]
+    )
+    return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">trans_signature (generic function with 1 method)</code></pre><h2 id="1.-Manual-composition:-@join-and-@equalize"><a class="docs-heading-anchor" href="#1.-Manual-composition:-@join-and-@equalize">1. Manual composition: <code>@join</code> and <code>@equalize</code></a><a id="1.-Manual-composition:-@join-and-@equalize-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Manual-composition:-@join-and-@equalize" title="Permalink"></a></h2><p>The lowest rung. <code>@join</code> takes the <strong>union</strong> of two networks&#39; species, transitions, and parameters (and their events and observables), optionally <em>identifying</em> shared species across the two via equations. <code>@equalize</code> collapses two species <em>within</em> one network into a single pool and rewrites every reference. Both are the <strong>manual, no-declared-ports</strong> path: you name the species to identify by hand. Both operate on a static network, before construction.</p><p>Two reaction sub-systems each consume a shared resource <code>A</code>; we join them, identifying the two <code>A</code>s as one pool, and count the parts of the merged network.</p><pre><code class="language-julia hljs">acs1 = @reaction_network begin
+    1.0, A --&gt; B, name =&gt; t1
+end
+acs2 = @reaction_network begin
+    1.0, A --&gt; C, name =&gt; t2
+end
+joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
+println(&quot;@join acs1 acs2 (identifying the shared species A)&quot;)
+println(
+    &quot;  species in join : &quot;, nrows(joined, :S),
+    &quot;  (union {A,B,C} ⇒ 3; the two A&#39;s merged into one)&quot;
+)
+println(&quot;  transitions     : &quot;, nrows(joined, :T), &quot;  (1 + 1, none lost)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">@join acs1 acs2 (identifying the shared species A)
+  species in join : 3  (union {A,B,C} ⇒ 3; the two A&#39;s merged into one)
+  transitions     : 2  (1 + 1, none lost)</code></pre><p><code>@equalize</code> collapses two conceptually-identical species <code>A</code> and <code>A2</code> into one pool.</p><pre><code class="language-julia hljs">eqacs = @reaction_network begin
+    1.0, A  --&gt; B, name =&gt; t1
+    1.0, A2 --&gt; B, name =&gt; t2
+end
+before_S = nrows(eqacs, :S)
+equalized = @equalize eqacs A = A2
+println(&quot;@equalize eqacs A = A2 (collapse A and A2 into one pool)&quot;)
+println(
+    &quot;  species before  : &quot;, before_S, &quot;  → after : &quot;, nrows(equalized, :S),
+    &quot;  (dropped by exactly 1; references rewritten)&quot;
+)
+println(&quot;  transitions     : &quot;, nrows(equalized, :T), &quot;  (preserved; only :S was touched)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">@equalize eqacs A = A2 (collapse A and A2 into one pool)
+  species before  : 3  → after : 2  (dropped by exactly 1; references rewritten)
+  transitions     : 2  (preserved; only :S was touched)</code></pre><p><code>@join</code>/<code>@equalize</code> work, but they make you <em>remember which names to identify</em>. The next rung declares the boundary once, on the fragment, and lets composition match it.</p><h2 id="2.-Declared-open-ports:-@process-/-@port-/-@compose"><a class="docs-heading-anchor" href="#2.-Declared-open-ports:-@process-/-@port-/-@compose">2. Declared open ports: <code>@process</code> / <code>@port</code> / <code>@compose</code></a><a id="2.-Declared-open-ports:-@process-/-@port-/-@compose-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Declared-open-ports:-@process-/-@port-/-@compose" title="Permalink"></a></h2><p>A <strong>fragment</strong> is a named, parameterized model factory. <code>@process name(params…) = begin … end</code> writes ordinary reaction lines with the parameters <em>bare</em>; at call time each parameter is substituted structurally into the reaction AST before parsing (eval-free — there is no <code>$</code>-interpolation in the DSL).</p><pre><code class="language-julia hljs">@process phase_gate(inp, outp; ct, pos) = begin
+    1.0, inp --&gt; outp, name =&gt; gate, cycletime =&gt; ct, probability =&gt; pos
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">phase_gate (generic function with 1 method)</code></pre><p>We instantiate the <em>same</em> fragment twice, wired head-to-tail on the shared species <code>Lead</code>.</p><pre><code class="language-julia hljs">screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
+lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
+println(&quot;phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:&quot;)
+println(&quot;  species   : &quot;, screening[:, :specName], &quot;   transitions: &quot;, nrows(screening, :T))
+println(&quot;  (ct, pos) : &quot;, (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:
+  species   : [:Screen, :Lead]   transitions: 1
+  (ct, pos) : (0.5, 0.85)</code></pre><p>A <strong>port</strong> is a boundary species tagged with a role: <code>:input</code> (consumed-from boundary), <code>:output</code> (produced-into boundary), <code>:shared</code> (identified by bare name), or the default <code>:private</code> (auto-namespaced on compose). <code>@port</code> tags them via <code>species =&gt; role</code> pairs (written with <code>=&gt;</code>, not <code>=</code>). Here <code>Lead</code> is the <em>output</em> of screening and the <em>input</em> of lead_opt — the same-named port <code>@compose</code> will identify; <code>Screen</code>/<code>Candidate</code> stay dangling.</p><pre><code class="language-julia hljs">@port screening  Screen =&gt; input   Lead =&gt; output
+@port lead_opt   Lead =&gt; input      Candidate =&gt; output
+println(
+    &quot;port roles — screening: Screen=&quot;, port_role(screening, :Screen),
+    &quot; Lead=&quot;, port_role(screening, :Lead),
+    &quot; | lead_opt: Lead=&quot;, port_role(lead_opt, :Lead),
+    &quot; Candidate=&quot;, port_role(lead_opt, :Candidate)
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">port roles — screening: Screen=input Lead=output | lead_opt: Lead=input Candidate=output</code></pre><p><code>@compose</code> is <code>@join</code> <strong>plus automatic port matching</strong>: an <code>:output</code> port of one fragment is identified with a same-named <code>:input</code> port of another by repointing an integer foreign key (not string surgery), <code>:private</code> species are namespaced per fragment, and <code>:shared</code> species stay bare.</p><pre><code class="language-julia hljs">chain = @compose screening lead_opt
+populate_reactant_specs!(chain)   # promote the incidence table so we can read it
+names_chain = chain[:, :specName]
+println(&quot;@compose screening lead_opt:&quot;)
+println(&quot;  merged species : &quot;, names_chain)
+println(
+    &quot;  shared port `Lead` collapsed to ONE species? &quot;,
+    count(==(:Lead), names_chain) == 1, &quot;  (FK-repoint, not two pools)&quot;
+)
+leadix = find_index(:Lead, chain)
+through_lead = count(r -&gt; r.species == leadix, reactant_specs(chain))
+println(
+    &quot;  rows routed through `Lead` : &quot;, through_lead,
+    &quot;  (produced by screening, consumed by lead_opt ⇒ one seam, not two)&quot;
+)
+println(&quot;  transitions preserved      : &quot;, nrows(chain, :T), &quot; (1 + 1, none lost)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">@compose screening lead_opt:
+  merged species : [:f1__Screen, :Lead, :f2__Candidate]
+  shared port `Lead` collapsed to ONE species? true  (FK-repoint, not two pools)
+  rows routed through `Lead` : 2  (produced by screening, consumed by lead_opt ⇒ one seam, not two)
+  transitions preserved      : 2 (1 + 1, none lost)</code></pre><h2 id="3.-The-coarse-portfolio-in-ONE-block:-@pipeline"><a class="docs-heading-anchor" href="#3.-The-coarse-portfolio-in-ONE-block:-@pipeline">3. The coarse portfolio in ONE block: <code>@pipeline</code></a><a id="3.-The-coarse-portfolio-in-ONE-block:-@pipeline-1"></a><a class="docs-heading-anchor-permalink" href="#3.-The-coarse-portfolio-in-ONE-block:-@pipeline" title="Permalink"></a></h2><p>The dominant business-process shape is a <strong>chain of phases</strong>. <code>@pipeline</code> authors the whole chain in one block: each <code>From =&gt; To : (ct, pos)</code> edge expands to a <code>flow</code> routing transition that consumes the upstream phase as an upfront left-hand side — so it fires only once a token exists there (token-flow, not an independent Poisson clock) — and produces the downstream phase, carrying that edge&#39;s cycletime and probability-of-success. Six phases, five edges, one block; the transition names come out as <code>flow_&lt;From&gt;_&lt;To&gt;</code>.</p><pre><code class="language-julia hljs">build_portfolio() = @pipeline Project begin
+    Discovery =&gt; Phase1:(ct = 1.0, pos = 0.45)
+    Phase1 =&gt; Phase2:(ct = 1.5, pos = 0.6)
+    Phase2 =&gt; Phase3:(ct = 2.0, pos = 0.4)
+    Phase3 =&gt; Filed:(ct = 3.0, pos = 0.65)
+    Filed =&gt; Market:(ct = 1.0, pos = 0.9)
+end
+
+portfolio = build_portfolio()
+populate_reactant_specs!(portfolio)
+println(&quot;@pipeline expanded the phase chain into a flat ReactionNetwork:&quot;)
+println(&quot;  species (phases) : &quot;, portfolio[:, :specName])
+println(
+    &quot;  parts            : &quot;, nrows(portfolio, :S), &quot; species, &quot;,
+    nrows(portfolio, :T), &quot; transitions&quot;
+)
+println(&quot;  per-edge (ct, pos):&quot;)
+for i in row_ids(portfolio, :T)
+    @printf(
+        &quot;    %-24s ct=%.1f  pos=%.2f\n&quot;,
+        portfolio[i, :transName], portfolio[i, :transCycleTime],
+        portfolio[i, :transProbOfSuccess]
+    )
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">@pipeline expanded the phase chain into a flat ReactionNetwork:
+  species (phases) : [:Discovery, :Phase1, :Phase2, :Phase3, :Filed, :Market]
+  parts            : 6 species, 5 transitions
+  per-edge (ct, pos):
+    flow_Discovery_Phase1    ct=1.0  pos=0.45
+    flow_Phase1_Phase2       ct=1.5  pos=0.60
+    flow_Phase2_Phase3       ct=2.0  pos=0.40
+    flow_Phase3_Filed        ct=3.0  pos=0.65
+    flow_Filed_Market        ct=1.0  pos=0.90</code></pre><h2 id="4.-Zooming-in:-refine-one-transition,-plug-compatibly"><a class="docs-heading-anchor" href="#4.-Zooming-in:-refine-one-transition,-plug-compatibly">4. Zooming in: <code>refine</code> one transition, plug-compatibly</a><a id="4.-Zooming-in:-refine-one-transition,-plug-compatibly-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Zooming-in:-refine-one-transition,-plug-compatibly" title="Permalink"></a></h2><p>The headline workflow: keep the portfolio coarse, but substitute a <strong>detailed Phase-2 sub-model</strong> (screening → lead-opt → tox → filing, each its own timed, probabilistic step) for the single coarse <code>flow_Phase2_Phase3</code> transition. The sub-model declares its boundary as ports: <code>p2_in</code> plugs onto the parent&#39;s <code>Phase2</code>, <code>p2_out</code> onto <code>Phase3</code>; everything else is <code>:private</code> and gets namespaced.</p><pre><code class="language-julia hljs">phase2_detail = @reaction_network begin
+    1.0, p2_in  --&gt; screen, name =&gt; screening, cycletime =&gt; 0.5, probability =&gt; 0.85
+    1.0, screen --&gt; leadopt, name =&gt; lead_opt, cycletime =&gt; 0.7, probability =&gt; 0.8
+    1.0, leadopt --&gt; tox, name =&gt; tox_study, cycletime =&gt; 0.5, probability =&gt; 0.85
+    1.0, tox    --&gt; p2_out, name =&gt; filing_prep, cycletime =&gt; 0.3, probability =&gt; 0.7
+end
+set_port_role!(phase2_detail, :p2_in =&gt; :input, :p2_out =&gt; :output)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ReactiveDynamics.ReactionNetwork(Dict(:T =&gt; 4, :P =&gt; 0, :M =&gt; 0, :obs =&gt; 0, :S =&gt; 5, :E =&gt; 0), (specName = ReactiveDynamics.AttrColumn{Symbol}([:p2_in, :screen, :leadopt, :tox, :p2_out], Bool[1, 1, 1, 1, 1]), specModality = ReactiveDynamics.AttrColumn{Set{Symbol}}(Set{Symbol}[Set(), Set(), Set(), Set(), Set()], Bool[1, 1, 1, 1, 1]), specInitVal = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.0, 0.0, 0.0, 0.0, 0.0], Bool[1, 1, 1, 1, 1]), specInitUncertainty = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.0, 0.0, 0.0, 0.0, 0.0], Bool[1, 1, 1, 1, 1]), specCost = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.0, 0.0, 0.0, 0.0, 0.0], Bool[1, 1, 1, 1, 1]), specReward = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.0, 0.0, 0.0, 0.0, 0.0], Bool[1, 1, 1, 1, 1]), specValuation = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.0, 0.0, 0.0, 0.0, 0.0], Bool[1, 1, 1, 1, 1]), specStructured = ReactiveDynamics.AttrColumn{Bool}(Bool[0, 0, 0, 0, 0], Bool[1, 1, 1, 1, 1]), specRole = ReactiveDynamics.AttrColumn{Symbol}([:input, :private, :private, :private, :output], Bool[1, 1, 1, 1, 1]), trans = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[:(p2_in → screen), :(screen → leadopt), :(leadopt → tox), :(tox → p2_out)], Bool[1, 1, 1, 1]), transPriority = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[1, 1, 1, 1], Bool[1, 1, 1, 1]), transRate = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[:(rand(state.rng, Poisson(max(state.dt * 1.0, 0)))), :(rand(state.rng, Poisson(max(state.dt * 1.0, 0)))), :(rand(state.rng, Poisson(max(state.dt * 1.0, 0)))), :(rand(state.rng, Poisson(max(state.dt * 1.0, 0))))], Bool[1, 1, 1, 1]), transCycleTime = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.5, 0.7, 0.5, 0.3], Bool[1, 1, 1, 1]), transProbOfSuccess = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[0.85, 0.8, 0.85, 0.7], Bool[1, 1, 1, 1]), transCapacity = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[Inf, Inf, Inf, Inf], Bool[1, 1, 1, 1]), transMaxLifeTime = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[Inf, Inf, Inf, Inf], Bool[1, 1, 1, 1]), transPreAction = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[:(()), :(()), :(()), :(())], Bool[1, 1, 1, 1]), transPostAction = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[:(()), :(()), :(()), :(())], Bool[1, 1, 1, 1]), transMultiplier = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[1, 1, 1, 1], Bool[1, 1, 1, 1]), transName = ReactiveDynamics.AttrColumn{Union{Missing, String, Symbol}}(Union{Missing, String, Symbol}[:screening, :lead_opt, :tox_study, :filing_prep], Bool[1, 1, 1, 1]), eventTrigger = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[], Bool[]), eventAction = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[], Bool[]), obsName = ReactiveDynamics.AttrColumn{Symbol}(Symbol[], Bool[]), obsOpts = ReactiveDynamics.AttrColumn{ReactiveDynamics.FoldedObservable}(ReactiveDynamics.FoldedObservable[], Bool[]), prmName = ReactiveDynamics.AttrColumn{Symbol}(Symbol[], Bool[]), prmVal = ReactiveDynamics.AttrColumn{Any}(Any[], Bool[]), metaKeyword = ReactiveDynamics.AttrColumn{Symbol}(Symbol[], Bool[]), metaVal = ReactiveDynamics.AttrColumn{Union{Float64, Int64, AbstractString, Expr, Function, Symbol}}(Union{Float64, Int64, AbstractString, Expr, Function, Symbol}[], Bool[])), ReactantSpec[])</code></pre><p>Record the coarse boundary indices <em>before</em> the splice, so we can show they survive it.</p><pre><code class="language-julia hljs">phase2_ix_before = find_index(:Phase2, portfolio)
+phase3_ix_before = find_index(:Phase3, portfolio)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4</code></pre><p><code>refine(spec, transition, submodel; ports)</code> splices the sub-model into the named coarse transition: it namespaces the sub&#39;s private species, identifies the sub&#39;s ports with the parent boundary species by FK-repoint, appends the sub&#39;s transitions, and drops the coarse transition. It is <strong>non-mutating</strong> (<code>refine</code> = <code>refine!</code> on a <code>deepcopy</code>); <code>portfolio</code> is left intact.</p><pre><code class="language-julia hljs">refined = refine(
+    portfolio, :flow_Phase2_Phase3, phase2_detail;
+    ports = Dict(:Phase2 =&gt; :p2_in, :Phase3 =&gt; :p2_out)
+)
+
+tnames_before = [portfolio[i, :transName] for i in row_ids(portfolio, :T)]
+tnames_after = [refined[i, :transName] for i in row_ids(refined, :T)]
+println(&quot;transitions BEFORE refine : &quot;, tnames_before)
+println(&quot;transitions AFTER  refine : &quot;, tnames_after)
+println(&quot;  coarse `flow_Phase2_Phase3` removed? &quot;, !(:flow_Phase2_Phase3 in tnames_after))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">transitions BEFORE refine : [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase2_Phase3, :flow_Phase3_Filed, :flow_Filed_Market]
+transitions AFTER  refine : [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase2_Phase3__sub__filing_prep, :flow_Phase3_Filed, :flow_Filed_Market, :flow_Phase2_Phase3__sub__screening, :flow_Phase2_Phase3__sub__lead_opt, :flow_Phase2_Phase3__sub__tox_study]
+  coarse `flow_Phase2_Phase3` removed? true</code></pre><p><strong>Plug-compatibility (the point of the whole rung).</strong> Because the boundary species keep their indices <em>and</em> their names, every transition <em>other</em> than the one we refined is structurally byte-for-byte identical before and after. The rest of the portfolio does not notice that Phase-2 became four sub-steps.</p><pre><code class="language-julia hljs">println()
+println(&quot;PLUG-COMPATIBILITY:&quot;)
+println(
+    &quot;  boundary species keep their indices — Phase2: &quot;, phase2_ix_before, &quot; → &quot;,
+    find_index(:Phase2, refined), &quot;   Phase3: &quot;, phase3_ix_before, &quot; → &quot;, find_index(:Phase3, refined)
+)
+untouched = [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase3_Filed, :flow_Filed_Market]
+identical = [tn =&gt; (trans_signature(portfolio, tn) == trans_signature(refined, tn)) for tn in untouched]
+for (tn, same) in identical
+    @printf(&quot;    %-24s identical before/after? %s\n&quot;, tn, same)
+end
+println(
+    &quot;  ⇒ all untouched transitions identical: &quot;, all(last, identical),
+    &quot;  — the zoom is local to Phase 2.&quot;
+)
+sub_transitions = [n for n in tnames_after if occursin(&quot;__sub__&quot;, string(n))]
+println(&quot;  sub-steps spliced in (namespaced): &quot;, sub_transitions)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">
+PLUG-COMPATIBILITY:
+  boundary species keep their indices — Phase2: 3 → 3   Phase3: 4 → 4
+    flow_Discovery_Phase1    identical before/after? true
+    flow_Phase1_Phase2       identical before/after? true
+    flow_Phase3_Filed        identical before/after? true
+    flow_Filed_Market        identical before/after? true
+  ⇒ all untouched transitions identical: true  — the zoom is local to Phase 2.
+  sub-steps spliced in (namespaced): [:flow_Phase2_Phase3__sub__filing_prep, :flow_Phase2_Phase3__sub__screening, :flow_Phase2_Phase3__sub__lead_opt, :flow_Phase2_Phase3__sub__tox_study]</code></pre><h2 id="5.-It&#39;s-just-a-ReactionNetwork:-construct-and-simulate-the-refined-pipeline"><a class="docs-heading-anchor" href="#5.-It&#39;s-just-a-ReactionNetwork:-construct-and-simulate-the-refined-pipeline">5. It&#39;s just a <code>ReactionNetwork</code>: construct and simulate the refined pipeline</a><a id="5.-It&#39;s-just-a-ReactionNetwork:-construct-and-simulate-the-refined-pipeline-1"></a><a class="docs-heading-anchor-permalink" href="#5.-It&#39;s-just-a-ReactionNetwork:-construct-and-simulate-the-refined-pipeline" title="Permalink"></a></h2><p>Refinement leaves no runtime trace — the refined model is an ordinary <code>ReactionNetwork</code>, so it constructs and simulates exactly like a hand-authored flat model. We attach a marking and a horizon and run both the coarse and the refined portfolio, reproducibly from <code>(model, seed)</code>. (Macro arguments are literal, so <code>@prob_init</code> takes a literal count; the sub-model&#39;s private pools default to zero.)</p><pre><code class="language-julia hljs">const SEED = 20260718
+function attach_and_build(net; seed)
+    @prob_init net Discovery = 60
+    @prob_params net
+    @prob_meta net tspan = 30 dt = 1.0
+    return ReactionNetworkProblem(net; seed = seed)
+end
+
+coarse_prob = attach_and_build(build_portfolio(); seed = SEED)
+refined_prob = attach_and_build(
+    refine(
+        build_portfolio(), :flow_Phase2_Phase3, phase2_detail;
+        ports = Dict(:Phase2 =&gt; :p2_in, :Phase3 =&gt; :p2_out)
+    ); seed = SEED
+)
+simulate(refined_prob)
+
+launched = refined_prob.sol[end, &quot;Market&quot;]
+horizon = refined_prob.sol[end, &quot;t&quot;]
+@printf(
+    &quot;Refined pipeline (seed=%d): 60 Discovery projects → %.0f reached :Market by t=%.0f\n&quot;,
+    SEED, launched, horizon
+)
+subcols = [c for c in names(refined_prob.sol) if occursin(&quot;__sub__&quot;, c)]
+println(&quot;  the detailed Phase-2 sub-net&#39;s pools appear in prob.sol: &quot;, subcols)
+println(&quot;  ⇒ the zoom is live: the refined model runs like any flat network.&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Refined pipeline (seed=20260718): 60 Discovery projects → 4 reached :Market by t=31
+  the detailed Phase-2 sub-net&#39;s pools appear in prob.sol: [&quot;flow_Phase2_Phase3__sub__screen&quot;, &quot;flow_Phase2_Phase3__sub__leadopt&quot;, &quot;flow_Phase2_Phase3__sub__tox&quot;]
+  ⇒ the zoom is live: the refined model runs like any flat network.</code></pre><p>A structural view of the splice — the coarse Phase-2 edge versus the four-step sub-net — renders through Graphviz. Rendering needs a backend, so we wrap it: the DOT source is always obtainable from <code>to_graphviz</code> even when no backend is present, so a hiccup can never fail the build.</p><pre><code class="language-julia hljs">structure = try
+    coarse_svg = draw_network(coarse_prob; format = &quot;svg&quot;)
+    refined_svg = draw_network(refined_prob; format = &quot;svg&quot;)
+    HTML(
+        &quot;&lt;div style=\&quot;display:flex;flex-wrap:wrap;gap:1rem;justify-content:center\&quot;&gt;&quot; *
+            &quot;&lt;figure style=\&quot;margin:0\&quot;&gt;&lt;figcaption&gt;coarse portfolio&lt;/figcaption&gt;&quot; * coarse_svg * &quot;&lt;/figure&gt;&quot; *
+            &quot;&lt;figure style=\&quot;margin:0\&quot;&gt;&lt;figcaption&gt;Phase 2 refined&lt;/figcaption&gt;&quot; * refined_svg * &quot;&lt;/figure&gt;&lt;/div&gt;&quot;
+    )
+catch err
+    @warn &quot;draw_network: no Graphviz backend — showing the DOT source instead&quot; exception = err
+    Text(to_graphviz(network_graph(coarse_prob)))
+end</code></pre><div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center"><figure style="margin:0"><figcaption>coarse portfolio</figcaption><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="1262pt" height="80pt"
+ viewBox="0.00 0.00 1261.72 79.59" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 75.59)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-75.59 1257.72,-75.59 1257.72,4 -4,4"/>
+<!-- Discovery -->
+<g id="node1" class="node">
+<title>Discovery</title>
+<ellipse fill="none" stroke="black" cx="35.8" cy="-35.8" rx="35.59" ry="35.59"/>
+<text text-anchor="middle" x="35.8" y="-33.6" font-family="Times,serif" font-size="9.00">Discovery</text>
+</g>
+<!-- flow_Discovery_Phase1 -->
+<g id="node7" class="node">
+<title>flow_Discovery_Phase1</title>
+<polygon fill="none" stroke="black" points="230.59,-53.8 107.59,-53.8 107.59,-17.8 230.59,-17.8 230.59,-53.8"/>
+<text text-anchor="middle" x="169.09" y="-33.6" font-family="Times,serif" font-size="9.00">flow_Discovery_Phase1</text>
+</g>
+<!-- Discovery&#45;&gt;flow_Discovery_Phase1 -->
+<g id="edge1" class="edge">
+<title>Discovery&#45;&gt;flow_Discovery_Phase1</title>
+<path fill="none" stroke="black" d="M71.64,-35.8C79.64,-35.8 88.43,-35.8 97.35,-35.8"/>
+<polygon fill="black" stroke="black" points="97.44,-39.3 107.44,-35.8 97.44,-32.3 97.44,-39.3"/>
+</g>
+<!-- Phase1 -->
+<g id="node2" class="node">
+<title>Phase1</title>
+<ellipse fill="none" stroke="black" cx="295.46" cy="-35.8" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="295.46" y="-33.6" font-family="Times,serif" font-size="9.00">Phase1</text>
+</g>
+<!-- flow_Phase1_Phase2 -->
+<g id="node8" class="node">
+<title>flow_Phase1_Phase2</title>
+<polygon fill="none" stroke="black" points="470.33,-53.8 360.33,-53.8 360.33,-17.8 470.33,-17.8 470.33,-53.8"/>
+<text text-anchor="middle" x="415.33" y="-33.6" font-family="Times,serif" font-size="9.00">flow_Phase1_Phase2</text>
+</g>
+<!-- Phase1&#45;&gt;flow_Phase1_Phase2 -->
+<g id="edge3" class="edge">
+<title>Phase1&#45;&gt;flow_Phase1_Phase2</title>
+<path fill="none" stroke="black" d="M324.39,-35.8C332.21,-35.8 341.04,-35.8 350.04,-35.8"/>
+<polygon fill="black" stroke="black" points="350.23,-39.3 360.22,-35.8 350.22,-32.3 350.23,-39.3"/>
+</g>
+<!-- Phase2 -->
+<g id="node3" class="node">
+<title>Phase2</title>
+<ellipse fill="none" stroke="black" cx="535.19" cy="-35.8" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="535.19" y="-33.6" font-family="Times,serif" font-size="9.00">Phase2</text>
+</g>
+<!-- flow_Phase2_Phase3 -->
+<g id="node9" class="node">
+<title>flow_Phase2_Phase3</title>
+<polygon fill="none" stroke="black" points="710.06,-53.8 600.06,-53.8 600.06,-17.8 710.06,-17.8 710.06,-53.8"/>
+<text text-anchor="middle" x="655.06" y="-33.6" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3</text>
+</g>
+<!-- Phase2&#45;&gt;flow_Phase2_Phase3 -->
+<g id="edge5" class="edge">
+<title>Phase2&#45;&gt;flow_Phase2_Phase3</title>
+<path fill="none" stroke="black" d="M564.13,-35.8C571.94,-35.8 580.77,-35.8 589.77,-35.8"/>
+<polygon fill="black" stroke="black" points="589.96,-39.3 599.96,-35.8 589.96,-32.3 589.96,-39.3"/>
+</g>
+<!-- Phase3 -->
+<g id="node4" class="node">
+<title>Phase3</title>
+<ellipse fill="none" stroke="black" cx="774.93" cy="-35.8" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="774.93" y="-33.6" font-family="Times,serif" font-size="9.00">Phase3</text>
+</g>
+<!-- flow_Phase3_Filed -->
+<g id="node10" class="node">
+<title>flow_Phase3_Filed</title>
+<polygon fill="none" stroke="black" points="940.8,-53.8 839.8,-53.8 839.8,-17.8 940.8,-17.8 940.8,-53.8"/>
+<text text-anchor="middle" x="890.3" y="-33.6" font-family="Times,serif" font-size="9.00">flow_Phase3_Filed</text>
+</g>
+<!-- Phase3&#45;&gt;flow_Phase3_Filed -->
+<g id="edge7" class="edge">
+<title>Phase3&#45;&gt;flow_Phase3_Filed</title>
+<path fill="none" stroke="black" d="M803.95,-35.8C811.77,-35.8 820.56,-35.8 829.47,-35.8"/>
+<polygon fill="black" stroke="black" points="829.52,-39.3 839.52,-35.8 829.52,-32.3 829.52,-39.3"/>
+</g>
+<!-- Filed -->
+<g id="node5" class="node">
+<title>Filed</title>
+<ellipse fill="none" stroke="black" cx="999.89" cy="-35.8" rx="23.19" ry="23.19"/>
+<text text-anchor="middle" x="999.89" y="-33.6" font-family="Times,serif" font-size="9.00">Filed</text>
+</g>
+<!-- flow_Filed_Market -->
+<g id="node11" class="node">
+<title>flow_Filed_Market</title>
+<polygon fill="none" stroke="black" points="1159.98,-53.8 1058.98,-53.8 1058.98,-17.8 1159.98,-17.8 1159.98,-53.8"/>
+<text text-anchor="middle" x="1109.48" y="-33.6" font-family="Times,serif" font-size="9.00">flow_Filed_Market</text>
+</g>
+<!-- Filed&#45;&gt;flow_Filed_Market -->
+<g id="edge9" class="edge">
+<title>Filed&#45;&gt;flow_Filed_Market</title>
+<path fill="none" stroke="black" d="M1023.18,-35.8C1030.7,-35.8 1039.48,-35.8 1048.49,-35.8"/>
+<polygon fill="black" stroke="black" points="1048.71,-39.3 1058.71,-35.8 1048.71,-32.3 1048.71,-39.3"/>
+</g>
+<!-- Market -->
+<g id="node6" class="node">
+<title>Market</title>
+<ellipse fill="none" stroke="black" cx="1224.85" cy="-35.8" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="1224.85" y="-33.6" font-family="Times,serif" font-size="9.00">Market</text>
+</g>
+<!-- flow_Discovery_Phase1&#45;&gt;Phase1 -->
+<g id="edge2" class="edge">
+<title>flow_Discovery_Phase1&#45;&gt;Phase1</title>
+<path fill="none" stroke="black" d="M230.82,-35.8C239.48,-35.8 248.18,-35.8 256.24,-35.8"/>
+<polygon fill="black" stroke="black" points="256.42,-39.3 266.42,-35.8 256.42,-32.3 256.42,-39.3"/>
+</g>
+<!-- flow_Phase1_Phase2&#45;&gt;Phase2 -->
+<g id="edge4" class="edge">
+<title>flow_Phase1_Phase2&#45;&gt;Phase2</title>
+<path fill="none" stroke="black" d="M470.43,-35.8C479.11,-35.8 487.93,-35.8 496.13,-35.8"/>
+<polygon fill="black" stroke="black" points="496.13,-39.3 506.13,-35.8 496.13,-32.3 496.13,-39.3"/>
+</g>
+<!-- flow_Phase2_Phase3&#45;&gt;Phase3 -->
+<g id="edge6" class="edge">
+<title>flow_Phase2_Phase3&#45;&gt;Phase3</title>
+<path fill="none" stroke="black" d="M710.17,-35.8C718.85,-35.8 727.67,-35.8 735.87,-35.8"/>
+<polygon fill="black" stroke="black" points="735.87,-39.3 745.87,-35.8 735.87,-32.3 735.87,-39.3"/>
+</g>
+<!-- flow_Phase3_Filed&#45;&gt;Filed -->
+<g id="edge8" class="edge">
+<title>flow_Phase3_Filed&#45;&gt;Filed</title>
+<path fill="none" stroke="black" d="M941,-35.8C949.65,-35.8 958.45,-35.8 966.48,-35.8"/>
+<polygon fill="black" stroke="black" points="966.53,-39.3 976.53,-35.8 966.53,-32.3 966.53,-39.3"/>
+</g>
+<!-- flow_Filed_Market&#45;&gt;Market -->
+<g id="edge10" class="edge">
+<title>flow_Filed_Market&#45;&gt;Market</title>
+<path fill="none" stroke="black" d="M1160.21,-35.8C1168.83,-35.8 1177.66,-35.8 1185.9,-35.8"/>
+<polygon fill="black" stroke="black" points="1185.96,-39.3 1195.96,-35.8 1185.96,-32.3 1185.96,-39.3"/>
+</g>
+</g>
+</svg>
+</figure><figure style="margin:0"><figcaption>Phase 2 refined</figcaption><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="2720pt" height="215pt"
+ viewBox="0.00 0.00 2720.24 214.69" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 210.69)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-210.69 2716.24,-210.69 2716.24,4 -4,4"/>
+<!-- Discovery -->
+<g id="node1" class="node">
+<title>Discovery</title>
+<ellipse fill="none" stroke="black" cx="35.8" cy="-103.35" rx="35.59" ry="35.59"/>
+<text text-anchor="middle" x="35.8" y="-101.15" font-family="Times,serif" font-size="9.00">Discovery</text>
+</g>
+<!-- flow_Discovery_Phase1 -->
+<g id="node10" class="node">
+<title>flow_Discovery_Phase1</title>
+<polygon fill="none" stroke="black" points="230.59,-121.35 107.59,-121.35 107.59,-85.35 230.59,-85.35 230.59,-121.35"/>
+<text text-anchor="middle" x="169.09" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Discovery_Phase1</text>
+</g>
+<!-- Discovery&#45;&gt;flow_Discovery_Phase1 -->
+<g id="edge1" class="edge">
+<title>Discovery&#45;&gt;flow_Discovery_Phase1</title>
+<path fill="none" stroke="black" d="M71.64,-103.35C79.64,-103.35 88.43,-103.35 97.35,-103.35"/>
+<polygon fill="black" stroke="black" points="97.44,-106.85 107.44,-103.35 97.44,-99.85 97.44,-106.85"/>
+</g>
+<!-- Phase1 -->
+<g id="node2" class="node">
+<title>Phase1</title>
+<ellipse fill="none" stroke="black" cx="295.46" cy="-103.35" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="295.46" y="-101.15" font-family="Times,serif" font-size="9.00">Phase1</text>
+</g>
+<!-- flow_Phase1_Phase2 -->
+<g id="node11" class="node">
+<title>flow_Phase1_Phase2</title>
+<polygon fill="none" stroke="black" points="470.33,-121.35 360.33,-121.35 360.33,-85.35 470.33,-85.35 470.33,-121.35"/>
+<text text-anchor="middle" x="415.33" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase1_Phase2</text>
+</g>
+<!-- Phase1&#45;&gt;flow_Phase1_Phase2 -->
+<g id="edge3" class="edge">
+<title>Phase1&#45;&gt;flow_Phase1_Phase2</title>
+<path fill="none" stroke="black" d="M324.39,-103.35C332.21,-103.35 341.04,-103.35 350.04,-103.35"/>
+<polygon fill="black" stroke="black" points="350.23,-106.85 360.22,-103.35 350.22,-99.85 350.23,-106.85"/>
+</g>
+<!-- Phase2 -->
+<g id="node3" class="node">
+<title>Phase2</title>
+<ellipse fill="none" stroke="black" cx="535.19" cy="-103.35" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="535.19" y="-101.15" font-family="Times,serif" font-size="9.00">Phase2</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__screening -->
+<g id="node15" class="node">
+<title>flow_Phase2_Phase3__sub__screening</title>
+<polygon fill="none" stroke="black" points="791.06,-121.35 600.06,-121.35 600.06,-85.35 791.06,-85.35 791.06,-121.35"/>
+<text text-anchor="middle" x="695.56" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__screening</text>
+</g>
+<!-- Phase2&#45;&gt;flow_Phase2_Phase3__sub__screening -->
+<g id="edge11" class="edge">
+<title>Phase2&#45;&gt;flow_Phase2_Phase3__sub__screening</title>
+<path fill="none" stroke="black" d="M564.14,-103.35C571.77,-103.35 580.51,-103.35 589.78,-103.35"/>
+<polygon fill="black" stroke="black" points="590.01,-106.85 600.01,-103.35 590.01,-99.85 590.01,-106.85"/>
+</g>
+<!-- Phase3 -->
+<g id="node4" class="node">
+<title>Phase3</title>
+<ellipse fill="none" stroke="black" cx="2233.45" cy="-103.35" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="2233.45" y="-101.15" font-family="Times,serif" font-size="9.00">Phase3</text>
+</g>
+<!-- flow_Phase3_Filed -->
+<g id="node13" class="node">
+<title>flow_Phase3_Filed</title>
+<polygon fill="none" stroke="black" points="2399.31,-121.35 2298.31,-121.35 2298.31,-85.35 2399.31,-85.35 2399.31,-121.35"/>
+<text text-anchor="middle" x="2348.81" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase3_Filed</text>
+</g>
+<!-- Phase3&#45;&gt;flow_Phase3_Filed -->
+<g id="edge7" class="edge">
+<title>Phase3&#45;&gt;flow_Phase3_Filed</title>
+<path fill="none" stroke="black" d="M2262.47,-103.35C2270.28,-103.35 2279.08,-103.35 2287.98,-103.35"/>
+<polygon fill="black" stroke="black" points="2288.03,-106.85 2298.03,-103.35 2288.03,-99.85 2288.03,-106.85"/>
+</g>
+<!-- Filed -->
+<g id="node5" class="node">
+<title>Filed</title>
+<ellipse fill="none" stroke="black" cx="2458.41" cy="-103.35" rx="23.19" ry="23.19"/>
+<text text-anchor="middle" x="2458.41" y="-101.15" font-family="Times,serif" font-size="9.00">Filed</text>
+</g>
+<!-- flow_Filed_Market -->
+<g id="node14" class="node">
+<title>flow_Filed_Market</title>
+<polygon fill="none" stroke="black" points="2618.5,-121.35 2517.5,-121.35 2517.5,-85.35 2618.5,-85.35 2618.5,-121.35"/>
+<text text-anchor="middle" x="2568" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Filed_Market</text>
+</g>
+<!-- Filed&#45;&gt;flow_Filed_Market -->
+<g id="edge9" class="edge">
+<title>Filed&#45;&gt;flow_Filed_Market</title>
+<path fill="none" stroke="black" d="M2481.7,-103.35C2489.21,-103.35 2497.99,-103.35 2507.01,-103.35"/>
+<polygon fill="black" stroke="black" points="2507.23,-106.85 2517.23,-103.35 2507.23,-99.85 2507.23,-106.85"/>
+</g>
+<!-- Market -->
+<g id="node6" class="node">
+<title>Market</title>
+<ellipse fill="none" stroke="black" cx="2683.37" cy="-103.35" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="2683.37" y="-101.15" font-family="Times,serif" font-size="9.00">Market</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__screen -->
+<g id="node7" class="node">
+<title>flow_Phase2_Phase3__sub__screen</title>
+<ellipse fill="none" stroke="black" cx="928.68" cy="-103.35" rx="101.73" ry="101.73"/>
+<text text-anchor="middle" x="928.68" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__screen</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__lead_opt -->
+<g id="node16" class="node">
+<title>flow_Phase2_Phase3__sub__lead_opt</title>
+<polygon fill="none" stroke="black" points="1250.29,-121.35 1066.29,-121.35 1066.29,-85.35 1250.29,-85.35 1250.29,-121.35"/>
+<text text-anchor="middle" x="1158.29" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__lead_opt</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__screen&#45;&gt;flow_Phase2_Phase3__sub__lead_opt -->
+<g id="edge13" class="edge">
+<title>flow_Phase2_Phase3__sub__screen&#45;&gt;flow_Phase2_Phase3__sub__lead_opt</title>
+<path fill="none" stroke="black" d="M1030.5,-103.35C1038.96,-103.35 1047.51,-103.35 1055.97,-103.35"/>
+<polygon fill="black" stroke="black" points="1056.22,-106.85 1066.22,-103.35 1056.22,-99.85 1056.22,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__leadopt -->
+<g id="node8" class="node">
+<title>flow_Phase2_Phase3__sub__leadopt</title>
+<ellipse fill="none" stroke="black" cx="1389.63" cy="-103.35" rx="103.19" ry="103.19"/>
+<text text-anchor="middle" x="1389.63" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__leadopt</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__tox_study -->
+<g id="node17" class="node">
+<title>flow_Phase2_Phase3__sub__tox_study</title>
+<polygon fill="none" stroke="black" points="1717.98,-121.35 1528.98,-121.35 1528.98,-85.35 1717.98,-85.35 1717.98,-121.35"/>
+<text text-anchor="middle" x="1623.48" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__tox_study</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__leadopt&#45;&gt;flow_Phase2_Phase3__sub__tox_study -->
+<g id="edge15" class="edge">
+<title>flow_Phase2_Phase3__sub__leadopt&#45;&gt;flow_Phase2_Phase3__sub__tox_study</title>
+<path fill="none" stroke="black" d="M1493,-103.35C1501.45,-103.35 1510,-103.35 1518.46,-103.35"/>
+<polygon fill="black" stroke="black" points="1518.73,-106.85 1528.73,-103.35 1518.73,-99.85 1518.73,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__tox -->
+<g id="node9" class="node">
+<title>flow_Phase2_Phase3__sub__tox</title>
+<ellipse fill="none" stroke="black" cx="1845.78" cy="-103.35" rx="91.6" ry="91.6"/>
+<text text-anchor="middle" x="1845.78" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__tox</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__filing_prep -->
+<g id="node12" class="node">
+<title>flow_Phase2_Phase3__sub__filing_prep</title>
+<polygon fill="none" stroke="black" points="2168.58,-121.35 1973.58,-121.35 1973.58,-85.35 2168.58,-85.35 2168.58,-121.35"/>
+<text text-anchor="middle" x="2071.08" y="-101.15" font-family="Times,serif" font-size="9.00">flow_Phase2_Phase3__sub__filing_prep</text>
+</g>
+<!-- flow_Phase2_Phase3__sub__tox&#45;&gt;flow_Phase2_Phase3__sub__filing_prep -->
+<g id="edge5" class="edge">
+<title>flow_Phase2_Phase3__sub__tox&#45;&gt;flow_Phase2_Phase3__sub__filing_prep</title>
+<path fill="none" stroke="black" d="M1937.6,-103.35C1946.11,-103.35 1954.78,-103.35 1963.41,-103.35"/>
+<polygon fill="black" stroke="black" points="1963.52,-106.85 1973.52,-103.35 1963.52,-99.85 1963.52,-106.85"/>
+</g>
+<!-- flow_Discovery_Phase1&#45;&gt;Phase1 -->
+<g id="edge2" class="edge">
+<title>flow_Discovery_Phase1&#45;&gt;Phase1</title>
+<path fill="none" stroke="black" d="M230.82,-103.35C239.48,-103.35 248.18,-103.35 256.24,-103.35"/>
+<polygon fill="black" stroke="black" points="256.42,-106.85 266.42,-103.35 256.42,-99.85 256.42,-106.85"/>
+</g>
+<!-- flow_Phase1_Phase2&#45;&gt;Phase2 -->
+<g id="edge4" class="edge">
+<title>flow_Phase1_Phase2&#45;&gt;Phase2</title>
+<path fill="none" stroke="black" d="M470.43,-103.35C479.11,-103.35 487.93,-103.35 496.13,-103.35"/>
+<polygon fill="black" stroke="black" points="496.13,-106.85 506.13,-103.35 496.13,-99.85 496.13,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__filing_prep&#45;&gt;Phase3 -->
+<g id="edge6" class="edge">
+<title>flow_Phase2_Phase3__sub__filing_prep&#45;&gt;Phase3</title>
+<path fill="none" stroke="black" d="M2168.6,-103.35C2177.54,-103.35 2186.2,-103.35 2194.1,-103.35"/>
+<polygon fill="black" stroke="black" points="2194.37,-106.85 2204.36,-103.35 2194.36,-99.85 2194.37,-106.85"/>
+</g>
+<!-- flow_Phase3_Filed&#45;&gt;Filed -->
+<g id="edge8" class="edge">
+<title>flow_Phase3_Filed&#45;&gt;Filed</title>
+<path fill="none" stroke="black" d="M2399.52,-103.35C2408.17,-103.35 2416.96,-103.35 2425,-103.35"/>
+<polygon fill="black" stroke="black" points="2425.04,-106.85 2435.04,-103.35 2425.04,-99.85 2425.04,-106.85"/>
+</g>
+<!-- flow_Filed_Market&#45;&gt;Market -->
+<g id="edge10" class="edge">
+<title>flow_Filed_Market&#45;&gt;Market</title>
+<path fill="none" stroke="black" d="M2618.73,-103.35C2627.34,-103.35 2636.18,-103.35 2644.42,-103.35"/>
+<polygon fill="black" stroke="black" points="2644.48,-106.85 2654.48,-103.35 2644.48,-99.85 2644.48,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__screening&#45;&gt;flow_Phase2_Phase3__sub__screen -->
+<g id="edge12" class="edge">
+<title>flow_Phase2_Phase3__sub__screening&#45;&gt;flow_Phase2_Phase3__sub__screen</title>
+<path fill="none" stroke="black" d="M791.23,-103.35C799.65,-103.35 808.23,-103.35 816.77,-103.35"/>
+<polygon fill="black" stroke="black" points="816.77,-106.85 826.77,-103.35 816.77,-99.85 816.77,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__lead_opt&#45;&gt;flow_Phase2_Phase3__sub__leadopt -->
+<g id="edge14" class="edge">
+<title>flow_Phase2_Phase3__sub__lead_opt&#45;&gt;flow_Phase2_Phase3__sub__leadopt</title>
+<path fill="none" stroke="black" d="M1250.59,-103.35C1258.85,-103.35 1267.28,-103.35 1275.69,-103.35"/>
+<polygon fill="black" stroke="black" points="1275.94,-106.85 1285.94,-103.35 1275.94,-99.85 1275.94,-106.85"/>
+</g>
+<!-- flow_Phase2_Phase3__sub__tox_study&#45;&gt;flow_Phase2_Phase3__sub__tox -->
+<g id="edge16" class="edge">
+<title>flow_Phase2_Phase3__sub__tox_study&#45;&gt;flow_Phase2_Phase3__sub__tox</title>
+<path fill="none" stroke="black" d="M1718.23,-103.35C1726.73,-103.35 1735.36,-103.35 1743.92,-103.35"/>
+<polygon fill="black" stroke="black" points="1743.92,-106.85 1753.92,-103.35 1743.92,-99.85 1743.92,-106.85"/>
+</g>
+</g>
+</svg>
+</figure></div><h3 id="abstract-—-climbing-back-up-the-ladder"><a class="docs-heading-anchor" href="#abstract-—-climbing-back-up-the-ladder"><code>abstract</code> — climbing back up the ladder</a><a id="abstract-—-climbing-back-up-the-ladder-1"></a><a class="docs-heading-anchor-permalink" href="#abstract-—-climbing-back-up-the-ladder" title="Permalink"></a></h3><p><code>abstract_transitions</code> is the inverse of <code>refine</code>: it collapses a connected set of sub-transitions back into one coarse transition whose boundary reaction line is <code>lhs --&gt; rhs</code>, carrying summarized attributes. It is a structural convenience for moving <em>up</em> the granularity ladder (it drops the sub rows and adds the coarse one; it does not garbage-collect the now-inert internal species).</p><pre><code class="language-julia hljs">collapsed = abstract_transitions(
+    refined, sub_transitions, :flow_Phase2_Phase3;
+    lhs = [:Phase2], rhs = [:Phase3],
+    attrs = Dict(:transCycleTime =&gt; 2.0, :transProbOfSuccess =&gt; 0.4)
+)
+tnames_collapsed = [collapsed[i, :transName] for i in row_ids(collapsed, :T)]
+println(
+    &quot;abstract_transitions collapsed the &quot;, length(sub_transitions),
+    &quot; sub-steps back into one coarse `flow_Phase2_Phase3`:&quot;
+)
+println(
+    &quot;  coarse transition restored? &quot;, :flow_Phase2_Phase3 in tnames_collapsed,
+    &quot; ; T count back to &quot;, nrows(collapsed, :T), &quot; (coarse was &quot;, nrows(portfolio, :T), &quot;)&quot;
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">abstract_transitions collapsed the 4 sub-steps back into one coarse `flow_Phase2_Phase3`:
+  coarse transition restored? true ; T count back to 5 (coarse was 5)</code></pre><h2 id="6.-The-granularity-substitution-guarantee"><a class="docs-heading-anchor" href="#6.-The-granularity-substitution-guarantee">6. The granularity-substitution guarantee</a><a id="6.-The-granularity-substitution-guarantee-1"></a><a class="docs-heading-anchor-permalink" href="#6.-The-granularity-substitution-guarantee" title="Permalink"></a></h2><p>Refinement does <strong>not</strong> claim the fine model is behaviorally <em>equivalent</em> to the coarse one — that would need a bisimulation the framework cannot check, and zooming in legitimately changes the dynamics. What it <em>does</em> offer is <strong>plug-compatibility</strong> (§4, structural) plus an <strong>advisory boundary check</strong> that makes the ladder auditable: on a linear chain, a coarse transition and its refined sub-model <em>agree in aggregate</em> when the coarse cycletime matches the <strong>sum</strong> of the sub cycletimes and the coarse probability matches the <strong>product</strong> of the sub probabilities. <code>refinement_diagnostics(submodel, coarse_attrs)</code> returns exactly those warnings (empty ⇒ clean); the author may override them.</p><p>The coarse <code>flow_Phase2_Phase3</code> claimed <code>(ct = 2.0, pos = 0.40)</code>. We check the detailed sub-model we actually spliced in against those coarse attributes — and, for contrast, a deliberately <em>drifted</em> sub-model whose aggregates do not match.</p><pre><code class="language-julia hljs">coarse_attrs = Dict(:transCycleTime =&gt; 2.0, :transProbOfSuccess =&gt; 0.4)
+
+Σct = 0.5 + 0.7 + 0.5 + 0.3           # sum of the four sub cycletimes
+Πpos = 0.85 * 0.8 * 0.85 * 0.7        # product of the four sub PoS
+warns_ok = refinement_diagnostics(phase2_detail, coarse_attrs)
+
+drifted = @reaction_network begin
+    1.0, p2_in --&gt; mid, name =&gt; slow_a, cycletime =&gt; 3.0, probability =&gt; 0.9
+    1.0, mid   --&gt; p2_out, name =&gt; slow_b, cycletime =&gt; 3.0, probability =&gt; 0.9
+end
+set_port_role!(drifted, :p2_in =&gt; :input, :p2_out =&gt; :output)
+warns_drift = refinement_diagnostics(drifted, coarse_attrs)
+
+println(&quot;Plug-compatible sub-model (the one we spliced in):&quot;)
+@printf(&quot;  Σ sub cycletimes = %.2f  (coarse ct = 2.00)\n&quot;, Σct)
+@printf(&quot;  Π sub PoS        = %.3f  (coarse pos = 0.400)\n&quot;, Πpos)
+println(&quot;  refinement_diagnostics : &quot;, isempty(warns_ok) ? &quot;clean — no warnings&quot; : warns_ok)
+println()
+println(&quot;Drifted sub-model (Σct = 6.0, ΠPoS = 0.81):&quot;)
+for w in warns_drift
+    println(&quot;  ⚠ &quot;, w)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Plug-compatible sub-model (the one we spliced in):
+  Σ sub cycletimes = 2.00  (coarse ct = 2.00)
+  Π sub PoS        = 0.405  (coarse pos = 0.400)
+  refinement_diagnostics : clean — no warnings
+
+Drifted sub-model (Σct = 6.0, ΠPoS = 0.81):
+  ⚠ coarse cycletime 2.0 ≉ Σ sub cycletimes 6.0 (&gt;25% drift)
+  ⚠ coarse prob_of_success 0.4 ≉ Π sub PoS 0.81 (&gt;0.25 drift)</code></pre><p>The aggregate agreement is easiest to <em>see</em>: the four sub-step cycletimes stack up to the coarse cycletime, and the four sub-step success probabilities multiply back to the coarse probability — for the plug-compatible refinement, not the drifted one.</p><pre><code class="language-julia hljs">p_ct = bar(
+    [&quot;coarse\n(1 step)&quot;, &quot;refined\n(Σ 4 steps)&quot;, &quot;drifted\n(Σ 2 steps)&quot;],
+    [2.0, Σct, 6.0]; legend = false, title = &quot;cycletime&quot;, ylabel = &quot;ticks&quot;,
+    color = [:steelblue :seagreen :firebrick],
+)
+p_pos = bar(
+    [&quot;coarse\n(1 step)&quot;, &quot;refined\n(Π 4 steps)&quot;, &quot;drifted\n(Π 2 steps)&quot;],
+    [0.4, Πpos, 0.81]; legend = false, title = &quot;prob. of success&quot;, ylabel = &quot;probability&quot;,
+    color = [:steelblue :seagreen :firebrick],
+)
+plot(p_ct, p_pos; layout = (1, 2), size = (760, 320), plot_title = &quot;Granularity substitution: refined ≈ coarse, drifted ⇏ coarse&quot;)</code></pre><img src="89d06be7.svg" alt="Example block output"/><h3 id="Reading-the-result"><a class="docs-heading-anchor" href="#Reading-the-result">Reading the result</a><a id="Reading-the-result-1"></a><a class="docs-heading-anchor-permalink" href="#Reading-the-result" title="Permalink"></a></h3><p><strong>The plug-compatible Phase-2 sub-model agrees with the coarse transition on both boundary aggregates</strong> — Σ cycletimes = 2.0 against the coarse 2.0, and Π success = 0.40 against the coarse 0.40 — so <code>refinement_diagnostics</code> returns <em>clean</em>. The drifted sub-model, whose steps sum to 6.0 ticks and multiply to 0.81, trips both checks. That is the granularity-substitution guarantee in operational form: you may model Phase 2 at whatever resolution the question demands, and a cheap, deterministic check tells you when the finer model still <em>stands in</em> for the coarser one at the boundary — without ever claiming a behavioral equivalence the framework cannot honestly prove.</p><p>What matters is the <em>kind</em> of guarantee, not the specific numbers: a coarse portfolio for fast what-if, a finer sub-model spliced in plug-compatibly where fidelity is needed, and an advisory boundary check that keeps the two rungs honest — all as authoring-time structural rewrites over a static network, never touched once a run is live.</p><h2 id="Recap"><a class="docs-heading-anchor" href="#Recap">Recap</a><a id="Recap-1"></a><a class="docs-heading-anchor-permalink" href="#Recap" title="Permalink"></a></h2><p>The granularity ladder, bottom to top:</p><ol><li><code>@join</code> / <code>@equalize</code> — manual, no-declared-ports union and collapse;</li><li><code>@process</code> / <code>@port</code> / <code>@compose</code> — reusable fragments composed by <em>declared open ports</em>, matched automatically by FK-repoint;</li><li><code>@pipeline</code> — a whole phase chain authored in one block as <code>flow</code> routing transitions;</li><li><code>refine</code> — substitute a finer sub-model for one coarse transition, <strong>plug-compatibly</strong> (boundary species keep their indices/names; every other transition is untouched);</li><li><code>abstract</code> — the inverse, collapsing sub-steps back into one coarse transition;</li><li><code>refinement_diagnostics</code> — the advisory Σ-ct / Π-PoS boundary check that makes the ladder auditable, the granularity-substitution guarantee in computable form.</li></ol><p>Every rung is an authoring-time rewrite of a static <code>ReactionNetwork</code> — forbidden on a live, stepping model, because it reindexes the store. The <a href="../serialization/">serialization deep-dive</a> shows the flip side: a composed or refined model is still just data, and round-trips through JSON with no runtime trace.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../serialization/">« Deep dive: serialization</a><a class="docs-footer-nextpage" href="../../case_studies/marginal_scientist/">Marginal eNPV of the Nth scientist »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 21 August 2026 20:26">Friday 21 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
