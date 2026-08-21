@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-label="A labelled Petri-net diagram: a Phase-2 place holding program tokens, an arc into a transition bar, and an arc out to a Phase-3 place; below, two resource pools (scientists, budget) feed the transition.">
+  <!-- Reading a Petri net — the whole notation on one program's step. Lifted from
+       demo/bd_acquisition/presentation.html (Exhibit 4). Font fallbacks via CSS
+       attribute selectors so the mark reads cleanly when JetBrains Mono / Inter
+       are not loaded (e.g. embedded via <img>): CSS wins over presentation attrs. -->
+  <style>
+    [font-family^="JetBrains"]{font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace}
+    [font-family="Inter"]{font-family:'Inter',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+  </style>
+  <!-- places -->
+  <circle cx="200" cy="120" r="46" fill="#fff" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="200" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="14" fill="#0A0A0A">Phase 2</text>
+  <circle cx="800" cy="120" r="46" fill="#fff" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="800" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="14" fill="#0A0A0A">Phase 3</text>
+  <!-- tokens in phase 2 -->
+  <circle cx="188" cy="112" r="6.5" fill="#0A0A0A"/>
+  <circle cx="210" cy="116" r="6.5" fill="#0A0A0A"/>
+  <circle cx="198" cy="132" r="6.5" fill="#0A0A0A"/>
+  <!-- transition bar -->
+  <line x1="246" y1="120" x2="470" y2="120" stroke="#0A0A0A" stroke-width="1.6"/>
+  <polygon points="470,120 462,116 462,124" fill="#0A0A0A"/>
+  <rect x="496" y="92" width="9" height="56" fill="#0A8A84" rx="0"/>
+  <line x1="514" y1="120" x2="752" y2="120" stroke="#0A0A0A" stroke-width="1.6"/>
+  <polygon points="754,120 746,116 746,124" fill="#0A0A0A"/>
+  <text x="500" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#0A8A84" font-weight="700">advance</text>
+  <!-- resource pools below feeding the bar -->
+  <circle cx="430" cy="250" r="26" fill="#fff" stroke="#0A8A84" stroke-width="1.8"/>
+  <circle cx="424" cy="246" r="3.4" fill="#0A8A84"/><circle cx="436" cy="246" r="3.4" fill="#0A8A84"/><circle cx="430" cy="256" r="3.4" fill="#0A8A84"/>
+  <text x="430" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="11.5" fill="#0A8A84">scientists</text>
+  <circle cx="570" cy="250" r="26" fill="#fff" stroke="#B5740A" stroke-width="1.8"/>
+  <text x="570" y="255" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#B5740A">$$$</text>
+  <text x="570" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="11.5" fill="#B5740A">budget</text>
+  <path d="M448 228 C 470 196, 492 168, 500 150" fill="none" stroke="#9A9A9A" stroke-width="1.3" stroke-dasharray="3 3"/>
+  <path d="M556 228 C 532 196, 510 168, 502 150" fill="none" stroke="#9A9A9A" stroke-width="1.3" stroke-dasharray="3 3"/>
+  <!-- callout labels -->
+  <line x1="200" y1="66" x2="200" y2="40" stroke="#6E6E6E" stroke-width="1"/><text x="200" y="30" text-anchor="middle" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">place — a state a program can be in</text>
+  <line x1="188" y1="112" x2="150" y2="60" stroke="#6E6E6E" stroke-width="1"/><text x="150" y="50" text-anchor="start" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">token — one program</text>
+  <line x1="500" y1="148" x2="690" y2="200" stroke="#6E6E6E" stroke-width="1"/><text x="694" y="204" font-family="JetBrains Mono" font-size="11.5" fill="#0A0A0A">transition — an event that can fire</text>
+  <text x="690" y="222" font-family="JetBrains Mono" font-size="11.5" fill="#6E6E6E" font-style="italic">arc weights set how much it moves</text>
+</svg>
