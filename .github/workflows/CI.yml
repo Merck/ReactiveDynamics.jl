@@ -36,7 +36,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
@@ -60,7 +60,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: nightly
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
 
@@ -82,7 +82,7 @@ jobs:
       - uses: julia-actions/julia-downgrade-compat@v1
         with:
           skip: Random, Statistics, TOML   # stdlibs pinned to the Julia version
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
 
@@ -103,7 +103,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       # Instantiates docs/Project.toml, devs the package, runs docs/make.jl (which also runs the
       # doctests, since makedocs defaults to doctest=true), and deploys via deploydocs.
       - uses: julia-actions/julia-docdeploy@v1
