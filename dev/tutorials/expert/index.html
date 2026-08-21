@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Expert: coupled heterogeneous systems · ReactiveDynamics.jl</title><meta name="title" content="Expert: coupled heterogeneous systems · ReactiveDynamics.jl"/><meta property="og:title" content="Expert: coupled heterogeneous systems · ReactiveDynamics.jl"/><meta property="twitter:title" content="Expert: coupled heterogeneous systems · ReactiveDynamics.jl"/><meta name="description" content="Documentation for ReactiveDynamics.jl."/><meta property="og:description" content="Documentation for ReactiveDynamics.jl."/><meta property="twitter:description" content="Documentation for ReactiveDynamics.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/rd-theme.css" rel="stylesheet" type="text/css"/><script src="../../assets/rd-logo.js"></script><link href="../../assets/favicon.svg" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img class="docs-light-only" src="../../assets/logo.svg" alt="ReactiveDynamics.jl logo"/><img class="docs-dark-only" src="../../assets/logo-dark.svg" alt="ReactiveDynamics.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ReactiveDynamics.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../introductory/">Introductory: your first model</a></li><li><a class="tocitem" href="../advanced/">Advanced: structured-token portfolios</a></li><li class="is-active"><a class="tocitem" href>Expert: coupled heterogeneous systems</a><ul class="internal"><li><a class="tocitem" href="#1.-The-model-is-data:-a-JSON-round-trip"><span>1. The model is data: a JSON round-trip</span></a></li><li><a class="tocitem" href="#2.-Composition,-in-one-paragraph"><span>2. Composition, in one paragraph</span></a></li><li><a class="tocitem" href="#3.-Coupling:-the-network-as-an-AA-node"><span>3. Coupling: the network as an AA node</span></a></li><li><a class="tocitem" href="#4.-Checkpoint-and-restore"><span>4. Checkpoint and restore</span></a></li><li><a class="tocitem" href="#5.-Reading-the-coupled-system"><span>5. Reading the coupled system</span></a></li><li><a class="tocitem" href="#Recap"><span>Recap</span></a></li></ul></li><li><a class="tocitem" href="../../deep_dives/serialization/">Deep dive: serialization</a></li><li><a class="tocitem" href="../../deep_dives/composition/">Deep dive: composition</a></li></ul></li><li><span class="tocitem">Case studies</span><ul><li><a class="tocitem" href="../../case_studies/marginal_scientist/">Marginal eNPV of the Nth scientist</a></li><li><a class="tocitem" href="../../case_studies/inlicensing_value/">In-licensing asset value</a></li><li><a class="tocitem" href="../../case_studies/kill_a_program/">When to kill a program</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../reference/authoring/">Authoring</a></li><li><a class="tocitem" href="../../reference/structured_tokens/">Structured tokens</a></li><li><a class="tocitem" href="../../reference/rules_actions/">Rules &amp; actions</a></li><li><a class="tocitem" href="../../reference/construction_simulation/">Construction &amp; simulation</a></li><li><a class="tocitem" href="../../reference/composition/">Composition</a></li><li><a class="tocitem" href="../../reference/serialization/">Serialization</a></li><li><a class="tocitem" href="../../reference/json_schema/">JSON model schema</a></li><li><a class="tocitem" href="../../reference/analysis_viz/">Analysis &amp; visualization</a></li><li><a class="tocitem" href="../../reference/aa_coupling/">AlgebraicAgents coupling</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Expert: coupled heterogeneous systems</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Expert: coupled heterogeneous systems</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl/blob/main/docs/literate/tutorials/expert.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Expert-tutorial-—-a-portfolio-as-a-node-in-a-larger-system"><a class="docs-heading-anchor" href="#Expert-tutorial-—-a-portfolio-as-a-node-in-a-larger-system">Expert tutorial — a portfolio as a node in a larger system</a><a id="Expert-tutorial-—-a-portfolio-as-a-node-in-a-larger-system-1"></a><a class="docs-heading-anchor-permalink" href="#Expert-tutorial-—-a-portfolio-as-a-node-in-a-larger-system" title="Permalink"></a></h1><p><strong>What you will build.</strong> This tier takes the portfolio you have been modeling and treats it as one component of a <em>larger</em> system. We will move the model out of Julia source and into a JSON document (a model is data), preview how fragments compose into it, then couple the whole thing to sibling agents — a market feeding it and a finance function reading off it — under a single simulation clock. We checkpoint a run mid-flight and restore it bit-for-bit, and we close on the analysis surface: an <em>exec map</em> of the coupled net rendered inline.</p><p><strong>Who this is for.</strong> Readers who have worked through the <a href="../introductory/">introductory</a> and <a href="../advanced/">advanced</a> tutorials and are comfortable with the <code>@reaction_network</code> DSL, structured tokens, seeded ensembles, and reading <code>prob.sol</code> by column name. Here we stop building single models in isolation and start <em>embedding</em> them.</p><p><strong>The mental model in one paragraph.</strong> A <code>ReactionNetworkProblem</code> is not a closed world. It is a first-class node in an <a href="https://github.com/Merck/AlgebraicAgents.jl">AlgebraicAgents</a> (AA) hierarchy: it can be read by its neighbours (they pull its species through <code>getobservable</code>) and it can read them back (it declares named <em>input ports</em> and consumes their observables through an <code>ExternalRef</code> leaf). The document that describes the network stays inert data — it names the ports it reads but never the agents that fill them; that wiring is host-side. And because the whole model is data, any run can be dumped at a clean tick boundary and restored exactly. That portability — data in, data out, deterministic under <code>(hierarchy, seed)</code> — is the subject of this tutorial.</p><pre><code class="language-julia hljs">using ReactiveDynamics
+using ReactiveDynamics: validate, dump_state, restore, ExternalRef   # unexported helpers used below
+using AlgebraicAgents                                        # entangle!/add_wire!/simulate/FreeAgent — reexported by RD
+using Plots                                                  # inline figures
+import JSON
+
+const RD = ReactiveDynamics</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ReactiveDynamics</code></pre><p>A tiny helper so a raw Graphviz SVG string renders as an inline figure in the built page: an object whose <code>show(::MIME&quot;image/svg+xml&quot;)</code> prints the SVG. Literate writes it as a sidecar <code>.svg</code> the build inlines, so the exec map appears as a diagram rather than as escaped markup.</p><pre><code class="language-julia hljs">struct RawSVG
+    s::String
+end
+Base.show(io::IO, ::MIME&quot;image/svg+xml&quot;, x::RawSVG) = print(io, x.s)</code></pre><h2 id="1.-The-model-is-data:-a-JSON-round-trip"><a class="docs-heading-anchor" href="#1.-The-model-is-data:-a-JSON-round-trip">1. The model is data: a JSON round-trip</a><a id="1.-The-model-is-data:-a-JSON-round-trip-1"></a><a class="docs-heading-anchor-permalink" href="#1.-The-model-is-data:-a-JSON-round-trip" title="Permalink"></a></h2><p>Every model you have authored with <code>@reaction_network</code> has an equivalent as a single, inert JSON document. The engine loads it with <code>from_json_model</code> and emits it with <code>to_json_model</code>, and the loader never <code>eval</code>s or <code>Meta.parse</code>s a model field — it walks a typed IR and lowers it through the same compiler the DSL uses. The upshot is that an untrusted party (a colleague, an LLM) can <em>author</em> a model as data, and the worst a malicious field can do is fail validation. The <a href="../../deep_dives/serialization/">serialization deep-dive</a> covers the IR, the registry, and the RCE boundary in depth; here we only need the round-trip and its validator, because they are what make a network portable enough to drop into a larger system.</p><p>We author a small portfolio <em>cash model</em> directly as JSON. It has one <code>grow</code> transition that accrues cash, and — the piece that matters for coupling — a top-level <code>inputs[]</code> array declaring a single read port, <code>sentiment</code>, with a pre-wire <code>default</code> of <code>0.0</code>. The rate of <code>grow</code> reads that port through an <code>ExternalRef</code>, so a hotter external market funds the portfolio faster. An in-model <code>acquire</code> rule (a once-lever) fires the first tick external sentiment clears a threshold <em>and</em> the portfolio has banked enough cash — an endogenous decision driven by external state.</p><pre><code class="language-julia hljs">const PORTFOLIO_JSON = &quot;&quot;&quot;
+{ &quot;rd_format&quot;:&quot;reactive-dynamics-model&quot;, &quot;version&quot;:&quot;1.0&quot;,
+  &quot;meta&quot;:{ &quot;tspan&quot;:8.0, &quot;dt&quot;:1.0 },
+  &quot;params&quot;:[ { &quot;name&quot;:&quot;base_inflow&quot;, &quot;value&quot;:30.0 },
+             { &quot;name&quot;:&quot;acq_cash_trigger&quot;, &quot;value&quot;:50.0 },
+             { &quot;name&quot;:&quot;sentiment_threshold&quot;, &quot;value&quot;:0.45 } ],
+  &quot;inputs&quot;:[ { &quot;port&quot;:&quot;sentiment&quot;, &quot;default&quot;:{ &quot;node&quot;:&quot;const&quot;, &quot;value&quot;:0.0 } } ],
+  &quot;species&quot;:[ { &quot;name&quot;:&quot;cash&quot;, &quot;init&quot;:0 },
+              { &quot;name&quot;:&quot;acquired&quot;, &quot;init&quot;:0 } ],
+  &quot;transitions&quot;:[
+    { &quot;id&quot;:&quot;grow&quot;, &quot;name&quot;:&quot;grow&quot;, &quot;rate_mode&quot;:&quot;deterministic&quot;,
+      &quot;rate&quot;:{ &quot;node&quot;:&quot;call&quot;, &quot;op&quot;:&quot;*&quot;,
+               &quot;args&quot;:[ { &quot;node&quot;:&quot;externalref&quot;, &quot;port&quot;:&quot;sentiment&quot; },
+                        { &quot;node&quot;:&quot;ref&quot;, &quot;kind&quot;:&quot;param&quot;, &quot;name&quot;:&quot;base_inflow&quot; } ] } } ],
+  &quot;reactants&quot;:[
+    { &quot;transition&quot;:&quot;grow&quot;, &quot;side&quot;:&quot;rhs&quot;, &quot;species&quot;:&quot;cash&quot;, &quot;stoich&quot;:1 } ],
+  &quot;rules&quot;:[
+    { &quot;id&quot;:&quot;acquire&quot;, &quot;fire_mode&quot;:&quot;once&quot;,
+      &quot;guard&quot;:{ &quot;node&quot;:&quot;call&quot;, &quot;op&quot;:&quot;&amp;&amp;&quot;,
+                &quot;args&quot;:[ { &quot;node&quot;:&quot;call&quot;, &quot;op&quot;:&quot;&gt;&quot;,
+                           &quot;args&quot;:[ { &quot;node&quot;:&quot;externalref&quot;, &quot;port&quot;:&quot;sentiment&quot; },
+                                    { &quot;node&quot;:&quot;ref&quot;, &quot;kind&quot;:&quot;param&quot;, &quot;name&quot;:&quot;sentiment_threshold&quot; } ] },
+                         { &quot;node&quot;:&quot;call&quot;, &quot;op&quot;:&quot;&gt;=&quot;,
+                           &quot;args&quot;:[ { &quot;node&quot;:&quot;ref&quot;, &quot;kind&quot;:&quot;species&quot;, &quot;name&quot;:&quot;cash&quot; },
+                                    { &quot;node&quot;:&quot;ref&quot;, &quot;kind&quot;:&quot;param&quot;, &quot;name&quot;:&quot;acq_cash_trigger&quot; } ] } ] },
+      &quot;action&quot;:{ &quot;verb&quot;:&quot;seq&quot;, &quot;stmts&quot;:[
+                   { &quot;verb&quot;:&quot;set_species&quot;, &quot;name&quot;:&quot;acquired&quot;, &quot;mode&quot;:&quot;inc&quot;,
+                     &quot;value&quot;:{ &quot;node&quot;:&quot;const&quot;, &quot;value&quot;:1 } },
+                   { &quot;verb&quot;:&quot;log&quot;, &quot;msg&quot;:&quot;ACQUISITION: external sentiment cleared + cash trigger met&quot; } ] } } ] }
+&quot;&quot;&quot;</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;{ \&quot;rd_format\&quot;:\&quot;reactive-dynamics-model\&quot;, \&quot;version\&quot;:\&quot;1.0\&quot;,\n  \&quot;meta\&quot;:{ \&quot;tspan\&quot;:8.0, \&quot;dt\&quot;:1.0 },\n  \&quot;params\&quot;:[ { \&quot;name\&quot;:\&quot;base_inflow\&quot;, \&quot;value\&quot;:30.0 },\n             { \&quot;name\&quot;:\&quot;acq_cash_trigger\&quot;, \&quot;value\&quot;:50.0 },\n             { \&quot;name\&quot;:\&quot;sentiment_threshold\&quot;, \&quot;value\&quot;:0.45 } ],\n  \&quot;inpu&quot;<span class="sgr93"><span class="sgr1"> ⋯ 1135 bytes ⋯ </span></span>&quot;erb\&quot;:\&quot;seq\&quot;, \&quot;stmts\&quot;:[\n                   { \&quot;verb\&quot;:\&quot;set_species\&quot;, \&quot;name\&quot;:\&quot;acquired\&quot;, \&quot;mode\&quot;:\&quot;inc\&quot;,\n                     \&quot;value\&quot;:{ \&quot;node\&quot;:\&quot;const\&quot;, \&quot;value\&quot;:1 } },\n                   { \&quot;verb\&quot;:\&quot;log\&quot;, \&quot;msg\&quot;:\&quot;ACQUISITION: external sentiment cleared + cash trigger met\&quot; } ] } } ] }\n&quot;</code></pre><p><code>validate</code> runs before any model is built: it is a pure, eval-free structural check over the parsed document. An empty result means clean. One of its rules (rule 8) is exactly the one that keeps coupling honest — every <code>ExternalRef.port</code> must be a declared <code>inputs[]</code> port.</p><pre><code class="language-julia hljs">clean = validate(JSON.parse(PORTFOLIO_JSON))
+println(&quot;validate(portfolio) -&gt; &quot;, isempty(clean) ? &quot;OK (no diagnostics)&quot; : clean)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">validate(portfolio) -&gt; OK (no diagnostics)</code></pre><p>To see the validator earn its keep, we point the <code>grow</code> rate at a port the document never declared. That is a <em>diagnostic</em>, not an exception — and crucially not an <code>eval</code>:</p><pre><code class="language-julia hljs">bad = JSON.parse(PORTFOLIO_JSON)
+bad[&quot;transitions&quot;][1][&quot;rate&quot;][&quot;args&quot;][1][&quot;port&quot;] = &quot;undeclared_signal&quot;
+bad_diags = validate(bad)
+println(&quot;validate(model with an undeclared port) -&gt; &quot;, length(bad_diags), &quot; diagnostic(s):&quot;)
+for d in bad_diags
+    println(&quot;    &quot;, string(d))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">validate(model with an undeclared port) -&gt; 1 diagnostic(s):
+    [error] transitions[1].rate.args[1]: ExternalRef port `undeclared_signal` is not a declared inputs[] port</code></pre><p>A clean document builds into a runnable problem with <code>from_json_model</code>. The engine also emits a live model back to a document with <code>to_json_model</code>, so a model is data in <em>both</em> directions — author-as-JSON then load, and build then export. The <a href="../../deep_dives/serialization/">serialization deep-dive</a> walks the export half and its round-trip guarantees; here we just confirm the forward direction gives us a network that knows the input port it declared, which is what §3 wires into.</p><pre><code class="language-julia hljs">rd0 = from_json_model(PORTFOLIO_JSON; seed = 11)
+println(&quot;built from JSON; declared input ports : &quot;, collect(keys(rd0.external_inputs)))
+println(&quot;its pre-wire `sentiment` buffer value  : &quot;, rd0.external_inputs[:sentiment], &quot;  (the declared default)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">built from JSON; declared input ports : [:sentiment]
+its pre-wire `sentiment` buffer value  : 0.0  (the declared default)</code></pre><h2 id="2.-Composition,-in-one-paragraph"><a class="docs-heading-anchor" href="#2.-Composition,-in-one-paragraph">2. Composition, in one paragraph</a><a id="2.-Composition,-in-one-paragraph-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Composition,-in-one-paragraph" title="Permalink"></a></h2><p>Before we couple this network to <em>other agents</em>, it is worth naming the other axis of scale: composing a network <em>from fragments</em>. You do not have to author a large model in one block. A <code>@pipeline</code> writes a whole phase chain compactly; a <code>@process</code> fragment is a reusable, parameterized sub-model; <code>@compose</code> joins fragments by <em>declared open ports</em> (an <code>:output</code> port of one identified with a same-named <code>:input</code> port of another); and <code>refine</code> substitutes a finer sub-model for a single coarse transition, <em>plug-compatibly</em> — the boundary species keep their indices, so every other transition is structurally untouched. All of it is authoring-time and additive: the result is an ordinary network that constructs, serializes, and simulates like a hand-written flat one, and (like reindexing) it is forbidden on a live, stepping model.</p><p>We do not exercise the composition ladder here — the <a href="../../deep_dives/composition/">composition deep-dive</a> is the place for the granularity story, and §5 closes this tutorial on a coarse-vs-refined ensemble agreement that shows <em>why</em> it matters. The point for now is only that the JSON document in §1 could equally have been assembled from fragments; either way what we hold is a portable network ready to become a node in something larger.</p><h2 id="3.-Coupling:-the-network-as-an-AA-node"><a class="docs-heading-anchor" href="#3.-Coupling:-the-network-as-an-AA-node">3. Coupling: the network as an AA node</a><a id="3.-Coupling:-the-network-as-an-AA-node-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Coupling:-the-network-as-an-AA-node" title="Permalink"></a></h2><p>Now the substance of this tier. A portfolio does not live alone — it sits beside a macro/market model that shapes its funding, and a finance function that consumes its cash. We model those as two ordinary AA agents in the host (they know nothing about the network&#39;s internals) and wire all three together under one root:</p><pre><code class="nohighlight hljs">             market ──▶ sentiment ─wire─▶ [ RD portfolio net ]
+           (a sibling                            │ getobservable
+            @aagent)                             ▼
+                             cash ─wire─▶ finance (downstream sink)</code></pre><h3 id="The-sibling-agents"><a class="docs-heading-anchor" href="#The-sibling-agents">The sibling agents</a><a id="The-sibling-agents-1"></a><a class="docs-heading-anchor-permalink" href="#The-sibling-agents" title="Permalink"></a></h3><p><code>MarketAgent</code> is a <em>source</em>: it carries a <code>sentiment</code> signal that drifts upward each tick (rising deal appetite) and exports it as an observable so a wire can carry it into the network. Its custom constructor types its first argument <code>::AbstractString</code> so dispatch picks it over the <code>@aagent</code>-generated positional signature.</p><pre><code class="language-julia hljs">@aagent struct MarketAgent
+    sentiment::Float64   # the exported signal (deal-appetite index, 0..1)
+    drift::Float64       # per-tick increment
+    dt::Float64
+    t::Float64
+    horizon::Float64
+end
+MarketAgent(name::AbstractString, s0::Real, drift::Real, dt::Real, horizon::Real) =
+    MarketAgent(name, Float64(s0), Float64(drift), Float64(dt), 0.0, Float64(horizon))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.MarketAgent</code></pre><p>The market&#39;s outbound surface: it exports one observable, <code>sentiment</code>.</p><pre><code class="language-julia hljs">AlgebraicAgents.observables(m::MarketAgent) = [:sentiment]
+AlgebraicAgents.getobservable(m::MarketAgent, ::Union{Symbol, AbstractString}) = m.sentiment
+AlgebraicAgents.getobservable(m::MarketAgent, ::Int) = m.sentiment
+# Stepping: drift the sentiment upward, advance the clock.
+AlgebraicAgents._step!(m::MarketAgent) = (m.sentiment += m.drift; m.t += m.dt; m.t)
+AlgebraicAgents._projected_to(m::MarketAgent) = m.t &gt; m.horizon ? true : m.t</code></pre><p><code>FinanceAgent</code> is a <em>sink</em>: each tick it latches a wired-in value (the network&#39;s <code>cash</code>) and records what it sees. It reads its own incoming wires the same way the network reads its input ports — through <code>retrieve_input_vars</code> at <code>_prestep!</code> — so the finance read carries the same one-tick coupling lag and the same determinism guarantee.</p><pre><code class="language-julia hljs">@aagent struct FinanceAgent
+    cash_seen::Vector{Float64}   # the wired-in RD cash, recorded each tick
+    dt::Float64
+    t::Float64
+    horizon::Float64
+end
+FinanceAgent(name::AbstractString, dt::Real, horizon::Real) =
+    FinanceAgent(name, Float64[], Float64(dt), 0.0, Float64(horizon))
+
+function AlgebraicAgents._prestep!(f::FinanceAgent, t)
+    inputs = AlgebraicAgents.retrieve_input_vars(f)   # Dict(to_var_name =&gt; value)
+    haskey(inputs, &quot;rd_cash&quot;) &amp;&amp; push!(f.cash_seen, Float64(inputs[&quot;rd_cash&quot;]))
+    return f
+end
+AlgebraicAgents._step!(f::FinanceAgent) = (f.t += f.dt; f.t)
+AlgebraicAgents._projected_to(f::FinanceAgent) = f.t &gt; f.horizon ? true : f.t</code></pre><h3 id="Entangle-and-wire"><a class="docs-heading-anchor" href="#Entangle-and-wire">Entangle and wire</a><a id="Entangle-and-wire-1"></a><a class="docs-heading-anchor-permalink" href="#Entangle-and-wire" title="Permalink"></a></h3><p><code>entangle!</code> places the three agents under one <code>FreeAgent</code> root. Two <code>add_wire!</code> calls lay the topology — <code>add_wire!(root; from, to, from_var_name, to_var_name)</code> says &quot;carry the source&#39;s observable <code>from_var_name</code> into the target&#39;s input <code>to_var_name</code>&quot;. This is the <em>only</em> place the cross-agent topology lives; the network&#39;s JSON document names only its <code>sentiment</code> <em>port</em>, never the market agent that fills it, so the document stays portable. We wrap the whole construction in a builder so §4 and §5 can rebuild an identical system on demand.</p><pre><code class="language-julia hljs">const HORIZON = 8.0
+
+function build_system(; seed)
+    rd = from_json_model(PORTFOLIO_JSON; seed = seed)
+    market = MarketAgent(&quot;market&quot;, 0.0, 0.12, 1.0, HORIZON)   # sentiment 0.0, +0.12/tick
+    finance = FinanceAgent(&quot;finance&quot;, 1.0, HORIZON)
+    root = FreeAgent(&quot;portfolio&quot;)
+    entangle!(root, market)
+    entangle!(root, rd)
+    entangle!(root, finance)
+    # wire 1 — INBOUND: the market&#39;s sentiment feeds the network&#39;s `sentiment` port.
+    add_wire!(root; from = market, to = rd, from_var_name = &quot;sentiment&quot;, to_var_name = &quot;sentiment&quot;)
+    # wire 2 — OUTBOUND: the network&#39;s cash (read via getobservable) feeds the finance agent.
+    add_wire!(root; from = rd, to = finance, from_var_name = &quot;cash&quot;, to_var_name = &quot;rd_cash&quot;)
+    return (; root, rd, market, finance)
+end
+
+sys = build_system(seed = 11)
+println(&quot;hierarchy: portfolio (root) ⊇ {market, RD portfolio net, finance}&quot;)
+println(&quot;RD exports observables       : &quot;, AlgebraicAgents.observables(sys.rd))
+println(&quot;market sentiment at t=0      : &quot;, AlgebraicAgents.getobservable(sys.market, :sentiment))
+println(&quot;RD&#39;s pre-wire sentiment buffer: &quot;, sys.rd.external_inputs[:sentiment], &quot;  (the declared default)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">hierarchy: portfolio (root) ⊇ {market, RD portfolio net, finance}
+RD exports observables       : [:cash, :acquired]
+market sentiment at t=0      : 0.0
+RD&#39;s pre-wire sentiment buffer: 0.0  (the declared default)</code></pre><h3 id="Run-the-whole-thing-under-one-clock"><a class="docs-heading-anchor" href="#Run-the-whole-thing-under-one-clock">Run the whole thing under one clock</a><a id="Run-the-whole-thing-under-one-clock-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-whole-thing-under-one-clock" title="Permalink"></a></h3><p>A coupled network is driven by <code>simulate</code> on the <em>root</em>, never on the network directly. AA&#39;s step first walks every agent&#39;s <code>_prestep!</code> (the <em>latch</em> phase — where the network and the finance agent read their incoming wires, once, for the tick), then steps each agent whose projected time equals the hierarchy minimum. So every external read in a tick is the source&#39;s <em>previous</em>-tick-boundary value — a one-tick Jacobi lag. That is deliberate: it closes the algebraic loop a live mid-step cross-agent read would open, and it is what makes the coupled run reproducible from <code>(hierarchy, seed)</code> alone, independent of the order AA happens to step siblings in. The lag is why the finance series in §4 is the cash trajectory shifted by one tick.</p><pre><code class="language-julia hljs">simulate(sys.root)
+
+cash = round.(sys.rd.sol.cash; digits = 1)
+acquired = Int.(sys.rd.sol.acquired)
+println(&quot;RD cash trajectory (grow rate = sentiment × base_inflow, latched one tick late):&quot;)
+println(&quot;   t    : &quot;, Int.(sys.rd.sol.t))
+println(&quot;   cash : &quot;, cash)
+println(&quot;   acquired (the lever) : &quot;, acquired)
+
+acq_tick = findfirst(&gt;(0.0), sys.rd.sol.acquired)
+println(
+    &quot;the acquisition lever fired at t = &quot;,
+    isnothing(acq_tick) ? &quot;never&quot; : Int(sys.rd.sol.t[acq_tick]),
+    &quot; — the first tick BOTH external sentiment cleared its threshold AND cash ≥ trigger.&quot;
+)
+println(&quot;rule `acquire` still enabled? &quot;, sys.rd.rules[1].enabled, &quot;  (false ⇒ the :once lever has fired)&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ACQUISITION: external sentiment cleared + cash trigger met
+RD cash trajectory (grow rate = sentiment × base_inflow, latched one tick late):
+   t    : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+   cash : [0.0, 0.0, 3.0, 10.0, 20.0, 34.0, 52.0, 73.0, 98.0, 126.0]
+   acquired (the lever) : [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+the acquisition lever fired at t = 6 — the first tick BOTH external sentiment cleared its threshold AND cash ≥ trigger.
+rule `acquire` still enabled? false  (false ⇒ the :once lever has fired)</code></pre><h3 id="Determinism-of-the-coupled-trajectory"><a class="docs-heading-anchor" href="#Determinism-of-the-coupled-trajectory">Determinism of the coupled trajectory</a><a id="Determinism-of-the-coupled-trajectory-1"></a><a class="docs-heading-anchor-permalink" href="#Determinism-of-the-coupled-trajectory" title="Permalink"></a></h3><p>The whole reason for latching external reads at <code>_prestep!</code> is that the coupled run is a function of <code>(hierarchy, seed)</code> and nothing else. We build and run the same system twice and confirm both the network&#39;s trajectory and the finance agent&#39;s latched reads are identical.</p><pre><code class="language-julia hljs">a = build_system(seed = 11); simulate(a.root)
+b = build_system(seed = 11); simulate(b.root)
+println(&quot;two independent coupled runs, same seed:&quot;)
+println(&quot;   RD trajectories identical (sol == sol)? &quot;, a.rd.sol == b.rd.sol)
+println(&quot;   finance reads identical?                &quot;, a.finance.cash_seen == b.finance.cash_seen)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+two independent coupled runs, same seed:
+   RD trajectories identical (sol == sol)? true
+   finance reads identical?                true</code></pre><h2 id="4.-Checkpoint-and-restore"><a class="docs-heading-anchor" href="#4.-Checkpoint-and-restore">4. Checkpoint and restore</a><a id="4.-Checkpoint-and-restore-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Checkpoint-and-restore" title="Permalink"></a></h2><p>Because the model is data, so is a <em>run</em>. <code>dump_state(prob)</code> serializes a live run at a clean tick boundary into an eval-free, JSON-able artifact — the clock, the RNG state, creation counters, the plain species column <code>u</code>, the token population with current field values, and the once-rule latches. <code>restore(spec, dump)</code> rebuilds an identical problem <em>from the same network <code>spec</code></em> (not from the JSON text — <code>restore</code> takes the constructed <code>ReactionNetwork</code>, overlaying the dumped state onto a fresh build of it), and resuming the restored copy reproduces the original&#39;s continuation exactly. (The <a href="../../deep_dives/serialization/">serialization deep-dive</a> details the dump schema; dumping requires an empty in-flight set — a clean tick boundary — which is the Milestone-1 scope.)</p><p>We demonstrate the round-trip on a small self-contained model. It is a plain-species work queue: a <code>backlog</code> pool drained by an instantaneous <code>work</code> transition (<code>cycletime =&gt; 0.0</code>, so nothing is ever in-flight at a boundary) and refilled by a Poisson <code>intake</code>. We hold the built network as <code>spec</code> so we can both construct the run and, later, hand the same <code>spec</code> to <code>restore</code>.</p><pre><code class="language-julia hljs">function checkpoint_model()
+    net = @reaction_network begin
+        @deterministic(50.0), backlog --&gt; cleared, name =&gt; work, cycletime =&gt; 0.0, probability =&gt; 1.0
+        2.0, ∅ --&gt; backlog, name =&gt; intake
+    end
+    @prob_init net backlog = 5 cleared = 0
+    @prob_params net
+    @prob_meta net tspan = 8 dt = 1.0
+    return net
+end
+
+spec = checkpoint_model()
+check = ReactionNetworkProblem(spec; seed = 11)
+simulate(check, 4)                                   # step to a clean boundary at t = 4
+println(&quot;stepped to t = &quot;, check.t, &quot;; in-flight transitions empty? &quot;, isempty(check.ongoing_transitions))
+
+dumped = dump_state(check)
+println(&quot;dump_state: captured t=&quot;, dumped.t, &quot;, u=&quot;, round.(dumped.u; digits = 1), &quot; (eval-free, JSON-able)&quot;)
+
+restored = restore(spec, dumped)
+println(&quot;restore    : t=&quot;, restored.t, &quot;, u matches the original? &quot;, restored.u == check.u)
+
+simulate(check)                                       # resume the original to the horizon
+simulate(restored)                                    # resume the restored copy
+println(&quot;resume both to the horizon — final marking identical? &quot;, check.u == restored.u)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">stepped to t = 4.0; in-flight transitions empty? true
+dump_state: captured t=4.0, u=[4.0, 10.0] (eval-free, JSON-able)
+restore    : t=4.0, u matches the original? true
+resume both to the horizon — final marking identical? true</code></pre><p><code>reinit!</code> closes the loop the other way for a coupled node: it resets a run to t=0 <em>and</em> re-seeds the external-input buffer from the declared <code>inputs[]</code> defaults, so a stale latched wire value from a finished run cannot leak into the next one. We build a <em>throwaway</em> coupled system for this (so we leave the <code>sys</code> from §3 intact for the reads in §5), run it, and confirm the buffer returns to exactly its declared default.</p><pre><code class="language-julia hljs">spent = build_system(seed = 11); simulate(spent.root)
+println(
+    &quot;after the run, RD&#39;s latched sentiment = &quot;, round(spent.rd.external_inputs[:sentiment]; digits = 3),
+    &quot;  (a stale wire value)&quot;
+)
+AlgebraicAgents._reinit!(spent.rd)
+println(
+    &quot;after reinit, RD&#39;s sentiment buffer   = &quot;, spent.rd.external_inputs[:sentiment],
+    &quot;  (restored to the declared default)&quot;
+)
+println(&quot;buffer equals the declared defaults snapshot? &quot;, spent.rd.external_inputs == spent.rd.external_input_defaults)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ACQUISITION: external sentiment cleared + cash trigger met
+after the run, RD&#39;s latched sentiment = 0.96  (a stale wire value)
+after reinit, RD&#39;s sentiment buffer   = 0.0  (restored to the declared default)
+buffer equals the declared defaults snapshot? true</code></pre><h2 id="5.-Reading-the-coupled-system"><a class="docs-heading-anchor" href="#5.-Reading-the-coupled-system">5. Reading the coupled system</a><a id="5.-Reading-the-coupled-system-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Reading-the-coupled-system" title="Permalink"></a></h2><p>We have a coupled, checkpointable system. What does it <em>tell</em> us? Two reads close the tutorial: a structural one — the exec map, our hero visual — and a quantitative one — the cash trajectory the finance sibling reconstructed off the wire, framed against an ensemble.</p><h3 id="The-exec-map-(hero-visual)"><a class="docs-heading-anchor" href="#The-exec-map-(hero-visual)">The exec map (hero visual)</a><a id="The-exec-map-(hero-visual)-1"></a><a class="docs-heading-anchor-permalink" href="#The-exec-map-(hero-visual)" title="Permalink"></a></h3><p>The analysis layer renders a network as a three-layer diagram. <code>network_graph(prob)</code> is a pure, dependency-free Petri-net view (species places, transition nodes, arcs). <code>to_graphviz(g)</code> emits DOT; <code>draw_network(prob)</code> renders it through Graphviz. <code>exec_map(prob)</code> decorates that structure with run statistics — species painted where their pool ran to a trough, and (for structured models) a selected cohort&#39;s path drawn as thick arcs. It is strictly read-only: it never mutates the run. Rendering is best-effort: if no Graphviz backend is present we still emit the DOT source, so a backend hiccup cannot fail the build.</p><pre><code class="language-julia hljs">g = network_graph(sys.rd)
+println(&quot;network_graph — species : &quot;, [s.name for s in g.species])
+println(&quot;               transitions: &quot;, [t.name for t in g.transitions])
+println(&quot;               arcs       : &quot;, length(g.arcs))
+
+# The DOT source is always available, backend or not — this is what draw_network/exec_map render.
+dot = to_graphviz(g)
+println(&quot;to_graphviz emitted &quot;, length(dot), &quot; bytes of DOT source&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">network_graph — species : [:cash, :acquired]
+               transitions: [:grow]
+               arcs       : 1
+to_graphviz emitted 190 bytes of DOT source</code></pre><p>We render the exec map, wrapped so a missing backend degrades to the DOT source. With no <code>path</code>, <code>exec_map</code> returns the rendered SVG bytes as a <code>String</code>; we hand that to <code>RawSVG</code> so it inlines as a figure. Graphviz&#39;s <code>dot</code> is present in the docs build environment, so this renders inline as the closing structural visual; the block&#39;s last expression is what the page displays.</p><pre><code class="language-julia hljs">exec_map_figure = try
+    RawSVG(exec_map(sys.rd; format = &quot;svg&quot;))
+catch err
+    @warn &quot;exec_map: no Graphviz backend — falling back to the DOT source&quot; exception = err
+    Text(dot)
+end
+exec_map_figure</code></pre><img src='data:image/svg+xml;utf-8,<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="155pt" height="132pt"
+ viewBox="0.00 0.00 154.85 132.43" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 128.43)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-128.43 150.85,-128.43 150.85,4 -4,4"/>
+<!-- cash -->
+<g id="node1" class="node">
+<title>cash</title>
+<ellipse fill="gold" stroke="black" cx="124.91" cy="-21.94" rx="21.88" ry="21.88"/>
+<text text-anchor="middle" x="124.91" y="-19.74" font-family="Times,serif" font-size="9.00">cash</text>
+</g>
+<!-- acquired -->
+<g id="node2" class="node">
+<title>acquired</title>
+<ellipse fill="gold" stroke="black" cx="33.49" cy="-90.94" rx="33.47" ry="33.47"/>
+<text text-anchor="middle" x="33.49" y="-88.74" font-family="Times,serif" font-size="9.00">acquired</text>
+</g>
+<!-- grow -->
+<g id="node3" class="node">
+<title>grow</title>
+<polygon fill="none" stroke="black" points="60.49,-39.94 6.49,-39.94 6.49,-3.94 60.49,-3.94 60.49,-39.94"/>
+<text text-anchor="middle" x="33.49" y="-19.74" font-family="Times,serif" font-size="9.00">grow</text>
+</g>
+<!-- grow&%2345;&gt;cash -->
+<g id="edge1" class="edge">
+<title>grow&%2345;&gt;cash</title>
+<path fill="none" stroke="black" d="M60.83,-21.94C70.78,-21.94 82.18,-21.94 92.54,-21.94"/>
+<polygon fill="black" stroke="black" points="92.85,-25.44 102.85,-21.94 92.85,-18.44 92.85,-25.44"/>
+</g>
+</g>
+</svg>
+'/><h3 id="The-quantitative-read:-cash-off-the-wire"><a class="docs-heading-anchor" href="#The-quantitative-read:-cash-off-the-wire">The quantitative read: cash off the wire</a><a id="The-quantitative-read:-cash-off-the-wire-1"></a><a class="docs-heading-anchor-permalink" href="#The-quantitative-read:-cash-off-the-wire" title="Permalink"></a></h3><p>The finance agent never touched the network — it only read <code>rd_cash</code> off its incoming wire each <code>_prestep!</code>. Because that read is pinned at the latch (the source&#39;s previous boundary), the series it recorded <em>is</em> the network&#39;s cash trajectory, shifted by exactly one tick. That is the coupled-system read: a downstream agent reconstructs an upstream agent&#39;s state purely through <code>getobservable</code>, with no knowledge of how it is computed. We plot the two series against each other so the lag is visible — the reconstruction sits one tick behind the source and stops one tick short.</p><pre><code class="language-julia hljs">fin = sys.finance.cash_seen
+plot(
+    (0:(length(fin) - 1)), fin;
+    label = &quot;finance reconstruction (off the wire)&quot;, marker = :circle, lw = 2,
+    xlabel = &quot;time (ticks)&quot;, ylabel = &quot;cash&quot;, title = &quot;Cash reconstructed downstream (seed 11)&quot;,
+)
+plot!(Int.(sys.rd.sol.t), sys.rd.sol.cash; label = &quot;RD cash (source)&quot;, lw = 2, ls = :dash, marker = :diamond)</code></pre><img src="b09a9b7c.svg" alt="Example block output"/><h3 id="Reading-the-result"><a class="docs-heading-anchor" href="#Reading-the-result">Reading the result</a><a id="Reading-the-result-1"></a><a class="docs-heading-anchor-permalink" href="#Reading-the-result" title="Permalink"></a></h3><p>The relationship is not approximate — it is <em>exact</em>. The finance agent&#39;s whole recorded series equals the network&#39;s cash trajectory dropped by its last tick, and the horizon value it reconstructs is precisely the network&#39;s cash one tick earlier. The lag is the only difference the coupling introduces, and it is the same whatever seed we run the hierarchy under.</p><pre><code class="language-julia hljs">reconstructed = Int(last(fin))
+source_prev = Int(sys.rd.sol.cash[end - 1])
+exact = fin == sys.rd.sol.cash[1:(end - 1)]
+cross_seed = all(k -&gt; (s = build_system(seed = hash((2026, k))); simulate(s.root); s.finance.cash_seen == s.rd.sol.cash[1:(end - 1)]), 1:8)
+println(&quot;finance&#39;s reconstruction == RD cash shifted one tick? &quot;, exact)
+println(&quot;  cash the finance sibling reports at the horizon : &quot;, reconstructed)
+println(&quot;  RD&#39;s own cash one tick earlier                  : &quot;, source_prev, &quot;  (⇒ the one-tick Jacobi lag)&quot;)
+println(&quot;  holds identically across 8 independent seeds?   : &quot;, cross_seed)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+ACQUISITION: external sentiment cleared + cash trigger met
+finance&#39;s reconstruction == RD cash shifted one tick? true
+  cash the finance sibling reports at the horizon : 98
+  RD&#39;s own cash one tick earlier                  : 98  (⇒ the one-tick Jacobi lag)
+  holds identically across 8 independent seeds?   : true</code></pre><p><strong>The finance function reconstructs the portfolio&#39;s horizon cash as 98 — exactly the network&#39;s cash one tick earlier — purely by reading a wire</strong>, and it does so identically under every seed. The number itself is unremarkable; what matters is its <em>kind</em>. It is a value produced by one component of a heterogeneous system and consumed by another with the coupling made <em>explicit</em> — a known one-tick Jacobi lag — rather than smuggled through a shared mutable buffer where a read-before-write hazard would make the result depend on sibling-stepping order. A downstream treasury or covenant calculation can be built against this series with confidence: it is exact up to a fixed lag and reproducible from <code>(hierarchy, seed)</code>. The same machinery lets the market model shape the portfolio&#39;s funding rate and lets the in-model rule fire an acquisition on external state — all under one clock, all reproducible, and all checkpointable mid-flight.</p><p>This is what distinguishes the engine from a standalone simulator: a model is not a closed program but a portable, composable <em>node</em>. It rounds-trips through data (§1), assembles from fragments (§2), reads and is read by its neighbours (§3), and can be halted and resumed exactly (§4) — so a portfolio can be embedded in a market-and-finance system, or a whole company, without rewriting it.</p><h2 id="Recap"><a class="docs-heading-anchor" href="#Recap">Recap</a><a id="Recap-1"></a><a class="docs-heading-anchor-permalink" href="#Recap" title="Permalink"></a></h2><p>You have, end to end:</p><ol><li>validated an eval-free JSON model and built it with <code>from_json_model</code> (a model is data — the property that makes a network portable, with <code>to_json_model</code> the export inverse);</li><li>seen how fragments compose into a network (<code>@pipeline</code> / <code>@compose</code> / <code>refine</code>), pointing to the composition deep-dive for the granularity ladder;</li><li>coupled the network into an AA hierarchy as a first-class node — read by a downstream finance agent via <code>getobservable</code>, and reading an upstream market via a declared input port and <code>ExternalRef</code> — wired host-side with <code>add_wire!</code>, and run under one <code>simulate(root)</code> with the one-tick Jacobi lag that keeps the coupled trajectory deterministic;</li><li>checkpointed a live run with <code>dump_state</code> and rebuilt it exactly with <code>restore</code>, and reset the external buffer with <code>reinit!</code>;</li><li>read the coupled system both structurally (the <code>exec_map</code> hero visual) and quantitatively (the cash a finance sibling reconstructs off a wire — exact up to the one-tick lag, invariant across seeds).</li></ol><p>Next: the <a href="../../case_studies/marginal_scientist/">applied case studies</a> put this machinery to work on decision questions — the shadow price of a binding resource, and what an in-licensing asset is worth to a <em>living</em> portfolio.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../advanced/">« Advanced: structured-token portfolios</a><a class="docs-footer-nextpage" href="../../deep_dives/serialization/">Deep dive: serialization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 21 August 2026 20:12">Friday 21 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
