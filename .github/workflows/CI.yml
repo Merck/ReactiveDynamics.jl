@@ -32,7 +32,7 @@ jobs:
           - macOS-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
@@ -56,7 +56,7 @@ jobs:
       actions: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v2
         with:
           version: nightly
@@ -75,7 +75,7 @@ jobs:
       actions: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.12'
@@ -95,7 +95,7 @@ jobs:
       pull-requests: read  # PR preview deploys
       statuses: write      # documenter preview status
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The tutorials/case-studies render network exec-maps through Graphviz's `dot`; without a
       # backend they degrade to raw DOT source (see docs/literate/**), so install it for full pages.
       - name: Install Graphviz
