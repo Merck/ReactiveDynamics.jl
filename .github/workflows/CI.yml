@@ -33,7 +33,7 @@ jobs:
           - windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
@@ -57,7 +57,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: nightly
       - uses: julia-actions/cache@v2
@@ -76,7 +76,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1.12'
       - uses: julia-actions/julia-downgrade-compat@v1
@@ -100,7 +100,7 @@ jobs:
       # backend they degrade to raw DOT source (see docs/literate/**), so install it for full pages.
       - name: Install Graphviz
         run: sudo apt-get update && sudo apt-get install -y graphviz
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
       - uses: julia-actions/cache@v2
