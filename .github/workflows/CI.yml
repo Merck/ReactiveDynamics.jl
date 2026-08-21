@@ -79,7 +79,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.12'
-      - uses: julia-actions/julia-downgrade-compat@v1
+      - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Random, Statistics, TOML   # stdlibs pinned to the Julia version
       - uses: julia-actions/cache@v2
