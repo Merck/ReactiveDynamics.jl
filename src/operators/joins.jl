@@ -20,17 +20,17 @@ function merge_networks!(net1, net2, name = gensym("net"), eqs = [])
     prepend!(net2, name, eqs)
 
     for i in row_ids(net2, :S)
-        inc = find_rows(net1, net2[i, :specName], :specName)
+        inc = find_rows(net1, net2[i, :placeName], :placeName)
 
         if isempty(inc)
-            inc = add_row!(net1, :S; specName = net2[i, :specName])
+            inc = add_row!(net1, :S; placeName = net2[i, :placeName])
             assign_defaults!(net1)
         end
 
-        union!(net1[first(inc), :specModality], net2[i, :specModality])
+        union!(net1[first(inc), :placeModality], net2[i, :placeModality])
 
         for attr in propertynames(net1.columns)
-            !occursin("spec", string(attr)) && continue
+            !occursin("place", string(attr)) && continue
             !ismissing(net2[i, attr]) && (net1[first(inc), attr] = net2[i, attr])
         end
     end
@@ -107,12 +107,12 @@ function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
         if port_role(net, i) === :shared
             continue
         end
-        new_name = normalize_name(name, i, net[i, :specName], eqs)
-        push!(specmap, net[i, :specName] => (net[i, :specName] = new_name))
+        new_name = normalize_name(name, i, net[i, :placeName], eqs)
+        push!(specmap, net[i, :placeName] => (net[i, :placeName] = new_name))
     end
 
     for attr in propertynames(net.columns)
-        attr == :specName && continue
+        attr == :placeName && continue
         # Observable options live inside a FoldedObservable struct (the :obsOpts column), not as a
         # bare Expr the loop below rewrites — handle them structurally via prepend_obs! so species
         # referenced inside `on`/`range` exprs are namespaced consistently with every other attr.

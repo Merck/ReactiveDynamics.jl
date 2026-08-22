@@ -56,8 +56,8 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 # transition `adv` @selects a Phase1 project, meters `budget` at @rate over its
 # cycletime, and @advances the project to Phase2 with `probability => 0.6` (a
 # Binomial success draw, so the run is genuinely stochastic — the ensemble has
-# real spread). `budget` carries a specCost so the burn is a real ledger cost, and
-# the produced :Project carries a specReward so a successful advance realizes
+# real spread). `budget` carries a placeCost so the burn is a real ledger cost, and
+# the produced :Project carries a placeReward so a successful advance realizes
 # reward. `budget` starts DELIBERATELY SCARCE (8) so the pool runs to a trough of
 # 0 — which is exactly what the exec map paints as starvation. So this one model
 # makes the trajectory log, the exec map's starvation coloring, AND both sides of
@@ -102,11 +102,11 @@ function project_model(; budget0 = 8, cost = 1.0, reward = 10.0)
             name => adv, cycletime => 1.0, probability => 0.6
     end
     RD.register_structured_species!(net, :Project)
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specInitVal] = Float64(budget0)
-    net[bi, :specCost] = cost
-    pi = findfirst(==(:Project), net[:, :specName])
-    net[pi, :specReward] = reward
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeInitVal] = Float64(budget0)
+    net[bi, :placeCost] = cost
+    pi = findfirst(==(:Project), net[:, :placeName])
+    net[pi, :placeReward] = reward
     @prob_meta net tspan = 5 dt = 1.0
     return net
 end

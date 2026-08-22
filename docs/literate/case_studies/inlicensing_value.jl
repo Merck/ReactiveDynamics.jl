@@ -150,8 +150,8 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
     ## Price the budget burn at 1 currency/unit so the engine's per-program ledger attributes each
     ## program's capital spend during the run. This touches only the ledger rows, never the dynamics —
     ## the trajectory, the pools, and the Δ-rNPV are exactly as they would be without it.
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specCost] = 1.0
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeCost] = 1.0
     return net
 end
 

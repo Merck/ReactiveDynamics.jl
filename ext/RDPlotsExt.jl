@@ -165,7 +165,7 @@ end
 # Species trajectories from `prob.sol` (generalized by recipe 1, kept as the AA `draw(prob)` entry).
 function ReactiveDynamics.AlgebraicAgents._draw(
         prob::ReactionNetworkProblem,
-        vars = string.(prob.acs[:, :specName]);
+        vars = string.(prob.acs[:, :placeName]);
         kwargs...,
     )
     p = Plots.plot()

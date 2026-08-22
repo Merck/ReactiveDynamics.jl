@@ -130,7 +130,7 @@ function export_run(prob::ReactionNetworkProblem, dir::AbstractString; with_mode
         "seed" => prob.seed === nothing ? nothing : string(prob.seed),
         "tspan" => collect(prob.tspan),
         "dt" => prob.dt,
-        "species" => string.(prob.network[:, :specName]),
+        "species" => string.(prob.network[:, :placeName]),
         "artifacts" => artifacts,
     )
     with_model && (manifest["model"] = JSON.parse(to_json_model(prob)))

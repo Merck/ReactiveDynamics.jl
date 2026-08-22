@@ -52,7 +52,7 @@ const RD = ReactiveDynamics
         end
         RD.set_port_role!(f2, :mid => :input, :product => :output)
         m = @compose f1 f2
-        names = m[:, :specName]
+        names = m[:, :placeName]
         # the shared output→input port `mid` collapses to ONE species (FK-repoint)
         @test count(==(:mid), names) == 1
         # private/other species are namespaced per fragment
@@ -103,12 +103,12 @@ const RD = ReactiveDynamics
         # …and every OTHER transition is structurally unchanged (plug-compatibility, Invariant 1).
         @test :phase3 in tnames
         # boundary species keep their names/indices (P1, P2 unchanged; P3 untouched).
-        @test :P1 in r[:, :specName]
-        @test :P2 in r[:, :specName]
-        @test :P3 in r[:, :specName]
+        @test :P1 in r[:, :placeName]
+        @test :P2 in r[:, :placeName]
+        @test :P3 in r[:, :placeName]
         # the sub's PRIVATE species is namespaced (not leaked as a bare name).
-        @test any(n -> occursin("work", string(n)), r[:, :specName])
-        @test !(:work in r[:, :specName])
+        @test any(n -> occursin("work", string(n)), r[:, :placeName])
+        @test !(:work in r[:, :placeName])
         # refine is non-mutating on the input (refine = refine! on a deepcopy).
         @test :phase2 in [coarse[i, :transName] for i in row_ids(coarse, :T)]
         # the promoted table is FK-exact after the splice.
@@ -133,7 +133,7 @@ const RD = ReactiveDynamics
         # runtime trace — it is a plain ModelSpec).
         @test nrows(r2, :S) == nrows(r, :S)
         @test nrows(r2, :T) == nrows(r, :T)
-        @test Set(r2[:, :specName]) == Set(r[:, :specName])
+        @test Set(r2[:, :placeName]) == Set(r[:, :placeName])
     end
 
     # ── §D: @pipeline expands to flow-genesis routing transitions ────────────────────────────────
@@ -144,7 +144,7 @@ const RD = ReactiveDynamics
             Phase2 => Market:(ct = 1.0, pos = 0.9)
         end
         @test nrows(p, :T) == 3                       # one transition per edge
-        @test Set(p[:, :specName]) == Set([:Discovery, :Phase1, :Phase2, :Market])
+        @test Set(p[:, :placeName]) == Set([:Discovery, :Phase1, :Phase2, :Market])
         # each edge carries its per-edge cycletime / prob_of_success.
         cts = Dict(p[i, :transName] => p[i, :transCycleTime] for i in row_ids(p, :T))
         poss = Dict(p[i, :transName] => p[i, :transProbOfSuccess] for i in row_ids(p, :T))
@@ -163,7 +163,7 @@ const RD = ReactiveDynamics
             1.0, inp --> outp, name => g, cycletime => ct, probability => pos
         end
         ga = phase_gate(:Phase1, :Phase2; ct = 2.0, pos = 0.6)
-        @test Set(ga[:, :specName]) == Set([:Phase1, :Phase2])
+        @test Set(ga[:, :placeName]) == Set([:Phase1, :Phase2])
         @test nrows(ga, :T) == 1
         @test ga[1, :transCycleTime] == 2.0
         @test ga[1, :transProbOfSuccess] == 0.6
@@ -172,7 +172,7 @@ const RD = ReactiveDynamics
         RD.set_port_role!(ga, :Phase1 => :input, :Phase2 => :output)
         RD.set_port_role!(gb, :Phase2 => :input, :Phase3 => :output)
         model = @compose ga gb
-        @test count(==(:Phase2), model[:, :specName]) == 1   # the shared port identified
+        @test count(==(:Phase2), model[:, :placeName]) == 1   # the shared port identified
         @test nrows(model, :T) == 2
     end
 

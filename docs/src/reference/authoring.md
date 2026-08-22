@@ -45,8 +45,8 @@ Common species attributes.
 
 | attribute | shorthand | interpretation |
 | :----- | :----- | :----- |
-| `specInitUncertainty` | `uncertainty` `stoch` `stochasticity` | uncertainty about a variable's initial state (modelled as a Gaussian standard deviation) |
-| `specInitVal` | | initial value of a variable |
+| `placeInitUncertainty` | `uncertainty` `stoch` `stochasticity` | uncertainty about a variable's initial state (modelled as a Gaussian standard deviation) |
+| `placeInitVal` | | initial value of a variable |
 
 ## Rate semantics
 

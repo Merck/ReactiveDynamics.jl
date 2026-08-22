@@ -240,7 +240,7 @@ using Statistics
     end
 
     # [pharma-ledger-populated] tier=T1-characterization expectedStatus=pass-now
-    # contract: Brief criterion (ledger populated); Contract §5.4 specCost/specReward/specValuation; log rows solvers.jl:304-312, 426-433, 659-666
+    # contract: Brief criterion (ledger populated); Contract §5.4 placeCost/placeReward/placeValuation; log rows solvers.jl:304-312, 426-433, 659-666
     # note: Verified: with @cost/@reward/@valuation attached, cost sum≈585.6, reward sum≈250.0 over tspan=50 (seed=1).
     # note: CRITICAL: the STOCK toy_pharma_model.jl sets NO valuation attrs, so its ledger rows are all 0.0
     # note: (verified) — the brief's 'ledger populated' is true row-wise even then, but a meaningful (nonzero)

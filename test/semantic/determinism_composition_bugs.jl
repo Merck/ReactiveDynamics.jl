@@ -166,7 +166,7 @@ using ReactiveDynamics: nrows, row_ids
 
     # [join-species-count-union] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md Pending §Composition; merge_networks! operators/joins.jl:14-44 (S merge by name) and :30-36 (T append)
-    # note: Locks in present merge_networks! behavior: S-merge loop (joins.jl:14-28) dedups by specName via incident;
+    # note: Locks in present merge_networks! behavior: S-merge loop (joins.jl:14-28) dedups by placeName via incident;
     # note: T-append (joins.jl:30-36) copies every trans-attr for nrows(acs2,:T) new rows, then renames
     # note: (joins.jl:38-44). The transition-count assertion pins that the historic mid-loop early-return is
     # note: gone on ref-agents (the loop runs to completion). If alias resolution differs and A is NOT merged, S
@@ -184,7 +184,7 @@ using ReactiveDynamics: nrows, row_ids
         m = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
         # union of names {A, B, C} => 3 species (A merged; B, C distinct after prefixing).
         @test nrows(m, :S) == 3
-        @test Symbol("A") in m[:, :specName]
+        @test Symbol("A") in m[:, :placeName]
         # transitions are appended, never dropped: 1 + 1 = 2 (pins the historic mid-loop-return bug is FIXED).
         @test nrows(m, :T) == 2
         # both transition bodies survive the merge (the :trans column is fully populated).
@@ -268,7 +268,7 @@ using ReactiveDynamics: nrows, row_ids
         # A and A2 collapse to one => species count drops by exactly 1.
         @test nrows(m, :S) == before_S - 1
         # the surviving merged name is present; the eliminated alias is gone.
-        @test count(n -> n in (:A, :A2), m[:, :specName]) == 1
+        @test count(n -> n in (:A, :A2), m[:, :placeName]) == 1
         # transitions are preserved (rem_parts! only touched :S).
         @test nrows(m, :T) == 2
     end
@@ -283,11 +283,11 @@ using ReactiveDynamics: nrows, row_ids
     @testset "store: rem_parts! swap-and-pop is exact and safe with undefined non-bits cells" begin
         net = ReactiveDynamics.ReactionNetwork()
         for s in (:A, :B, :C, :D, :E, :F)
-            ReactiveDynamics.add_row!(net, :S; specName = s)   # NO modality ⇒ specModality cell #undef
+            ReactiveDynamics.add_row!(net, :S; placeName = s)   # NO modality ⇒ placeModality cell #undef
         end
         # swap-and-pop order (victims [2,4] reversed): remove 4 → F fills slot4; remove 2 → E fills slot2.
         ReactiveDynamics.rem_rows!(net, :S, [2, 4])            # must NOT throw on the #undef Set column
-        @test net[:, :specName] == [:A, :E, :C, :F]            # exact ACSets swap-and-pop surviving order
+        @test net[:, :placeName] == [:A, :E, :C, :F]            # exact ACSets swap-and-pop surviving order
         @test nrows(net, :S) == 4
     end
 

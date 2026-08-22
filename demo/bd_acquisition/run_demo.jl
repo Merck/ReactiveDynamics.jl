@@ -128,7 +128,7 @@ function main(; root_seed = 2026, nseed = 160)
     end
     # ── Engine-level per-program ledger (MVP finding D, src/ledger.jl) ──────────────────────
     # NEW capability: the engine now attributes the cost ledger PER PROGRAM during the run (with
-    # `budget` priced via specCost in host.jl — which leaves the dynamics and the Δ-rNPV above
+    # `budget` priced via placeCost in host.jl — which leaves the dynamics and the Δ-rNPV above
     # untouched). `program_ledger(prob)` returns the per-program cost/reward/valuation summary in
     # deterministic token order; previously this was reconstructed in post. We surface it for one
     # representative full-deal run and CROSS-CHECK that the per-program rows reconcile to the

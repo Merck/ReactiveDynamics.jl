@@ -44,19 +44,19 @@ end
 # reflection loops (compilers.jl, solvers.jl, joins.jl, equalize.jl) filter over by substring.
 const SCHEMA = (
     S = (
-        specName = Symbol,
-        specModality = Set{Symbol},
-        specInitVal = SampleableValues,
-        specInitUncertainty = SampleableValues,
-        specCost = SampleableValues,
-        specReward = SampleableValues,
-        specValuation = SampleableValues,
-        specStructured = Bool,
+        placeName = Symbol,
+        placeModality = Set{Symbol},
+        placeInitVal = SampleableValues,
+        placeInitUncertainty = SampleableValues,
+        placeCost = SampleableValues,
+        placeReward = SampleableValues,
+        placeValuation = SampleableValues,
+        placeStructured = Bool,
         # ADR 0009 §A / CONTRACT §11.1 — open-port role: a thin closed tag on the Species record
         # (NOT a new table). role ∈ {:private (default, auto-namespaced m__X on compose), :input,
         # :output (open ports; directionality advisory), :shared (bare-name identified, the
         # first-class @catchall)}. Drives @compose port-matching and refine boundary identification.
-        specRole = Symbol,
+        placeRole = Symbol,
     ),
     T = (
         trans = SampleableValues,
@@ -187,12 +187,12 @@ reactant_specs(net::ReactionNetwork) = net.reactants
 
 The `:S` species name at row index `i` — the inverse of `find_index`, used to resolve/check a `ReactantSpec` FK target back to a name.
 """
-specname(net::ReactionNetwork, i::Integer) = net[i, :specName]
+specname(net::ReactionNetwork, i::Integer) = net[i, :placeName]
 
 # The :S index of a species name on the STATIC schema (the ReactionNetworkProblem overload lives in
 # state.jl:263). Returns nothing if absent. Used by equalize!'s FK-repoint and the acceptance tests.
 function find_index(species::Symbol, net::ReactionNetwork)
-    inc = find_rows(net, species, :specName)
+    inc = find_rows(net, species, :placeName)
     return isempty(inc) ? nothing : first(inc)
 end
 
@@ -203,10 +203,10 @@ const PORT_ROLES = (:private, :input, :output, :shared)
     port_role(net, i::Integer) -> Symbol
     port_role(net, name::Symbol) -> Union{Symbol, Nothing}
 
-The open-port role of a species (ADR 0009 §A / CONTRACT §11.1), one of `:private`, `:input`, `:output`, `:shared`. `:private` (the default for a species authored before roles existed or whose `specRole` cell is unset) is namespaced on compose; `:input`/`:output` are the open ports matched by [`@compose`](@ref); `:shared` is identified by bare name. Indexed by row `i`, or by `name` (returning `nothing` if no such species). Set roles with [`set_port_role!`](@ref) / `@port`.
+The open-port role of a species (ADR 0009 §A / CONTRACT §11.1), one of `:private`, `:input`, `:output`, `:shared`. `:private` (the default for a species authored before roles existed or whose `placeRole` cell is unset) is namespaced on compose; `:input`/`:output` are the open ports matched by [`@compose`](@ref); `:shared` is identified by bare name. Indexed by row `i`, or by `name` (returning `nothing` if no such species). Set roles with [`set_port_role!`](@ref) / `@port`.
 """
 function port_role(net::ReactionNetwork, i::Integer)
-    r = net[i, :specRole]
+    r = net[i, :placeRole]
     return (r === nothing || r === missing) ? :private : r
 end
 port_role(net::ReactionNetwork, name::Symbol) =
@@ -241,7 +241,7 @@ col_row_ids(net::ReactionNetwork, attr::Symbol) = Base.OneTo(net.counts[ATTR2OBJ
 Base.getindex(net::ReactionNetwork, i::Int, attr::Symbol) = getcell(_col(net, attr), i)
 Base.setindex!(net::ReactionNetwork, v, i::Int, attr::Symbol) = setcell!(_col(net, attr), i, v)
 # whole-column and row-subset reads return COPIES (matching ACSets `collect_column`/`map(identity)`);
-# `map(identity, …)` narrows e.g. `net[:, :specName]` back to `Vector{Symbol}`.
+# `map(identity, …)` narrows e.g. `net[:, :placeName]` back to `Vector{Symbol}`.
 Base.getindex(net::ReactionNetwork, ::Colon, attr::Symbol) =
     map(identity, [getcell(_col(net, attr), i) for i in 1:net.counts[ATTR2OBJ[attr]]])
 Base.getindex(net::ReactionNetwork, rows::AbstractVector, attr::Symbol) =
@@ -322,7 +322,7 @@ Base.convert(::Type{SampleableValues}, ex::String) = MacroTools.striplines(Meta.
 
 prettynames = Dict(
     :transRate => [:rate],
-    :specInitUncertainty => [:uncertainty, :stoch, :stochasticity],
+    :placeInitUncertainty => [:uncertainty, :stoch, :stochasticity],
     :transPreAction => [:preAction, :action, :pre],
     :transPostAction => [:postAction, :post],
     :transName => [:name, :interpretation],
@@ -346,13 +346,13 @@ defargs = Dict(
         :transName => missing,
     ),
     :S => Dict{Symbol, Any}(
-        :specInitUncertainty => 0.0,
-        :specInitVal => 0.0,
-        :specCost => 0.0,
-        :specReward => 0.0,
-        :specValuation => 0.0,
-        :specStructured => false,
-        :specRole => :private,          # ADR 0009 §A — default port role (internal, namespaced)
+        :placeInitUncertainty => 0.0,
+        :placeInitVal => 0.0,
+        :placeCost => 0.0,
+        :placeReward => 0.0,
+        :placeValuation => 0.0,
+        :placeStructured => false,
+        :placeRole => :private,          # ADR 0009 §A — default port role (internal, namespaced)
     ),
     :P => Dict{Symbol, Any}(:prmVal => missing),
     :M => Dict{Symbol, Any}(:metaVal => missing),
@@ -371,10 +371,10 @@ function assign_defaults!(net::ReactionNetwork)
     end
 
     foreach(
-        i -> !isnothing(net[i, :specModality]) || (net[i, :specModality] = Set{Symbol}()),
+        i -> !isnothing(net[i, :placeModality]) || (net[i, :placeModality] = Set{Symbol}()),
         row_ids(net, :S),
     )
-    k = [:specCost, :specReward, :specValuation]
+    k = [:placeCost, :placeReward, :placeValuation]
     foreach(
         k -> foreach(i -> !isnothing(net[i, k]) || (net[i, k] = 0.0), row_ids(net, :S)),
         k,
@@ -429,7 +429,7 @@ function merge_network!(net::ReactionNetwork, transitions, reactants, obs, event
         events,
     )
     foreach(
-        r -> isempty(find_rows(net, r, :specName)) && add_row!(net, :S; specName = r),
+        r -> isempty(find_rows(net, r, :placeName)) && add_row!(net, :S; placeName = r),
         reactants,
     )
 

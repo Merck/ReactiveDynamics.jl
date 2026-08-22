@@ -27,7 +27,7 @@ function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol, Symbol}...)
             error("set_port_role!: role must be one of $(PORT_ROLES), got $(repr(role))")
         i = find_index(name, net)
         i === nothing && error("set_port_role!: no species named $(repr(name))")
-        net[i, :specRole] = role
+        net[i, :placeRole] = role
     end
     return net
 end
@@ -78,7 +78,7 @@ function compose(fragments::ReactionNetwork...)
     for f in fragments
         for i in row_ids(f, :S)
             r = port_role(f, i)
-            (is_open_port(r) || r === :shared) && push!(portnames, f[i, :specName])
+            (is_open_port(r) || r === :shared) && push!(portnames, f[i, :placeName])
         end
     end
 
@@ -92,7 +92,7 @@ function compose(fragments::ReactionNetwork...)
         for i in row_ids(f, :S)
             r = port_role(f, i)
             if is_open_port(r)
-                orig = f[i, :specName]
+                orig = f[i, :placeName]
                 push!(get!(portmap, orig, Symbol[]), normalize_name(orig, name))
             end
         end
@@ -168,7 +168,7 @@ function refine!(
     # build one eqs block PER port that aliases the sub's port species to the parent boundary name, so
     # `prepend!`/`normalize_name` rename the port to the boundary name (bare) while every PRIVATE
     # species is namespaced `<name>__X`. merge_networks! then merges the boundary-named port onto the
-    # existing parent row (incident by specName) — the structural FK-repoint — and appends the rest.
+    # existing parent row (incident by placeName) — the structural FK-repoint — and appends the rest.
     # `shared`-role sub species are left bare by prepend! (§A) and merge onto any same-named parent row.
     eqs = Any[]
     for (boundary, subport) in ports
@@ -266,7 +266,7 @@ function refinement_diagnostics(
     rhs_species = Set(r.species for r in reactant_specs(sub) if r.side === :rhs && r.species > 0)
     for i in row_ids(sub, :S)
         role = port_role(sub, i)
-        nm = sub[i, :specName]
+        nm = sub[i, :placeName]
         if role === :input && !(i in lhs_species)
             push!(warns, "input port $(nm) is not consumed by any sub-transition (dangling input)")
         elseif role === :output && !(i in rhs_species)

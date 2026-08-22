@@ -71,7 +71,7 @@ const PAYOFF = 100.0
 # its three-tick `cycletime`, and `@advance`s it to `:Launched`; `capacity => 2` caps concurrent
 # development slots. Budget starts scarce (`6`) and refills slowly (`4`/tick), so with ten programs
 # competing for two slots and a metered burn, **capital is the binding constraint** — every unit
-# spent developing one program is a unit unavailable to another. `budget` carries a `specCost` so
+# spent developing one program is a unit unavailable to another. `budget` carries a `placeCost` so
 # the burn registers on the per-program ledger.
 #
 # Model attributes are *literal* (they evaluate in module scope), so the network is authored once in
@@ -87,9 +87,9 @@ function portfolio_model()
     RD.register_structured_species!(net, :Project)
     ## Set the budget pool's initial level and unit cost by index assignment (the kwargs the macro
     ## cannot take as literals): scarce start, and every unit burned is a unit of cost.
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specInitVal] = 6.0
-    net[bi, :specCost] = 1.0
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeInitVal] = 6.0
+    net[bi, :placeCost] = 1.0
     @prob_meta net tspan = 14 dt = 1.0
     return net
 end

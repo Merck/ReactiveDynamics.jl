@@ -51,9 +51,9 @@ function traj_model(; budget0 = 100, cost = 1.0)
             name => adv, cycletime => 1.0, probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specInitVal] = Float64(budget0)
-    net[bi, :specCost] = cost
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeInitVal] = Float64(budget0)
+    net[bi, :placeCost] = cost
     @prob_meta net tspan = 5 dt = 1.0
     return net
 end

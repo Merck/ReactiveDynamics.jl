@@ -8,7 +8,7 @@ export @register
 
 # NOTE (WS-4 housekeeping): three dangling exports were DELETED from here — `@prob_role`,
 # `@list_by_role`, `@list_roles` (a legacy roles/actors ontology that was never implemented: no
-# macro definitions, no `specRole` schema attribute), and `@prob_check_verbose` (see below). The
+# macro definitions, no `placeRole` schema attribute), and `@prob_check_verbose` (see below). The
 # role concept was dropped; ADR 0009's `PortRole` is an unrelated per-Species `role` field authored
 # inside `@reaction_network`, not a `@prob_role`-style config macro, so nothing is repurposed.
 
@@ -115,21 +115,21 @@ end
 
 """
 Union the modality tags in `dict` (`species-or-regex => modalities`) into each matching species'
-`specModality` set, in place. A plain key matches one species by name ([`find_rows`](@ref)); a `Regex`
+`placeModality` set, in place. A plain key matches one species by name ([`find_rows`](@ref)); a `Regex`
 key matches every species whose name matches ([`incident_pattern`](@ref)). The runtime behind
 [`@mode`](@ref).
 """
 function mode!(net, dict)
     for (spex, mods) in dict
         i = if spex isa Regex
-            incident_pattern(spex, net[:, :specName])
+            incident_pattern(spex, net[:, :placeName])
         else
-            find_rows(net, Symbol(spex), :specName)
+            find_rows(net, Symbol(spex), :placeName)
         end
 
         for ix in i
-            isnothing(net[ix, :specModality]) && (net[ix, :specModality] = Set{Symbol}())
-            union!(net[ix, :specModality], mods)
+            isnothing(net[ix, :placeModality]) && (net[ix, :placeModality] = Set{Symbol}())
+            union!(net[ix, :placeModality], mods)
         end
     end
     return
@@ -173,22 +173,22 @@ macro mode(netex, spexs, mexs)
 end
 
 """
-Set the `valuation_type` economic attribute (`:cost`/`:reward`/`:valuation` → the `specCost`/`specReward`/
-`specValuation` column) of each species named in `dict` (`species-or-regex => value`), in place. Matches
+Set the `valuation_type` economic attribute (`:cost`/`:reward`/`:valuation` → the `placeCost`/`placeReward`/
+`placeValuation` column) of each species named in `dict` (`species-or-regex => value`), in place. Matches
 by name ([`find_rows`](@ref)) or, for a `Regex` key, by pattern ([`incident_pattern`](@ref)). The runtime
 behind the `@cost`/`@reward`/`@valuation` macros.
 """
 function set_valuation!(net, dict, valuation_type)
     for (spex, val) in dict
         i = if spex isa Regex
-            incident_pattern(spex, column(net, :specName))
+            incident_pattern(spex, column(net, :placeName))
         else
-            find_rows(net, Symbol(spex), :specName)
+            find_rows(net, Symbol(spex), :placeName)
         end
 
         foreach(
             ix ->
-            net[ix, Symbol(:spec, Symbol(uppercasefirst(string(valuation_type))))] =
+            net[ix, Symbol(:place, Symbol(uppercasefirst(string(valuation_type))))] =
                 eval(val),
             i,
         )
@@ -251,7 +251,7 @@ macro add_species(netex, exs...)
     foreach(s -> push!(spexs_, s), exs)
 
     for ex in recursively_expand_dots.(spexs_)
-        push!(call.args, :(add_row!($(esc(netex)), :S; specName = $(QuoteNode(ex)))))
+        push!(call.args, :(add_row!($(esc(netex)), :S; placeName = $(QuoteNode(ex)))))
     end
 
     push!(call.args, :(assign_defaults!($(esc(netex)))))
@@ -303,25 +303,25 @@ macro prob_init_from_vec(netex, vecex)
 end
 
 """
-Set species initial values (`specInitVal`) from `inits`, in place. A vector matching the species count is
+Set species initial values (`placeInitVal`) from `inits`, in place. A vector matching the species count is
 assigned positionally; a dict maps `index-or-name-or-regex => value` (a `Regex` key sets every matching
 species). The runtime behind [`@prob_init`](@ref).
 """
 function init!(net, inits)
     if inits isa AbstractVector && length(inits) == nrows(net, :S)
-        column(net, :specInitVal) .= inits
+        column(net, :placeInitVal) .= inits
     elseif inits isa AbstractDict
         for (k, init_val) in inits
             if k isa Number
-                net[k, :specInitVal] = init_val
+                net[k, :placeInitVal] = init_val
             else
                 begin
                     i = if k isa Regex
-                        incident_pattern(k, column(net, :specName))
+                        incident_pattern(k, column(net, :placeName))
                     else
-                        find_rows(net, k, :specName)
+                        find_rows(net, k, :placeName)
                     end
-                    foreach(ix -> (net[ix, :specInitVal] = init_val), i)
+                    foreach(ix -> (net[ix, :placeInitVal] = init_val), i)
                 end
             end
         end
@@ -366,25 +366,25 @@ macro prob_uncertainty(netex, exs...)
 end
 
 """
-Set species initial-value uncertainty (`specInitUncertainty`, a stderr) from `inits`, in place — the
+Set species initial-value uncertainty (`placeInitUncertainty`, a stderr) from `inits`, in place — the
 uncertainty counterpart of [`init!`](@ref), with the same vector/dict/regex handling. The runtime behind
 [`@prob_uncertainty`](@ref).
 """
 function uncinit!(net, inits)
     inits isa AbstractVector &&
         length(inits) == nrows(net, :S) &&
-        (column(net, :specInitUncertainty) .= inits; return)
+        (column(net, :placeInitUncertainty) .= inits; return)
     inits isa AbstractDict && for (k, init_val) in inits
         if k isa Number
-            net[k, :specInitUncertainty] = init_val
+            net[k, :placeInitUncertainty] = init_val
         else
             begin
                 i = if k isa Regex
-                    incident_pattern(k, column(net, :specName))
+                    incident_pattern(k, column(net, :placeName))
                 else
-                    find_rows(net, k, :specName)
+                    find_rows(net, k, :placeName)
                 end
-                foreach(ix -> (net[ix, :specInitUncertainty] = init_val), i)
+                foreach(ix -> (net[ix, :placeInitUncertainty] = init_val), i)
             end
         end
     end

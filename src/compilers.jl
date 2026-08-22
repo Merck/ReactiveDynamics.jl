@@ -181,13 +181,13 @@ end
 """
 `true` if attribute `attr` must be carried VERBATIM rather than compiled to a closure: the name/hash
 columns (`*Name`, `obs`, `meta`), the raw `trans` reaction-line column (re-parsed per tick, not a
-scalar-valued expr), and `specRole` (a closed `Symbol` tag, ADR 0009 §A). [`compile_attrs`](@ref)
+scalar-valued expr), and `placeRole` (a closed `Symbol` tag, ADR 0009 §A). [`compile_attrs`](@ref)
 routes these around [`wrap_expr`](@ref).
 """
 function skip_compile(attr)
     return any(contains.(Ref(string(attr)), ("Name", "obs", "meta"))) ||
         (string(attr) == "trans") ||
-        (attr === :specRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
+        (attr === :placeRole)          # ADR 0009 §A — a closed Symbol tag, never a compiled expr
 end
 
 """
@@ -202,7 +202,7 @@ identity), and `transGuard` (the stateless per-tick guard, default `true`; ADR 0
 `(attrs, transitions, wrap_fun)`.
 """
 function compile_attrs(net::ReactionNetwork, structured_token)
-    species_names = collect(net[:, :specName])
+    species_names = collect(net[:, :placeName])
 
     prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])

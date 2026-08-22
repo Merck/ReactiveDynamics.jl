@@ -55,7 +55,7 @@ function extract_reactants(r_line, state::ReactionNetworkProblem)
     r_line = recursively_choose(r_line, state)
 
     return recursive_find_reactants!(
-        escape_ref(r_line, state[:, :specName]),
+        escape_ref(r_line, state[:, :placeName]),
         1.0,
         Set{Symbol}(),
         Vector{FoldedReactant}(undef, 0),

@@ -16,7 +16,7 @@
 # not interact: attribution here is eval-free, append-only, and consumes NO randomness.
 #
 # ── The attribution rule (chosen, with its boundary documented) ─────────────────────────
-# A transition's per-tick resource COST is `Σ_s allocs[s] · specCost[s]` over the species it
+# A transition's per-tick resource COST is `Σ_s allocs[s] · placeCost[s]` over the species it
 # consumed this tick — the SAME quantity the aggregate `:valuation_cost` row sums (solvers.jl
 # `evolve!`). We attribute that transition's cost to the structured token(s) BOUND to it this tick,
 # split EVENLY across them:
@@ -41,7 +41,7 @@
 #     transition; pool-level spend with no bound program stays pool-level.
 #
 # REWARD is attributed at `finish!`: when a transition completes, its realized reward
-# (`Σ specReward · q · stoich` over RHS products, the per-transition contribution to the aggregate
+# (`Σ placeReward · q · stoich` over RHS products, the per-transition contribution to the aggregate
 # `:valuation_reward` row) is split EVENLY across the tokens that were bound to that finishing
 # transition (same rule as cost). For an @advance/@move pipeline the produced token IS the bound
 # program (identity preserved, ADR 0008 §D), so reward lands on the program that advanced. Reward
@@ -75,13 +75,13 @@ function _program_ledger!(state::ReactionNetworkProblem, token)
     return led
 end
 
-# Cost of one transition this tick: `Σ_s consumed[s] · specCost[s]` over the species column
+# Cost of one transition this tick: `Σ_s consumed[s] · placeCost[s]` over the species column
 # `consumed` (one transition's allocation). This is the per-transition decomposition of the
-# aggregate `actual_allocs' · specCost` the `:valuation_cost` row sums.
+# aggregate `actual_allocs' · placeCost` the `:valuation_cost` row sums.
 function _transition_cost(state::ReactionNetworkProblem, consumed::AbstractVector)
     c = 0.0
     for s in row_ids(state, :S)
-        @inbounds c += consumed[s] * state[s, :specCost]
+        @inbounds c += consumed[s] * state[s, :placeCost]
     end
     return c
 end
@@ -96,7 +96,7 @@ end
 """
     attribute_cost!(state, transition, consumed)
 
-Attribute the COST a `transition` consumed this tick (`Σ consumed[s]·specCost[s]`) to the
+Attribute the COST a `transition` consumed this tick (`Σ consumed[s]·placeCost[s]`) to the
 structured token(s) bound to it, split evenly (MVP finding D attribution rule, see this file's
 header). A transition with no bound program books its cost against the network UNATTRIBUTED
 bucket. Append-only; draws no RNG. Returns the cost it accounted for (so the caller can assert the
@@ -123,7 +123,7 @@ end
 """
     attribute_reward!(state, transition, tokens, reward)
 
-Attribute the REWARD a finishing `transition` realized this tick (`Σ specReward·q·stoich` over its
+Attribute the REWARD a finishing `transition` realized this tick (`Σ placeReward·q·stoich` over its
 RHS products) to `tokens` — the programs that were bound to it — split evenly (same rule as cost).
 For an @advance/@move pipeline the produced token IS the bound program (identity preserved, ADR
 0008 §D), so the reward lands on the advancing program. A finishing transition with no bound program
@@ -155,11 +155,11 @@ function attribute_reward!(
     return reward
 end
 
-# Recompute each program's mark-to-market valuation as its species' `specValuation` unit value
+# Recompute each program's mark-to-market valuation as its species' `placeValuation` unit value
 # (so the per-program valuations of live tokens sum to the structured part of the aggregate
 # `:valuation` row). Overwrites `valuation` (it is a STOCK, not a flow — unlike cost/reward which
 # accumulate), so it is NOT appended to `entries`. Iterated in deterministic token order. Tokens
-# whose species carries no `specValuation` (the BD case, where valuation is a post-hoc rNPV roll-up,
+# whose species carries no `placeValuation` (the BD case, where valuation is a post-hoc rNPV roll-up,
 # MVP finding D) keep valuation 0.0 here — the demo reads cost/reward from this ledger and computes
 # rNPV itself.
 function attribute_valuation!(state::ReactionNetworkProblem)
@@ -170,7 +170,7 @@ function attribute_valuation!(state::ReactionNetworkProblem)
         i = find_index(sp, state)
         i === nothing && continue
         led = _program_ledger!(state, tok)
-        led.valuation = isblocked(tok) ? led.valuation : state[i, :specValuation]
+        led.valuation = isblocked(tok) ? led.valuation : state[i, :placeValuation]
     end
     return state
 end
@@ -210,7 +210,7 @@ replacement for the BD demo's post-hoc reconstruction (MVP finding D). Columns:
   `creation_index`  the per-species monotonic creation index (ADR 0006 §E) — the order key
   `cost_incurred`   total capital burned on behalf of this program (sum of its bind-cost shares)
   `reward_realized` total reward credited when a transition it was bound to finished successfully
-  `valuation`       current mark-to-market = the species' `specValuation` (0 when none — see header)
+  `valuation`       current mark-to-market = the species' `placeValuation` (0 when none — see header)
   `net`             reward_realized − cost_incurred (the realized economics to date)
 
 The per-program `cost_incurred` summed over ALL programs PLUS `state.unattributed_cost` equals the

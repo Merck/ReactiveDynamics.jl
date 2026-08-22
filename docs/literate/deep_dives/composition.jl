@@ -109,7 +109,7 @@ end
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  species   : ", screening[:, :specName], "   transitions: ", nrows(screening, :T))
+println("  species   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # A **port** is a boundary species tagged with a role: `:input` (consumed-from boundary),
@@ -134,7 +134,7 @@ println(
 
 chain = @compose screening lead_opt
 populate_reactant_specs!(chain)   # promote the incidence table so we can read it
-names_chain = chain[:, :specName]
+names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
 println("  merged species : ", names_chain)
 println(
@@ -169,7 +169,7 @@ end
 portfolio = build_portfolio()
 populate_reactant_specs!(portfolio)
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  species (phases) : ", portfolio[:, :specName])
+println("  species (phases) : ", portfolio[:, :placeName])
 println(
     "  parts            : ", nrows(portfolio, :S), " species, ",
     nrows(portfolio, :T), " transitions"

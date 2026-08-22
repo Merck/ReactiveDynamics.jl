@@ -37,8 +37,8 @@ agg_cost(p) = sum(r[3] for r in p.log if r[1] == :valuation_cost; init = 0.0)
 agg_reward(p) = sum(r[3] for r in p.log if r[1] == :valuation_reward; init = 0.0)
 
 # A coarse one-step advance model: @select a Phase1 Project, burn 2 budget per tick at @rate over
-# cycletime 1, and @advance(phase,:Phase2) on success. `budget` carries specCost so the burn is a
-# real ledger cost; the advanced Project species carries specReward so a successful advance realizes
+# cycletime 1, and @advance(phase,:Phase2) on success. `budget` carries placeCost so the burn is a
+# real ledger cost; the advanced Project species carries placeReward so a successful advance realizes
 # reward — the minimal model where BOTH sides of the per-program ledger are non-trivial. (Macro
 # arguments are literal: @prob_init/@reaction_network eval their RHS in MODULE scope, so a
 # parameterized burn/budget would be undefined there — we set cost/reward/budget on the ACSet
@@ -52,11 +52,11 @@ function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
             probability => 1.0
     end
     RD.register_structured_species!(net, :Project)
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specInitVal] = Float64(budget0)
-    net[bi, :specCost] = cost
-    pi = findfirst(==(:Project), net[:, :specName])
-    net[pi, :specReward] = reward
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeInitVal] = Float64(budget0)
+    net[bi, :placeCost] = cost
+    pi = findfirst(==(:Project), net[:, :placeName])
+    net[pi, :placeReward] = reward
     @prob_meta net tspan = 4 dt = 1.0
     return net
 end
@@ -79,8 +79,8 @@ end
         @test nrow(df) == 1                       # exactly one program ever existed
         prog = df[1, :]
         # The program is bound exactly at tick 0 (it advances out of :Phase1 on the first finish),
-        # so it is charged the burn it consumed THAT tick (2 budget * specCost 1 = 2.0) and credited
-        # the advance reward (specReward 10 on the produced :Project). Attribution rule: a transition
+        # so it is charged the burn it consumed THAT tick (2 budget * placeCost 1 = 2.0) and credited
+        # the advance reward (placeReward 10 on the produced :Project). Attribution rule: a transition
         # with exactly one bound token gets its FULL consumed cost (see src/ledger.jl header).
         @test prog.cost_incurred == 2.0
         @test prog.reward_realized == 10.0
@@ -132,8 +132,8 @@ end
         end
         RD.register_structured_species!(net, :Project)
         @prob_init net budget = 100
-        bi = findfirst(==(:budget), net[:, :specName])
-        net[bi, :specCost] = 1.0
+        bi = findfirst(==(:budget), net[:, :placeName])
+        net[bi, :placeCost] = 1.0
         @prob_meta net tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(
             net;
@@ -206,13 +206,13 @@ end
         end
     end
 
-    # ── valuation: a species with specValuation marks its live programs to market ─────────
-    @testset "live programs are marked to market by their species' specValuation" begin
-        # Give the Project species a specValuation; a live (unblocked) program then carries that
+    # ── valuation: a species with placeValuation marks its live programs to market ─────────
+    @testset "live programs are marked to market by their species' placeValuation" begin
+        # Give the Project species a placeValuation; a live (unblocked) program then carries that
         # mark in the ledger's `valuation` column (a stock, recomputed each tick — not a flow).
         net = advance_cost_model(; reward = 0.0)
-        pi = findfirst(==(:Project), net[:, :specName])
-        net[pi, :specValuation] = 50.0
+        pi = findfirst(==(:Project), net[:, :placeName])
+        net[pi, :placeValuation] = 50.0
         # Make the program NOT advance (select a phase it isn't in) so it stays live & unblocked.
         p = ReactionNetworkProblem(
             net;
@@ -222,7 +222,7 @@ end
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 1
-        @test df[1, :valuation] == 50.0           # marked at the species' specValuation
+        @test df[1, :valuation] == 50.0           # marked at the species' placeValuation
         @test df[1, :species] == :Project
     end
 end

@@ -29,7 +29,7 @@
     observables(rd::ReactionNetworkProblem)
 
 The ordered list of names this network exports to the AlgebraicAgents hierarchy (ADR 0012 §A,
-Invariant 1): every SPECIES name (`net[:,:specName]`) followed by every NAMED observable
+Invariant 1): every SPECIES name (`net[:,:placeName]`) followed by every NAMED observable
 (`keys(state.observables)`, §9.4). This is the canonical order `getobservable(rd, i::Int)` indexes.
 
 Token aggregates are surfaced the LEAN-EXPLICIT way the ADR open question settles on: an author
@@ -38,7 +38,7 @@ count of Phase-2 tokens), which then appear here automatically — rather than a
 combinatorial `nactive × kind × phase` set. Returns `Vector{Symbol}`.
 """
 function AlgebraicAgents.observables(rd::ReactionNetworkProblem)
-    return Symbol[collect(rd.network[:, :specName]); collect(keys(rd.observables))]
+    return Symbol[collect(rd.network[:, :placeName]); collect(keys(rd.observables))]
 end
 
 """

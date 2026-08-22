@@ -137,7 +137,7 @@ end
 # ── Engine-level per-program ledger (MVP finding D — src/ledger.jl) ──────────────────────
 # Historically this demo RECONSTRUCTED per-program economics in post (portfolio_rnpv walks the
 # final token population and reads host fields). Finding D asked the ENGINE to attribute the ledger
-# per program DURING the run. It now does: with `specCost` priced on `budget` (host.jl), each
+# per program DURING the run. It now does: with `placeCost` priced on `budget` (host.jl), each
 # program's capital burn is accrued onto it at every advance it sits in, and `program_ledger(prob)`
 # returns the per-program cost/reward/valuation summary in deterministic (species, creation_index)
 # order. These functions surface that engine ledger and CROSS-CHECK it against the aggregate row and

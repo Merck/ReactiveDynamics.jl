@@ -127,7 +127,7 @@ The live simulation state — an AlgebraicAgents `@aagent`, so a running network
     creation_index::Dict{String, Int}
 
     # Declarative initial marking (ADR 0007 §B). `population` is the structured-token initial
-    # state (the analogue of specInitVal for plain species): either a vector of declarative
+    # state (the analogue of placeInitVal for plain species): either a vector of declarative
     # PopulationEntry specs (count + seeded attribute exprs) OR already-constructed host token
     # agents. Stored so _reinit! can rebuild the exact t=0 marking (§D, closing §4 D7 for
     # structured runs). For the explicit-host-token form `init_snapshot` records each token's
@@ -196,7 +196,7 @@ end
 function init_u!(state::ReactionNetworkProblem)
     return (
         u = fill(0.0, nrows(state, :S));
-        foreach(i -> u[i] = state[i, :specInitVal], row_ids(state, :S));
+        foreach(i -> u[i] = state[i, :placeInitVal], row_ids(state, :S));
         state.u = u
     )
 end
@@ -204,7 +204,7 @@ save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...)
 
 function compile_observables(net::ReactionNetwork)
     observables = Dict{Symbol, Observable}()
-    species_names = collect(net[:, :specName])
+    species_names = collect(net[:, :placeName])
     prm_names = collect(net[:, :prmName])
     varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
 
@@ -285,7 +285,7 @@ function prune_r_line(r_line)
 end
 
 function find_index(species::Symbol, state::ReactionNetworkProblem)
-    return findfirst(i -> state[i, :specName] == species, row_ids(state, :S))
+    return findfirst(i -> state[i, :placeName] == species, row_ids(state, :S))
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
@@ -330,7 +330,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
                     j,
                     r.species,
                     context_eval(state, nothing, state.wrap_fun(r.stoich)),
-                    r.modality ∪ state[j, :specModality],
+                    r.modality ∪ state[j, :placeModality],
                     r.predicate,
                 ),
             )

@@ -23,15 +23,15 @@ end
 """
     register_structured_species!(net, type)
 
-Register the structured-token kind `type` (a `Symbol`) as a species of the static network `net`, adding a `:S` row named `type` if one does not already exist and flagging it `specStructured = true`. This is what tells the engine that occupants of that place are first-class token agents (counted from the `"structured"` container), not a plain scalar count. Returns `nothing`. The `@register` sugar and [`@structured_token`](@ref) (which defines the host struct) are the usual companions; a kind must be registered before instances can be added to a `ReactionNetworkProblem`.
+Register the structured-token kind `type` (a `Symbol`) as a species of the static network `net`, adding a `:S` row named `type` if one does not already exist and flagging it `placeStructured = true`. This is what tells the engine that occupants of that place are first-class token agents (counted from the `"structured"` container), not a plain scalar count. Returns `nothing`. The `@register` sugar and [`@structured_token`](@ref) (which defines the host struct) are the usual companions; a kind must be registered before instances can be added to a `ReactionNetworkProblem`.
 """
 function register_structured_species!(reaction_network, type)
-    if !(type ∈ reaction_network[:, :specName])
-        add_row!(reaction_network, :S; specName = type)
+    if !(type ∈ reaction_network[:, :placeName])
+        add_row!(reaction_network, :S; placeName = type)
     end
 
-    i = first(find_rows(reaction_network, type, :specName))
-    reaction_network[i, :specStructured] = true
+    i = first(find_rows(reaction_network, type, :placeName))
+    reaction_network[i, :placeStructured] = true
 
     return nothing
 end
@@ -75,7 +75,7 @@ export PopulationEntry
 """
     PopulationEntry(species, kind; count = 1, attributes = Dict{Symbol, Any}())
 
-A declarative initial-marking entry (ADR 0007 §B): `count` instances of the structured `kind` (a registry key resolved to a host constructor), each token placed on `species` and built from `attributes` — a `Dict` of `field => Expr`-or-literal evaluated once at t=0 through the state's seeded `rng` (§4 D5). It is the structured-token analogue of `specInitVal` for plain species: put `PopulationEntry`s in the `population=` vector of `ReactionNetworkProblem` to declare the t=0 marking declaratively, so it re-instantiates cleanly on `reinit!` / across ensemble members. The alternative form — an already-constructed host token agent — is placed in the `population` vector directly (no `PopulationEntry`, and the registry is not consulted).
+A declarative initial-marking entry (ADR 0007 §B): `count` instances of the structured `kind` (a registry key resolved to a host constructor), each token placed on `species` and built from `attributes` — a `Dict` of `field => Expr`-or-literal evaluated once at t=0 through the state's seeded `rng` (§4 D5). It is the structured-token analogue of `placeInitVal` for plain species: put `PopulationEntry`s in the `population=` vector of `ReactionNetworkProblem` to declare the t=0 marking declaratively, so it re-instantiates cleanly on `reinit!` / across ensemble members. The alternative form — an already-constructed host token agent — is placed in the `population` vector directly (no `PopulationEntry`, and the registry is not consulted).
 """
 struct PopulationEntry
     species::Symbol

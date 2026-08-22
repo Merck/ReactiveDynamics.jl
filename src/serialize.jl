@@ -98,16 +98,16 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()
         add_row!(net, :P; prmName = Symbol(pr["name"]), prmVal = pr["value"])
     end
 
-    # species[] → :S (specInitVal/specCost/… are scalar Const ExprNodes → literals)
+    # species[] → :S (placeInitVal/placeCost/… are scalar Const ExprNodes → literals)
     for sp in get(d, "species", [])
-        i = add_row!(net, :S; specName = Symbol(sp["name"]))
-        haskey(sp, "init") && (net[i, :specInitVal] = to_expr(_attr_node(sp["init"])))
-        haskey(sp, "cost") && (net[i, :specCost] = to_expr(_attr_node(sp["cost"])))
-        haskey(sp, "reward") && (net[i, :specReward] = to_expr(_attr_node(sp["reward"])))
-        haskey(sp, "valuation") && (net[i, :specValuation] = to_expr(_attr_node(sp["valuation"])))
-        get(sp, "structured", false) === true && (net[i, :specStructured] = true)
+        i = add_row!(net, :S; placeName = Symbol(sp["name"]))
+        haskey(sp, "init") && (net[i, :placeInitVal] = to_expr(_attr_node(sp["init"])))
+        haskey(sp, "cost") && (net[i, :placeCost] = to_expr(_attr_node(sp["cost"])))
+        haskey(sp, "reward") && (net[i, :placeReward] = to_expr(_attr_node(sp["reward"])))
+        haskey(sp, "valuation") && (net[i, :placeValuation] = to_expr(_attr_node(sp["valuation"])))
+        get(sp, "structured", false) === true && (net[i, :placeStructured] = true)
         # modality 3-axis → Set{Symbol} (E6); default empty set = row 1
-        haskey(sp, "modality") && (net[i, :specModality] = modality_from_dict(sp["modality"]))
+        haskey(sp, "modality") && (net[i, :placeModality] = modality_from_dict(sp["modality"]))
     end
 
     # transitions[] → :T. reactants[] for this transition assemble into the :trans reaction line.
@@ -216,7 +216,7 @@ end
 # Set{Any}, which from_expr/rate_from_expr reject). Threaded into every from_expr call so a stored
 # attribute Expr's bare symbols classify back to the right NodeRef kind.
 function _name_sets(net::ReactionNetwork)
-    species = Set{Symbol}(net[i, :specName] for i in row_ids(net, :S))
+    species = Set{Symbol}(net[i, :placeName] for i in row_ids(net, :S))
     params = Set{Symbol}(net[i, :prmName] for i in row_ids(net, :P) if !isnothing(net[i, :prmName]))
     return species, params
 end
@@ -838,16 +838,16 @@ end
 # clean and re-import reconstructs the same value via assign_defaults!. A literal Const lowered by
 # the loader is a bare Number here, so we emit the bare number (the loader's _attr_node wraps it).
 function _species_to_dict(net, i)
-    sp = Dict{String, Any}("name" => string(net[i, :specName]))
-    iv = net[i, :specInitVal]
+    sp = Dict{String, Any}("name" => string(net[i, :placeName]))
+    iv = net[i, :placeInitVal]
     iv isa Number && iv != 0 && (sp["init"] = iv)
     # cost/reward/valuation default to 0.0 (defargs[:S]); emit only when set (TVE=no literals).
-    for (col, key) in (:specCost => "cost", :specReward => "reward", :specValuation => "valuation")
+    for (col, key) in (:placeCost => "cost", :placeReward => "reward", :placeValuation => "valuation")
         v = net[i, col]
         v isa Number && v != 0 && (sp[key] = v)
     end
-    net[i, :specStructured] && (sp["structured"] = true)
-    isempty(net[i, :specModality]) || (sp["modality"] = modality_to_dict(net[i, :specModality]))
+    net[i, :placeStructured] && (sp["structured"] = true)
+    isempty(net[i, :placeModality]) || (sp["modality"] = modality_to_dict(net[i, :placeModality]))
     return sp
 end
 

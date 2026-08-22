@@ -61,7 +61,7 @@ const REGISTRY = Dict{Symbol, Any}(
     ),
 )
 
-# The model is a **builder function** parameterized by the scientist headcount `fte`. This is the idiomatic way to vary a model: macro arguments (rates, `probability`, and the `@prob_meta` horizon) are *literal* — evaluated in module scope — so a headcount that varies across the study cannot be a macro argument. Instead we author the network with literal attributes and set the scarce resource's initial pool (`specInitVal`), the budget cost, and the launch reward on the store by name. Reward is carried by a plain `launch` product species so it realizes ONLY at a successful launch — not at candidate intake — which keeps expected NPV tracking launches cleanly.
+# The model is a **builder function** parameterized by the scientist headcount `fte`. This is the idiomatic way to vary a model: macro arguments (rates, `probability`, and the `@prob_meta` horizon) are *literal* — evaluated in module scope — so a headcount that varies across the study cannot be a macro argument. Instead we author the network with literal attributes and set the scarce resource's initial pool (`placeInitVal`), the budget cost, and the launch reward on the store by name. Reward is carried by a plain `launch` product species so it realizes ONLY at a successful launch — not at candidate intake — which keeps expected NPV tracking launches cleanly.
 #
 # Units: pool quantities are in \$k; the `launch` product carries a \$4,000k = **\$4M** reward per launch, and we report expected NPV in **\$M**. We discount monthly ticks at an 8% annual rate.
 
@@ -84,14 +84,14 @@ function portfolio_model(; fte)
             name => trial_imm, cycletime => 4.0, probability => 0.55, priority => 1.0
     end
     RD.register_structured_species!(net, :Project)
-    si = findfirst(==(:scientist), net[:, :specName])
-    net[si, :specInitVal] = Float64(fte)          # the scarce, contended resource — the study's lever
-    bi = findfirst(==(:budget), net[:, :specName])
-    net[bi, :specInitVal] = 1.0e9                  # deep budget pool ⇒ money never binds here
-    net[bi, :specCost] = 1.0                       # but budget burn is a real ledger cost
-    li = findfirst(==(:launch), net[:, :specName])
-    net[li, :specInitVal] = 1.0                    # nonzero so the launch tally isn't flagged as a "starved" pool
-    net[li, :specReward] = 4000.0                  # $4M realized per successful launch (credited on production, not stock)
+    si = findfirst(==(:scientist), net[:, :placeName])
+    net[si, :placeInitVal] = Float64(fte)          # the scarce, contended resource — the study's lever
+    bi = findfirst(==(:budget), net[:, :placeName])
+    net[bi, :placeInitVal] = 1.0e9                  # deep budget pool ⇒ money never binds here
+    net[bi, :placeCost] = 1.0                       # but budget burn is a real ledger cost
+    li = findfirst(==(:launch), net[:, :placeName])
+    net[li, :placeInitVal] = 1.0                    # nonzero so the launch tally isn't flagged as a "starved" pool
+    net[li, :placeReward] = 4000.0                  # $4M realized per successful launch (credited on production, not stock)
     @prob_meta net tspan = 48 dt = 1.0             # a 48-month horizon, monthly ticks
     return net
 end

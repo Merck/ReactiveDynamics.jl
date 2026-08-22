@@ -491,7 +491,7 @@ struct MarkingPlot              # recipe 1 — species/token counts over time (g
     prob::ReactionNetworkProblem
     vars::Vector{String}
 end
-MarkingPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :specName])) =
+MarkingPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :placeName])) =
     MarkingPlot(prob, collect(String.(vars)))
 
 """
@@ -503,7 +503,7 @@ struct SaturationPlot           # recipe 2 — resource utilization / pool troug
     prob::ReactionNetworkProblem
     vars::Vector{String}
 end
-SaturationPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :specName])) =
+SaturationPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :placeName])) =
     SaturationPlot(prob, collect(String.(vars)))
 
 """

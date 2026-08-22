@@ -43,19 +43,19 @@ function equalize!(net::ReactionNetwork, eqs = [])
                 (i == e[2]) ||
                     (
                     e[1] == :catchall &&
-                        occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(net[i, :specName]))
+                        occursin(Regex("(__$(e[2])|$(e[2]))\$"), string(net[i, :placeName]))
                 ) ||
-                    (e[2] == net[i, :specName])
+                    (e[2] == net[i, :placeName])
             ) && (
                 push!(species_ixs, i);
-                push!(specmap, net[i, :specName] => (net[i, :specName] = block_alias))
+                push!(specmap, net[i, :placeName] => (net[i, :placeName] = block_alias))
             )
         end
         isempty(species_ixs) && continue
         species_ixs = sort(unique!(species_ixs))
         lix = first(species_ixs)
         for attr in propertynames(net.columns)
-            !occursin("spec", string(attr)) && continue
+            !occursin("place", string(attr)) && continue
             for i in species_ixs
                 ismissing(net[lix, attr]) && (net[lix, attr] = net[i, attr])
             end
@@ -64,7 +64,7 @@ function equalize!(net::ReactionNetwork, eqs = [])
     end
 
     for attr in propertynames(net.columns)
-        attr == :specName && continue
+        attr == :placeName && continue
         attr_ = net[:, attr]
         for i in eachindex(attr_)
             attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))

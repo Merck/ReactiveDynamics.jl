@@ -77,7 +77,7 @@ portfolio = build_portfolio()
 RD.populate_reactant_specs!(portfolio)   # promote the incidence table so we can read it
 
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  species (phases)   : ", portfolio[:, :specName])
+println("  species (phases)   : ", portfolio[:, :placeName])
 println("  transitions        : ", [portfolio[i, :transName] for i in row_ids(portfolio, :T)])
 println(
     "  parts              : ", nrows(portfolio, :S), " species, ",
@@ -127,7 +127,7 @@ end
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  species   : ", screening[:, :specName], "   transitions: ", nrows(screening, :T))
+println("  species   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # Tag the boundary: `Lead` is the output of screening and the input of lead_opt — the
@@ -144,7 +144,7 @@ println(
 
 chain = @compose screening lead_opt
 RD.populate_reactant_specs!(chain)
-names_chain = chain[:, :specName]
+names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
 println("  merged species : ", names_chain)
 println(
@@ -228,7 +228,7 @@ println(
 )
 println(
     "    (and their names — Phase2, Phase3 still present: ",
-    (:Phase2 in refined[:, :specName]) && (:Phase3 in refined[:, :specName]), ")"
+    (:Phase2 in refined[:, :placeName]) && (:Phase3 in refined[:, :placeName]), ")"
 )
 
 untouched = [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase3_Filed, :flow_Filed_Market]
@@ -245,9 +245,9 @@ println(
 # The sub's PRIVATE species are namespaced (not leaked as bare names).
 println(
     "  sub-private species namespaced (bare `screen` NOT present): ",
-    !(:screen in refined[:, :specName]),
+    !(:screen in refined[:, :placeName]),
     " ; namespaced form present: ",
-    any(n -> occursin("__sub__screen", string(n)), refined[:, :specName])
+    any(n -> occursin("__sub__screen", string(n)), refined[:, :placeName])
 )
 
 
@@ -343,7 +343,7 @@ println(
 )
 println(
     "  same species set after reload? ",
-    Set(reloaded[:, :specName]) == Set(refined[:, :specName])
+    Set(reloaded[:, :placeName]) == Set(refined[:, :placeName])
 )
 
 

@@ -15,7 +15,7 @@ using Statistics
     # contract: §1.3 truth-table row 1 ({} ⇒ upfront,consumed,block); §3.2 stage 3 + stage 8 ('Plain consumed tokens are not returned')
     # note: Verified live: material 100→98→96→94, widget→3, valuation_cost rows all 10.0. Locks in raw-
     # note: consumption semantics + the (:valuation_cost,t,scalar) ledger shape (solvers.jl:308-311).
-    # note: specInitVal/sol column order is spec order: material is col 1.
+    # note: placeInitVal/sol column order is spec order: material is col 1.
     @testset "Row 1 (upfront/consumed/block): empty modality is raw stoichiometric consumption, never returned" begin
         net = @reaction_network begin
             @deterministic(1.0), 2 * material --> widget, name => build
@@ -30,7 +30,7 @@ using Statistics
         # 2 material burned per tick, monotone non-increasing, never credited back
         @test df.material[2] == 98.0 && df.material[3] == 96.0 && df.material[4] == 94.0
         @test df.widget[4] == 3.0   # one widget emitted per completed (ct=0) tick
-        # ledger: each spawn tick charges 2 units * cost 5.0 = 10.0 at specCost
+        # ledger: each spawn tick charges 2 units * cost 5.0 = 10.0 at placeCost
         costs = [r[3] for r in prob.log if r[1] == :valuation_cost]
         @test all(c -> c == 10.0, costs[1:3])
     end
@@ -151,19 +151,19 @@ using Statistics
     end
 
     # [mod-mode-macro-unions-modality] tier=T1-characterization expectedStatus=pass-now
-    # contract: §5.4 specModality; FIXED update.jl:108 (now uses `:specModality` not bare `specModality`)
-    # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: specModality` because
-    # note: update.jl:108 referenced a bare `specModality` instead of the column symbol `:specModality`. @mode now
+    # contract: §5.4 placeModality; FIXED update.jl:108 (now uses `:placeModality` not bare `placeModality`)
+    # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: placeModality` because
+    # note: update.jl:108 referenced a bare `placeModality` instead of the column symbol `:placeModality`. @mode now
     # note: unions the named modality into the species' modality set. Verified live: after `@mode net X conserved`,
-    # note: `net[1,:specModality] == Set([:conserved])`. Note `net[1,:specModality]` indexes the SCHEMA (net),
+    # note: `net[1,:placeModality] == Set([:conserved])`. Note `net[1,:placeModality]` indexes the SCHEMA (net),
     # note: not the problem.
     # action: invoke `@mode net X conserved`
-    @testset "@mode unions :conserved into the species' modality set (specModality)" begin
+    @testset "@mode unions :conserved into the species' modality set (placeModality)" begin
         net = @reaction_network begin
             1.0, X --> Y, name => t1
         end
         @mode net X conserved
-        @test :conserved in net[1, :specModality]
+        @test :conserved in net[1, :placeModality]
     end
 
     # [mod-construct-rejects-nonblock-conserved] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -205,7 +205,7 @@ using Statistics
     # contract: §1.4 illegal rule 'allocation = perstep requires a non-structured (countable) species'; current deep error get_reqs_ongoing! solvers.jl:38-42
     # note: Today the structured+:rate clash only errors DEEP in get_reqs_ongoing! at simulate time
     # note: (solvers.jl:38-42), and `set_structured!` is a target helper (the engine currently sets structured-
-    # note: ness via the `specStructured` schema column / @structured token authoring, not a one-liner). This
+    # note: ness via the `placeStructured` schema column / @structured token authoring, not a one-liner). This
     # note: test assumes the §1.1 typed re-model + a construction validator; it errors-until-implemented on both
     # note: the helper and the validation.
     # action: construct and expect rejection
@@ -217,7 +217,7 @@ using Statistics
         @prob_init net robot = 5 task = 0
         @prob_params net
         # Mark `robot` structured via the ACTUAL engine mechanism: register_structured_species!
-        # sets the `specStructured` schema flag (the reference block's `set_structured!` was a
+        # sets the `placeStructured` schema flag (the reference block's `set_structured!` was a
         # hypothetical target helper — this is the real API, per ADR 0006/0007 authoring).
         register_structured_species!(net, :robot)
         @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)

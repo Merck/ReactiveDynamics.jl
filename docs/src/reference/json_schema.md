@@ -43,7 +43,7 @@ Each entry is `{ "name": <string>, "value": <number> }`. Values are plain JSON n
 
 Each entry carries a `name` and optional scalar attributes; all of these are **time-invariant literals** (validate rule 5 rejects a non-trivial expression tree here):
 
-- `init` — the initial count / marking at t = 0 (`specInitVal`; omitted when 0).
+- `init` — the initial count / marking at t = 0 (`placeInitVal`; omitted when 0).
 - `cost`, `reward`, `valuation` — the per-unit ledger coefficients (omitted when 0.0, their default).
 - `structured` — `true` marks the species a **structured-token kind** (its instances are live agents, not a counted `Float64` stock); omitted otherwise.
 - `modality` — the resource-claim modality as a 3-axis object (see [Modality](#Modality-3-axis)); omitted when the modality set is empty.

@@ -384,7 +384,7 @@ function evolve!(state)
             bound = transition.bound_structured_agents
             structured_to_agents = transition.structured_to_agents
 
-            for (j, type) in enumerate(state.network[:, :specName])
+            for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
@@ -483,7 +483,7 @@ function evolve!(state)
             bound = transition.nonblock_structured_agents
             structured_to_agents = transition.structured_to_agents
 
-            for (j, type) in enumerate(state.network[:, :specName])
+            for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
@@ -543,7 +543,7 @@ function evolve!(state)
         (
             :valuation_cost,
             state.t,
-            actual_allocs' * [state[i, :specCost] for i in row_ids(state, :S)],
+            actual_allocs' * [state[i, :placeCost] for i in row_ids(state, :S)],
         ),
     )
 end
@@ -701,14 +701,14 @@ function finish!(state)
                     species === nothing && continue
                     i = find_index(species, state)
                     state.u[i] += 1
-                    val_reward += state[i, :specReward]
+                    val_reward += state[i, :placeReward]
                 end
             else
                 i = find_index(r.species, state)
                 stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
 
                 state.u[i] += q * stoich
-                val_reward += state[i, :specReward] * q * stoich
+                val_reward += state[i, :placeReward] * q * stoich
             end
         end
 
@@ -850,7 +850,7 @@ end
 # Reactants are read via the eval-free static decomposition (`_split_reaction_line` +
 # `_static_reactants`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
 # modality Set matches what the engine forms per tick. The effective per-token modality unions the
-# reactant's wrapper tags with the species' `:specModality` (the `@mode` channel), exactly as the
+# reactant's wrapper tags with the species' `:placeModality` (the `@mode` channel), exactly as the
 # runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
 # are the escape hatch and are left un-validated (they are un-validatable statically).
 function validate_modalities(net::ReactionNetwork)
@@ -866,7 +866,7 @@ function validate_modalities(net::ReactionNetwork)
         for r in _static_reactants(lhs)
             sname = string(r.species)
             i = r.species isa Symbol ? find_index(r.species, net) : nothing
-            mod = i === nothing ? r.modality : (r.modality ∪ net[i, :specModality])
+            mod = i === nothing ? r.modality : (r.modality ∪ net[i, :placeModality])
 
             # Rule 1 — blocking = nonblock requires return = consumed.
             if in(:nonblock, mod) && in(:conserved, mod)
@@ -894,7 +894,7 @@ function validate_modalities(net::ReactionNetwork)
             end
 
             # Rule 3 — allocation = perstep requires a non-structured (countable) species.
-            if in(:rate, mod) && i !== nothing && net[i, :specStructured] === true
+            if in(:rate, mod) && i !== nothing && net[i, :placeStructured] === true
                 throw(
                     ArgumentError(
                         "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) on a " *
@@ -912,7 +912,7 @@ end
 """
     ReactionNetworkProblem(net::ReactionNetwork, u0 = Dict(), p = Dict(); name = "reaction_network", seed = nothing, tspan, dt = 1, kwargs...)
 
-Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-species initial markings by name (defaulting to each species' `specInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
+Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-species initial markings by name (defaulting to each species' `placeInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
 
 The `seed` kwarg owns the per-run RNG (CONTRACT §4): it fixes the state-owned stream so a run is fully determined by `(model, seed)`; absent, a fresh seed is drawn from system entropy and the REALIZED value stored on `.seed`, so any run stays replayable. `initial_rng` snapshots the stream at t=0 for `_reinit!`.
 """
@@ -926,7 +926,7 @@ function ReactionNetworkProblem(
     assign_defaults!(net)
     # CONTRACT §1.4: reject the three illegal modality configurations up front, before any closure
     # compiles or any tick runs (the T2 acceptance tests require the throw from the constructor
-    # itself, not deep in the stepper). Runs after assign_defaults! so :specModality is materialized.
+    # itself, not deep in the stepper). Runs after assign_defaults! so :placeModality is materialized.
     validate_modalities(net)
     keywords = Dict{Symbol, Any}(
         [
@@ -970,17 +970,17 @@ function ReactionNetworkProblem(
     net = register_observables(net)
 
     structured_token_names =
-        net[filter(i -> net[i, :specStructured], 1:nrows(net, :S)), :specName]
+        net[filter(i -> net[i, :placeStructured], 1:nrows(net, :S)), :placeName]
 
     attrs, transitions, wrap_fun = compile_attrs(net, structured_token_names)
     transition_recipes = transitions
     u0_init = zeros(nrows(net, :S))
 
     for i in row_ids(net, :S)
-        if !isnothing(net[i, :specName]) && haskey(u0, net[i, :specName])
-            u0_init[i] = u0[net[i, :specName]]
+        if !isnothing(net[i, :placeName]) && haskey(u0, net[i, :placeName])
+            u0_init[i] = u0[net[i, :placeName]]
         else
-            u0_init[i] = net[i, :specInitVal]
+            u0_init[i] = net[i, :placeInitVal]
         end
     end
 
@@ -1005,7 +1005,7 @@ function ReactionNetworkProblem(
 
     sol = DataFrame(
         "t" => Float64[],
-        (string(name) => Float64[] for name in net[:, :specName])...,
+        (string(name) => Float64[] for name in net[:, :placeName])...,
     )
 
     # Endogenous decision channel (ADR 0010 §12). Per-network host registry for AddToken/Invoke
@@ -1164,8 +1164,8 @@ end
 
 function update_u_structured!(state)
     structured_tokens = collect(values(inners(getagent(state, "structured"))))
-    for (i, species) in enumerate(state.network[:, :specName])
-        if state.network[i, :specStructured]
+    for (i, species) in enumerate(state.network[:, :placeName])
+        if state.network[i, :placeStructured]
             state.u[i] =
                 count(a -> get_species(a) == species && !isblocked(a), structured_tokens)
         end
@@ -1200,11 +1200,11 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         (
             :valuation,
             state.t,
-            state.u' * [state[i, :specValuation] for i in row_ids(state, :S)],
+            state.u' * [state[i, :placeValuation] for i in row_ids(state, :S)],
         ),
     )
 
-    # MVP finding D — mark each live program to market (its species' specValuation) and push the
+    # MVP finding D — mark each live program to market (its species' placeValuation) and push the
     # per-tick per-program ledger row, in deterministic token order, right after the aggregate
     # :valuation row so the per-program and aggregate views are consistent (src/ledger.jl).
     attribute_valuation!(state)

@@ -98,7 +98,7 @@ the ADR 0003 `ReactantSpec` table lands; this is the `transLHS`/`transRHS` form 
 function network_graph(prob::ReactionNetworkProblem)
     net = prob.network
     species = SpeciesNode[
-        SpeciesNode(net[i, :specName], net[i, :specStructured] === true) for i in row_ids(net, :S)
+        SpeciesNode(net[i, :placeName], net[i, :placeStructured] === true) for i in row_ids(net, :S)
     ]
 
     # Realize the incidence on a copy so the original RNG is untouched.
@@ -109,7 +109,7 @@ function network_graph(prob::ReactionNetworkProblem)
     arcs = Arc[]
     lhs = work.transitions[:transLHS]
     rhs = work.transitions[:transRHS]
-    known_species = Set(net[i, :specName] for i in row_ids(net, :S))
+    known_species = Set(net[i, :placeName] for i in row_ids(net, :S))
     for i in eachindex(lhs)
         tnode_name = _transition_node_name(net, i)
         push!(transitions, TransitionNode(tnode_name, i, _transition_label(net, i)))
@@ -120,7 +120,7 @@ function network_graph(prob::ReactionNetworkProblem)
         struct_lhs = nothing
         for r in lhs[i]
             sp = _species_sym(r.species)
-            (sp in known_species && net[find_index(sp, work), :specStructured] === true) && (struct_lhs = sp)
+            (sp in known_species && net[find_index(sp, work), :placeStructured] === true) && (struct_lhs = sp)
             push!(
                 arcs, Arc(
                     sp, tnode_name, :in,
@@ -239,7 +239,7 @@ end
 # Pool trough (lowest level reached) per species over a run — the starvation signal.
 function _pool_troughs(prob::ReactionNetworkProblem)
     troughs = Dict{Symbol, Float64}()
-    for s in prob.network[:, :specName]
+    for s in prob.network[:, :placeName]
         col = string(s)
         if col in names(prob.sol)
             troughs[s] = minimum(prob.sol[!, col])
