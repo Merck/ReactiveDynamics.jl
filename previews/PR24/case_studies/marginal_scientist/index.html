@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Marginal eNPV of the Nth scientist · ReactiveDynamics.jl</title><meta name="title" content="Marginal eNPV of the Nth scientist · ReactiveDynamics.jl"/><meta property="og:title" content="Marginal eNPV of the Nth scientist · ReactiveDynamics.jl"/><meta property="twitter:title" content="Marginal eNPV of the Nth scientist · ReactiveDynamics.jl"/><meta name="description" content="Documentation for ReactiveDynamics.jl."/><meta property="og:description" content="Documentation for ReactiveDynamics.jl."/><meta property="twitter:description" content="Documentation for ReactiveDynamics.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/rd-theme.css" rel="stylesheet" type="text/css"/><script src="../../assets/rd-logo.js"></script><link href="../../assets/favicon.svg" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img class="docs-light-only" src="../../assets/logo.svg" alt="ReactiveDynamics.jl logo"/><img class="docs-dark-only" src="../../assets/logo-dark.svg" alt="ReactiveDynamics.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ReactiveDynamics.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../tutorials/introductory/">Introductory: your first model</a></li><li><a class="tocitem" href="../../tutorials/advanced/">Advanced: structured-token portfolios</a></li><li><a class="tocitem" href="../../tutorials/expert/">Expert: coupled heterogeneous systems</a></li><li><a class="tocitem" href="../../deep_dives/serialization/">Deep dive: serialization</a></li><li><a class="tocitem" href="../../deep_dives/composition/">Deep dive: composition</a></li></ul></li><li><span class="tocitem">Case studies</span><ul><li class="is-active"><a class="tocitem" href>Marginal eNPV of the Nth scientist</a><ul class="internal"><li><a class="tocitem" href="#1.-The-model:-a-two-program-portfolio-contending-for-one-scientist-bench"><span>1. The model: a two-program portfolio contending for one scientist bench</span></a></li><li><a class="tocitem" href="#2.-The-shadow-price:-an-N-vs-N1-ensemble-comparison"><span>2. The shadow price: an N-vs-N+1 ensemble comparison</span></a></li><li><a class="tocitem" href="#3.-The-hero-visual:-which-resource-binds,-and-who-wins-the-contention"><span>3. The hero visual: which resource binds, and who wins the contention</span></a></li><li><a class="tocitem" href="#4.-What-this-means-for-the-decision"><span>4. What this means for the decision</span></a></li></ul></li><li><a class="tocitem" href="../inlicensing_value/">In-licensing asset value</a></li><li><a class="tocitem" href="../kill_a_program/">When to kill a program</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../reference/authoring/">Authoring</a></li><li><a class="tocitem" href="../../reference/structured_tokens/">Structured tokens</a></li><li><a class="tocitem" href="../../reference/rules_actions/">Rules &amp; actions</a></li><li><a class="tocitem" href="../../reference/construction_simulation/">Construction &amp; simulation</a></li><li><a class="tocitem" href="../../reference/composition/">Composition</a></li><li><a class="tocitem" href="../../reference/serialization/">Serialization</a></li><li><a class="tocitem" href="../../reference/json_schema/">JSON model schema</a></li><li><a class="tocitem" href="../../reference/analysis_viz/">Analysis &amp; visualization</a></li><li><a class="tocitem" href="../../reference/aa_coupling/">AlgebraicAgents coupling</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Case studies</a></li><li class="is-active"><a href>Marginal eNPV of the Nth scientist</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Marginal eNPV of the Nth scientist</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Merck/ReactiveDynamics.jl/blob/main/docs/literate/case_studies/marginal_scientist.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="What-is-the-marginal-eNPV-of-the-Nth-scientist?"><a class="docs-heading-anchor" href="#What-is-the-marginal-eNPV-of-the-Nth-scientist?">What is the marginal eNPV of the Nth scientist?</a><a id="What-is-the-marginal-eNPV-of-the-Nth-scientist?-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-the-marginal-eNPV-of-the-Nth-scientist?" title="Permalink"></a></h1><p><strong>The number.</strong> On the portfolio modeled below, the fifth full-time scientist is worth about <strong><span>$</span>19M in expected NPV</strong> (≈ <span>$</span>19M ± <span>$</span>2.5M over a 48-month horizon, from a 48-member seeded ensemble at capacity 4 vs 5). That is the <em>shadow price</em> of the binding resource: the extra expected value the whole system produces when one more scientist is available at the margin.</p><p><strong>The decision rule that falls out of it.</strong> Hire the fifth scientist iff their fully-loaded cost over the horizon is below the shadow price of ≈ <span>$</span>19M. A senior R&amp;D scientist loaded at even <span>$</span>1–2M/yr clears that bar comfortably — so on this portfolio the hire is value-accretive, and the marginal scientist is worth far more than their salary line suggests.</p><p><strong>Why a spreadsheet cannot produce this number.</strong> A staffing spreadsheet prices a scientist at their <em>accounting cost</em>. But under contention the value of a resource is not what it costs — it is what the <em>system</em> does with it at the margin: which trials it unblocks, which queued programs it lets advance, which launches it pulls forward. That marginal system effect is a property of the whole timed, stochastic, resource-contended portfolio, and it is what the model computes below.</p><p>The rest of this study is <em>how we got the number</em>: the portfolio model and why the scientist bench genuinely binds (§1), the N-vs-N+1 ensemble comparison that reads off the shadow price (§2), the execution map that shows <em>which</em> resource binds and who wins the contention (§3), and what it means for the staffing decision (§4).</p><pre><code class="language-julia hljs">using ReactiveDynamics
+using AlgebraicAgents            # inners / getagent — read the live token population
+using Statistics                 # ensemble reductions
+using Printf                     # aligned reporting
+using Plots                      # inline figures
+
+RD = ReactiveDynamics</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ReactiveDynamics</code></pre><p>A tiny helper so a raw Graphviz SVG string renders as an inline image in the built page (its <code>show(::MIME&quot;image/svg+xml&quot;)</code> prints the SVG). This is the same device the visualization tour uses for the execution map in §3.</p><pre><code class="language-julia hljs">struct RawSVG
+    s::String
+end
+Base.show(io::IO, ::MIME&quot;image/svg+xml&quot;, x::RawSVG) = print(io, x.s)</code></pre><h2 id="1.-The-model:-a-two-program-portfolio-contending-for-one-scientist-bench"><a class="docs-heading-anchor" href="#1.-The-model:-a-two-program-portfolio-contending-for-one-scientist-bench">1. The model: a two-program portfolio contending for one scientist bench</a><a id="1.-The-model:-a-two-program-portfolio-contending-for-one-scientist-bench-1"></a><a class="docs-heading-anchor-permalink" href="#1.-The-model:-a-two-program-portfolio-contending-for-one-scientist-bench" title="Permalink"></a></h2><p>We model a small R&amp;D portfolio with two therapeutic programs — an <strong>oncology</strong> franchise and an <strong>immunology</strong> franchise — that share a single finite pool of scientists. Each program has a steady intake of candidate assets and runs each candidate through a trial that, on success, launches. The scarce, contended resource is the scientist bench; the money to run trials is not the constraint here. That is deliberate: we want a study where <em>people</em>, not cash, bind — so the marginal question is &quot;one more scientist,&quot; and the shadow price is a hiring number.</p><p>Three modeling choices make the scientist bench the true bottleneck:</p><ul><li>Each trial holds scientists as a <strong><code>@conserved</code></strong> resource: a running trial <em>occupies</em> its scientists for the trial&#39;s <code>cycletime</code> and returns them intact at completion. A conserved pool is reusable capacity, not consumed mass — exactly how headcount behaves.</li><li>Trial budget is metered as a <strong><code>@rate</code></strong> resource (drawn per ongoing tick over the cycle) out of an ample pool, so budget is a real <em>cost</em> on the ledger but never the binding constraint.</li><li>The two trials carry different <strong><code>priority</code></strong> weights. When more trials are ready than the bench can staff in a tick, the <a href="https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/adr/0002-priority-weighted-allocation.md">priority-weighted allocator</a> rations the scientists in proportion to priority. We give oncology the higher priority (protecting the higher-strategic-value franchise), so under contention oncology is staffed first and immunology waits — a queue we will <em>see</em> in §3.</li></ul><p>A structured <strong>token</strong> carries each candidate&#39;s <code>program</code> (<code>:Onc</code>/<code>:Immuno</code>), lifecycle <code>phase</code>, and <code>value</code>; the trial <code>@select</code>s a program&#39;s active candidates and <code>@advance</code>s a survivor to <code>:Launched</code>, emitting a plain <code>launch</code> product that carries the reward. We define the token kind in ReactiveDynamics&#39; own scope via the <code>@register</code>/<code>@aagent</code> idiom (the engine&#39;s selection/advancement machinery must see the type) and map its kind name to a constructor through a registry.</p><pre><code class="language-julia hljs">@register begin
+    @aagent BaseStructuredToken AbstractStructuredToken struct SciProjectToken
+        program::Symbol      # :Onc or :Immuno — which franchise this candidate belongs to
+        phase::Symbol        # :Active while in trial, :Launched once it succeeds
+        value::Float64       # a descriptor field (logged per tick)
+    end
+    function SciProjectToken(program, phase, value)
+        return SciProjectToken(
+            &quot;PP&quot; * string(rand(1:(10^9))),                        # unique token name
+            :Project,                                             # kind tag (one kind for both programs)
+            nothing,                                              # bound_transition (engine-set)
+            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds history
+            program, phase, value,
+        )
+    end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ReactiveDynamics.SciProjectToken</code></pre><p>Opt this kind into the per-tick trajectory log (records these fields each tick, RNG-free).</p><pre><code class="language-julia hljs">RD.log_token_fields(t::RD.SciProjectToken) = (; program = t.program, phase = t.phase, value = t.value)</code></pre><p>The registry resolves the kind name <code>:Project</code> to a real constructor, so a declarative population (and, downstream, a serialized model) can reference the kind BY NAME without carrying any code.</p><pre><code class="language-julia hljs">const REGISTRY = Dict{Symbol, Any}(
+    :Project =&gt; (state, f) -&gt; RD.SciProjectToken(
+        get(f, :program, :Onc), get(f, :phase, :Active), get(f, :value, 100.0)
+    ),
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dict{Symbol, Any} with 1 entry:
+  :Project =&gt; #2</code></pre><p>The model is a <strong>builder function</strong> parameterized by the scientist headcount <code>fte</code>. This is the idiomatic way to vary a model: macro arguments (rates, <code>probability</code>, and the <code>@prob_meta</code> horizon) are <em>literal</em> — evaluated in module scope — so a headcount that varies across the study cannot be a macro argument. Instead we author the network with literal attributes and set the scarce resource&#39;s initial pool (<code>specInitVal</code>), the budget cost, and the launch reward on the store by name. Reward is carried by a plain <code>launch</code> product species so it realizes ONLY at a successful launch — not at candidate intake — which keeps expected NPV tracking launches cleanly.</p><p>Units: pool quantities are in <span>$</span>k; the <code>launch</code> product carries a <span>$</span>4,000k = <strong><span>$</span>4M</strong> reward per launch, and we report expected NPV in <strong><span>$</span>M</strong>. We discount monthly ticks at an 8% annual rate.</p><pre><code class="language-julia hljs">function portfolio_model(; fte)
+    net = @reaction_network begin
+        # steady intake of candidate assets into each franchise (genesis on the RHS)
+        @deterministic(1.5), ∅ --&gt; @structured(:Project, program = :Onc, phase = :Active, value = 100.0),
+            name =&gt; intake_onc
+        @deterministic(1.5), ∅ --&gt; @structured(:Project, program = :Immuno, phase = :Active, value = 100.0),
+            name =&gt; intake_imm
+        # oncology trial — HIGHER priority: staffed first when the bench is contended
+        @deterministic(4.0),
+            @select(Project, program == :Onc &amp;&amp; phase == :Active) +
+            1 * @conserved(scientist) + 20 * @rate(budget) --&gt; @advance(phase, :Launched) + launch,
+            name =&gt; trial_onc, cycletime =&gt; 4.0, probability =&gt; 0.55, priority =&gt; 3.0
+        # immunology trial — LOWER priority: waits behind oncology under contention
+        @deterministic(4.0),
+            @select(Project, program == :Immuno &amp;&amp; phase == :Active) +
+            1 * @conserved(scientist) + 20 * @rate(budget) --&gt; @advance(phase, :Launched) + launch,
+            name =&gt; trial_imm, cycletime =&gt; 4.0, probability =&gt; 0.55, priority =&gt; 1.0
+    end
+    RD.register_structured_species!(net, :Project)
+    si = findfirst(==(:scientist), net[:, :specName])
+    net[si, :specInitVal] = Float64(fte)          # the scarce, contended resource — the study&#39;s lever
+    bi = findfirst(==(:budget), net[:, :specName])
+    net[bi, :specInitVal] = 1.0e9                  # deep budget pool ⇒ money never binds here
+    net[bi, :specCost] = 1.0                       # but budget burn is a real ledger cost
+    li = findfirst(==(:launch), net[:, :specName])
+    net[li, :specInitVal] = 1.0                    # nonzero so the launch tally isn&#39;t flagged as a &quot;starved&quot; pool
+    net[li, :specReward] = 4000.0                  # $4M realized per successful launch (credited on production, not stock)
+    @prob_meta net tspan = 48 dt = 1.0             # a 48-month horizon, monthly ticks
+    return net
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">portfolio_model (generic function with 1 method)</code></pre><p>A member builder: a fixed opening portfolio of three active candidates per franchise, seeded.</p><pre><code class="language-julia hljs">function build_prob(seed; fte)
+    pop = vcat(
+        [RD.SciProjectToken(:Onc, :Active, 100.0) for _ in 1:3],
+        [RD.SciProjectToken(:Immuno, :Active, 100.0) for _ in 1:3],
+    )
+    return ReactionNetworkProblem(portfolio_model(; fte = fte); seed = seed, registry = REGISTRY, population = pop)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">build_prob (generic function with 1 method)</code></pre><p>Expected NPV is a pure post-processing reduction over the run&#39;s financial ledger: discounted rewards minus discounted costs, in <span>$</span>M (the engine does no discounting itself). Monthly ticks are discounted at 8% annual.</p><pre><code class="language-julia hljs">enpv(p; annual = 0.08) = sum(
+    (
+            row[1] == :valuation_reward ? row[3] :
+            row[1] == :valuation_cost ? -row[3] : 0.0
+        ) / (1 + annual)^(row[2] / 12) / 1000
+        for row in p.log; init = 0.0
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">enpv (generic function with 1 method)</code></pre><p>Live-token helpers: the launched count per franchise, and the still-waiting (queued) count.</p><pre><code class="language-julia hljs">livetokens(p) = collect(values(AlgebraicAgents.inners(AlgebraicAgents.getagent(p, &quot;structured&quot;))))
+n_launched(p, prog) = count(t -&gt; t.program == prog &amp;&amp; t.phase == :Launched, livetokens(p))
+n_waiting(p, prog) = count(t -&gt; t.program == prog &amp;&amp; t.phase == :Active, livetokens(p))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">n_waiting (generic function with 1 method)</code></pre><p><strong>Confirm the bench genuinely binds.</strong> Before comparing capacities we check that the scientist pool actually starves — otherwise the marginal value of a scientist is ≈ 0 and the study is pointless. We run one member at four scientists and read the pool&#39;s trough and the queue it leaves behind.</p><pre><code class="language-julia hljs">prob4 = build_prob(1; fte = 4)
+simulate(prob4)
+
+sci = prob4.sol[!, &quot;scientist&quot;]
+println(&quot;Scientist pool over the run : start &quot;, Int(sci[1]), &quot; → trough &quot;, round(minimum(sci); digits = 1), &quot; → end &quot;, round(sci[end]; digits = 1))
+println(&quot;  ⇒ trough at 0 means the bench is fully committed — a genuinely binding resource.&quot;)
+println(&quot;Launches by franchise       : Onc &quot;, n_launched(prob4, :Onc), &quot;  Immuno &quot;, n_launched(prob4, :Immuno))
+println(&quot;Still-waiting candidates     : Onc &quot;, n_waiting(prob4, :Onc), &quot;  Immuno &quot;, n_waiting(prob4, :Immuno))
+println(&quot;Expected NPV of this run     : \$&quot;, round(enpv(prob4); digits = 1), &quot;M&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Scientist pool over the run : start 4 → trough 0.0 → end 0.0
+  ⇒ trough at 0 means the bench is fully committed — a genuinely binding resource.
+Launches by franchise       : Onc 21  Immuno 7
+Still-waiting candidates     : Onc 31  Immuno 45
+Expected NPV of this run     : $93.4M</code></pre><p>The bench runs to a trough of zero and leaves a deep queue of candidates that never got staffed — the signature of a binding constraint. And the priority split is already visible: oncology, the higher-priority franchise, launches far more than immunology, which waits behind it. Both facts are what make the marginal scientist worth measuring.</p><h2 id="2.-The-shadow-price:-an-N-vs-N1-ensemble-comparison"><a class="docs-heading-anchor" href="#2.-The-shadow-price:-an-N-vs-N1-ensemble-comparison">2. The shadow price: an N-vs-N+1 ensemble comparison</a><a id="2.-The-shadow-price:-an-N-vs-N1-ensemble-comparison-1"></a><a class="docs-heading-anchor-permalink" href="#2.-The-shadow-price:-an-N-vs-N1-ensemble-comparison" title="Permalink"></a></h2><p>A single run is one draw of a stochastic process; the shadow price is a difference of <em>expected</em> values, so we need an ensemble at each capacity. <code>ensemble(build; nseed, root_seed)</code> runs <code>nseed</code> members, member <code>k</code> seeded deterministically from <code>hash((root_seed, k))</code> — so the two arms are compared on the <em>same</em> seed stream and member <code>k</code> is reproducible regardless of how many members we run or in what order.</p><p>We build one arm at <strong>four</strong> scientists and one at <strong>five</strong>, then read the shadow price of the fifth with <code>treatment_effect(baseline, deal, metric)</code>, which returns the difference of mean eNPV with its unpaired standard error. Keeping each arm to a few dozen members keeps the build fast.</p><pre><code class="language-julia hljs">ens4 = ensemble(s -&gt; (p = build_prob(s; fte = 4); simulate(p); p); nseed = 48, root_seed = 2026)
+ens5 = ensemble(s -&gt; (p = build_prob(s; fte = 5); simulate(p); p); nseed = 48, root_seed = 2026)
+
+shadow = treatment_effect(ens4, ens5, enpv)
+
+@printf(&quot;Expected NPV over the 48-month horizon (48-member ensembles, in \$M):\n&quot;)
+@printf(&quot;  4 scientists         : \$%.1fM\n&quot;, shadow.baseline)
+@printf(&quot;  5 scientists         : \$%.1fM\n&quot;, shadow.deal)
+@printf(&quot;  shadow price of #5    : +\$%.1fM  (± \$%.1fM SE)\n&quot;, shadow.delta, shadow.se)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Expected NPV over the 48-month horizon (48-member ensembles, in $M):
+  4 scientists         : $88.0M
+  5 scientists         : $107.0M
+  shadow price of #5    : +$19.0M  (± $2.5M SE)</code></pre><p>The standard error sits well below the effect, so this is a real marginal gain, not ensemble noise. The two eNPV distributions make the shift visible — the whole five-scientist distribution sits to the right of the four-scientist one:</p><pre><code class="language-julia hljs">d4 = [enpv(m) for m in ens4.members]
+d5 = [enpv(m) for m in ens5.members]
+
+histogram(
+    d4; bins = 15, alpha = 0.5, label = &quot;4 scientists&quot;, xlabel = &quot;expected NPV over horizon (\$M)&quot;,
+    ylabel = &quot;ensemble members&quot;, title = &quot;Marginal value of the 5th scientist&quot;,
+)
+histogram!(d5; bins = 15, alpha = 0.5, label = &quot;5 scientists&quot;)
+vline!([mean(d4), mean(d5)]; label = &quot;means&quot;, lw = 2, color = :black, ls = :dash)</code></pre><img src="4d77faef.svg" alt="Example block output"/><p>The shadow price is <em>not</em> the scientist&#39;s cost and <em>not</em> a fixed &quot;value per head.&quot; It is the system&#39;s marginal response: adding the fifth scientist relieves the contended bench just enough to staff trials that would otherwise have queued, and the expected NPV of the launches that unblocks is ≈ <span>$</span>19M. Sweeping capacity would trace a <em>diminishing</em> marginal curve — each further scientist is worth less as the bench stops binding — which is precisely the curve a static per-head cost cannot represent.</p><h2 id="3.-The-hero-visual:-which-resource-binds,-and-who-wins-the-contention"><a class="docs-heading-anchor" href="#3.-The-hero-visual:-which-resource-binds,-and-who-wins-the-contention">3. The hero visual: which resource binds, and who wins the contention</a><a id="3.-The-hero-visual:-which-resource-binds,-and-who-wins-the-contention-1"></a><a class="docs-heading-anchor-permalink" href="#3.-The-hero-visual:-which-resource-binds,-and-who-wins-the-contention" title="Permalink"></a></h2><p>The number tells us a resource binds; the <strong>execution map</strong> shows <em>which</em> one and <em>how</em> the contention resolves. It is built in three layers, each usable alone:</p><ul><li><code>network_graph(prob)</code> — the pure Petri-net structure: species (places), transitions, and the arcs between them, with stoichiometry and modality. It runs on a copy and never perturbs the run.</li><li><code>draw_network(prob)</code> — renders that structure to an image via Graphviz (authoring-time documentation; no run needed).</li><li><code>exec_map(prob; highlight)</code> — <em>decorates</em> the structure with run statistics: places that ran to a trough are painted as <strong>starved</strong> (the binding resource, in gold), and a <code>@select</code> cohort&#39;s path through the net is drawn as thick arcs — here, the launched cohort&#39;s route through the trials.</li></ul><p>We render the execution map for the four-scientist run, highlighting the launched cohort. Rendering is best-effort: if no Graphviz backend is available at build time we fall back to the DOT source.</p><pre><code class="language-julia hljs">launched_cohort = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNode(:Launched))])
+
+g = network_graph(prob4)
+println(&quot;Execution-map structure:&quot;)
+println(&quot;  places (species) : &quot;, [s.name for s in g.species])
+println(&quot;  transitions      : &quot;, [t.name for t in g.transitions])
+starved = [s for (s, v) in RD._pool_troughs(prob4) if v &lt;= 0.0]
+println(&quot;  starved place(s) : &quot;, isempty(starved) ? &quot;none&quot; : starved, &quot;  (painted gold — the binding resource)&quot;)
+
+hero = try
+    RawSVG(exec_map(prob4; highlight = launched_cohort, format = &quot;svg&quot;))
+catch err
+    @warn &quot;exec_map: no Graphviz backend at build time — falling back to DOT source&quot; exception = err
+    nothing
+end
+hero === nothing ? Text(to_graphviz(g; highlight_species = starved)) : hero</code></pre><img src='data:image/svg+xml;utf-8,<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="647pt" height="346pt"
+ viewBox="0.00 0.00 647.34 345.87" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 341.87)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-341.87 643.34,-341.87 643.34,4 -4,4"/>
+<!-- Project -->
+<g id="node1" class="node">
+<title>Project</title>
+<ellipse fill="none" stroke="black" cx="34.5" cy="-112.87" rx="28.75" ry="28.75"/>
+<ellipse fill="none" stroke="black" cx="34.5" cy="-112.87" rx="32.74" ry="32.74"/>
+<text text-anchor="middle" x="34.5" y="-110.67" font-family="Times,serif" font-size="9.00">Project</text>
+</g>
+<!-- trial_onc -->
+<g id="node7" class="node">
+<title>trial_onc</title>
+<polygon fill="none" stroke="black" points="370.46,-77.87 313.46,-77.87 313.46,-41.87 370.46,-41.87 370.46,-77.87"/>
+<text text-anchor="middle" x="341.96" y="-57.67" font-family="Times,serif" font-size="9.00">trial_onc</text>
+</g>
+<!-- Project&%2345;&gt;trial_onc -->
+<g id="edge3" class="edge">
+<title>Project&%2345;&gt;trial_onc</title>
+<path fill="none" stroke="black" stroke-width="3" d="M57.56,-88.76C66.33,-82.7 76.75,-77.14 87,-73.87 160.83,-50.31 252.43,-48.21 302.98,-52.12"/>
+<polygon fill="black" stroke="black" stroke-width="3" points="302.85,-55.63 313.13,-53.04 303.48,-48.65 302.85,-55.63"/>
+</g>
+<!-- trial_imm -->
+<g id="node8" class="node">
+<title>trial_imm</title>
+<polygon fill="none" stroke="black" points="371.96,-158.87 311.96,-158.87 311.96,-122.87 371.96,-122.87 371.96,-158.87"/>
+<text text-anchor="middle" x="341.96" y="-138.67" font-family="Times,serif" font-size="9.00">trial_imm</text>
+</g>
+<!-- Project&%2345;&gt;trial_imm -->
+<g id="edge8" class="edge">
+<title>Project&%2345;&gt;trial_imm</title>
+<path fill="none" stroke="black" stroke-width="3" d="M67.09,-107.17C73.67,-107.6 80.56,-108.26 87,-108.87 162.92,-115.99 251.65,-123.94 301.58,-131.12"/>
+<polygon fill="black" stroke="black" stroke-width="3" points="301.21,-134.61 311.62,-132.64 302.26,-127.69 301.21,-134.61"/>
+</g>
+<!-- scientist -->
+<g id="node2" class="node">
+<title>scientist</title>
+<ellipse fill="gold" stroke="black" cx="34.5" cy="-197.87" rx="32.16" ry="32.16"/>
+<text text-anchor="middle" x="34.5" y="-195.67" font-family="Times,serif" font-size="9.00">scientist</text>
+</g>
+<!-- scientist&%2345;&gt;trial_onc -->
+<g id="edge4" class="edge">
+<title>scientist&%2345;&gt;trial_onc</title>
+<path fill="none" stroke="darkgreen" d="M57.6,-174.66C76.89,-155.7 106.49,-129.56 137,-113.87 191.05,-86.07 260.73,-71.62 303.06,-64.89"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="303.85,-68.31 313.21,-63.35 302.79,-61.39 303.85,-68.31"/>
+</g>
+<!-- scientist&%2345;&gt;trial_imm -->
+<g id="edge9" class="edge">
+<title>scientist&%2345;&gt;trial_imm</title>
+<path fill="none" stroke="darkgreen" d="M66.89,-193.79C82.58,-191.64 101.83,-188.84 119,-185.87 183.34,-174.73 257.61,-159.11 301.85,-149.5"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="302.59,-152.92 311.62,-147.37 301.1,-146.08 302.59,-152.92"/>
+</g>
+<!-- budget -->
+<g id="node3" class="node">
+<title>budget</title>
+<ellipse fill="none" stroke="black" cx="34.5" cy="-28.87" rx="28.74" ry="28.74"/>
+<text text-anchor="middle" x="34.5" y="-26.67" font-family="Times,serif" font-size="9.00">budget</text>
+</g>
+<!-- budget&%2345;&gt;trial_onc -->
+<g id="edge5" class="edge">
+<title>budget&%2345;&gt;trial_onc</title>
+<path fill="none" stroke="%23666666" d="M63.33,-24.18C79.57,-22.04 100.45,-20.29 119,-21.87 184.28,-27.41 259.19,-41.98 303.17,-51.38"/>
+<polygon fill="%23666666" stroke="%23666666" points="302.61,-54.84 313.12,-53.54 304.09,-48 302.61,-54.84"/>
+<text text-anchor="middle" x="103" y="-25.67" font-family="Times,serif" font-size="14.00">20.0</text>
+</g>
+<!-- budget&%2345;&gt;trial_imm -->
+<g id="edge10" class="edge">
+<title>budget&%2345;&gt;trial_imm</title>
+<path fill="none" stroke="%23666666" d="M58.81,-44.53C78.83,-57.39 108.83,-75.32 137,-86.87 192.3,-109.53 259.97,-125.24 301.77,-133.66"/>
+<polygon fill="%23666666" stroke="%23666666" points="301.33,-137.14 311.82,-135.64 302.68,-130.27 301.33,-137.14"/>
+<text text-anchor="middle" x="103" y="-81.67" font-family="Times,serif" font-size="14.00">20.0</text>
+</g>
+<!-- launch -->
+<g id="node4" class="node">
+<title>launch</title>
+<ellipse fill="none" stroke="black" cx="611.63" cy="-99.87" rx="27.93" ry="27.93"/>
+<text text-anchor="middle" x="611.63" y="-97.67" font-family="Times,serif" font-size="9.00">launch</text>
+</g>
+<!-- intake_onc -->
+<g id="node5" class="node">
+<title>intake_onc</title>
+<polygon fill="none" stroke="black" points="67.5,-283.87 1.5,-283.87 1.5,-247.87 67.5,-247.87 67.5,-283.87"/>
+<text text-anchor="middle" x="34.5" y="-263.67" font-family="Times,serif" font-size="9.00">intake_onc</text>
+</g>
+<!-- @structured :Project program = :Onc phase = :Active value = 100.0 -->
+<g id="node9" class="node">
+<title>@structured :Project program = :Onc phase = :Active value = 100.0</title>
+<ellipse fill="none" stroke="black" cx="341.96" cy="-265.87" rx="193.98" ry="18"/>
+<text text-anchor="middle" x="341.96" y="-263.67" font-family="Times,serif" font-size="9.00">@structured :Project program = :Onc phase = :Active value = 100.0</text>
+</g>
+<!-- intake_onc&%2345;&gt;@structured :Project program = :Onc phase = :Active value = 100.0 -->
+<g id="edge1" class="edge">
+<title>intake_onc&%2345;&gt;@structured :Project program = :Onc phase = :Active value = 100.0</title>
+<path fill="none" stroke="black" d="M67.61,-265.87C85.96,-265.87 110.69,-265.87 137.8,-265.87"/>
+<polygon fill="black" stroke="black" points="137.89,-269.37 147.89,-265.87 137.89,-262.37 137.89,-269.37"/>
+</g>
+<!-- intake_imm -->
+<g id="node6" class="node">
+<title>intake_imm</title>
+<polygon fill="none" stroke="black" points="69,-337.87 0,-337.87 0,-301.87 69,-301.87 69,-337.87"/>
+<text text-anchor="middle" x="34.5" y="-317.67" font-family="Times,serif" font-size="9.00">intake_imm</text>
+</g>
+<!-- @structured :Project program = :Immuno phase = :Active value = 100.0 -->
+<g id="node10" class="node">
+<title>@structured :Project program = :Immuno phase = :Active value = 100.0</title>
+<ellipse fill="none" stroke="black" cx="341.96" cy="-319.87" rx="204.92" ry="18"/>
+<text text-anchor="middle" x="341.96" y="-317.67" font-family="Times,serif" font-size="9.00">@structured :Project program = :Immuno phase = :Active value = 100.0</text>
+</g>
+<!-- intake_imm&%2345;&gt;@structured :Project program = :Immuno phase = :Active value = 100.0 -->
+<g id="edge2" class="edge">
+<title>intake_imm&%2345;&gt;@structured :Project program = :Immuno phase = :Active value = 100.0</title>
+<path fill="none" stroke="black" d="M69.06,-319.87C84.65,-319.87 104.61,-319.87 126.62,-319.87"/>
+<polygon fill="black" stroke="black" points="126.87,-323.37 136.87,-319.87 126.87,-316.37 126.87,-323.37"/>
+</g>
+<!-- trial_onc&%2345;&gt;Project -->
+<g id="edge6" class="edge">
+<title>trial_onc&%2345;&gt;Project</title>
+<path fill="none" stroke="black" d="M313.13,-63.97C265.55,-66.02 166.08,-66.63 87,-91.87 82.9,-93.18 78.77,-94.85 74.73,-96.7"/>
+<polygon fill="black" stroke="black" points="72.94,-93.69 65.52,-101.25 76.03,-99.96 72.94,-93.69"/>
+</g>
+<!-- trial_onc&%2345;&gt;launch -->
+<g id="edge7" class="edge">
+<title>trial_onc&%2345;&gt;launch</title>
+<path fill="none" stroke="black" d="M370.6,-64C419.06,-71.24 519.37,-86.23 573.71,-94.35"/>
+<polygon fill="black" stroke="black" points="573.53,-97.86 583.94,-95.88 574.57,-90.94 573.53,-97.86"/>
+</g>
+<!-- trial_imm&%2345;&gt;Project -->
+<g id="edge11" class="edge">
+<title>trial_imm&%2345;&gt;Project</title>
+<path fill="none" stroke="black" d="M311.62,-143.9C264.34,-143.08 168.32,-134.5 87,-126.87 83.29,-126.52 79.44,-126.15 75.58,-125.75"/>
+<polygon fill="black" stroke="black" points="75.79,-122.25 65.45,-124.55 74.97,-129.2 75.79,-122.25"/>
+</g>
+<!-- trial_imm&%2345;&gt;launch -->
+<g id="edge12" class="edge">
+<title>trial_imm&%2345;&gt;launch</title>
+<path fill="none" stroke="black" d="M372.22,-136.82C414.87,-130.86 496.6,-119.2 565.92,-107.87 568.6,-107.43 571.37,-106.96 574.15,-106.49"/>
+<polygon fill="black" stroke="black" points="574.93,-109.91 584.17,-104.74 573.72,-103.01 574.93,-109.91"/>
+</g>
+</g>
+</svg>
+'/><p>Read the map: the <strong><code>scientist</code></strong> place is the one painted gold — the pool that ran to a trough, the resource the whole portfolio is starved of. Budget, by contrast, never starves (the <code>@rate</code> draw comes out of a deep pool), so it is not the constraint despite being a real cost. The thick arcs trace the launched cohort&#39;s path through the two trials, and the arc weights make the priority split concrete: with the bench contended, oncology&#39;s higher <code>priority</code> claims scientists first, so its trial fires more and immunology&#39;s queue grows. That is the picture behind the number — the marginal scientist is valuable <em>because</em> the gold pool binds, and their value flows to whichever trial the allocator staffs next.</p><h2 id="4.-What-this-means-for-the-decision"><a class="docs-heading-anchor" href="#4.-What-this-means-for-the-decision">4. What this means for the decision</a><a id="4.-What-this-means-for-the-decision-1"></a><a class="docs-heading-anchor-permalink" href="#4.-What-this-means-for-the-decision" title="Permalink"></a></h2><p><strong>Hire the fifth scientist iff their fully-loaded cost over the 48-month horizon is below the shadow price of ≈ <span>$</span>19M.</strong> On this portfolio that is a clear yes: a scientist loaded at even a few <span>$</span>M per year over four years is well under the marginal value they unlock, so the hire is value-accretive rather than a cost to be minimized.</p><p>The transferable point is the <em>kind</em> of number this is. The scientist&#39;s accounting cost is a line item; their shadow price is a system property — the expected NPV of the launches one more unit of the binding resource lets the portfolio pull forward, net of the extra trial spend, across every seed. It exists only because the bench genuinely binds and the priority allocator has to choose whom to starve; relax the contention (add enough scientists) and the shadow price falls toward the accounting cost, which is exactly when hiring should stop. A capacity or hiring memo can take the ≈ <span>$</span>19M and its standard error directly, and the same machinery re-priced at capacity 5-vs-6, 6-vs-7, and so on traces the full diminishing-returns curve the headcount plan should follow.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../deep_dives/composition/">« Deep dive: composition</a><a class="docs-footer-nextpage" href="../inlicensing_value/">In-licensing asset value »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Saturday 22 August 2026 13:13">Saturday 22 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
