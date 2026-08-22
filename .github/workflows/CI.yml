@@ -32,15 +32,15 @@ jobs:
           - macOS-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -56,17 +56,22 @@ jobs:
       actions: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
           version: nightly
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
 
   # Validate the LOWER bounds in [compat] actually resolve and pass (CompatHelper only raises
-  # the upper bounds). If this ever red-lines on a transitive dep with an unsatisfiable floor,
-  # bump that dep's floor in Project.toml or add it to `skip` below.
+  # the upper bounds). v2 replaced v1's textual Project.toml rewriting with a Resolver.jl
+  # min-resolve; its default `mode: alldeps` pins every dep AND weakdep to its floor (what the
+  # Project.toml floor comments describe) and it handles stdlibs itself, so v1's
+  # `skip: Random, Statistics, TOML` is gone — under v2 `skip` is read only in `mode: forcedeps`,
+  # which we do not use because forcedeps resolves `deps` only and would drop the Plots/Arrow
+  # weakdep floors. If this ever red-lines on an unsatisfiable floor, raise that dep's floor
+  # in Project.toml.
   downgrade:
     name: Downgrade compat
     runs-on: ubuntu-latest
@@ -75,14 +80,12 @@ jobs:
       actions: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1.12'
-      - uses: julia-actions/julia-downgrade-compat@v1
-        with:
-          skip: Random, Statistics, TOML   # stdlibs pinned to the Julia version
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-downgrade-compat@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
 
@@ -95,15 +98,15 @@ jobs:
       pull-requests: read  # PR preview deploys
       statuses: write      # documenter preview status
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The tutorials/case-studies render network exec-maps through Graphviz's `dot`; without a
       # backend they degrade to raw DOT source (see docs/literate/**), so install it for full pages.
       - name: Install Graphviz
         run: sudo apt-get update && sudo apt-get install -y graphviz
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       # Instantiates docs/Project.toml, devs the package, runs docs/make.jl (which also runs the
       # doctests, since makedocs defaults to doctest=true), and deploys via deploydocs.
       - uses: julia-actions/julia-docdeploy@v1
