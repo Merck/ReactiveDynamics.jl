@@ -70,7 +70,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 
 # The token kind is defined INTO the ReactiveDynamics module via @register (so it
 # is referenced as RD.TrajProjectToken). A BaseStructuredToken carries the
-# protocol fields (name, species, bound_transition, past_bonds); this kind adds
+# protocol fields (name, place, bound_transition, past_bonds); this kind adds
 # `phase` and `value`.
 @register begin
     @aagent BaseStructuredToken AbstractStructuredToken struct TrajProjectToken
@@ -138,7 +138,7 @@ println("  horizon          : tspan = ", prob.tspan, ", dt = ", prob.dt)
 # Three artifacts hang off a finished ReactionNetworkProblem and are the substrate
 # everything else reads:
 #
-#   * prob.sol — the solution DataFrame: a "t" column plus one column per species,
+#   * prob.sol — the solution DataFrame: a "t" column plus one column per place,
 #       the pool marking at each tick.
 #   * prob.log — the heterogeneous event stream: a vector of tuples
 #       (tag::Symbol, t, payload…). Read it by tag (r[1]). Financial rows are
@@ -171,7 +171,7 @@ led = program_ledger(prob)
 println("program_ledger(prob) — one row per program (", nrow(led), " rows):")
 for row in eachrow(led)
     @printf(
-        "  %-14s  species=%-8s  cost=%5.2f  reward=%5.2f  net=%6.2f\n",
+        "  %-14s  place=%-8s  cost=%5.2f  reward=%5.2f  net=%6.2f\n",
         row.program, row.species, row.cost_incurred, row.reward_realized, row.net
     )
 end
@@ -195,7 +195,7 @@ end
 # pushed at the same deterministic seam (and token order) as the per-program
 # ledger. Read it in long form with token_trajectory:
 #
-#   * token_trajectory(prob)         — all rows: columns t, program, species, then
+#   * token_trajectory(prob)         — all rows: columns t, program, place, then
 #       each opted-in field (here phase + value); one row per (tick, opted-in token).
 #   * token_trajectory(prob, name)   — one token's life.
 #   * token_trajectory(prob, pred)   — the rows of tokens CURRENTLY matching a
@@ -411,13 +411,13 @@ println("  TokenTrajectoryPlot(:value) rendered → ", relpath(traj_png, HERE))
 # usable alone:
 #
 #   Layer A — network_graph(prob) → NetworkGraph. A pure, dependency-free Petri-net
-#       view: species (place) nodes, transition nodes, arcs with stoichiometry +
+#       view: place (place) nodes, transition nodes, arcs with stoichiometry +
 #       modality. Runs on a deepcopy, so it does NOT perturb the caller's RNG — pure.
 #   Layer B — to_graphviz(g) emits DOT; draw_network(prob) renders it through AA's
 #       run_graphviz (Graphviz_jll or a system `dot`). No run needed — this is the
 #       structure diagram (authoring-time documentation).
 #   Layer C — exec_map(prob; highlight) DECORATES Layer A with run statistics:
-#       species nodes filled gold where their pool ran to a trough (starvation), and
+#       place nodes filled gold where their pool ran to a trough (starvation), and
 #       a @select cohort's past_bonds path through the net drawn as thick arcs
 #       ("where did these programs go?"). Read-only — never mutates state.
 #
@@ -429,7 +429,7 @@ banner("§7. The exec map — network_graph → draw_network → exec_map")
 # Layer A — the pure structure. Confirm it did not perturb the RNG.
 g = network_graph(prob)
 println("Layer A network_graph(prob):")
-println("  species (places)   : ", [s.name for s in g.species])
+println("  place (places)   : ", [s.name for s in g.places])
 println("  transitions        : ", [t.name for t in g.transitions])
 println("  arcs               : ", length(g.arcs), " (:in LHS→T and :out T→RHS)")
 
@@ -470,10 +470,10 @@ end
 # highlighted arcs. Then render if a backend exists.
 starved = [s for (s, v) in RD._pool_troughs(prob) if v <= 0.0]
 println("Layer C exec_map — decoration inputs:")
-println("  starved species (pool trough ≤ 0) : ", isempty(starved) ? "none" : starved)
+println("  starved place (pool trough ≤ 0) : ", isempty(starved) ? "none" : starved)
 
 # Build the highlight arc set the way exec_map does: each matching token's
-# past_bonds map a (species, transition-index) to the SAME node id the graph uses.
+# past_bonds map a (place, transition-index) to the SAME node id the graph uses.
 hi_arcs = Tuple{Symbol, Symbol}[]
 for tok in RD.select_tokens(prob, adv_pred)
     for (sp, _t, tr) in tok.past_bonds
@@ -494,7 +494,7 @@ catch err
     @warn "exec_map: no Graphviz backend available — falling back to DOT" exception = err
 end
 # The overlay DOT is always obtainable, backend or not (it is what exec_map renders).
-overlay_dot = to_graphviz(g; highlight_species = starved, highlight_arcs = hi_arcs)
+overlay_dot = to_graphviz(g; highlight_places = starved, highlight_arcs = hi_arcs)
 exec_dot_path = joinpath(OUTDIR, "exec_map.dot")
 write(exec_dot_path, overlay_dot)
 @assert prob.sol == sol_before "exec_map must be read-only (Invariant 3)"

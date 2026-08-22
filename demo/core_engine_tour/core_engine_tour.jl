@@ -1,10 +1,10 @@
 # =============================================================================
-# ReactiveDynamics.jl — CORE ENGINE TOUR (classical / plain-Float64 species)
+# ReactiveDynamics.jl — CORE ENGINE TOUR (classical / plain-Float64 place)
 # =============================================================================
 #
 # This is a single, runnable, literate walkthrough of the ReactiveDynamics
 # engine's core modeling vocabulary. It deliberately stays in the CLASSICAL
-# regime — every species is a plain counted quantity (a Float64 stock, like a
+# regime — every place is a plain counted quantity (a Float64 stock, like a
 # population of molecules, dollars, scientists, or jobs). The engine also
 # supports STRUCTURED / agent tokens (programs with attributes that move through
 # a lifecycle and carry identity); those are a separate demo (see
@@ -22,7 +22,7 @@
 # transition has a RATE (how often it tries to fire), a left-hand side of
 # REACTANTS it consumes, and a right-hand side of PRODUCTS it emits. Firing can
 # be instantaneous (cycletime 0) or take time (cycletime > 0, an "in-flight
-# instance"). Reactants can be consumed outright, held-and-returned, metered
+# instance"). Arcs can be consumed outright, held-and-returned, metered
 # per-step, and so on — the engine's signature feature is this RESOURCE MODALITY
 # system. When several transitions want the same scarce pool in the same tick,
 # a priority-weighted ALLOCATOR rations it. Randomness (Poisson genesis,
@@ -45,7 +45,7 @@ banner("§1. A first model: SIR — the metalanguage, simulate, and an invariant
 #
 #   * @reaction_network begin ... end  — the model DSL. Each line is
 #       `rate, LHS --> RHS, name => ...`. Here both rates are mass-action
-#       expressions in the species and parameters (α·S·I, β·I): a bare numeric
+#       expressions in the place and parameters (α·S·I, β·I): a bare numeric
 #       expression is a STOCHASTIC (Poisson) rate.
 #   * @prob_init  — initial counts (the marking at t=0).
 #   * @prob_params — the named parameters the rate expressions reference.
@@ -54,10 +54,10 @@ banner("§1. A first model: SIR — the metalanguage, simulate, and an invariant
 #       problem. The `seed=` kwarg owns a per-run RNG, which is the ONLY route
 #       to reproducibility (more on that in §8).
 #   * simulate(prob) — advance to tspan. The solution lands in `prob.sol`, a
-#       DataFrame with a "t" column plus one column per species.
+#       DataFrame with a "t" column plus one column per place.
 #
 # S+I→2I converts one S into one I (net −1 S, +1 I); I→R converts one I into
-# one R. No species is created or destroyed outright, so S+I+R is a structural
+# one R. No place is created or destroyed outright, so S+I+R is a structural
 # INVARIANT — a sanity check the engine should preserve exactly.
 
 sir = @reaction_network begin
@@ -72,7 +72,7 @@ sir_prob = ReactionNetworkProblem(sir; seed = 1)
 simulate(sir_prob)
 
 # IMPORTANT: read solution columns BY NAME. Column order is CONSTRUCTION order,
-# not the order you wrote the species, so positional indexing is a foot-gun.
+# not the order you wrote the place, so positional indexing is a foot-gun.
 S = sir_prob.sol[!, "S"]
 I = sir_prob.sol[!, "I"]
 R = sir_prob.sol[!, "R"]
@@ -153,8 +153,8 @@ println("In-flight instances at end  : ", inflight, "  (bounded by capacity => 4
 banner("§3. Resource modalities — the engine's signature feature (a truth-table tour)")
 # =============================================================================
 #
-# A reactant is not just "consumed". The engine has a small ALGEBRA of resource
-# behaviors, set by wrapping the species in a modality macro on the LHS. The
+# A arc is not just "consumed". The engine has a small ALGEBRA of resource
+# behaviors, set by wrapping the place in a modality macro on the LHS. The
 # behavior depends on WHEN the resource is drawn and WHETHER it comes back:
 #
 #   bare  X        — RAW CONSUMED: debited at spawn, never returned (mass burned).
@@ -355,7 +355,7 @@ banner("§5. Genesis modes: source (∅), flow/routing, and scheduled (@periodic
 #   * FLOW / ROUTING  — a non-empty LHS with a high nominal rate is TOKEN-GATED:
 #       it fires bounded by the available upstream tokens, not the nominal rate.
 #       The idiom for "route whatever is available": high rate + an upstream
-#       species on the LHS.
+#       place on the LHS.
 #   * SCHEDULED (@periodic) — `@deterministic(N * @periodic(p))` fires N spawns
 #       at each multiple of period p, nothing in between — a calendar/batch
 #       intake. NOTE: the MACRO `@periodic(p)` must appear INSIDE the rate; a
@@ -432,7 +432,7 @@ banner("§6. Custom registered rate functions + the cost / reward / valuation le
 # a marketed drug at a registered rate β(...).
 #
 # This section also tours the VALUATION LEDGER. Attach @cost / @reward /
-# @valuation to species and the engine records financial events to `prob.log`,
+# @valuation to place and the engine records financial events to `prob.log`,
 # a vector of NamedTuple-like rows. Read it by tag:
 #   costs  = [r[3] for r in prob.log if r[1] == :valuation_cost]
 #   rewards = [r[3] for r in prob.log if r[1] == :valuation_reward]
@@ -491,19 +491,19 @@ println(
 
 
 # =============================================================================
-banner("§7. Composition: @join two submodels and @equalize species")
+banner("§7. Composition: @join two submodels and @equalize place")
 # =============================================================================
 #
-# Models compose. `@join` takes the UNION of two schemas' species, transitions,
-# and parameters, optionally IDENTIFYING shared species across the two via
-# equations. `@equalize` collapses two species WITHIN one schema into a single
+# Models compose. `@join` takes the UNION of two schemas' place, transitions,
+# and parameters, optionally IDENTIFYING shared place across the two via
+# equations. `@equalize` collapses two place WITHIN one schema into a single
 # pool and rewrites every reference. Both operate at AUTHORING time (on a
 # schema), before construction.
 #
-# `@join` merges species / transitions / params AND (since WS-3) events (:E) and
+# `@join` merges place / transitions / params AND (since WS-3) events (:E) and
 # observables (:obs) too — `merge_networks!` walks all six objects and appends :E/:obs
 # structurally, so nothing is silently dropped on a join. `@join` / `@equalize` are
-# the MANUAL, no-declared-ports path (you name the species to identify); the
+# the MANUAL, no-declared-ports path (you name the place to identify); the
 # declared-port counterpart is `@compose`, which matches open input/output ports
 # automatically (see demo/refinement_tour).
 #
@@ -517,14 +517,14 @@ acs2 = @reaction_network begin
     1.0, A --> C, name => t2
 end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
-println("@join acs1 acs2 (identifying the shared species A)")
+println("@join acs1 acs2 (identifying the shared place A)")
 println(
-    "  species in join : ", nrows(joined, :S),
+    "  place in join : ", nrows(joined, :S),
     "  (union {A,B,C} ⇒ 3; the two A's merged into one)"
 )
 println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
-# @equalize: two conceptually-identical species A and A2 collapse to one.
+# @equalize: two conceptually-identical place A and A2 collapse to one.
 eqacs = @reaction_network begin
     1.0, A  --> B, name => t1
     1.0, A2 --> B, name => t2
@@ -533,7 +533,7 @@ before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
 println(
-    "  species before  : ", before_S, "  → after : ", nrows(equalized, :S),
+    "  place before  : ", before_S, "  → after : ", nrows(equalized, :S),
     "  (dropped by exactly 1; references rewritten)"
 )
 println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
@@ -611,12 +611,12 @@ println(
           scheduled @periodic batch intake.
       §6  @register'd custom rate functions on a toy-pharma pipeline, and the
           cost / reward / valuation ledger with a discounted-rNPV reduction.
-      §7  Composition: @join (union + shared-species identification) and @equalize
+      §7  Composition: @join (union + shared-place identification) and @equalize
           (collapse + rewrite).
       §8  Determinism: seed= reproducibility, divergence on different seeds, and a
           deterministically-seeded ensemble with mean ± spread.
 
-      Everything above used CLASSICAL (plain Float64) species only. Structured /
+      Everything above used CLASSICAL (plain Float64) place only. Structured /
       agent tokens with attributes and lifecycle identity are a separate demo:
       see demo/bd_acquisition.
     """

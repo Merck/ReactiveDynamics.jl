@@ -4,7 +4,7 @@
 # (`_step!`/`_reinit!`/`_projected_to`, solvers.jl), so `entangle!(parent, rd)` makes it a node in
 # a larger AlgebraicAgents hierarchy and AA's least-projected-time gate interleaves its single
 # clock with sibling clocks for free (§C). What it did NOT have was AA's READ / COUPLING surface:
-# nothing in the hierarchy could read an RD species/observable (so no AA wire could ORIGINATE from
+# nothing in the hierarchy could read an RD place/observable (so no AA wire could ORIGINATE from
 # an RD net), the hierarchy could not read or set RD params, and there was no pinned point at
 # which RD reads its incoming wires. This file adds exactly that, in BOTH directions:
 #
@@ -57,7 +57,7 @@ RNG-free — they never advance `state.rng`, so a coupled read does not perturb 
 never AA's silent `@error` fall-through (Invariant 1).
 """
 function AlgebraicAgents.getobservable(rd::ReactionNetworkProblem, name::Symbol)
-    # species count (classical stock or structured `state.u`-consistent count, §9.5 observation point)
+    # place count (classical stock or structured `state.u`-consistent count, §9.5 observation point)
     i = find_index(name, rd)
     isnothing(i) || return rd.u[i]
     # named observable → its last-sampled value (§9.4)
@@ -90,7 +90,7 @@ AlgebraicAgents._getparameters(rd::ReactionNetworkProblem) = rd.p
     _setparameters!(rd::ReactionNetworkProblem, parameters)
 
 Patch the network's parameters from a `Symbol=>value` dict (ADR 0012 §A, Invariant 5). Writes are
-PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (species/transitions/the network
+PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (place/transitions/the network
 index), so they are ADR-0004 index-safe — structural change stays on the append-only mutation API.
 
 Caveat (ADR 0012 open question / §5 A3): a param feeding an attribute FROZEN at spawn (a token's

@@ -123,7 +123,7 @@ end
 # - **Inbound coupling** is a declarative, eval-free port: the RD JSON's `inputs[]` list plus a
 #   closed `ExternalRef` leaf that a rate or a guard reads by name. Here `sentiment` drives both the
 #   `grow` rate and the `acquire` guard.
-# - **Outbound coupling** is `getobservable`: any sibling can read an RD species or named observable
+# - **Outbound coupling** is `getobservable`: any sibling can read an RD place or named observable
 #   off a wire, as `finance` reads `cash`.
 # - **The wiring lives host-side** in `add_wire!` — never in the portable RD document (Invariant 4).
 # - **The coupling is explicit and deterministic**: external reads are latched once per tick at

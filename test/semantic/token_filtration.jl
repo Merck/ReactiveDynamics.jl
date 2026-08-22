@@ -93,7 +93,7 @@ phases(p) =
         @test tok.phase == :Phase3                                  # same object, advanced
         @test AlgebraicAgents.getname(tok) == name_before           # identity preserved
         @test get(p.creation_index, name_before, -1) == ci_before   # creation_index stable
-        @test RDX.get_species(tok) == :Project                      # kind unchanged
+        @test RDX.get_place(tok) == :Project                      # kind unchanged
     end
 
     # ── continuous predicate selects a subset ───────────────────────────────────────────
@@ -129,7 +129,7 @@ phases(p) =
     end
 
     # ── deterministic bind total order (ADR 0008 inv 3): equal-priority ties broken by ──
-    # ── (species, creation_index), NOT the AA Dict / random token-name order ─────────────
+    # ── (place, creation_index), NOT the AA Dict / random token-name order ─────────────
     @testset "equal-priority tokens bind in deterministic creation_index order (not insertion/name)" begin
         # Two Phase2 projects with distinct npv but equal (default) priority. With rate 1 only one
         # advances per tick, so WHICH one advances first must be reproducible across runs — it is
@@ -160,7 +160,7 @@ phases(p) =
     @testset "a structured LHS with no @select binds by kind only (backward-compatible)" begin
         # rate 2 (two instances/tick) + cycletime 0 (instant completion) so both distinct
         # Project tokens are bound and advanced — @advance picks bound tokens in the
-        # (species, creation_index) order, one per firing instance.
+        # (place, creation_index) order, one per firing instance.
         net = @reaction_network begin
             @deterministic(2.0),
                 @select(Project) --> @advance(phase, :Done),

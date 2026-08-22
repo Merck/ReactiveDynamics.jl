@@ -2,7 +2,7 @@
 #
 # Covers the network "exec map" three layers + the result-plot recipes:
 #   §15.2 Layer A — `network_graph` is a pure function of the model (no run, no plotting dep, does
-#         not perturb the RNG); structure correctness (species/transition/arc counts).
+#         not perturb the RNG); structure correctness (place/transition/arc counts).
 #   §15.2 Layer B — `to_graphviz` emits valid DOT (a `dot`-parseable digraph) for the reference
 #         models; `draw_network` renders through AA's `run_graphviz` when a backend is available.
 #   §15.2 Layer C — `exec_map` decorates the structure with run statistics + `@select` highlighting,
@@ -19,7 +19,7 @@ using Plots   # trigger RDPlotsExt so the §15.1 recipe-render assertion runs (n
 
 RD = ReactiveDynamics
 
-# A small SIR model (the reference acceptance model) — plain species, no structured tokens, so
+# A small SIR model (the reference acceptance model) — plain place, no structured tokens, so
 # network_graph works with no population.
 function sir_model()
     net = @reaction_network begin
@@ -82,7 +82,7 @@ end
     @testset "§15.2 Layer A network_graph: SIR structure correctness, no simulation" begin
         p = ReactionNetworkProblem(sir_model(); seed = 1)
         g = network_graph(p)
-        spnames = Set(s.name for s in g.species)
+        spnames = Set(s.name for s in g.places)
         @test spnames == Set([:S, :I, :R])
         @test length(g.transitions) == 2          # infection + recovery
         @test !isempty(g.arcs)
@@ -104,7 +104,7 @@ end
         json = to_json_model(p)
         q = from_json_model(json)
         gp, gq = network_graph(p), network_graph(q)
-        @test Set(s.name for s in gp.species) == Set(s.name for s in gq.species)
+        @test Set(s.name for s in gp.places) == Set(s.name for s in gq.places)
         @test length(gp.transitions) == length(gq.transitions)
     end
 
@@ -143,7 +143,7 @@ end
         pred = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNode(:Phase2))])
         g = network_graph(p)
         # the overlay DOT (Layer C styling) is valid and includes highlight styling hooks
-        hi = to_graphviz(g; highlight_species = [:budget], highlight_arcs = Tuple{Symbol, Symbol}[])
+        hi = to_graphviz(g; highlight_places = [:budget], highlight_arcs = Tuple{Symbol, Symbol}[])
         @test valid_dot(hi)
         @test occursin("fillcolor=gold", hi)       # starvation/highlight fill present
         if renders(hi)

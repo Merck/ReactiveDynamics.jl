@@ -23,7 +23,7 @@ abstract type ActionStmt end
 """
     SetMarking(name, value, mode = :set)
 
-Action (`ActionStmt`) that writes a plain-species pool column of `state.u`: for species `name`, evaluate `value` (an `Expr`/literal, through the seeded closure path) and either set it (`mode = :set`) or increment it (`mode = :inc`).
+Action (`ActionStmt`) that writes a plain-place pool column of `state.u`: for place `name`, evaluate `value` (an `Expr`/literal, through the seeded closure path) and either set it (`mode = :set`) or increment it (`mode = :inc`).
 """
 struct SetMarking <: ActionStmt
     name::Symbol
@@ -54,7 +54,7 @@ end
 """
     SetTokens(predicate, assigns)
 
-Action (`ActionStmt`) that writes `assigns` (`field => value-expr` pairs) over the token population selected by `predicate` — the population generalization of `SetField` (ADR 0011 §A). Because it carries its own predicate it is legal in a `Rule`. Matched tokens are iterated in the `(species, creation_index)` total order (§9.2), and each value is evaluated IN THE SELECTED TOKEN's context (so `@field(name)` reads that token's own current attribute). `predicate` is a `TokenPredicate` (ADR 0008); a `(kind, clauses)` tuple form is also accepted.
+Action (`ActionStmt`) that writes `assigns` (`field => value-expr` pairs) over the token population selected by `predicate` — the population generalization of `SetField` (ADR 0011 §A). Because it carries its own predicate it is legal in a `Rule`. Matched tokens are iterated in the `(place, creation_index)` total order (§9.2), and each value is evaluated IN THE SELECTED TOKEN's context (so `@field(name)` reads that token's own current attribute). `predicate` is a `TokenPredicate` (ADR 0008); a `(kind, clauses)` tuple form is also accepted.
 """
 struct SetTokens <: ActionStmt
     predicate::Any
@@ -191,16 +191,16 @@ function set_guard!(state::ReactionNetworkProblem, t::Symbol, guard)
     return state.transition_recipes[:transGuard][ix] = state.wrap_fun(guard)
 end
 
-# Live-phase guard (ADR 0007 §A): species identification (equalize!) reindexes the :S table via
+# Live-phase guard (ADR 0007 §A): place identification (equalize!) reindexes the :S table via
 # rem_parts! (operators/equalize.jl), which would invalidate the construction-frozen, position-
 # indexed compiled closures (ADR 0004 INV-2). It is an AUTHORING-only op; calling it on a
 # constructed/live ReactionNetworkProblem must refuse rather than corrupt the closures. (The
 # authoring-phase equalize!(::ReactionNetwork, …) stays unrestricted.)
 function equalize!(state::ReactionNetworkProblem, args...)
     return error(
-        "equalize! reindexes the species table (rem_parts!) and is illegal on a live, constructed " *
+        "equalize! reindexes the place table (rem_parts!) and is illegal on a live, constructed " *
             "model (ADR 0004 INV-2 / ADR 0007 §A): the position-indexed compiled closures are frozen " *
-            "at construction. Identify species at AUTHORING time, before ReactionNetworkProblem(...).",
+            "at construction. Identify place at AUTHORING time, before ReactionNetworkProblem(...).",
     )
 end
 
@@ -222,7 +222,7 @@ Perform the action `a` against `state`, dispatching on the concrete `ActionStmt`
 """
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetMarking)
     ix = find_index(a.name, state)
-    isnothing(ix) && error("SetMarking: unknown species $(a.name)")
+    isnothing(ix) && error("SetMarking: unknown place $(a.name)")
     v = _eval_value(state, transition, a.value)
     if a.mode === :inc
         state.u[ix] += v
@@ -249,7 +249,7 @@ function apply_action!(state::ReactionNetworkProblem, transition, a::SetField)
 end
 
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetTokens)
-    # Iterate matched tokens in the (species, creation_index) total order (§9.2) and write each
+    # Iterate matched tokens in the (place, creation_index) total order (§9.2) and write each
     # field. SetTokens is the population generalization of SetField (ADR 0011 §A), so a value is
     # evaluated IN THE SELECTED TOKEN's context via `eval_with_token` (NOT `_eval_value`): that
     # rewrites every `@field(name)` to a literal read of the token's own current attribute before

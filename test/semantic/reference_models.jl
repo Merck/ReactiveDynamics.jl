@@ -172,7 +172,7 @@ using Statistics
 
     # [pharma-pipeline-runs] tier=T1-characterization expectedStatus=pass-now
     # contract: Brief reference-model criterion (toy-pharma pipeline runs; Discovery->...->market); tutorial/toy_pharma_model.jl lines 4-42
-    # note: Verified runs to completion; sol columns are exactly the 4 species + t (NOTE construction order
+    # note: Verified runs to completion; sol columns are exactly the 4 place + t (NOTE construction order
     # note: ['t','scientist','budget','candidate_compound','marketed_drug'] != author order — index by NAME).
     # note: @register the α/β rate fns BEFORE building, exactly as the tutorial does. No maxlifetime/nonblock so
     # note: the known bugs are not triggered.
@@ -376,7 +376,7 @@ using Statistics
 
     # [nonblock-free-credits-resource] tier=T1-characterization expectedStatus=pass-now
     # contract: Contract §1.3 row 5 (nonblock free path) / §3.4 Invariant 1 (resource non-negativity)
-    # note: Stage A FIXED the free path: free_blocked_species! no longer references the undefined q, so an
+    # note: Stage A FIXED the free path: free_blocked_places! no longer references the undefined q, so an
     # note: in-flight @nonblock token (cycletime>0) no longer throws UndefVarError. The run now completes and the
     # note: freed :nonblock resource is credited back. Verified under seed=1: simulate runs clean, A stays
     # note: non-negative (100 -> 94) and finite, B grows (0 -> 7). Was a @test_throws pin of the crash; flipped
@@ -388,7 +388,7 @@ using Statistics
         @prob_init m A = 100 B = 0
         @prob_meta m tspan = 10 dt = 1.0
         prob = ReactionNetworkProblem(m; seed = 1)
-        @test (simulate(prob); true)            # completes — no UndefVarError from free_blocked_species!
+        @test (simulate(prob); true)            # completes — no UndefVarError from free_blocked_places!
         @test all(prob.sol.A .>= -1.0e-9)         # freed @nonblock resource credited back; A never negative
         @test all(isfinite, prob.sol.A) && all(isfinite, prob.sol.B)   # trajectory stays finite
     end

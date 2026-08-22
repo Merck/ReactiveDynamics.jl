@@ -16,7 +16,7 @@
 # not interact: attribution here is eval-free, append-only, and consumes NO randomness.
 #
 # ── The attribution rule (chosen, with its boundary documented) ─────────────────────────
-# A transition's per-tick resource COST is `Σ_s allocs[s] · placeCost[s]` over the species it
+# A transition's per-tick resource COST is `Σ_s allocs[s] · placeCost[s]` over the place it
 # consumed this tick — the SAME quantity the aggregate `:valuation_cost` row sums (solvers.jl
 # `evolve!`). We attribute that transition's cost to the structured token(s) BOUND to it this tick,
 # split EVENLY across them:
@@ -32,7 +32,7 @@
 #     split by per-token stoichiometric weight, or by a token "size" field — are equally defensible;
 #     even split is chosen for being the simplest order-independent rule and because the demo's
 #     transitions each bind one token, where every split rule coincides.)
-#   • A PLAIN-species-only transition (no bound structured token — e.g. the `financing` inflow, or a
+#   • A PLAIN-place-only transition (no bound structured token — e.g. the `financing` inflow, or a
 #     classic non-agentic reaction) has NO program to attribute to. Its cost is recorded against the
 #     network-level UNATTRIBUTED bucket (`state.unattributed_cost`), NOT silently dropped — so the
 #     per-program rows + the unattributed bucket SUM EXACTLY to the aggregate `:valuation_cost` row
@@ -50,7 +50,7 @@
 #
 # ── Determinism (§4 D4) ─────────────────────────────────────────────────────────────────
 # Attribution draws NO randomness and is append-only. The per-tick `:program_ledger` log row
-# iterates tokens in the deterministic (species, creation_index) total order (`token_sortkey`,
+# iterates tokens in the deterministic (place, creation_index) total order (`token_sortkey`,
 # src/predicates.jl), so the ledger is byte-for-byte reproducible under a fixed seed and is rebuilt
 # (cleared) by `_reinit!` exactly like `creation_counters` (closing §4 D7 for the ledger).
 
@@ -69,13 +69,13 @@ function _program_ledger!(state::ReactionNetworkProblem, token)
     led = get(state.program_ledgers, name, nothing)
     if led === nothing
         ci = get(state.creation_index, name, 0)
-        led = ProgramLedger(get_species(token), ci)
+        led = ProgramLedger(get_place(token), ci)
         state.program_ledgers[name] = led
     end
     return led
 end
 
-# Cost of one transition this tick: `Σ_s consumed[s] · placeCost[s]` over the species column
+# Cost of one transition this tick: `Σ_s consumed[s] · placeCost[s]` over the place column
 # `consumed` (one transition's allocation). This is the per-transition decomposition of the
 # aggregate `actual_allocs' · placeCost` the `:valuation_cost` row sums.
 function _transition_cost(state::ReactionNetworkProblem, consumed::AbstractVector)
@@ -155,17 +155,17 @@ function attribute_reward!(
     return reward
 end
 
-# Recompute each program's mark-to-market valuation as its species' `placeValuation` unit value
+# Recompute each program's mark-to-market valuation as its place' `placeValuation` unit value
 # (so the per-program valuations of live tokens sum to the structured part of the aggregate
 # `:valuation` row). Overwrites `valuation` (it is a STOCK, not a flow — unlike cost/reward which
 # accumulate), so it is NOT appended to `entries`. Iterated in deterministic token order. Tokens
-# whose species carries no `placeValuation` (the BD case, where valuation is a post-hoc rNPV roll-up,
+# whose place carries no `placeValuation` (the BD case, where valuation is a post-hoc rNPV roll-up,
 # MVP finding D) keep valuation 0.0 here — the demo reads cost/reward from this ledger and computes
 # rNPV itself.
 function attribute_valuation!(state::ReactionNetworkProblem)
     container = getagent(state, "structured")
     for tok in collect(values(inners(container)))
-        sp = get_species(tok)
+        sp = get_place(tok)
         sp === nothing && continue
         i = find_index(sp, state)
         i === nothing && continue
@@ -179,7 +179,7 @@ end
 # A `(:program_ledger, t, Dict(token_name => (cost, reward, valuation)))` row whose per-program
 # `cost`/`reward` entries (PLUS the tick's unattributed deltas, carried on the row) reconcile to the
 # aggregate `:valuation_cost`/`:valuation_reward` rows of the same tick. Tokens are iterated in the
-# deterministic (species, creation_index) order so the row is reproducible (§4 D4). `cost`/`reward`
+# deterministic (place, creation_index) order so the row is reproducible (§4 D4). `cost`/`reward`
 # here are the RUNNING totals (matching the running `cost_incurred`/`reward_realized` fields); a
 # consumer wanting per-tick flow diffs successive rows.
 function push_program_ledger_row!(state::ReactionNetworkProblem)
@@ -202,15 +202,15 @@ end
     program_ledger(state) -> DataFrame
 
 Per-program (per-structured-token) cost/reward/valuation summary for a finished (or in-progress)
-run, in the deterministic (species, creation_index) token order (§4 D4) — the engine-level
+run, in the deterministic (place, creation_index) token order (§4 D4) — the engine-level
 replacement for the BD demo's post-hoc reconstruction (MVP finding D). Columns:
 
   `program`         the token's stable network identity (`AlgebraicAgents.getname`)
-  `species`         the token's CURRENT species/kind (`:removed` if soft-retired)
-  `creation_index`  the per-species monotonic creation index (ADR 0006 §E) — the order key
+  `place`         the token's CURRENT place/kind (`:removed` if soft-retired)
+  `creation_index`  the per-place monotonic creation index (ADR 0006 §E) — the order key
   `cost_incurred`   total capital burned on behalf of this program (sum of its bind-cost shares)
   `reward_realized` total reward credited when a transition it was bound to finished successfully
-  `valuation`       current mark-to-market = the species' `placeValuation` (0 when none — see header)
+  `valuation`       current mark-to-market = the place' `placeValuation` (0 when none — see header)
   `net`             reward_realized − cost_incurred (the realized economics to date)
 
 The per-program `cost_incurred` summed over ALL programs PLUS `state.unattributed_cost` equals the
@@ -231,7 +231,7 @@ function program_ledger(state::ReactionNetworkProblem)
     end
     extra = sort(
         [k for k in keys(state.program_ledgers) if !(k in seen)];
-        by = k -> (string(state.program_ledgers[k].species), state.program_ledgers[k].creation_index, k),
+        by = k -> (string(state.program_ledgers[k].place), state.program_ledgers[k].creation_index, k),
     )
     append!(rows_name, extra)
 
@@ -248,8 +248,8 @@ function program_ledger(state::ReactionNetworkProblem)
     for name in rows_name
         led = get(state.program_ledgers, name, nothing)
         led === nothing && continue
-        # current species: prefer the live token (it may have advanced/retired since first bind)
-        sp = haskey(live_by_name, name) ? get_species(live_by_name[name]) : led.species
+        # current place: prefer the live token (it may have advanced/retired since first bind)
+        sp = haskey(live_by_name, name) ? get_place(live_by_name[name]) : led.place
         push!(
             df,
             (

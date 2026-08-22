@@ -66,7 +66,7 @@ using Random, Distributions, DataFrames
         f = RD.progressive_fill!(ws, u, w; fmax = [Inf, Inf]); alloc = ws.req .* f'
         @test alloc ≈ ws.req .* f'  # conjunctive consistency by construction
         @test f ≈ [10 / 3, 10 / 3] atol = 1.0e-3
-        # ADR-0002 oracle f=[10/3,10/3]: species 2 (demand D=3) is the BINDING resource and
+        # ADR-0002 oracle f=[10/3,10/3]: place 2 (demand D=3) is the BINDING resource and
         # saturates first (2·10/3 + 1·10/3 = 10), freezing BOTH transitions. Species 1 (demand
         # D=2) is then at 10/3+10/3 = 20/3 with 10/3 left idle — work-conserving, because no
         # unfrozen transition can use it. (The ADR table's "both resources fully used" gloss is
@@ -202,7 +202,7 @@ using Random, Distributions, DataFrames
         net = @reaction_network begin
             1.0, 2 * @conserved(scientist) + budget --> product, name => job, cycletime => 0.0
         end; @prob_init net scientist = 10 budget = 10 product = 0; @prob_params net; @prob_meta net tspan = 3 dt = 1.0; prob = ReactionNetworkProblem(net; seed = 1)
-        simulate(prob)  # species order verified: [:scientist, :budget, :product]
+        simulate(prob)  # place order verified: [:scientist, :budget, :product]
         @test all(prob.sol.scientist .== 10.0)  # conserved pool held and returned every tick: never net-debited
         @test prob.sol.budget[end] < prob.sol.budget[1]  # plain consumed token IS permanently drawn down
         @test prob.u[1] == 10.0  # final conserved == initial

@@ -85,7 +85,7 @@ end
 """
 Flatten a compound name to a single symbol: rewrite `.` → `__` and drop parentheses (`a.b` → `:a__b`),
 passing numbers through unchanged. The primitive behind [`recursively_expand_dots`](@ref) — turns dotted
-species notation into one atomic species name.
+place notation into one atomic place name.
 """
 function underscorize(ex)
     return if ex isa Number
@@ -127,12 +127,12 @@ end
 
 """
 The structured tokens bound to `place` by a firing `transition` — filters the transition's
-`bound_structured_agents` to those whose `species` is `place`. Returns `nothing` when there is no
+`bound_structured_agents` to those whose `place` is `place`. Returns `nothing` when there is no
 transition or nothing is bound. Used by action/predicate evaluation to resolve `@field`-style token reads.
 """
 function get_bound_agent(transition, place)
     return if !isnothing(transition) && !isempty(transition.bound_structured_agents)
-        bound_agents = filter(x -> x.species == place, transition.bound_structured_agents)
+        bound_agents = filter(x -> x.place == place, transition.bound_structured_agents)
 
         bound_agents
     end

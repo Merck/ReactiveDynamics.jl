@@ -20,8 +20,8 @@ ifs = [:&&, :if]
 
 reserved_sampling_macros = [:register, :sample, :take]
 
-struct Reactant
-    species::Symbol
+struct ArcTerm
+    place::Symbol
     stoich::SampleableValues
     modality::Set{Symbol}
 end
@@ -95,7 +95,7 @@ end
 
 """
 Build the expression that constructs a [`ReactionNetwork`](@ref) from a `@reaction_network` body `ex`:
-flatten the block ([`unblock_shallow!`](@ref)) and splice the parsed `(transitions, reactants, obs,
+flatten the block ([`unblock_shallow!`](@ref)) and splice the parsed `(transitions, arcs, obs,
 events)` from [`get_data`](@ref) into the constructor call. The core of the [`@reaction_network`](@ref)
 macro.
 """
@@ -129,41 +129,41 @@ end
 symbolize(pairex) = pairex isa Number ? pairex : (pairex.args[2] => pairex.args[3])
 
 """
-Parse a `@reaction_network`/`@push` body `ex` into `(transitions, reactants, pcs, events)` — the tuple
+Parse a `@reaction_network`/`@push` body `ex` into `(transitions, arcs, pcs, events)` — the tuple
 the network constructor consumes. Splits a `begin … end` block line-by-line (or handles a single line),
 dispatching each to [`get_data!`](@ref). `pcs` collects the lifted `@register` computed-value declarations.
 """
 function get_data(ex)
     trans = []
     evs = []
-    reactants = []
+    arcs = []
     pcs = []
     if isexpr(ex, :block)
         ex = striplines(ex)
         esc_dollars!(ex)
         foreach(
-            l -> get_data!(trans, reactants, pcs, evs, isexpr(l, :tuple) ? l.args : [l]),
+            l -> get_data!(trans, arcs, pcs, evs, isexpr(l, :tuple) ? l.args : [l]),
             ex.args,
         )
     elseif ex != :()
-        get_data!(trans, reactants, pcs, evs, ex)
+        get_data!(trans, arcs, pcs, evs, ex)
     end
 
-    return trans, reactants, pcs, evs
+    return trans, arcs, pcs, evs
 end
 
 """
 Route one parsed line into the right bucket: an `if`/conditional line becomes an event
 ([`get_events!`](@ref)), anything else a transition ([`get_transitions!`](@ref)). Accumulates into the
-caller's `trans`/`reactants`/`pcs`/`evs` collections. Called per line by [`get_data`](@ref).
+caller's `trans`/`arcs`/`pcs`/`evs` collections. Called per line by [`get_data`](@ref).
 """
-function get_data!(trans, reactants, pcs, evs, exs)
+function get_data!(trans, arcs, pcs, evs, exs)
     length(exs) == 0 && return
 
     return if exs[1] isa Expr && (exs[1].head ∈ ifs)
         get_events!(evs, normalize_pcs!(pcs, exs[1]))
     else
-        get_transitions!(trans, reactants, pcs, exs)
+        get_transitions!(trans, arcs, pcs, exs)
     end
 end
 
@@ -223,15 +223,15 @@ end
 
 """
 Parse one transition line `exs` (`rate, reaction_line, key => value…`) into `trans`: prune the reaction
-line into reactant terms ([`prune_reaction_line!`](@ref)), lower the rate ([`expand_rate`](@ref)), and
+line into arc terms ([`prune_reaction_line!`](@ref)), lower the rate ([`expand_rate`](@ref)), and
 fold the trailing attributes (resolving their pretty-name aliases against `prettynames`, defaults from
 `defargs[:T]`) into the transition's attribute dict. Appends `(rate, rxs) => args` entries.
 """
-function get_transitions!(trans, reactants, pcs, exs)
+function get_transitions!(trans, arcs, pcs, exs)
     args = empty(defargs[:T])
 
     (rate, r_line) = exs[1:2]
-    rxs = prune_reaction_line!(pcs, reactants, r_line)
+    rxs = prune_reaction_line!(pcs, arcs, r_line)
     rate = expand_rate(rate)
     rxs = rxs isa Tuple ? tuple.(fill(rate, length(rxs)), rxs) : ((rate, rxs),)
 
@@ -295,12 +295,12 @@ function normalize_pcs!(pcs, expr)
 end
 
 """
-Normalize a reaction `line` and collect its species into `reactants`: rewrite `-->` to the canonical
+Normalize a reaction `line` and collect its place into `arcs`: rewrite `-->` to the canonical
 `→`, split a bidirectional `⟷` line into its forward/backward pair, and descend into the LHS/RHS to
-register reactant names ([`recursively_find_reactants!`](@ref)). Also threads the `pcs` computed-value
+register arc names ([`recursively_find_arcs!`](@ref)). Also threads the `pcs` computed-value
 accumulator through. Returns the normalized line(s). Called by [`get_transitions!`](@ref).
 """
-function prune_reaction_line!(pcs, reactants, line)
+function prune_reaction_line!(pcs, arcs, line)
     line isa Expr &&
         (line.head == :-->) &&
         (line = Expr(:call, :→, line.args[1], line.args[2]))
@@ -324,21 +324,21 @@ function prune_reaction_line!(pcs, reactants, line)
                 Expr(
                     :tuple,
                     line.args[i].args[1],
-                    prune_reaction_line!(pcs, reactants, line.args[i].args[2]),
+                    prune_reaction_line!(pcs, arcs, line.args[i].args[2]),
                 )
             else
-                prune_reaction_line!(pcs, reactants, line.args[i])
+                prune_reaction_line!(pcs, arcs, line.args[i])
             end
         end
     elseif line isa Expr && line.args[1] ∈ union(fwd_arrows, bwd_arrows)
         line.args[2:3] =
-            recursively_find_reactants!.(Ref(reactants), Ref(pcs), line.args[2:3])
+            recursively_find_arcs!.(Ref(arcs), Ref(pcs), line.args[2:3])
     elseif line isa Expr && line.args[1] ∈ double_arrows
         biarrow = nothing
         prewalk(ex -> (ex ∈ double_arrows && (biarrow = ex); ex), line)
         line = prune_reaction_line!.(
             Ref(pcs),
-            Ref(reactants),
+            Ref(arcs),
             (replace_in_expr(line, biarrow => :⟶), replace_in_expr(line, biarrow => :⟵)),
         )
     end
@@ -347,31 +347,31 @@ function prune_reaction_line!(pcs, reactants, line)
 end
 
 """
-Walk one side of a reaction line at AUTHORING time and register each species NAME into `reactants`
+Walk one side of a reaction line at AUTHORING time and register each place NAME into `arcs`
 (distributing `*`/`+`, and descending into `@choose` alternatives). RHS macrocalls are handled specially:
 `@structured` is validated to the named `(:Kind, field=value…)` form and left intact (the raw
 constructor form is rejected so the IR stays eval-free), `@move`/`@advance` pass through, and `@select`
-registers only its KIND as a species (its clause fields are token attributes, not species). The
-authoring-time twin of the runtime [`recursive_find_reactants!`](@ref) in reaction_parser.jl.
+registers only its KIND as a place (its clause fields are token attributes, not place). The
+authoring-time twin of the runtime [`recursive_find_arcs!`](@ref) in reaction_parser.jl.
 """
-function recursively_find_reactants!(reactants, pcs, ex)
+function recursively_find_arcs!(arcs, pcs, ex)
     if typeof(ex) != Expr || isexpr(ex, :.) || (ex.head == :escape)
         if (ex == 0 || in(ex, empty_set))
             return :∅
         else
-            push!(reactants, recursively_expand_dots(ex))
+            push!(arcs, recursively_expand_dots(ex))
         end
     elseif ex.args[1] == :*
-        recursively_find_reactants!(reactants, pcs, ex.args[end])
+        recursively_find_arcs!(arcs, pcs, ex.args[end])
         foreach(i -> ex.args[i] = normalize_pcs!(pcs, ex.args[i]), 2:(length(ex.args) - 1))
     elseif ex.args[1] == :+
         for i in 2:length(ex.args)
-            recursively_find_reactants!(reactants, pcs, ex.args[i])
+            recursively_find_arcs!(arcs, pcs, ex.args[i])
         end
     elseif isexpr(ex, :macrocall) && macroname(ex) == :choose
         for i in 3:length(ex.args)
-            recursively_find_reactants!(
-                reactants,
+            recursively_find_arcs!(
+                arcs,
                 pcs,
                 isexpr(ex.args[i], :tuple) ? ex.args[i].args[2] : ex.args[i],
             )
@@ -380,7 +380,7 @@ function recursively_find_reactants!(reactants, pcs, ex)
         # @structured(:Kind, field = value, …) — the named, registry-resolved genesis product is
         # the ONLY supported form (ADR 0005 §39 / 0006 §C): args[3] is the quoted kind symbol, the
         # rest are `field = value` pairs. The raw `@structured(Ctor(…))` form (an inline host
-        # constructor Expr) was REMOVED — it was the sole reactant construct that could not
+        # constructor Expr) was REMOVED — it was the sole arc construct that could not
         # round-trip through the eval-free JSON IR, so forbidding it makes eval-free serialization a
         # TOTAL invariant (every genesis product is data). Reject the raw form at construction time.
         (length(ex.args) >= 3 && ex.args[3] isa QuoteNode) || error(
@@ -394,16 +394,16 @@ function recursively_find_reactants!(reactants, pcs, ex)
     elseif isexpr(ex, :macrocall) && macroname(ex) ∈ [:move, :advance]
         return ex
     elseif isexpr(ex, :macrocall) && macroname(ex) == :select
-        # @select(Kind, clauses): register only the KIND as a species; the clause fields
-        # (phase, npv, …) are token attributes, NOT species, so they must not be registered.
-        push!(reactants, ex.args[3])
+        # @select(Kind, clauses): register only the KIND as a place; the clause fields
+        # (phase, npv, …) are token attributes, NOT place, so they must not be registered.
+        push!(arcs, ex.args[3])
     elseif isexpr(ex, :macrocall)
         pass_value = ex.args[3] isa QuoteNode ? ex.args[3].value : ex.args[3]
-        recursively_find_reactants!(reactants, pcs, pass_value)
+        recursively_find_arcs!(arcs, pcs, pass_value)
     elseif isexpr(ex, :call)
-        push!(reactants, ex.args[1])
+        push!(arcs, ex.args[1])
     else
-        push!(reactants, underscorize(ex))
+        push!(arcs, underscorize(ex))
     end
 
     return ex

@@ -83,7 +83,7 @@ _attr_node(x::AbstractString) = Const(Symbol(x))   # a string scalar is a litera
 # ── Build a ReactionNetwork from a parsed model dict (E2: scalar attrs) ─────
 # Lowers each ExprNode to the Expr column the constructor consumes. Transitions are assembled
 # from reactants[] into the :trans reaction line (E4); for E2 a transition may carry an explicit
-# `reaction` string-free node-list, but the minimal path supports params + species + a transition
+# `reaction` string-free node-list, but the minimal path supports params + place + a transition
 # whose reactants[] are plain (no modality/predicate) — assembled by assemble_reaction_line (E4).
 """
     build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()) -> ReactionNetwork
@@ -212,33 +212,33 @@ function from_json_model(json::AbstractString; seed = nothing, registry = Dict{S
     )
 end
 
-# The declared species + param NAME sets, typed Set{Symbol} (an empty comprehension would infer
+# The declared place + param NAME sets, typed Set{Symbol} (an empty comprehension would infer
 # Set{Any}, which from_expr/rate_from_expr reject). Threaded into every from_expr call so a stored
 # attribute Expr's bare symbols classify back to the right NodeRef kind.
 function _name_sets(net::ReactionNetwork)
-    species = Set{Symbol}(net[i, :placeName] for i in row_ids(net, :S))
+    places = Set{Symbol}(net[i, :placeName] for i in row_ids(net, :S))
     params = Set{Symbol}(net[i, :prmName] for i in row_ids(net, :P) if !isnothing(net[i, :prmName]))
-    return species, params
+    return places, params
 end
 
 # model_to_dict is the EXPORT envelope — the structural inverse of build_network_from_dict
 # (~line 73). It emits every top-level array build_network_from_dict reads back: params[], species[],
 # transitions[], reactants[], observables[], plus rules[] when the caller passes a constructed
 # model's typed Rule vector (a DSL/loaded model → JSON → from_json_model → equivalent model).
-# The species/param NAME SETS are threaded into every from_expr call below so a stored attribute
-# Expr's bare symbols are classified back to the right NodeRef kind (species vs param), matching
+# The place/param NAME SETS are threaded into every from_expr call below so a stored attribute
+# Expr's bare symbols are classified back to the right NodeRef kind (place vs param), matching
 # how the authoring DSL named them — exactly the inverse of to_expr's name→state.u[i]/state.p[:k]
 # substitution (ADR 0005 §66).
 """
     model_to_dict(net::ReactionNetwork; meta = Dict{String, Any}(), rules = [], inputs = Dict{Symbol, Any}()) -> Dict{String, Any}
 
-The EXPORT envelope: emit the JSON dict of a static [`ReactionNetwork`](@ref) — every top-level array [`build_network_from_dict`](@ref) reads back (`params[]`/`species[]`/`transitions[]`/`reactants[]`, plus `observables[]`/`rules[]`/`inputs[]` when present), and hence its structural inverse. Each stored attribute `Expr` is lowered back to an [`ExprNode`](@ref) dict via [`from_expr`](@ref), with the net's species/param NAME sets threaded through so a bare symbol classifies to the right `NodeRef` kind (matching how the DSL named it). `rules`/`inputs` are passed through by `to_json_model(::ReactionNetworkProblem)` since they live on the problem, not the net; legacy `:E` event rows and `RawExpr` actions are intentionally not emitted (not JSON-serializable). Called by [`to_json_model`](@ref).
+The EXPORT envelope: emit the JSON dict of a static [`ReactionNetwork`](@ref) — every top-level array [`build_network_from_dict`](@ref) reads back (`params[]`/`species[]`/`transitions[]`/`reactants[]`, plus `observables[]`/`rules[]`/`inputs[]` when present), and hence its structural inverse. Each stored attribute `Expr` is lowered back to an [`ExprNode`](@ref) dict via [`from_expr`](@ref), with the net's place/param NAME sets threaded through so a bare symbol classifies to the right `NodeRef` kind (matching how the DSL named it). `rules`/`inputs` are passed through by `to_json_model(::ReactionNetworkProblem)` since they live on the problem, not the net; legacy `:E` event rows and `RawExpr` actions are intentionally not emitted (not JSON-serializable). Called by [`to_json_model`](@ref).
 """
 function model_to_dict(
         net::ReactionNetwork; meta = Dict{String, Any}(), rules = [],
         inputs = Dict{Symbol, Any}()
     )
-    species, params = _name_sets(net)
+    places, params = _name_sets(net)
     d = Dict{String, Any}(
         "rd_format" => "reactive-dynamics-model",
         "version" => "1.0",
@@ -247,9 +247,9 @@ function model_to_dict(
             Dict{String, Any}("name" => string(net[i, :prmName]), "value" => net[i, :prmVal])
                 for i in row_ids(net, :P) if !isnothing(net[i, :prmName])
         ],
-        "species" => [_species_to_dict(net, i) for i in row_ids(net, :S)],
-        "transitions" => [_transition_to_dict(net, i; species, params) for i in row_ids(net, :T)],
-        "reactants" => _reactants_to_dict(net),
+        "species" => [_place_to_dict(net, i) for i in row_ids(net, :S)],
+        "transitions" => [_transition_to_dict(net, i; places, params) for i in row_ids(net, :T)],
+        "reactants" => _arcs_to_dict(net),
     )
     # observables[] (the inverse of _load_observables!, ~line 413) — emit only if any :obs row.
     obs = [obs_to_dict(net[i, :obsName], net[i, :obsOpts]) for i in row_ids(net, :obs)]
@@ -321,7 +321,7 @@ end
 # The inverse: recover (bare-intensity ExprNode, rate_mode) from a stored :transRate Expr, so a
 # DSL-authored model can be serialized to JSON. A wrapped `rand(state.rng, Poisson(max(state.dt *
 # <bare>, 0)))` ⇒ (<bare>, :poisson); anything else ⇒ (rate, :deterministic).
-function rate_from_expr(rate; species = Set{Symbol}(), params = Set{Symbol}())
+function rate_from_expr(rate; places = Set{Symbol}(), params = Set{Symbol}())
     if rate isa Expr && rate.head == :call && rate.args[1] == :rand
         distcall = rate.args[end]
         if distcall isa Expr && distcall.head == :call && distcall.args[1] == :Poisson
@@ -330,25 +330,25 @@ function rate_from_expr(rate; species = Set{Symbol}(), params = Set{Symbol}())
                 prod = maxcall.args[2]                       # state.dt * <bare>
                 if prod isa Expr && prod.head == :call && prod.args[1] == :*
                     bare = prod.args[3]                      # the bare intensity (state.dt is args[2])
-                    return from_expr(bare; species, params), :poisson
+                    return from_expr(bare; places, params), :poisson
                 end
             end
         end
     end
-    return from_expr(rate; species, params), :deterministic
+    return from_expr(rate; places, params), :deterministic
 end
 
 # ── Reaction-line assembly (E4) ─────────────────────────────────────────────────────────
 # Assemble a transition's reactants[] (grouped lhs/rhs) into the single :trans reaction-line Expr
-# `LHS --> RHS` that merge_network!/the runtime parser consume. A reactant row may carry: `species`
+# `LHS --> RHS` that merge_network!/the runtime parser consume. A arc row may carry: `place`
 # (or a `predicate` for @select on the LHS), `stoich`, `modality` (3-axis, LHS), or `advance`
 # (field+value, an RHS @advance) — assembled into exactly the macrocall Expr shapes the parser
 # (reaction_parser.jl / create.jl) expects.
 const _LN = LineNumberNode(0, :none)
 
-# The species "atom" of a reactant: a bare species symbol, or a @select(Kind, clauses) macrocall
+# The place "atom" of a arc: a bare place symbol, or a @select(Kind, clauses) macrocall
 # (LHS predicate), or a @advance(field, value)/@structured/@move macrocall (RHS).
-function _reactant_atom(r::AbstractDict)
+function _arc_atom(r::AbstractDict)
     if haskey(r, "predicate")                       # @select(Kind, clause && clause …)
         pd = r["predicate"]
         kind = Symbol(pd["kind"])
@@ -390,21 +390,21 @@ function _clause_expr(c)
 end
 
 # Wrap an LHS atom in its modality macros (@conserved/@rate/@nonblock) per the 3-axis modality.
-# The parser unions these macro names into the reactant's modality Set (reaction_parser.jl).
+# The parser unions these macro names into the arc's modality Set (reaction_parser.jl).
 function _apply_modality(atom, m)
     m === nothing && return atom
     s = m isa AbstractDict ? modality_from_dict(m) : m   # Set{Symbol}
     out = atom
-    # nest so the innermost wraps the species; order is irrelevant (the parser unions a Set)
+    # nest so the innermost wraps the place; order is irrelevant (the parser unions a Set)
     :conserved in s && (out = Expr(:macrocall, Symbol("@conserved"), _LN, out))
     :rate in s && (out = Expr(:macrocall, Symbol("@rate"), _LN, out))
     :nonblock in s && (out = Expr(:macrocall, Symbol("@nonblock"), _LN, out))
     return out
 end
 
-# A full reactant term: optional integer stoich coefficient × the (modality-wrapped) atom.
-function _reactant_term(r::AbstractDict; lhs::Bool)
-    atom = _reactant_atom(r)
+# A full arc term: optional integer stoich coefficient × the (modality-wrapped) atom.
+function _arc_term(r::AbstractDict; lhs::Bool)
+    atom = _arc_atom(r)
     lhs && haskey(r, "modality") && (atom = _apply_modality(atom, r["modality"]))
     stv = to_expr(_attr_node(get(r, "stoich", 1)))
     return (stv == 1 || stv === 1.0) ? atom : Expr(:call, :*, stv, atom)
@@ -416,9 +416,9 @@ function _sum_terms(terms)
     return foldl((a, b) -> Expr(:call, :+, a, b), terms)
 end
 
-function assemble_reaction_line(reactants)
-    lhs = [_reactant_term(r; lhs = true) for r in reactants if String(r["side"]) == "lhs"]
-    rhs = [_reactant_term(r; lhs = false) for r in reactants if String(r["side"]) == "rhs"]
+function assemble_reaction_line(arcs)
+    lhs = [_arc_term(r; lhs = true) for r in arcs if String(r["side"]) == "lhs"]
+    rhs = [_arc_term(r; lhs = false) for r in arcs if String(r["side"]) == "rhs"]
     return Expr(:call, :→, _sum_terms(lhs), _sum_terms(rhs))
 end
 
@@ -428,7 +428,7 @@ end
 # bridge for non-typed Exprs — a JSON model uses typed verbs only; ADR 0005 open question).
 #
 # NOTE (serialize-direction fidelity): the to_dict path lowers a stored action-value Expr back to
-# a node via from_expr WITHOUT a species/params context, so a bare symbol classifies to its
+# a node via from_expr WITHOUT a place/params context, so a bare symbol classifies to its
 # default NodeRef(:species, …). This is runtime-harmless — both NodeRef kinds lower to the same
 # bare symbol via to_expr, so a from_json-loaded model is unaffected — and only mislabels the JSON
 # `ref.kind` tag when re-serializing a model whose actions were hand-built from raw Exprs. JSON-
@@ -627,7 +627,7 @@ Base.string(d::Diagnostic) = "[$(d.severity)] $(d.path): $(d.msg)"
 # governs whether a Field (@field) node is legal here (true only in a SetField/@advance value,
 # ADR 0008 §D — a Field in a predicate clause would crash at runtime since @field is a macro).
 function _validate_node!(
-        diags, d, path; species, params, obs, ports = Set{Symbol}(),
+        diags, d, path; places, params, obs, ports = Set{Symbol}(),
         allow_sample = true, allow_field = true
     )
     d isa AbstractDict || return diags        # a bare literal scalar — fine
@@ -638,20 +638,20 @@ function _validate_node!(
         kind = Symbol(get(d, "kind", ""))
         nm = Symbol(get(d, "name", ""))
         kind in REF_KINDS || push!(diags, Diagnostic(:error, path, "ref kind $kind ∉ $REF_KINDS"))
-        pool = kind === :species ? species : kind === :param ? params : obs
+        pool = kind === :species ? places : kind === :param ? params : obs
         nm in pool || push!(diags, Diagnostic(:error, path, "ref to undeclared $kind `$nm`"))
     elseif tag == "call"
         op = Symbol(get(d, "op", ""))
         op in OP_WHITELIST || push!(diags, Diagnostic(:error, path, "op $op ∉ OP_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, ports, allow_sample, allow_field)
+            _validate_node!(diags, a, "$path.args[$i]"; places, params, obs, ports, allow_sample, allow_field)
         end
     elseif tag == "sample"
         allow_sample || push!(diags, Diagnostic(:error, path, "Sample (RNG) is not 𝓕ₜ-measurable here (no draws in a predicate)"))
         Symbol(get(d, "dist", "")) in DIST_WHITELIST ||
             push!(diags, Diagnostic(:error, path, "dist $(get(d, "dist", "")) ∉ DIST_WHITELIST"))
         for (i, a) in enumerate(get(d, "args", []))
-            _validate_node!(diags, a, "$path.args[$i]"; species, params, obs, ports, allow_sample, allow_field)
+            _validate_node!(diags, a, "$path.args[$i]"; places, params, obs, ports, allow_sample, allow_field)
         end
     elseif tag == "field"
         allow_field || push!(
@@ -670,7 +670,7 @@ function _validate_node!(
         # ok
     elseif tag == "choose"
         for (i, alt) in enumerate(get(d, "alts", []))
-            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; species, params, obs, ports, allow_sample, allow_field)
+            _validate_node!(diags, get(alt, "value", nothing), "$path.alts[$i]"; places, params, obs, ports, allow_sample, allow_field)
         end
     else
         push!(diags, Diagnostic(:error, path, "unknown node tag `$tag`"))
@@ -685,11 +685,11 @@ _is_literal(x) = !(x isa AbstractDict) || get(x, "node", "") == "const"
 """
     validate(d::AbstractDict; registry = Dict{Symbol, Any}()) -> Vector{Diagnostic}
 
-Statically check a parsed model dict `d` against the closed, eval-free IR and return a `Vector{Diagnostic}` — it never runs a model field, so it is the trust boundary [`from_json_model`](@ref) gates on (construction proceeds only when the returned vector is empty). Checks include: every [`NodeRef`](@ref) names a declared species/param/observable, every [`Call`](@ref) op is in [`OP_WHITELIST`](@ref) and every [`Sample`](@ref) distribution in [`DIST_WHITELIST`](@ref), reference kinds are in [`REF_KINDS`](@ref), and a non-time-varying attribute is a bare literal rather than a non-trivial tree. Host functions named by an action/genesis `kind` are resolved by name through `registry`. Unexported; call it as `ReactiveDynamics.validate(dict)` to inspect a document directly.
+Statically check a parsed model dict `d` against the closed, eval-free IR and return a `Vector{Diagnostic}` — it never runs a model field, so it is the trust boundary [`from_json_model`](@ref) gates on (construction proceeds only when the returned vector is empty). Checks include: every [`NodeRef`](@ref) names a declared place/param/observable, every [`Call`](@ref) op is in [`OP_WHITELIST`](@ref) and every [`Sample`](@ref) distribution in [`DIST_WHITELIST`](@ref), reference kinds are in [`REF_KINDS`](@ref), and a non-time-varying attribute is a bare literal rather than a non-trivial tree. Host functions named by an action/genesis `kind` are resolved by name through `registry`. Unexported; call it as `ReactiveDynamics.validate(dict)` to inspect a document directly.
 """
 function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
     diags = Diagnostic[]
-    species = Set(Symbol(s["name"]) for s in get(d, "species", []))
+    places = Set(Symbol(s["name"]) for s in get(d, "species", []))
     structured = Set(Symbol(s["name"]) for s in get(d, "species", []) if get(s, "structured", false) === true)
     params = Set(Symbol(p["name"]) for p in get(d, "params", []))
     obs = Set(Symbol(o["name"]) for o in get(d, "observables", []))
@@ -697,7 +697,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
     ports = Set(Symbol(inp["port"]) for inp in get(d, "inputs", []))
     regnames = Set(keys(registry))
 
-    # rule 5 (TVE policy): init/cost-type species attrs must be literals; structured/modality too
+    # rule 5 (TVE policy): init/cost-type place attrs must be literals; structured/modality too
     for (i, s) in enumerate(get(d, "species", []))
         for k in ("init", "cost", "reward", "valuation")
             haskey(s, k) && !_is_literal(s[k]) &&
@@ -721,7 +721,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
     ids = Set{String}()
     for (i, tr) in enumerate(get(d, "transitions", []))
         push!(ids, string(tr["id"]))
-        haskey(tr, "rate") && _validate_node!(diags, tr["rate"], "transitions[$i].rate"; species, params, obs, ports)
+        haskey(tr, "rate") && _validate_node!(diags, tr["rate"], "transitions[$i].rate"; places, params, obs, ports)
         for (k, lo, hi) in (("prob_of_success", 0.0, 1.0),)
             if haskey(tr, k) && _is_literal(tr[k])
                 v = tr[k] isa AbstractDict ? get(tr[k], "value", nothing) : tr[k]
@@ -738,24 +738,24 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
         end
     end
 
-    # rule 2: dangling reactant FKs (+ §9.5 predicate well-formedness, rule 7)
+    # rule 2: dangling arc FKs (+ §9.5 predicate well-formedness, rule 7)
     for (i, r) in enumerate(get(d, "reactants", []))
         string(get(r, "transition", "")) in ids ||
             push!(diags, Diagnostic(:error, "reactants[$i].transition", "dangling FK `$(get(r, "transition", ""))`"))
         if haskey(r, "species")
-            Symbol(r["species"]) in species ||
-                push!(diags, Diagnostic(:error, "reactants[$i].species", "undeclared species `$(r["species"])`"))
+            Symbol(r["species"]) in places ||
+                push!(diags, Diagnostic(:error, "reactants[$i].species", "undeclared place `$(r["species"])`"))
         end
         if haskey(r, "predicate")   # rule 7: predicate over a structured kind; clause values 𝓕ₜ-measurable
             pd = r["predicate"]
             Symbol(get(pd, "kind", "")) in structured ||
-                push!(diags, Diagnostic(:error, "reactants[$i].predicate.kind", "kind `$(get(pd, "kind", ""))` is not a structured species"))
+                push!(diags, Diagnostic(:error, "reactants[$i].predicate.kind", "kind `$(get(pd, "kind", ""))` is not a structured place"))
             for (j, c) in enumerate(get(pd, "clauses", []))
                 Symbol(c[2]) in PRED_OP_WHITELIST ||
                     push!(diags, Diagnostic(:error, "reactants[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
                 # the clause VALUE must be 𝓕ₜ-measurable (no Sample)
                 c[3] isa AbstractDict &&
-                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; species, params, obs, ports, allow_sample = false, allow_field = false)
+                    _validate_node!(diags, c[3], "reactants[$i].predicate.clauses[$j].value"; places, params, obs, ports, allow_sample = false, allow_field = false)
             end
         end
         if haskey(r, "structured")   # named @structured(:Kind, field = value, …) genesis product
@@ -764,26 +764,26 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
             k in regnames ||
                 push!(diags, Diagnostic(:error, "reactants[$i].structured.kind", "kind `$k` not in registry"))
             k in structured ||
-                push!(diags, Diagnostic(:error, "reactants[$i].structured.kind", "kind `$k` is not a structured species"))
+                push!(diags, Diagnostic(:error, "reactants[$i].structured.kind", "kind `$k` is not a structured place"))
             # field VALUES are genesis attributes: a Sample draw is legal (like an AddToken field),
             # but a bound-token @field read is not (there is no bound token at a genesis product).
             for (j, f) in enumerate(get(st, "fields", []))
                 haskey(f, "value") && f["value"] isa AbstractDict &&
-                    _validate_node!(diags, f["value"], "reactants[$i].structured.fields[$j].value"; species, params, obs, ports, allow_field = false)
+                    _validate_node!(diags, f["value"], "reactants[$i].structured.fields[$j].value"; places, params, obs, ports, allow_field = false)
             end
         end
     end
 
     # rules[] / events[]: guard nodes + action verb + AddToken.kind/Invoke.fn registry resolution
     for (i, r) in enumerate(get(d, "rules", []))
-        haskey(r, "guard") && _validate_node!(diags, r["guard"], "rules[$i].guard"; species, params, obs, ports)
-        haskey(r, "action") && _validate_action!(diags, r["action"], "rules[$i].action"; species, params, obs, ports, structured, regnames, in_rule = true)
+        haskey(r, "guard") && _validate_node!(diags, r["guard"], "rules[$i].guard"; places, params, obs, ports)
+        haskey(r, "action") && _validate_action!(diags, r["action"], "rules[$i].action"; places, params, obs, ports, structured, regnames, in_rule = true)
     end
 
     # rule 6: population[] well-formedness (ADR 0007)
     for (i, pe) in enumerate(get(d, "population", []))
         haskey(pe, "species") && Symbol(pe["species"]) in structured ||
-            push!(diags, Diagnostic(:error, "population[$i].species", "must be a declared structured species"))
+            push!(diags, Diagnostic(:error, "population[$i].species", "must be a declared structured place"))
         haskey(pe, "kind") && !(Symbol(pe["kind"]) in regnames) &&
             push!(diags, Diagnostic(:error, "population[$i].kind", "kind `$(pe["kind"])` not in registry"))
     end
@@ -795,10 +795,10 @@ end
 # (ADR 0012 §B2) lets rule 8 flag an undeclared ExternalRef inside an action VALUE (e.g. a
 # `set_params` value driven by an external signal) — actions are among the "value" contexts §B2
 # enumerates.
-function _validate_action!(diags, a, path; species, params, obs, ports = Set{Symbol}(), structured, regnames, in_rule)
+function _validate_action!(diags, a, path; places, params, obs, ports = Set{Symbol}(), structured, regnames, in_rule)
     a isa AbstractDict || return diags
     # Walk every node-valued field of the statement (rule 1 + rule 8 over its values).
-    _walk_action_values!(diags, a, path; species, params, obs, ports)
+    _walk_action_values!(diags, a, path; places, params, obs, ports)
     verb = get(a, "verb", nothing)
     if verb == "set_field" && in_rule
         push!(diags, Diagnostic(:error, path, "SetField is illegal in a Rule (no bound token, ADR 0010 §C)"))
@@ -810,7 +810,7 @@ function _validate_action!(diags, a, path; species, params, obs, ports = Set{Sym
             push!(diags, Diagnostic(:error, "$path.fn", "Invoke fn `$(get(a, "fn", ""))` not in registry"))
     elseif verb == "seq"
         for (i, s) in enumerate(get(a, "stmts", []))
-            _validate_action!(diags, s, "$path.stmts[$i]"; species, params, obs, ports, structured, regnames, in_rule)
+            _validate_action!(diags, s, "$path.stmts[$i]"; places, params, obs, ports, structured, regnames, in_rule)
         end
     elseif verb === nothing
         push!(diags, Diagnostic(:error, path, "action missing `verb`"))
@@ -823,17 +823,17 @@ end
 # Validate the node-valued fields of an action statement (the `value`/`assigns[].value`/`fields[].
 # value`/`args[]` slots). Used by rule 1 (op/dist/ref) and rule 8 (ExternalRef port declared).
 # A `seq`'s nested stmts are walked by `_validate_action!` itself; we skip them here.
-function _walk_action_values!(diags, a, path; species, params, obs, ports)
+function _walk_action_values!(diags, a, path; places, params, obs, ports)
     haskey(a, "value") &&
-        _validate_node!(diags, a["value"], "$path.value"; species, params, obs, ports)
+        _validate_node!(diags, a["value"], "$path.value"; places, params, obs, ports)
     for key in ("assigns", "fields")
         for (i, asg) in enumerate(get(a, key, []))
             haskey(asg, "value") &&
-                _validate_node!(diags, asg["value"], "$path.$key[$i].value"; species, params, obs, ports)
+                _validate_node!(diags, asg["value"], "$path.$key[$i].value"; places, params, obs, ports)
         end
     end
     for (i, arg) in enumerate(get(a, "args", []))
-        _validate_node!(diags, arg, "$path.args[$i]"; species, params, obs, ports)
+        _validate_node!(diags, arg, "$path.args[$i]"; places, params, obs, ports)
     end
     return diags
 end
@@ -842,7 +842,7 @@ end
 # Emit only NON-DEFAULT scalar attrs (mirroring defargs in ReactiveDynamics.jl), so the JSON stays
 # clean and re-import reconstructs the same value via assign_defaults!. A literal Const lowered by
 # the loader is a bare Number here, so we emit the bare number (the loader's _attr_node wraps it).
-function _species_to_dict(net, i)
+function _place_to_dict(net, i)
     sp = Dict{String, Any}("name" => string(net[i, :placeName]))
     iv = net[i, :placeInitVal]
     iv isa Number && iv != 0 && (sp["init"] = iv)
@@ -859,19 +859,19 @@ end
 # Emit a transition's `id`/`name`, its `rate`(+`rate_mode`), and every non-default attr column
 # (cycletime/prob_of_success/capacity/priority/max_lifetime/multiplier) as an ExprNode dict, plus
 # pre/post actions when they are typed ActionStmts. The structural inverse of the transitions[]
-# loop in build_network_from_dict (~line 98): that loop reads `id` as the reactant FK, `rate`+`rate_mode`
+# loop in build_network_from_dict (~line 98): that loop reads `id` as the arc FK, `rate`+`rate_mode`
 # (lowered by lower_rate), and the jsonkey→col attrs (lowered by to_expr); we recover each.
 #
 # `id` is the transition's `transName` (the FK the BD model.rdj.json uses, e.g. "adv_discovery") —
-# falling back to a positional "t<i>" for an unnamed transition so the reactant FKs still resolve.
-function _transition_to_dict(net, i; species = Set{Symbol}(), params = Set{Symbol}())
+# falling back to a positional "t<i>" for an unnamed transition so the arc FKs still resolve.
+function _transition_to_dict(net, i; places = Set{Symbol}(), params = Set{Symbol}())
     name = net[i, :transName]
     tr = Dict{String, Any}("id" => string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name))
     (ismissing(name) || isnothing(name)) || (tr["name"] = string(name))
 
     # rate: rate_from_expr Poisson-unwraps the stored :transRate Expr back to (bare-intensity node,
     # rate_mode) — the inverse of lower_rate (~line 190). A bare value ⇒ :deterministic.
-    rate_node, rate_mode = rate_from_expr(net[i, :transRate]; species, params)
+    rate_node, rate_mode = rate_from_expr(net[i, :transRate]; places, params)
     tr["rate"] = node_to_dict(rate_node)
     tr["rate_mode"] = string(rate_mode)
 
@@ -888,7 +888,7 @@ function _transition_to_dict(net, i; species = Set{Symbol}(), params = Set{Symbo
         )
         v = net[i, col]
         (isnothing(v) || _is_default_attr(v, default)) && continue
-        tr[key] = node_to_dict(from_expr(v; species, params))
+        tr[key] = node_to_dict(from_expr(v; places, params))
     end
 
     # pre/post actions: a JSON-authored model holds these as typed ActionStmts (the action family,
@@ -907,32 +907,32 @@ end
 # Inf/Int/Float tolerance; `:(())` (the empty pre/post action) is handled separately above.
 _is_default_attr(v, default) = v isa Number && default isa Number && (v == default)
 
-# ── _reactants_to_dict — the EXPORT inverse of assemble_reaction_line (~line 289) ─────────
+# ── _arcs_to_dict — the EXPORT inverse of assemble_reaction_line (~line 289) ─────────
 # assemble_reaction_line turns reactants[] dicts INTO a transition's :trans reaction-line Expr;
 # this is the exact inverse: it decomposes each transition's stored :trans Expr back into the flat
-# reactants[] list (one dict per reactant term, tagged with its transition FK + side). It is the
-# highest-risk export piece — it must reproduce exactly the reactant dicts the loader consumes.
+# reactants[] list (one dict per arc term, tagged with its transition FK + side). It is the
+# highest-risk export piece — it must reproduce exactly the arc dicts the loader consumes.
 #
 # Method: split the stored `LHS → RHS` line (the same `prune_r_line` split the runtime does, but
 # eval-free — we only need the LHS/RHS arms, not the @choose resolution), then walk each arm with
-# the runtime `recursive_find_reactants!` (reaction_parser.jl:74). That walker is PURE on a raw
-# Expr (no state) and yields the same FoldedReactant structs the runtime extracts — species/kind,
+# the runtime `recursive_find_arcs!` (reaction_parser.jl:74). That walker is PURE on a raw
+# Expr (no state) and yields the same FoldedArc structs the runtime extracts — place/kind,
 # integer-or-Expr stoich, the 3-axis modality Set (from @conserved/@rate/@nonblock wrappers), and
-# the @select TokenPredicate. From each FoldedReactant we emit the inverse of _reactant_atom /
+# the @select TokenPredicate. From each FoldedArc we emit the inverse of _arc_atom /
 # _apply_modality / the stoich coefficient.
-function _reactants_to_dict(net)
-    species, params = _name_sets(net)
+function _arcs_to_dict(net)
+    places, params = _name_sets(net)
     out = Dict{String, Any}[]
     for i in row_ids(net, :T)
         name = net[i, :transName]
         id = string(ismissing(name) || isnothing(name) ? Symbol("t", i) : name)
         line = net[i, :trans]
         lhs, rhs = _split_reaction_line(line)
-        for r in _static_reactants(lhs)
-            push!(out, _reactant_to_dict(r, id, "lhs"; species, params))
+        for r in _static_arcs(lhs)
+            push!(out, _arc_to_dict(r, id, "lhs"; places, params))
         end
-        for r in _static_reactants(rhs)
-            push!(out, _reactant_to_dict(r, id, "rhs"; species, params))
+        for r in _static_arcs(rhs)
+            push!(out, _arc_to_dict(r, id, "rhs"; places, params))
         end
     end
     return out
@@ -940,7 +940,7 @@ end
 
 # Split a stored reaction line into (LHS, RHS) Exprs. The line is `Expr(:call, arrow, LHS, RHS)`;
 # forward arrows keep (args[2], args[3]) and backward arrows flip — the eval-free counterpart of
-# prune_r_line (state.jl:192). `∅` (empty_set) arms yield no reactants via _static_reactants.
+# prune_r_line (state.jl:192). `∅` (empty_set) arms yield no arcs via _static_arcs.
 function _split_reaction_line(line)
     if line isa Expr && line.head == :call && line.args[1] in fwd_arrows
         return line.args[2], line.args[3]
@@ -948,34 +948,34 @@ function _split_reaction_line(line)
         return line.args[3], line.args[2]
     else
         error(
-            "_reactants_to_dict: unexpected reaction line shape $(repr(line)) " *
+            "_arcs_to_dict: unexpected reaction line shape $(repr(line)) " *
                 "(a @choose/bidirectional line is not yet supported by the export path)"
         )
     end
 end
 
-# Walk one arm of the reaction line into FoldedReactants, reusing the runtime parser unchanged.
-# An `∅`/`0` arm contributes nothing (recursive_find_reactants! drops it).
-_static_reactants(arm) =
-    recursive_find_reactants!(arm, 1.0, Set{Symbol}(), Vector{FoldedReactant}())
+# Walk one arm of the reaction line into FoldedArcs, reusing the runtime parser unchanged.
+# An `∅`/`0` arm contributes nothing (recursive_find_arcs! drops it).
+_static_arcs(arm) =
+    recursive_find_arcs!(arm, 1.0, Set{Symbol}(), Vector{FoldedArc}())
 
-# A single FoldedReactant → its reactants[] dict. Three shapes, mirroring _reactant_atom's three
+# A single FoldedArc → its reactants[] dict. Three shapes, mirroring _arc_atom's three
 # branches in reverse:
-#   • a @select LHS  → {side, predicate:{kind, clauses}}  (FoldedReactant.predicate ≠ nothing)
+#   • a @select LHS  → {side, predicate:{kind, clauses}}  (FoldedArc.predicate ≠ nothing)
 #   • an @advance/@structured/@move RHS → {side, advance:{field, value}} / {side, structured/move:…}
-#     (FoldedReactant.species is a macrocall Expr)
-#   • a plain species → {side, species, stoich, modality}
-function _reactant_to_dict(r::FoldedReactant, id, side; species, params)
+#     (FoldedArc.place is a macrocall Expr)
+#   • a plain place → {side, place, stoich, modality}
+function _arc_to_dict(r::FoldedArc, id, side; places, params)
     d = Dict{String, Any}("transition" => id, "side" => side)
     if r.predicate !== nothing
-        # @select(Kind, clauses) — the inverse of _reactant_atom's predicate branch. pred_to_dict
+        # @select(Kind, clauses) — the inverse of _arc_atom's predicate branch. pred_to_dict
         # emits {kind, clauses:[[field, op, value-node], …]} exactly as the loader's predicate{} reads.
         d["predicate"] = pred_to_dict(r.predicate)
-    elseif r.species isa Expr && isexpr(r.species, :macrocall)
-        _emit_macro_reactant!(d, r.species; species, params)
+    elseif r.place isa Expr && isexpr(r.place, :macrocall)
+        _emit_macro_arc!(d, r.place; places, params)
     else
-        # a plain species term: name, integer-or-Expr stoich (omit the default 1), 3-axis modality.
-        d["species"] = string(r.species)
+        # a plain place term: name, integer-or-Expr stoich (omit the default 1), 3-axis modality.
+        d["species"] = string(r.place)
         _emit_stoich!(d, r.stoich)
         isempty(r.modality) || (d["modality"] = modality_to_dict(r.modality))
     end
@@ -983,8 +983,8 @@ function _reactant_to_dict(r::FoldedReactant, id, side; species, params)
 end
 
 # Decompose a structured RHS macrocall (@advance / @structured / @move) back to its JSON form —
-# the inverse of _reactant_atom's @advance branch and the structured_rhs (solvers.jl:352) shapes.
-function _emit_macro_reactant!(d, mc::Expr; species, params)
+# the inverse of _arc_atom's @advance branch and the structured_rhs (solvers.jl:352) shapes.
+function _emit_macro_arc!(d, mc::Expr; places, params)
     name = macroname(mc)
     if name === :advance
         # @advance(field, value) — an RHS lifecycle field-write (ADR 0008 §D).
@@ -992,10 +992,10 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
         valex = mc.args[4]
         d["advance"] = Dict{String, Any}(
             "field" => string(field isa QuoteNode ? field.value : field),
-            "value" => node_to_dict(from_expr(valex; species, params)),
+            "value" => node_to_dict(from_expr(valex; places, params)),
         )
     elseif name === :move
-        # @move(from, to) — species relabel (ADR 0006). Emit the two species symbols.
+        # @move(from, to) — place relabel (ADR 0006). Emit the two place symbols.
         d["move"] = Dict{String, Any}(
             "from" => string(_macro_sym(mc.args[3])),
             "to" => string(_macro_sym(mc.args[4])),
@@ -1004,7 +1004,7 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
         # NAMED form `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
         # product (ADR 0005 §39), and the ONLY @structured form the engine accepts (the raw
         # constructor form was removed and is rejected at construction, create.jl). Emit
-        # {kind, fields:[{name, value-node}, …]}, the inverse of _reactant_atom's structured branch;
+        # {kind, fields:[{name, value-node}, …]}, the inverse of _arc_atom's structured branch;
         # each field value lowers through from_expr exactly like an @advance value or an AddToken
         # field. args[3] is always a QuoteNode here (construction guarantees it).
         d["structured"] = Dict{String, Any}(
@@ -1012,12 +1012,12 @@ function _emit_macro_reactant!(d, mc::Expr; species, params)
             "fields" => [
                 Dict{String, Any}(
                         "name" => string(kw.args[1]),
-                        "value" => node_to_dict(from_expr(kw.args[2]; species, params)),
+                        "value" => node_to_dict(from_expr(kw.args[2]; places, params)),
                     ) for kw in @view mc.args[4:end]
             ],
         )
     else
-        error("_reactants_to_dict: unsupported reactant macrocall @$(name)")
+        error("_arcs_to_dict: unsupported arc macrocall @$(name)")
     end
     return d
 end
@@ -1046,17 +1046,17 @@ modality_to_dict(s::Set{Symbol}) = Dict{String, Any}(
 )
 
 # ── ADR 0003 Phase 2: populate the promoted ArcSpec incidence table from `:trans` ────────
-# Derive `net.reactants` from the authoritative `:trans` column, reusing the SAME eval-free static
-# decomposition the JSON exporter uses (`_split_reaction_line` + `_static_reactants`, ~line 844/857),
-# so the table is exactly the reactant set the runtime/exporter see. Each FoldedReactant becomes one
-# ArcSpec row: a plain species term gets an integer `species` FK (`find_index` into :S) and its
+# Derive `net.arcs` from the authoritative `:trans` column, reusing the SAME eval-free static
+# decomposition the JSON exporter uses (`_split_reaction_line` + `_static_arcs`, ~line 844/857),
+# so the table is exactly the arc set the runtime/exporter see. Each FoldedArc becomes one
+# ArcSpec row: a plain place term gets an integer `place` FK (`find_index` into :S) and its
 # static stoich/modality; a DYNAMIC term (a @select predicate, an @advance/@move/@structured/@choose
-# macrocall, or a species not found in :S) gets `species = 0` and stashes its term Expr in `expr`
+# macrocall, or a place not found in :S) gets `place = 0` and stashes its term Expr in `expr`
 # (the ADR escape-hatch). Idempotent: clears and rebuilds. Lines the static splitter cannot handle
 # (a raw @choose or bidirectional arrow at top level) are left un-promoted for that transition —
-# their reactants stay Expr-only in `:trans`, which is the escape-hatch at the whole-line grain.
-function populate_reactant_specs!(net::ReactionNetwork)
-    empty!(net.reactants)
+# their arcs stay Expr-only in `:trans`, which is the escape-hatch at the whole-line grain.
+function populate_arcs!(net::ReactionNetwork)
+    empty!(net.arcs)
     for t in row_ids(net, :T)
         line = net[t, :trans]
         lhs, rhs = try
@@ -1065,26 +1065,26 @@ function populate_reactant_specs!(net::ReactionNetwork)
             continue    # @choose / bidirectional / non-standard line: leave this transition Expr-only
         end
         for (arm, side) in ((lhs, :lhs), (rhs, :rhs))
-            for r in _static_reactants(arm)
-                if r.predicate !== nothing || (r.species isa Expr)
+            for r in _static_arcs(arm)
+                if r.predicate !== nothing || (r.place isa Expr)
                     # dynamic: a @select predicate or an @advance/@move/@structured macrocall term.
                     push!(
-                        net.reactants, ArcSpec(
+                        net.arcs, ArcSpec(
                             t, 0, r.stoich, side, r.modality,
-                            r.species isa Union{Expr, Symbol} ? r.species : nothing
+                            r.place isa Union{Expr, Symbol} ? r.place : nothing
                         )
                     )
                 else
-                    sp = r.species isa Symbol ? r.species : Symbol(r.species)
+                    sp = r.place isa Symbol ? r.place : Symbol(r.place)
                     j = find_index(sp, net)
                     if j === nothing
-                        push!(net.reactants, ArcSpec(t, 0, r.stoich, side, r.modality, sp))
+                        push!(net.arcs, ArcSpec(t, 0, r.stoich, side, r.modality, sp))
                     else
-                        push!(net.reactants, ArcSpec(t, j, r.stoich, side, r.modality, nothing))
+                        push!(net.arcs, ArcSpec(t, j, r.stoich, side, r.modality, nothing))
                     end
                 end
             end
         end
     end
-    return net.reactants
+    return net.arcs
 end

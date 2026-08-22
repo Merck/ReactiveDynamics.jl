@@ -1,7 +1,7 @@
 export equalize!, @equalize
 
 # Parse one entry of an `@equalize` equation into a `(qualifier, name)` pair: a `@catchall`/`@alias`
-# macrocall yields `(:catchall, name)`/`(:alias, name)`, a bare species yields `(nothing, name)`.
+# macrocall yields `(:catchall, name)`/`(:alias, name)`, a bare place yields `(nothing, name)`.
 # Dotted names are flattened by `underscorize`. The "_ff" suffix distinguishes it from the join
 # operators' `get_eqs`.
 expand_name_ff(ex) =
@@ -30,7 +30,7 @@ end
 """
     equalize!(net, eqs = []) -> ReactionNetwork
 
-Identify (collapse) sets of species in the static `net`, in place. Each block in `eqs` names species to merge — by exact `:S` index, by bare name, or by a `:catchall` name match (matching a `__`-namespaced suffix) — into a single surviving row aliased to the block's `:alias` (or its first entry). Missing attribute cells on the survivor are filled from the merged rows, every reference to a removed name is rewritten, and the removed rows are dropped by swap-and-pop; the promoted [`ArcSpec`](@ref) table is then rebuilt so each reactant's `species` FK is repointed structurally onto the survivor (§7.4/J7, ADR 0003 Phase 2). Authoring-time only — FORBIDDEN on a live/stepping model, since it reindexes. [`@equalize`](@ref) is the declarative macro form.
+Identify (collapse) sets of place in the static `net`, in place. Each block in `eqs` names place to merge — by exact `:S` index, by bare name, or by a `:catchall` name match (matching a `__`-namespaced suffix) — into a single surviving row aliased to the block's `:alias` (or its first entry). Missing attribute cells on the survivor are filled from the merged rows, every reference to a removed name is rewritten, and the removed rows are dropped by swap-and-pop; the promoted [`ArcSpec`](@ref) table is then rebuilt so each arc's `place` FK is repointed structurally onto the survivor (§7.4/J7, ADR 0003 Phase 2). Authoring-time only — FORBIDDEN on a live/stepping model, since it reindexes. [`@equalize`](@ref) is the declarative macro form.
 """
 function equalize!(net::ReactionNetwork, eqs = [])
     specmap = Dict()
@@ -73,22 +73,22 @@ function equalize!(net::ReactionNetwork, eqs = [])
         end
     end
 
-    # ADR 0003 Phase 2 (§7.4/J7): promote the transition↔reactant relation to the FK-exact
+    # ADR 0003 Phase 2 (§7.4/J7): promote the transition↔arc relation to the FK-exact
     # ArcSpec table AFTER the merge. Because the merge above already collapsed the identified
-    # species to a single surviving `:S` row and rewrote every reference to the survivor's name,
-    # rebuilding the typed table from the post-merge `:trans` lines repoints every reactant's integer
-    # `species` FK onto the survivor STRUCTURALLY — no dangling FK to a removed row, and no reactant
+    # place to a single surviving `:S` row and rewrote every reference to the survivor's name,
+    # rebuilding the typed table from the post-merge `:trans` lines repoints every arc's integer
+    # `place` FK onto the survivor STRUCTURALLY — no dangling FK to a removed row, and no arc
     # still names an eliminated alias. This is the collision-safe replacement for the string surgery
     # above at the STRUCTURAL grain (the string rewrite of `:trans` is retained only because the
     # runtime engine still parses `:trans` per tick, ADR 0003 Phase 1's behavior-preserving contract).
-    populate_reactant_specs!(net)
+    populate_arcs!(net)
 
     return net
 end
 
 """
-Identify (collapse) sets of species in a model — each equation names species to merge into one, so a
-downstream species can be fused with an upstream one (the FK-repoint of §7.4/J7, not string surgery).
+Identify (collapse) sets of place in a model — each equation names place to merge into one, so a
+downstream place can be fused with an upstream one (the FK-repoint of §7.4/J7, not string surgery).
 
 # Examples
 

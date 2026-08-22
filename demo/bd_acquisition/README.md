@@ -47,9 +47,9 @@ Three reads a BD partner takes away:
 |---|---|
 | Program / asset | a `ProjectToken` structured token (host Julia, [`host.jl`](host.jl)), identity preserved across phases |
 | Initial portfolio | the declarative `population[]` initial marking (ADR 0007 §B, Stage D): `initial_population()` is a list of `ProjectToken` structs passed to the constructor, instantiated before t=0 — reproducible input, not imperative post-construction host code (MVP finding H) |
-| Pipeline phase | a `phase` **attribute** on the single `:Project` kind (phase-as-attribute, ADR 0008) — not a species per phase |
+| Pipeline phase | a `phase` **attribute** on the single `:Project` kind (phase-as-attribute, ADR 0008) — not a place per phase |
 | Phase advance | a transition selecting an in-phase token via `@select(Project, phase==:PhaseN)` (Stage C), consuming `@conserved(scientist)` + `@rate(budget)`, advancing via `@advance(phase, :PhaseN1)` on `Binomial(q, PoS)` success |
-| Failure / kill | `Binomial` failure ⇒ the bound token soft-retires (its species flips to `:removed`, ADR 0006); its `phase` records how far it got |
+| Failure / kill | `Binomial` failure ⇒ the bound token soft-retires (its place flips to `:removed`, ADR 0006); its `phase` records how far it got |
 | **The acquisition** | an **endogenous Rule** (ADR 0010, Stage B): `fire_mode: once`, guard `@t() > T_acq`, action `Seq[AddToken(ProjectToken…), SetMarking(scientist,+Δ), SetMarking(budget,+Δ), SetParams(synergy…)]`. The lever lives *in the model*, not in host patch code |
 | Resource contention | the model is calibrated so cash (and headcount) **genuinely bind** — the organic pipeline runs the `budget`/`scientist` pools into single digits, so the ADR-0002 priority allocator actually rations scarce resources (an over-provisioned model would leave the engine's contention machinery idle and make resource synergy inert) |
 | Synergies | param-mediated (MVP §2.1): the acquisition rule flips `synergy_pos`/`synergy_eff`, which the late-phase transitions read in their `probability`/`cycletime` ExprNodes |

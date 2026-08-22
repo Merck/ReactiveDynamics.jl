@@ -17,7 +17,7 @@
 # JSON document, validated, checkpointed, and replayed.
 #
 # Why ONE script for the whole tour? Because the strongest claim ReactiveDynamics makes is that
-# a model — its species, its pipeline transitions, its management levers, AND its initial
+# a model — its place, its pipeline transitions, its management levers, AND its initial
 # portfolio — is reproducible DATA, fully determined by `(model, population, seed)`. A single
 # command that builds, runs, serializes, validates, checkpoints, and replays the very same
 # model is that claim, executable.
@@ -29,7 +29,7 @@
 using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!, add_structured_token!,
     Rule, Seq, SetMarking, SetParams, SetTokens, AddToken, Activate, Deactivate, Log,
-    get_species, inners, getagent, find_index, TokenPredicate, Clause, PopulationEntry,
+    get_place, inners, getagent, find_index, TokenPredicate, Clause, PopulationEntry,
     from_json_model, to_json_model, validate, dump_state, restore, apply_action!, set_guard!
 using Random, Distributions, DataFrames
 import JSON
@@ -44,7 +44,7 @@ banner(title) = (println(); println("="^78); println(title); println("="^78))
 # §0. The structured-token KIND — a project is a first-class entity, not a count
 # ════════════════════════════════════════════════════════════════════════════════════════
 #
-# A *classical* reaction-network species is a scalar: a single Float64 saying "how many A are
+# A *classical* reaction-network place is a scalar: a single Float64 saying "how many A are
 # there." That is perfect for indistinguishable molecules, but a project is not a molecule. We
 # want each project to carry ATTRIBUTES (its current phase, its value) and a stable IDENTITY
 # (the SAME object as it advances Phase1 → Phase2 → …, so a downstream report can follow it).
@@ -57,7 +57,7 @@ banner(title) = (println(); println("="^78); println(title); println("="^78))
 #
 # The four leading constructor arguments are the @aagent protocol fields, in order:
 #   name::String            — a unique token name
-#   species::Symbol         — the KIND tag (here :Project; every project shares one kind)
+#   place::Symbol         — the KIND tag (here :Project; every project shares one kind)
 #   bound_transition        — nothing (the engine sets this when a transition binds the token)
 #   past_bonds              — an empty Tuple{Symbol,Float64,Transition}[] history vector
 # …followed by our modeling attributes: `phase` and `npv`.
@@ -92,15 +92,15 @@ const REGISTRY = Dict{Symbol, Any}(
 # keyed by token name; we usually want the values).
 livetokens(p) = collect(values(inners(getagent(p, "structured"))))
 # Count live (non-retired) projects in a given phase.
-nphase(p, ph) = count(t -> get_species(t) == :Project && t.phase == ph, livetokens(p))
-# How many soft-retired (failed a stage gate; species flipped to :removed)?
-nretired(p) = count(t -> get_species(t) == :removed, livetokens(p))
+nphase(p, ph) = count(t -> get_place(t) == :Project && t.phase == ph, livetokens(p))
+# How many soft-retired (failed a stage gate; place flipped to :removed)?
+nretired(p) = count(t -> get_place(t) == :removed, livetokens(p))
 
 banner("§0. The structured-token KIND")
 println("Defined kind :Project as a ProjectToken{phase::Symbol, npv::Float64}.")
 println(
     "One demo token: ", let t = RDX.ProjectToken(:Phase1, 120.0)
-        "phase=$(t.phase), npv=$(t.npv), kind=$(get_species(t))"
+        "phase=$(t.phase), npv=$(t.npv), kind=$(get_place(t))"
     end
 )
 println("Why a structured token and not a Float64 count? A count is anonymous and stateless;")
@@ -113,7 +113,7 @@ println("advances — so we can select projects by attribute and follow each one
 #
 # A naive model would make a SPECIES per phase (Phase1, Phase2, …) and "advance" by destroying
 # a Phase1 token and creating a Phase2 token. That breaks identity (the new token is a different
-# object) and multiplies the species count. The canonical ReactiveDynamics design (ADR 0008 §D)
+# object) and multiplies the place count. The canonical ReactiveDynamics design (ADR 0008 §D)
 # is PHASE-AS-ATTRIBUTE: there is ONE :Project kind, and `phase` is a field. A pipeline step is
 #
 #     @select(Project, <clause>) --> @advance(phase, :NextPhase)
@@ -123,8 +123,8 @@ println("advances — so we can select projects by attribute and follow each one
 # bound token's `phase` field IN PLACE — same object, identity preserved.
 #
 # A stage gate can also FAIL: `probability => q` makes each advance a Binomial(·, q) trial. On
-# failure the bound token SOFT-RETIRES — its species flips to `:removed`, and its `phase` field
-# records how far it got (a killed Phase2 program stays at phase==:Phase2 but species==:removed).
+# failure the bound token SOFT-RETIRES — its place flips to `:removed`, and its `phase` field
+# records how far it got (a killed Phase2 program stays at phase==:Phase2 but place==:removed).
 #
 # We seed the starting portfolio with the DECLARATIVE `population[]` initial marking (ADR 0007
 # §B), passed to the constructor and instantiated before t=0. This is preferred over an
@@ -220,7 +220,7 @@ println(
 # transition act on a value threshold — e.g. "only fast-track high-value Phase2 programs."
 #
 # When several tokens match but the transition can only fire on a few per tick, WHICH bind first
-# is deterministic: equal-priority ties break by (species, creation_index) — the earlier-added
+# is deterministic: equal-priority ties break by (place, creation_index) — the earlier-added
 # token wins — NOT by the agent dictionary's hash order or the tokens' random names. So a
 # predicate-selected pipeline reproduces exactly under `(model, seed)`.
 
@@ -264,7 +264,7 @@ println("wins), so this selection reproduces exactly under the same (model, seed
 #
 #     Rule(id, guard::Expr, action; fire_mode = :once | :every_tick)
 #
-# The guard is evaluated against the live state (`@t()` is the clock; species/params are in
+# The guard is evaluated against the live state (`@t()` is the clock; place/params are in
 # scope). `fire_mode = :once` fires the action exactly once, the first tick its guard holds, then
 # latches OFF (`p.rules[i].enabled == false`); `_reinit!` re-arms it. The ACTION family — all
 # verified — composes via `Seq`:
@@ -280,7 +280,7 @@ println("wins), so this selection reproduces exactly under the same (model, seed
 # IN the model. We also gate a `fund` transition on `cash >= 50` via `set_guard!`, so that line
 # only comes alive once the raise lands.
 #
-# Because `cash` must be a real species column, we build a small model with a `cash` pool and a
+# Because `cash` must be a real place column, we build a small model with a `cash` pool and a
 # `fund` line that converts cash into a `report` (a stand-in for "spend the raise"), plus the
 # Phase2->Phase3 pipeline step so AddToken has somewhere to land.
 
@@ -359,7 +359,7 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
 # registry. Because it carries only a name + typed field nodes, it ROUND-TRIPS through the
 # eval-free JSON IR (we prove that below, and again in §6) — genesis-as-product and
 # genesis-as-rule-action are the same operation in two positions. This is the ONLY @structured
-# form: an inline-constructor form `@structured(Ctor(…))` — the only reactant construct that could
+# form: an inline-constructor form `@structured(Ctor(…))` — the only arc construct that could
 # not serialize eval-free — was removed, so eval-free serialization is now a TOTAL invariant (every
 # genesis product is data). A raw constructor on the RHS is rejected at construction (see the note
 # at the end of this section).
@@ -452,7 +452,7 @@ println(
     sort([t.born for t in gtoks]) == sort([t.born for t in livetokens(pg_rt)])
 )
 println("Contrast §3: there a token was ADDED by a rule ACTION (AddToken, decision channel); here")
-println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> species —")
+println("it is BORN as a transition PRODUCT (@structured), the agentic analogue of ∅ --> place —")
 println("sharing AddToken's registry, so it serializes as eval-free data too.")
 
 # A raw inline constructor on the RHS is REJECTED at construction — @structured is named-only, so
@@ -527,8 +527,8 @@ println("was not selected and is untouched. @field read each token's OWN npv bef
 # model back to a full JSON document with `to_json_model`/`@export_model` and reload it loss-free
 # (a model is DATA in BOTH directions: author-as-JSON → load, and build/load → export → reload).
 
-# The pipeline as a JSON model. Structured species carry "structured": true; a pipeline step's
-# reactants are an LHS predicate + an RHS advance. (Bare string "Phase2" in clause arrays.)
+# The pipeline as a JSON model. Structured place carry "structured": true; a pipeline step's
+# arcs are an LHS predicate + an RHS advance. (Bare string "Phase2" in clause arrays.)
 const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",
   "meta":{ "tspan":6.0, "dt":1.0 },
@@ -553,7 +553,7 @@ banner("§6. Model-as-data — the eval-free JSON model (ADR 0005)")
 diags_ok = validate(JSON.parse(PIPELINE_JSON); registry = REGISTRY)
 println("(b) validate(clean model) -> ", isempty(diags_ok) ? "OK (no diagnostics)" : diags_ok)
 
-# (c) a deliberately broken model: a dangling reactant foreign-key (transition that doesn't exist).
+# (c) a deliberately broken model: a dangling arc foreign-key (transition that doesn't exist).
 broken = JSON.parse(PIPELINE_JSON)
 broken["reactants"][1]["transition"] = "ghost"   # no transition with id "ghost"
 diags_bad = validate(broken; registry = REGISTRY)
@@ -733,7 +733,7 @@ println(
       §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
       §7  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007
 
-    The through-line: a model — species, pipeline, levers, and starting portfolio — is reproducible
+    The through-line: a model — place, pipeline, levers, and starting portfolio — is reproducible
     DATA, fully determined by (model, population, rules, seed). A token can enter the run three ways —
     declaratively at t=0 (population[], §1), imperatively via a rule action (AddToken, §3), or as a
     first-class transition product (@structured, §4) — the decision logic lives IN the model as typed

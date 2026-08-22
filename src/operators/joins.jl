@@ -7,12 +7,12 @@ using MacroTools: prewalk
 """
     merge_networks!(net1, net2, name = gensym("net"), eqs = []) -> ReactionNetwork
 
-Merge `net2` into `net1` IN PLACE and return `net1`. `net2` is deep-copied and its species namespaced
-under `name` (via [`prepend!`](@ref)) before merging, so the two fragments' private species stay
-distinct; a species already present in `net1` is identified by name and its attribute cells overwritten
+Merge `net2` into `net1` IN PLACE and return `net1`. `net2` is deep-copied and its place namespaced
+under `name` (via [`prepend!`](@ref)) before merging, so the two fragments' private place stay
+distinct; a place already present in `net1` is identified by name and its attribute cells overwritten
 from `net2` (later fragment wins), with modality sets unioned. Transitions, params, metadata, events
 (`:E`) and observables (`:obs`) are all carried across — `:E`/`:obs` STRUCTURALLY (appended, never
-deduplicated). The `eqs` equation blocks drive species identification across fragments (see
+deduplicated). The `eqs` equation blocks drive place identification across fragments (see
 [`normalize_name`](@ref)). The engine behind [`@join`](@ref).
 """
 function merge_networks!(net1, net2, name = gensym("net"), eqs = [])
@@ -66,7 +66,7 @@ function merge_networks!(net1, net2, name = gensym("net"), eqs = [])
     # Events (:E) and observables (:obs) are STRUCTURAL — appended, never deduplicated (like :T,
     # §7/J2). The historic gap (merge_networks! walked only :S/:T/:P/:M) silently DROPPED both on join
     # (determinism_composition_bugs.jl §"merge_networks! does NOT merge observables/events"). `prepend!`
-    # (above) already namespaced the species referenced inside each event's trigger/action Expr and
+    # (above) already namespaced the place referenced inside each event's trigger/action Expr and
     # inside each observable's option-Exprs (via prepend_obs), so both merges are pure structural
     # copies of already-namespaced rows.
     for i in row_ids(net2, :E)
@@ -89,9 +89,9 @@ end
 @deprecate union_acs!(net1, net2, name = gensym("net"), eqs = []) merge_networks!(net1, net2, name, eqs)
 
 """
-Namespace `net`'s species in place: rename each `X → name__X` and rewrite every reference to it across
+Namespace `net`'s place in place: rename each `X → name__X` and rewrite every reference to it across
 all attribute columns (and, structurally, inside observable option Exprs via [`prepend_obs!`](@ref)), so
-merging two fragments cannot conflate their private species. A `:shared`-role species (the first-class
+merging two fragments cannot conflate their private place. A `:shared`-role place (the first-class
 `@catchall`, ADR 0009 §A / CONTRACT §11.1) is identified by BARE name and left un-namespaced; `:private`
 (default) and the open `:input`/`:output` ports namespace here, with [`@compose`](@ref) re-identifying
 the open ports afterwards by FK-repoint. `eqs` drives cross-fragment identification via
@@ -100,10 +100,10 @@ the open ports afterwards by FK-repoint. `eqs` drives cross-fragment identificat
 function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
     specmap = Dict()
     for i in row_ids(net, :S)
-        # ADR 0009 §A / CONTRACT §11.1: a `shared`-role species is identified by BARE name across all
+        # ADR 0009 §A / CONTRACT §11.1: a `shared`-role place is identified by BARE name across all
         # fragments (the first-class @catchall) — it is NOT namespaced. `private` (default) and the
         # open `input`/`output` ports namespace as usual here; @compose (§E) re-identifies the open
-        # ports afterwards by FK-repoint. (A species carrying no role reads :private via port_role.)
+        # ports afterwards by FK-repoint. (A place carrying no role reads :private via port_role.)
         if port_role(net, i) === :shared
             continue
         end
@@ -114,7 +114,7 @@ function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
     for attr in propertynames(net.columns)
         attr == :placeName && continue
         # Observable options live inside a FoldedObservable struct (the :obsOpts column), not as a
-        # bare Expr the loop below rewrites — handle them structurally via prepend_obs! so species
+        # bare Expr the loop below rewrites — handle them structurally via prepend_obs! so place
         # referenced inside `on`/`range` exprs are namespaced consistently with every other attr.
         attr == :obsOpts && continue
         attr_ = net[:, attr]
@@ -133,12 +133,12 @@ function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
 end
 
 """
-Namespace the species referenced inside an observable's option expressions.
+Namespace the place referenced inside an observable's option expressions.
 
-`prepend!` renames every species `X → parent__X` and records the map in `specmap`. An observable's
+`prepend!` renames every place `X → parent__X` and records the map in `specmap`. An observable's
 sampling triggers (`on`) and range endpoints (`range`) are stored as Exprs inside a `FoldedObservable`
 (the `:obsOpts` column), which `prepend!`'s attribute loop skips — so without this the observable would
-still reference the pre-namespaced species and silently read the wrong (or a missing) pool after a join.
+still reference the pre-namespaced place and silently read the wrong (or a missing) pool after a join.
 This mirrors the per-attribute `escape_ref` + `recursively_substitute_vars!` rewrite `prepend!` applies
 to every other spec-referencing attribute. The observable's own NAME (`obsName`) is intentionally left
 un-namespaced — rate/guard exprs reference observables by bare name via `@obs(x)`.
@@ -154,17 +154,17 @@ function prepend_obs!(opts::FoldedObservable, specmap)
     return opts
 end
 
-## species name normalization
+## place name normalization
 normalize_name(name::Symbol, parent_name) = Symbol("$(parent_name)__$name")
 normalize_name(name::String, parent_name) = "$(parent_name)__$name"
 normalize_name(name, parent_name) = Symbol(parent_name, "__", name)
 
 """
-The namespaced name for the `i`-th species (named `name`) of the fragment `parent`, honoring the
-identification blocks in `eqs`: if the species is named by a block — by exact `:S` index, by a
+The namespaced name for the `i`-th place (named `name`) of the fragment `parent`, honoring the
+identification blocks in `eqs`: if the place is named by a block — by exact `:S` index, by a
 `:catchall` name match, or by a `parent`-qualified name match — it collapses to that block's alias (its
-`:alias` entry, else a generated `shared_species_N`); otherwise it namespaces to `parent__name`. This is
-what lets `@equalize`/`@join` fuse species across fragments. Used by [`prepend!`](@ref).
+`:alias` entry, else a generated `shared_place_N`); otherwise it namespaces to `parent__name`. This is
+what lets `@equalize`/`@join` fuse place across fragments. Used by [`prepend!`](@ref).
 """
 function normalize_name(parent, i::Int, name::Symbol, eqs = [])
     for (block_ix, block) in enumerate(eqs)
@@ -172,7 +172,7 @@ function normalize_name(parent, i::Int, name::Symbol, eqs = [])
         block_alias = if !isnothing(block_alias)
             block[block_alias][2]
         else
-            Symbol(:shared_species_, block_ix)
+            Symbol(:shared_place_, block_ix)
         end
         for e in block
             (
@@ -192,7 +192,7 @@ function normalize_name(parent, i::Int, name::Symbol, eqs = [])
     return normalize_name(name, parent)
 end
 
-# The two names a species may match after a join: its bare `name` and its namespaced `parent__name`.
+# The two names a place may match after a join: its bare `name` and its namespaced `parent__name`.
 matching_name(name::Symbol, parent_name) = [name, Symbol("$(parent_name)__$name")]
 
 # Parse one side of a `@join`/`@equalize` equation into `(qualifier, name)` tuples: a dotted `net.X`

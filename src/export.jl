@@ -76,8 +76,8 @@ _jsonable(x) = string(x)
 # from the §14.1 trajectory store. Round-trips structurally like the model JSON (Invariant 5).
 function _tokens_to_records(prob::ReactionNetworkProblem)
     out = Dict{String, Vector{Dict{String, Any}}}()
-    for (t, name, species, fields) in prob.token_trajectory
-        rec = Dict{String, Any}("t" => t, "species" => string(species))
+    for (t, name, place, fields) in prob.token_trajectory
+        rec = Dict{String, Any}("t" => t, "species" => string(place))
         for k in keys(fields)
             rec[string(k)] = _jsonable(getfield(fields, k))
         end

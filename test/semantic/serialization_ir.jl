@@ -48,12 +48,12 @@ end
         # unary !
         @test RDX.to_expr(RDX.Call(:!, [RDX.Const(true)])) == :(!true)
 
-        # from_expr round-trip on arithmetic (species/param sets classify bare symbols)
-        rt = RDX.from_expr(:(0.3 * beta); species = Set{Symbol}(), params = Set([:beta]))
+        # from_expr round-trip on arithmetic (place/param sets classify bare symbols)
+        rt = RDX.from_expr(:(0.3 * beta); places = Set{Symbol}(), params = Set([:beta]))
         @test rt == RDX.Call(:*, [RDX.Const(0.3), RDX.NodeRef(:param, :beta)])
         # to_expr ∘ from_expr == identity on a compound arithmetic/comparison expr
         ex = :((X + 2) * beta > 0)
-        @test RDX.to_expr(RDX.from_expr(ex; species = Set([:X]), params = Set([:beta]))) == ex
+        @test RDX.to_expr(RDX.from_expr(ex; places = Set([:X]), params = Set([:beta]))) == ex
 
         # op outside the whitelist is rejected at to_expr
         @test_throws Exception RDX.to_expr(RDX.Call(:foncall, [RDX.Const(1)]))
@@ -88,7 +88,7 @@ end
         """
         p = RDX.from_json_model(json; seed = 1)
         @test p.p[:beta] === 0.4                       # JSON number, not an eval'd string
-        @test p.u[RDX.find_index(:A, p)] == 100.0      # species init
+        @test p.u[RDX.find_index(:A, p)] == 100.0      # place init
         simulate(p)
         @test p.sol.B[end] > 0.0                       # the A --> B transition fired
         # the assembled reaction line is the expected Expr
@@ -158,7 +158,7 @@ end
             Dict("transition" => "t", "species" => "out", "side" => "rhs", "stoich" => 1),
         ]
         line = RDX.assemble_reaction_line(rs)
-        # the LHS terms wrap their species in @conserved / @rate; the runtime parser unions these
+        # the LHS terms wrap their place in @conserved / @rate; the runtime parser unions these
         s = string(line)
         @test occursin("@conserved", s) && occursin("scientist", s)
         @test occursin("@rate", s) && occursin("budget", s)
@@ -277,10 +277,21 @@ end
         # rule 1: unknown ref name
         bad_ref = deepcopy(valid); bad_ref["transitions"][1]["rate"]["args"][2]["name"] = "nonexistent"
         @test any(d -> occursin("undeclared", d.msg), RDX.validate(bad_ref))
+        # rule 1, PLACE pool: a `ref` of kind `species` resolves against the declared PLACE names,
+        # not the params. Regression pin (ADR 0017): the only ref in the document above is a param,
+        # so the place-pool branch of `_validate_node!` was entirely uncovered — a typo in it threw
+        # `UndefVarError` on every place-referencing document while the suite stayed green.
+        place_ref = deepcopy(valid)
+        place_ref["transitions"][1]["rate"]["args"][2] =
+            Dict("node" => "ref", "kind" => "species", "name" => "A")
+        @test isempty(RDX.validate(place_ref))
+        bad_place_ref = deepcopy(place_ref)
+        bad_place_ref["transitions"][1]["rate"]["args"][2]["name"] = "nonexistent"
+        @test any(d -> occursin("undeclared", d.msg), RDX.validate(bad_place_ref))
         # rule 1: bad op
         bad_op = deepcopy(valid); bad_op["transitions"][1]["rate"]["op"] = "system"
         @test any(d -> occursin("OP_WHITELIST", d.msg), RDX.validate(bad_op))
-        # rule 2: dangling reactant FK
+        # rule 2: dangling arc FK
         bad_fk = deepcopy(valid); bad_fk["reactants"][1]["transition"] = "ghost"
         @test any(d -> occursin("dangling", d.msg), RDX.validate(bad_fk))
         # rule 3: prob_of_success out of [0,1]
@@ -437,19 +448,19 @@ end
         import JSON
         d = JSON.parse(json)
         net = RDX.build_network_from_dict(d)
-        # params + species survive the round-trip through the acset
+        # params + place survive the round-trip through the acset
         back = RDX.model_to_dict(net)
         @test any(pr -> pr["name"] == "k" && pr["value"] == 0.5, back["params"])
         @test Set(sp["name"] for sp in back["species"]) == Set(["A", "B"])
     end
 
     # ── E10: the EXPORT path — to_json_model is the inverse of from_json_model ───────────
-    # Completed _transition_to_dict / _reactants_to_dict (the inverse of assemble_reaction_line):
+    # Completed _transition_to_dict / _arcs_to_dict (the inverse of assemble_reaction_line):
     # a DSL-or-JSON model → to_json_model → from_json_model is an EQUIVALENT model. The standard of
     # correctness is reconstructed-Expr equality (striplines) + a trajectory-equal simulation under
     # a fixed seed + idempotency of re-export — NOT raw-JSON-byte equality (the import-side
     # `_sum_terms` foldl re-associates an n-ary `+` reaction sum, a cosmetic Expr-nesting difference
-    # that `recursive_find_reactants!` flattens identically, so the trajectory is unaffected).
+    # that `recursive_find_arcs!` flattens identically, so the trajectory is unaffected).
     @testset "E10: a built model exports + re-imports with matching rate/attr nodes" begin
         import JSON
         json = """
@@ -475,11 +486,11 @@ end
         @test RDX.node_from_dict(t1["prob_of_success"]) == RDX.Const(0.8)
         @test RDX.node_from_dict(t1["cycletime"]) == RDX.Const(2.0)
         @test RDX.node_from_dict(t1["priority"]) == RDX.Const(3.0)
-        # non-default species attrs are emitted; defaults (e.g. cash.reward=0) are omitted
+        # non-default place attrs are emitted; defaults (e.g. cash.reward=0) are omitted
         cash = first(filter(s -> s["name"] == "cash", back["species"]))
         @test cash["cost"] == 2.0 && cash["valuation"] == -1.0 && !haskey(cash, "reward")
         @test first(filter(s -> s["name"] == "B", back["species"]))["reward"] == 50.0
-        # the reactants[] decompose back to the same (species, side, stoich) the loader consumes
+        # the reactants[] decompose back to the same (place, side, stoich) the loader consumes
         ra = Set((r["species"], r["side"], get(r, "stoich", 1)) for r in back["reactants"])
         @test ra == Set([("A", "lhs", 2), ("B", "rhs", 1)])
 
@@ -489,10 +500,10 @@ end
         @test p.sol == p2.sol
     end
 
-    @testset "E10: modality / @select / @advance reactants are the inverse of assemble_reaction_line" begin
+    @testset "E10: modality / @select / @advance arcs are the inverse of assemble_reaction_line" begin
         import MacroTools, JSON
         # a phase-advance transition with a @select LHS, @conserved/@rate resources, integer stoich,
-        # and an @advance RHS — exercising every reactant shape _reactants_to_dict must invert.
+        # and an @advance RHS — exercising every arc shape _arcs_to_dict must invert.
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[],
@@ -519,7 +530,7 @@ end
         adv = first(filter(r -> haskey(r, "advance"), back["reactants"]))
         @test adv["advance"]["field"] == "phase"
         @test RDX.node_from_dict(adv["advance"]["value"]) == RDX.Const(:Phase3)
-        # the 3-axis modality is recovered per species
+        # the 3-axis modality is recovered per place
         sci = first(filter(r -> get(r, "species", "") == "sci", back["reactants"]))
         @test sci["modality"] == Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
         @test sci["stoich"] == 3
@@ -569,7 +580,7 @@ end
         end
         json = RDX.to_json_model(net; meta = Dict("tspan" => 5.0, "dt" => 1.0))
         p = RDX.from_json_model(json; seed = 1)
-        # the assembled reaction lines re-parse to the same FoldedReactant decomposition: a grow
+        # the assembled reaction lines re-parse to the same FoldedArc decomposition: a grow
         # transition A→B and a merge transition 2B→C.
         @test MacroTools.striplines(p.network[1, :trans]) == MacroTools.striplines(:(A → B))
         @test MacroTools.striplines(p.network[2, :trans]) == MacroTools.striplines(:(2B → C))
@@ -666,40 +677,40 @@ end
         net = @reaction_network begin
             1.0, 2 * A + @conserved(B) --> C, name => rx
         end
-        RDX.populate_reactant_specs!(net)
+        RDX.populate_arcs!(net)
         rs = RDX.arcs(net)
-        # every static reactant carries an in-range integer FK and no escape-hatch expr.
-        static = filter(r -> r.species != 0, rs)
+        # every static arc carries an in-range integer FK and no escape-hatch expr.
+        static = filter(r -> r.place != 0, rs)
         @test !isempty(static)
-        @test all(r -> 1 <= r.species <= RDX.nrows(net, :S), static)
+        @test all(r -> 1 <= r.place <= RDX.nrows(net, :S), static)
         @test all(r -> r.expr === nothing, static)
-        # FK targets match the species names / sides / stoich the reaction line declares.
-        byname = Dict(RDX.placename(net, r.species) => r for r in static)
+        # FK targets match the place names / sides / stoich the reaction line declares.
+        byname = Dict(RDX.placename(net, r.place) => r for r in static)
         @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].stoich == 2.0
         @test haskey(byname, :B) && byname[:B].side == :lhs && :conserved in byname[:B].modality
         @test haskey(byname, :C) && byname[:C].side == :rhs
         # JSON round-trip: the table is DERIVED from :trans, which round-trips, so re-populating the
-        # reloaded model reproduces the same FK rows (species-name → side → stoich).
+        # reloaded model reproduces the same FK rows (place-name → side → stoich).
         @prob_params net
         json = RDX.to_json_model(net; meta = Dict{String, Any}("tspan" => 5.0))
         acs2 = RDX.build_network_from_dict(RDX.JSON.parse(json))
-        RDX.populate_reactant_specs!(acs2)
+        RDX.populate_arcs!(acs2)
         rt(m) = sort(
             [
-                (string(RDX.placename(m, r.species)), r.side, Float64(r.stoich))
-                    for r in RDX.arcs(m) if r.species != 0
+                (string(RDX.placename(m, r.place)), r.side, Float64(r.stoich))
+                    for r in RDX.arcs(m) if r.place != 0
             ]
         )
         @test rt(acs2) == rt(net)
 
-        # Escape-hatch: a dynamic RHS (@advance field write, ADR 0008) is a species=0 / expr-carried
+        # Escape-hatch: a dynamic RHS (@advance field write, ADR 0008) is a place=0 / expr-carried
         # row, NOT a static FK — the table records it without inventing a bogus FK.
         acs3 = @reaction_network begin
             1.0, @select(Project, phase == :Phase2) --> @advance(phase, :Phase3), name => adv
         end
-        RDX.populate_reactant_specs!(acs3)
+        RDX.populate_arcs!(acs3)
         rs3 = RDX.arcs(acs3)
-        @test any(r -> r.species == 0 && r.expr !== nothing, rs3)   # a dynamic term is escape-hatched
+        @test any(r -> r.place == 0 && r.expr !== nothing, rs3)   # a dynamic term is escape-hatched
     end
 
 end

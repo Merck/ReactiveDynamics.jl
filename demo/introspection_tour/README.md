@@ -30,7 +30,7 @@ The whole tour runs on ONE small self-contained model — a two-phase "project a
 |---|---|---|
 | 0 | The model | A structured-token `@register`ed kind with `log_token_fields` opt-in; `@reaction_network` + index-assigned cost / reward / budget; `ReactionNetworkProblem(...; seed=, population=)` + `simulate` |
 | 1 | Raw run artifacts | `prob.sol` (the marking DataFrame, read by column name), `prob.log` (the tagged event stream, reduced by tag to aggregate cost / reward), and `program_ledger(prob)` + `program_ledger_entries` (the per-program attribution DataFrame + append-only audit trail) |
-| 2 | Per-token trajectory log | `token_trajectory(prob)` (long form: `t, program, species, <field>…`), one token's life by name, and predicate-scoped rows via a `@select` `TokenPredicate` / `Clause` (the same selection machinery the dynamics use) |
+| 2 | Per-token trajectory log | `token_trajectory(prob)` (long form: `t, program, place, <field>…`), one token's life by name, and predicate-scoped rows via a `@select` `TokenPredicate` / `Clause` (the same selection machinery the dynamics use) |
 | 3 | "Typical" helpers | `representative_token(prob)` (the MEDOID program — closest to the cohort mean path) and `trajectory_envelope(prob)` (per-tick median + IQR band over each numeric logged field) |
 | 4 | Ensemble analysis | `ensemble(build; nseed, root_seed)` (member `k` seeded `hash((root_seed, k))`), `summarize` (mean / sem / quantiles), `treatment_effect` (the unpaired A/B Δ with `se = √(var_b/n_b + var_d/n_d)`), and the `EnsembleProblem` as an AA-readable node (`observables` / `getobservable` / `inners`) |
 | 5 | Export bundles | `export_run(prob, dir)` and `export_ensemble(ens, dir; metric)` — the CSV + JSON core (`trajectory` / `ledger` / `tokens` / `events.json` / `tokens.json` / `run.json`), plus the `.arrow` siblings (because this demo loads Arrow), with a manifest pinning `model_hash` + `seed` |
@@ -42,9 +42,9 @@ The whole tour runs on ONE small self-contained model — a two-phase "project a
 
 The exec map is the maintainer's headline ask: a system diagram you can read for inefficiencies, decorated with the run's results. It is built in three layers, each usable alone:
 
-- **Layer A — `network_graph(prob)`** returns a plain `NetworkGraph` (species/place nodes, transition nodes, arcs with stoichiometry + modality). It is a pure function of the model — no plotting dependency, no simulation, and it runs on a `deepcopy` so it does NOT perturb the caller's RNG.
-- **Layer B — `to_graphviz(g)` / `draw_network(prob)`** emits Graphviz DOT (species as circles, transitions as boxes, arcs colored by resource modality) and renders it through AlgebraicAgents' `run_graphviz`. The DOT string is always obtainable even with no Graphviz backend; rendering is the only step that needs one.
-- **Layer C — `exec_map(prob; highlight)`** decorates Layer A with finished-run statistics: species nodes filled gold where their pool ran to a trough (starvation), and — given a `highlight::TokenPredicate` — the matching cohort's `past_bonds` path through the net drawn as thickened arcs. It is read-only: it never mutates state or re-runs dynamics.
+- **Layer A — `network_graph(prob)`** returns a plain `NetworkGraph` (place/place nodes, transition nodes, arcs with stoichiometry + modality). It is a pure function of the model — no plotting dependency, no simulation, and it runs on a `deepcopy` so it does NOT perturb the caller's RNG.
+- **Layer B — `to_graphviz(g)` / `draw_network(prob)`** emits Graphviz DOT (place as circles, transitions as boxes, arcs colored by resource modality) and renders it through AlgebraicAgents' `run_graphviz`. The DOT string is always obtainable even with no Graphviz backend; rendering is the only step that needs one.
+- **Layer C — `exec_map(prob; highlight)`** decorates Layer A with finished-run statistics: place nodes filled gold where their pool ran to a trough (starvation), and — given a `highlight::TokenPredicate` — the matching cohort's `past_bonds` path through the net drawn as thickened arcs. It is read-only: it never mutates state or re-runs dynamics.
 
 On this model the exec map fills `budget` gold (it starves to 0) and thickens the `Project → adv` arc (the advanced cohort's path) — the (in)efficiency read at a glance.
 

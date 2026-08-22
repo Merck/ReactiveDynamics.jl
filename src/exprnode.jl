@@ -25,7 +25,7 @@ end
 """
     NodeRef(kind, name)
 
-A named reference to a declared model entity — `kind ∈ `[`REF_KINDS`](@ref)` (:species/:param/:obs) selects which namespace `name` lives in. Lowers to the bare `name` Symbol; `wrap_fun`/`compile_attrs` then substitute a species → `state.u[i]` and a param → `state.p[:name]` at compile time. It is `NodeRef`, NOT `Ref` — a distinct IR leaf, not Julia's `Base.Ref`.
+A named reference to a declared model entity — `kind ∈ `[`REF_KINDS`](@ref)` (:species/:param/:obs) selects which namespace `name` lives in. Lowers to the bare `name` Symbol; `wrap_fun`/`compile_attrs` then substitute a place → `state.u[i]` and a param → `state.p[:name]` at compile time. It is `NodeRef`, NOT `Ref` — a distinct IR leaf, not Julia's `Base.Ref`.
 """
 struct NodeRef <: ExprNode
     kind::Symbol   # ∈ REF_KINDS — what `name` refers to
@@ -135,7 +135,7 @@ export OP_WHITELIST, DIST_WHITELIST, REF_KINDS, to_expr, from_expr
 Lower a typed IR node to EXACTLY the Julia `Expr` (or bare literal/Symbol) the `@reaction_network` DSL and `compile_attrs` consume — the only place Julia is produced from an inert model, and hence the eval-free trust boundary. Each concrete node lowers as documented on its type: [`Const`](@ref) → literal/`QuoteNode`, [`NodeRef`](@ref) → bare Symbol, [`Call`](@ref) → whitelisted call/short-circuit `Expr`, [`Sample`](@ref) → `rand(state.rng, …)`, [`TimeRef`](@ref) → `@t()`, [`Choose`](@ref) → `@choose(…)`, [`Field`](@ref) → `@field(name)`, [`ExternalRef`](@ref) → `state.external_inputs[:port]`. A `Call`/`Sample` whose op/dist is not in [`OP_WHITELIST`](@ref)/[`DIST_WHITELIST`](@ref) is a hard `error`. The structural inverse is [`from_expr`](@ref).
 """
 to_expr(n::Const) = n.value isa Symbol ? QuoteNode(n.value) : n.value
-to_expr(n::NodeRef) = n.name   # a bare Symbol; wrap_fun substitutes species→state.u[i], param→state.p[:name]
+to_expr(n::NodeRef) = n.name   # a bare Symbol; wrap_fun substitutes place→state.u[i], param→state.p[:name]
 
 function to_expr(n::Call)
     n.op in OP_WHITELIST || error("Call op $(n.op) ∉ OP_WHITELIST")
@@ -169,20 +169,20 @@ to_expr(n::Field) = Expr(:macrocall, Symbol("@field"), LineNumberNode(0, :none),
 
 # ExternalRef(port) → a read of the per-tick external-input buffer (ADR 0012 §B2). Lowers to the
 # literal index `state.external_inputs[:port]`. wrap_fun/compile_attrs leave this `state.<field>`
-# access untouched (it is not a species/param name, so neither the varmap substitution nor the
+# access untouched (it is not a place/param name, so neither the varmap substitution nor the
 # ref/dot-escaping passes rewrite it — verified against compilers.jl), so the compiled (state,
 # transition) closure reads the buffer `_prestep!` filled this tick. The `state.dt`/`state.rng`
 # accesses the engine already lowers elsewhere are the precedent for a bare `state.<field>` leaf.
 to_expr(n::ExternalRef) = :(state.external_inputs[$(QuoteNode(n.port))])
 
-# ── from_expr: structural inverse, classifying bare symbols via the known species/param sets ──
+# ── from_expr: structural inverse, classifying bare symbols via the known place/param sets ──
 # Used to lower a DSL-authored attribute Expr back to a typed tree (for to_json of a DSL model).
 """
-    from_expr(ex; species = Set{Symbol}(), params = Set{Symbol}()) -> ExprNode
+    from_expr(ex; places = Set{Symbol}(), params = Set{Symbol}()) -> ExprNode
 
-Structural inverse of [`to_expr`](@ref): lower a DSL-authored attribute `Expr` back to a typed [`ExprNode`](@ref) tree (so a DSL/loaded model can be serialized to JSON). Bare symbols are classified via the known `species`/`params` name sets — a symbol in `params` becomes a `NodeRef(:param, …)`, otherwise a `NodeRef(:species, …)` (the default for an unclassified bare symbol). Recognizes the exact lowered shapes `to_expr` emits — `rand(state.rng, Dist(…))` → [`Sample`](@ref), `state.external_inputs[:port]` → [`ExternalRef`](@ref), the `@t`/`@field`/`@choose` macrocalls, short-circuit boolean heads — and rejects a call head outside [`OP_WHITELIST`](@ref). Result nodes are [`NodeRef`](@ref)s (not Julia `Ref`s).
+Structural inverse of [`to_expr`](@ref): lower a DSL-authored attribute `Expr` back to a typed [`ExprNode`](@ref) tree (so a DSL/loaded model can be serialized to JSON). Bare symbols are classified via the known `places`/`params` name sets — a symbol in `params` becomes a `NodeRef(:param, …)`, otherwise a `NodeRef(:species, …)` (the default for an unclassified bare symbol). Recognizes the exact lowered shapes `to_expr` emits — `rand(state.rng, Dist(…))` → [`Sample`](@ref), `state.external_inputs[:port]` → [`ExternalRef`](@ref), the `@t`/`@field`/`@choose` macrocalls, short-circuit boolean heads — and rejects a call head outside [`OP_WHITELIST`](@ref). Result nodes are [`NodeRef`](@ref)s (not Julia `Ref`s).
 """
-function from_expr(ex; species::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} = Set{Symbol}())
+function from_expr(ex; places::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} = Set{Symbol}())
     if ex isa Bool
         return Const(ex)
     elseif ex isa Union{Int, Float64}
@@ -191,10 +191,10 @@ function from_expr(ex; species::Set{Symbol} = Set{Symbol}(), params::Set{Symbol}
         return Const(ex.value)   # a literal symbol
     elseif ex isa Symbol
         ex in params && return NodeRef(:param, ex)
-        ex in species && return NodeRef(:species, ex)
-        return NodeRef(:species, ex)   # default: an unclassified bare symbol is a species ref
+        ex in places && return NodeRef(:species, ex)
+        return NodeRef(:species, ex)   # default: an unclassified bare symbol is a place ref
     elseif ex isa Expr
-        return _from_expr_compound(ex; species = species, params = params)
+        return _from_expr_compound(ex; places = places, params = params)
     else
         error("from_expr: cannot classify $(ex) :: $(typeof(ex))")
     end
@@ -209,10 +209,10 @@ function _is_external_input_ref(ex::Expr)
         dot.args[2] isa QuoteNode && dot.args[2].value === :external_inputs
 end
 
-function _from_expr_compound(ex::Expr; species, params)
+function _from_expr_compound(ex::Expr; places, params)
     # short-circuit boolean head: Expr(:&&, a, b) / Expr(:||, a, b)
     if ex.head in _SHORTCIRCUIT_OPS
-        return Call(ex.head, [from_expr(a; species, params) for a in ex.args])
+        return Call(ex.head, [from_expr(a; places, params) for a in ex.args])
     elseif ex.head == :ref && _is_external_input_ref(ex)
         # state.external_inputs[:port] ⇒ ExternalRef(:port) — the structural inverse of the
         # ADR 0012 §B2 lowering, so a stored attr Expr round-trips back to the typed leaf.
@@ -223,11 +223,11 @@ function _from_expr_compound(ex::Expr; species, params)
         if head == :rand
             distcall = ex.args[end]
             if distcall isa Expr && distcall.head == :call && distcall.args[1] in DIST_WHITELIST
-                return Sample(distcall.args[1], [from_expr(a; species, params) for a in distcall.args[2:end]])
+                return Sample(distcall.args[1], [from_expr(a; places, params) for a in distcall.args[2:end]])
             end
         end
         head in OP_WHITELIST || error("from_expr: call head $head ∉ OP_WHITELIST")
-        return Call(head, [from_expr(a; species, params) for a in ex.args[2:end]])
+        return Call(head, [from_expr(a; places, params) for a in ex.args[2:end]])
     elseif ex.head == :macrocall
         m = ex.args[1]
         if m == Symbol("@t")
@@ -240,7 +240,7 @@ function _from_expr_compound(ex::Expr; species, params)
             for a in ex.args[3:end]
                 a isa Expr && a.head == :tuple ||
                     error("from_expr: @choose alt must be a (weight, value) tuple")
-                push!(alts, (Float64(a.args[1]), from_expr(a.args[2]; species, params)))
+                push!(alts, (Float64(a.args[1]), from_expr(a.args[2]; places, params)))
             end
             return Choose(alts)
         end

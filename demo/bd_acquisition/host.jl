@@ -7,7 +7,7 @@
 
 using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!,
-    add_structured_token!, Rule, Seq, SetMarking, SetParams, AddToken, get_species
+    add_structured_token!, Rule, Seq, SetMarking, SetParams, AddToken, get_place
 using Random, Distributions, DataFrames
 
 # ── The ProjectToken kind (host Julia, ADR 0006 §B) ─────────────────────────────────────
@@ -26,7 +26,7 @@ using Random, Distributions, DataFrames
     end
 
     using Random: randstring
-    # Host constructor (positional fields after the @aagent-injected name/species/bound/past_bonds).
+    # Host constructor (positional fields after the @aagent-injected name/place/bound/past_bonds).
     function ProjectToken(;
             phase = :Discovery,
             npv_peak = 1000.0,

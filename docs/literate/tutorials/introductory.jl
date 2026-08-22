@@ -12,7 +12,7 @@
 #
 # **The mental model in one paragraph.** A model is a set of **transitions**. Each
 # transition has a **rate** (how often it tries to fire), a left-hand side of
-# **reactants** it consumes, and a right-hand side of **products** it emits. Firing can
+# **arcs** it consumes, and a right-hand side of **products** it emits. Firing can
 # be instantaneous or take time (a `cycletime`, during which an in-flight instance may
 # also fail a success draw). All randomness flows through a per-run **seeded RNG**, so a
 # run is fully determined by the model and its seed. That is the whole engine.
@@ -64,13 +64,13 @@ end
 # `ReactionNetworkProblem(model; seed = …)` compiles the authored network into a runnable
 # problem. The `seed=` kwarg owns a per-run RNG; §3 comes back to what that guarantees.
 # `simulate(prob)` then advances to `tspan`; the solution lands in `prob.sol`, a
-# `DataFrame` with a `"t"` column plus one column per species.
+# `DataFrame` with a `"t"` column plus one column per place.
 
 sir_prob = ReactionNetworkProblem(sir; seed = 1)
 simulate(sir_prob)
 
 # **Read solution columns by name.** Column order is *construction* order, not the order
-# you wrote the species, so positional indexing is a foot-gun — always index by name.
+# you wrote the place, so positional indexing is a foot-gun — always index by name.
 
 S = sir_prob.sol[!, "S"]
 I = sir_prob.sol[!, "I"]

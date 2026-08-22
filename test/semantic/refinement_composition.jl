@@ -20,7 +20,7 @@ const RD = ReactiveDynamics
         f = @reaction_network begin
             1.0, A --> B, name => t
         end
-        # default role is :private for every species
+        # default role is :private for every place
         @test RD.port_role(f, :A) == :private
         @test RD.port_role(f, :B) == :private
         RD.set_port_role!(f, :A => :input, :B => :output)
@@ -28,7 +28,7 @@ const RD = ReactiveDynamics
         @test RD.port_role(f, :B) == :output
         @test RD.is_open_port(:input) && RD.is_open_port(:output)
         @test !RD.is_open_port(:private) && !RD.is_open_port(:shared)
-        # @port sugar tags groups; unlisted species keep :private
+        # @port sugar tags groups; unlisted place keep :private
         g = @reaction_network begin
             1.0, X --> Y, name => t
             1.0, Y --> Z, name => u
@@ -53,9 +53,9 @@ const RD = ReactiveDynamics
         RD.set_port_role!(f2, :mid => :input, :product => :output)
         m = @compose f1 f2
         names = m[:, :placeName]
-        # the shared output→input port `mid` collapses to ONE species (FK-repoint)
+        # the shared output→input port `mid` collapses to ONE place (FK-repoint)
         @test count(==(:mid), names) == 1
-        # private/other species are namespaced per fragment
+        # private/other place are namespaced per fragment
         @test :f1__raw in names
         @test :f2__product in names
         # both transitions survive (structural append, §7/J2)
@@ -63,9 +63,9 @@ const RD = ReactiveDynamics
         # the promoted ArcSpec table is FK-exact: every static FK resolves and the two
         # transitions route through the single shared `mid` index.
         rs = RD.arcs(m)
-        @test all(r -> r.species == 0 || 1 <= r.species <= nrows(m, :S), rs)
+        @test all(r -> r.place == 0 || 1 <= r.place <= nrows(m, :S), rs)
         midix = RD.find_index(:mid, m)
-        @test count(r -> r.species == midix, rs) == 2   # produced by step1, consumed by step2
+        @test count(r -> r.place == midix, rs) == 2   # produced by step1, consumed by step2
     end
 
     @testset "§E/J4: @compose merges events (:E) and observables (:obs) of the fragments" begin
@@ -102,18 +102,18 @@ const RD = ReactiveDynamics
         @test any(n -> occursin("filing", string(n)), tnames)
         # …and every OTHER transition is structurally unchanged (plug-compatibility, Invariant 1).
         @test :phase3 in tnames
-        # boundary species keep their names/indices (P1, P2 unchanged; P3 untouched).
+        # boundary place keep their names/indices (P1, P2 unchanged; P3 untouched).
         @test :P1 in r[:, :placeName]
         @test :P2 in r[:, :placeName]
         @test :P3 in r[:, :placeName]
-        # the sub's PRIVATE species is namespaced (not leaked as a bare name).
+        # the sub's PRIVATE place is namespaced (not leaked as a bare name).
         @test any(n -> occursin("work", string(n)), r[:, :placeName])
         @test !(:work in r[:, :placeName])
         # refine is non-mutating on the input (refine = refine! on a deepcopy).
         @test :phase2 in [coarse[i, :transName] for i in row_ids(coarse, :T)]
         # the promoted table is FK-exact after the splice.
-        RD.populate_reactant_specs!(r)
-        @test all(x -> x.species == 0 || 1 <= x.species <= nrows(r, :S), RD.arcs(r))
+        RD.populate_arcs!(r)
+        @test all(x -> x.place == 0 || 1 <= x.place <= nrows(r, :S), RD.arcs(r))
     end
 
     # ── §B round-trip: a refined spec serializes/reloads as a flat model (Invariant 5) ───────────
@@ -129,7 +129,7 @@ const RD = ReactiveDynamics
         @prob_params r
         json = RD.to_json_model(r; meta = Dict{String, Any}("tspan" => 5.0))
         r2 = RD.build_network_from_dict(RD.JSON.parse(json))
-        # the reloaded flat model has the same species and transition counts (refinement left no
+        # the reloaded flat model has the same place and transition counts (refinement left no
         # runtime trace — it is a plain ModelSpec).
         @test nrows(r2, :S) == nrows(r, :S)
         @test nrows(r2, :T) == nrows(r, :T)
@@ -152,9 +152,9 @@ const RD = ReactiveDynamics
         @test cts[:flow_Phase1_Phase2] == 2.0 && poss[:flow_Phase1_Phase2] == 0.6
         @test cts[:flow_Phase2_Market] == 1.0 && poss[:flow_Phase2_Market] == 0.9
         # a flow transition consumes its upstream phase (upfront LHS) — the §2.8 flow idiom.
-        RD.populate_reactant_specs!(p)
+        RD.populate_arcs!(p)
         p1ix = RD.find_index(:Phase1, p)
-        @test any(r -> r.species == p1ix && r.side == :lhs, RD.arcs(p))
+        @test any(r -> r.place == p1ix && r.side == :lhs, RD.arcs(p))
     end
 
     # ── §D: @process — reusable parameterized fragment (eval-free param substitution) ────────────

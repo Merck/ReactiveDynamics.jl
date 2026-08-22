@@ -110,7 +110,7 @@ end
 # Here is the whole policy. A `Rule` is a `(guard, action, fire_mode)` triple the engine evaluates
 # once per tick against the live state. Our guard is always-on (`@t() >= 0.0`); the action is a
 # `SetTokens` that selects every Phase-1 program whose `pos` is below the threshold and flips its
-# `species` to `:removed` — a **soft retire** that frees the program's slot and stops any further
+# `place` to `:removed` — a **soft retire** that frees the program's slot and stops any further
 # budget from flowing to it, while leaving it in the population for audit.
 
 kill_rule(θ) = RD.Rule(
@@ -135,7 +135,7 @@ kill_rule(θ) = RD.Rule(
 demo_rule = kill_rule(0.5)
 println("kill_rule(0.5) is a ", typeof(demo_rule).name.name, " with:")
 println("  guard  : @t() >= 0.0   (evaluated against live state every tick)")
-println("  action : ", typeof(demo_rule.action).name.name, " over a ", typeof(demo_rule.action.predicate).name.name, " (select PoS < θ, set species -> :removed)")
+println("  action : ", typeof(demo_rule.action).name.name, " over a ", typeof(demo_rule.action.predicate).name.name, " (select PoS < θ, set place -> :removed)")
 println("  mode   : ", demo_rule.fire_mode)
 
 # A small helper surface for reading a finished run: the live token pool, and the realized portfolio
@@ -144,7 +144,7 @@ println("  mode   : ", demo_rule.fire_mode)
 livetokens(p) = collect(values(RD.inners(RD.getagent(p, "structured"))))
 launched_value(p) = sum(
     t.pos * PAYOFF for t in livetokens(p)
-        if t.phase == :Launched && RD.get_species(t) == :Project; init = 0.0
+        if t.phase == :Launched && RD.get_place(t) == :Project; init = 0.0
 )
 
 # One run assembles the model, its seed-matched portfolio, and a kill rule at threshold `θ`. The run

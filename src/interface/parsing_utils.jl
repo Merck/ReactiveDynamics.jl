@@ -1,8 +1,8 @@
 # Reaction-line parsing helpers. Parts of this file were originally adapted from Catalyst.jl.
 
 """
-Flatten dotted notation `A.B` into the single species symbol `Symbol("A__B")` (an alias for
-[`underscorize`](@ref)). Applied to reactant terms so a dotted species name becomes one atomic symbol.
+Flatten dotted notation `A.B` into the single place symbol `Symbol("A__B")` (an alias for
+[`underscorize`](@ref)). Applied to arc terms so a dotted place name becomes one atomic symbol.
 """
 recursively_expand_dots(ex) = underscorize(ex)
 

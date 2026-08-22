@@ -61,7 +61,7 @@ const REGISTRY = Dict{Symbol, Any}(
     ),
 )
 
-# The model is a **builder function** parameterized by the scientist headcount `fte`. This is the idiomatic way to vary a model: macro arguments (rates, `probability`, and the `@prob_meta` horizon) are *literal* — evaluated in module scope — so a headcount that varies across the study cannot be a macro argument. Instead we author the network with literal attributes and set the scarce resource's initial pool (`placeInitVal`), the budget cost, and the launch reward on the store by name. Reward is carried by a plain `launch` product species so it realizes ONLY at a successful launch — not at candidate intake — which keeps expected NPV tracking launches cleanly.
+# The model is a **builder function** parameterized by the scientist headcount `fte`. This is the idiomatic way to vary a model: macro arguments (rates, `probability`, and the `@prob_meta` horizon) are *literal* — evaluated in module scope — so a headcount that varies across the study cannot be a macro argument. Instead we author the network with literal attributes and set the scarce resource's initial pool (`placeInitVal`), the budget cost, and the launch reward on the store by name. Reward is carried by a plain `launch` product place so it realizes ONLY at a successful launch — not at candidate intake — which keeps expected NPV tracking launches cleanly.
 #
 # Units: pool quantities are in \$k; the `launch` product carries a \$4,000k = **\$4M** reward per launch, and we report expected NPV in **\$M**. We discount monthly ticks at an 8% annual rate.
 
@@ -167,7 +167,7 @@ vline!([mean(d4), mean(d5)]; label = "means", lw = 2, color = :black, ls = :dash
 #
 # The number tells us a resource binds; the **execution map** shows *which* one and *how* the contention resolves. It is built in three layers, each usable alone:
 #
-# - `network_graph(prob)` — the pure Petri-net structure: species (places), transitions, and the arcs between them, with stoichiometry and modality. It runs on a copy and never perturbs the run.
+# - `network_graph(prob)` — the pure Petri-net structure: place (places), transitions, and the arcs between them, with stoichiometry and modality. It runs on a copy and never perturbs the run.
 # - `draw_network(prob)` — renders that structure to an image via Graphviz (authoring-time documentation; no run needed).
 # - `exec_map(prob; highlight)` — *decorates* the structure with run statistics: places that ran to a trough are painted as **starved** (the binding resource, in gold), and a `@select` cohort's path through the net is drawn as thick arcs — here, the launched cohort's route through the trials.
 #
@@ -177,7 +177,7 @@ launched_cohort = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNod
 
 g = network_graph(prob4)
 println("Execution-map structure:")
-println("  places (species) : ", [s.name for s in g.species])
+println("  places (place) : ", [s.name for s in g.places])
 println("  transitions      : ", [t.name for t in g.transitions])
 starved = [s for (s, v) in RD._pool_troughs(prob4) if v <= 0.0]
 println("  starved place(s) : ", isempty(starved) ? "none" : starved, "  (painted gold — the binding resource)")
@@ -188,7 +188,7 @@ catch err
     @warn "exec_map: no Graphviz backend at build time — falling back to DOT source" exception = err
     nothing
 end
-hero === nothing ? Text(to_graphviz(g; highlight_species = starved)) : hero
+hero === nothing ? Text(to_graphviz(g; highlight_places = starved)) : hero
 
 # Read the map: the **`scientist`** place is the one painted gold — the pool that ran to a trough, the resource the whole portfolio is starved of. Budget, by contrast, never starves (the `@rate` draw comes out of a deep pool), so it is not the constraint despite being a real cost. The thick arcs trace the launched cohort's path through the two trials, and the arc weights make the priority split concrete: with the bench contended, oncology's higher `priority` claims scientists first, so its trial fires more and immunology's queue grows. That is the picture behind the number — the marginal scientist is valuable *because* the gold pool binds, and their value flows to whichever trial the allocator staffs next.
 

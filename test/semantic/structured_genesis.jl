@@ -14,7 +14,7 @@
 #   to_json_model / from_json_model / validate. The registry resolves the host constructor by name
 #   at firing time (ADR 0006 §C).
 #
-# The RAW `@structured(Ctor(…))` constructor form was REMOVED: it was the only reactant construct
+# The RAW `@structured(Ctor(…))` constructor form was REMOVED: it was the only arc construct
 # that could not round-trip eval-free, so forbidding it makes eval-free serialization a TOTAL
 # invariant (every genesis product is data). It is now rejected at CONSTRUCTION (create.jl), tested
 # below. All assertions run against the built engine (real @tests, not pins).
@@ -77,7 +77,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         toks = livetokens(p)
         # one @deterministic(1.0) genesis per tick over the run (6 tick boundaries t=0..5)
         @test length(toks) == 6
-        @test all(t -> RDX.get_species(t) == :Project, toks)
+        @test all(t -> RDX.get_place(t) == :Project, toks)
         @test all(t -> t.phase == :Phase1 && t.npv == 100.0, toks)
         # each minted token has its OWN identity — the entangle! pool is keyed by unique name
         @test length(unique(AlgebraicAgents.getname.(toks))) == length(toks)
@@ -156,7 +156,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
         exported = RDX.to_json_model(p_dsl)                      # live model → eval-free JSON
         doc = JSON.parse(exported)
-        # the genesis reactant emitted a typed structured{kind, fields} row (no host Expr)
+        # the genesis arc emitted a typed structured{kind, fields} row (no host Expr)
         srow = only(r for r in doc["reactants"] if haskey(r, "structured"))
         @test srow["structured"]["kind"] == "Project"
         @test Set(f["name"] for f in srow["structured"]["fields"]) == Set(["phase", "npv", "born"])
@@ -192,9 +192,9 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
 
     # ── the RAW `@structured(Ctor(…))` form is REJECTED at construction (removed) ──────────
     @testset "raw @structured(Ctor(…)) is rejected at construction — only the named form exists" begin
-        # The raw constructor form was removed: it was the sole reactant construct that could not
+        # The raw constructor form was removed: it was the sole arc construct that could not
         # round-trip eval-free, so forbidding it makes eval-free serialization TOTAL. The rejection
-        # is at CONSTRUCTION (recursively_find_reactants!, create.jl) — fail fast at model build,
+        # is at CONSTRUCTION (recursively_find_arcs!, create.jl) — fail fast at model build,
         # not deep in a simulation — and the message points at the named replacement.
         err = try
             @reaction_network begin
@@ -211,8 +211,8 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         @test occursin("@structured(:Kind", err)     # …and shows its shape
     end
 
-    # ── the two-arg raw form `@structured(token, species)` is likewise rejected ────────────
-    @testset "raw @structured(token, species) two-arg form is also rejected at construction" begin
+    # ── the two-arg raw form `@structured(token, place)` is likewise rejected ────────────
+    @testset "raw @structured(token, place) two-arg form is also rejected at construction" begin
         err = try
             @reaction_network begin
                 @deterministic(1.0),

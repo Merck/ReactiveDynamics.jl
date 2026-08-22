@@ -1,4 +1,4 @@
-# reaction network DSL: UPDATE part; add species, name, add modalities, set model variables, set solver arguments
+# reaction network DSL: UPDATE part; add place, name, add modalities, set model variables, set solver arguments
 
 export @push, @name_transition, @mode, @add_place
 export @periodic, @jump
@@ -97,7 +97,7 @@ end
 """
 Row indices of `attr` whose stringified value matches `pattern` in FULL (the regex must span the whole
 name, not just a substring). The regex-valued analogue of [`find_rows`](@ref), used by [`mode!`](@ref) to
-apply a modality to every species whose name matches a pattern.
+apply a modality to every place whose name matches a pattern.
 """
 function incident_pattern(pattern, attr)
     ix = []
@@ -114,9 +114,9 @@ function incident_pattern(pattern, attr)
 end
 
 """
-Union the modality tags in `dict` (`species-or-regex => modalities`) into each matching species'
-`placeModality` set, in place. A plain key matches one species by name ([`find_rows`](@ref)); a `Regex`
-key matches every species whose name matches ([`incident_pattern`](@ref)). The runtime behind
+Union the modality tags in `dict` (`place-or-regex => modalities`) into each matching place'
+`placeModality` set, in place. A plain key matches one place by name ([`find_rows`](@ref)); a `Regex`
+key matches every place whose name matches ([`incident_pattern`](@ref)). The runtime behind
 [`@mode`](@ref).
 """
 function mode!(net, dict)
@@ -136,7 +136,7 @@ function mode!(net, dict)
 end
 
 """
-Set species modality.
+Set place modality.
 
 # Supported modalities
 
@@ -174,7 +174,7 @@ end
 
 """
 Set the `valuation_type` economic attribute (`:cost`/`:reward`/`:valuation` → the `placeCost`/`placeReward`/
-`placeValuation` column) of each species named in `dict` (`species-or-regex => value`), in place. Matches
+`placeValuation` column) of each place named in `dict` (`place-or-regex => value`), in place. Matches
 by name ([`find_rows`](@ref)) or, for a `Regex` key, by pattern ([`incident_pattern`](@ref)). The runtime
 behind the `@cost`/`@reward`/`@valuation` macros.
 """
@@ -235,7 +235,7 @@ for valuation_type in (:cost, :reward, :valuation)
 end
 
 """
-Add new species to a model.
+Add new place to a model.
 
 # Examples
 
@@ -258,12 +258,12 @@ macro add_place(netex, exs...)
     return call
 end
 
-# Resolve a species/param selector to a matcher: an `r"…"` regex-string macrocall becomes the compiled
+# Resolve a place/param selector to a matcher: an `r"…"` regex-string macrocall becomes the compiled
 # `Regex` (so callers can pattern-match names), anything else passes through as the literal name.
 get_pattern(ex) = ex isa Expr && (macroname(ex) == :r_str) ? eval(ex) : ex
 
 """
-Set initial values of species in a network.
+Set initial values of place in a network.
 
 # Examples
 
@@ -303,9 +303,9 @@ macro prob_init_from_vec(netex, vecex)
 end
 
 """
-Set species initial values (`placeInitVal`) from `inits`, in place. A vector matching the species count is
+Set place initial values (`placeInitVal`) from `inits`, in place. A vector matching the place count is
 assigned positionally; a dict maps `index-or-name-or-regex => value` (a `Regex` key sets every matching
-species). The runtime behind [`@prob_init`](@ref).
+place). The runtime behind [`@prob_init`](@ref).
 """
 function init!(net, inits)
     if inits isa AbstractVector && length(inits) == nrows(net, :S)
@@ -331,7 +331,7 @@ function init!(net, inits)
 end
 
 """
-Set uncertainty in initial values of species in a network (stderr).
+Set uncertainty in initial values of place in a network (stderr).
 
 # Examples
 
@@ -366,7 +366,7 @@ macro prob_uncertainty(netex, exs...)
 end
 
 """
-Set species initial-value uncertainty (`placeInitUncertainty`, a stderr) from `inits`, in place — the
+Set place initial-value uncertainty (`placeInitUncertainty`, a stderr) from `inits`, in place — the
 uncertainty counterpart of [`init!`](@ref), with the same vector/dict/regex handling. The runtime behind
 [`@prob_uncertainty`](@ref).
 """
@@ -477,17 +477,20 @@ Alias an object name in a network.
 
 | name       | short name |
 |:---------- |:---------- |
-| species    | S          |
+| place      | S          |
 | transition | T          |
 | action     | A          |
 | event      | E          |
 | param      | P          |
 | meta       | M          |
 
+The pre-ADR-0017 spelling `species` is still accepted on the left of `=` for one release (it selects
+the `:S` object exactly as `place` does) and then removed.
+
 # Examples
 
 ```julia
-@aka net species = resource transition = reaction
+@aka net place = resource transition = reaction
 ```
 """
 macro aka(netex, exs...)
@@ -495,7 +498,7 @@ macro aka(netex, exs...)
     foreach(
         ex -> push!(
             dictcall.args[2].args,
-            Symbol("alias_", findfirst(==(ex.args[1]), alias_default)) => ex.args[2],
+            Symbol("alias_", _aka_object(ex.args[1])) => ex.args[2],
         ),
         exs,
     )
@@ -503,13 +506,19 @@ macro aka(netex, exs...)
 end
 
 alias_default = Dict(
-    :S => :species,
+    :S => :place,
     :T => :transition,
     :A => :action,
     :E => :event,
     :P => :param,
     :M => :meta,
 )
+
+# The object an `@aka` left-hand name selects. Normally the inverse of `alias_default`; the extra
+# entry keeps the retired ADR-0017 spelling working for ONE release, so `@aka net species = resource`
+# still targets `:S` instead of silently becoming `alias_nothing`.
+const _AKA_LEGACY_NAMES = Dict(:species => :S)
+_aka_object(name) = get(_AKA_LEGACY_NAMES, name, findfirst(==(name), alias_default))
 
 """
 The display alias for object `ob` (`:S`/`:T`/`:A`/`:E`/`:P`/`:M`) — a user-set `alias_<ob>` metadata

@@ -18,14 +18,14 @@
 # (test/semantic/refinement_composition.jl) and the operators/refine.jl docstrings
 # — this file invents no API. The setting is the same pharma R&D pipeline the other
 # demos use (Discovery → Phase1 → Phase2 → Phase3 → Filed → Market), but taught
-# through the refinement lens, on PLAIN counted species (no structured-token
+# through the refinement lens, on PLAIN counted place (no structured-token
 # machinery) so the refinement mechanics are the star and the demo runs fast.
 #
 # The whole layer is AUTHORING-time and additive: every operation here produces a
 # plain ReactionNetwork that constructs / serializes / simulates exactly like
 # a hand-written flat model (it is FORBIDDEN on a live/stepping model — it
 # reindexes). The enabling mechanism is the ADR-0003 Phase-2 ArcSpec FK-repoint:
-# species identification is repointing an integer FK, not string surgery.
+# place identification is repointing an integer FK, not string surgery.
 
 using ReactiveDynamics
 using ReactiveDynamics: nrows, row_ids, placename, find_index, arcs, port_role
@@ -35,8 +35,8 @@ const RD = ReactiveDynamics
 banner(title) = (println(); println("="^74); println(title); println("="^74))
 
 # A small helper used throughout §3: the STRUCTURAL SIGNATURE of a named transition
-# — its cycletime, prob-of-success, and its reactant rows read off the promoted
-# ArcSpec table as (species NAME, side, stoich). Two transitions with equal
+# — its cycletime, prob-of-success, and its arc rows read off the promoted
+# ArcSpec table as (place NAME, side, stoich). Two transitions with equal
 # signatures are structurally identical. Keying by transition NAME (not index) makes
 # the comparison robust to the row-reordering that refinement performs.
 function trans_signature(m, tname)
@@ -44,11 +44,11 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(placename(m, r.species)), r.side, r.stoich)
-                for r in arcs(m) if r.trans == ti && r.species > 0
+            (string(placename(m, r.place)), r.side, r.stoich)
+                for r in arcs(m) if r.trans == ti && r.place > 0
         ]
     )
-    return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
+    return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], arcs = rows)
 end
 
 
@@ -74,13 +74,13 @@ build_portfolio() = @pipeline Project begin
 end
 
 portfolio = build_portfolio()
-RD.populate_reactant_specs!(portfolio)   # promote the incidence table so we can read it
+RD.populate_arcs!(portfolio)   # promote the incidence table so we can read it
 
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  species (phases)   : ", portfolio[:, :placeName])
+println("  place (phases)   : ", portfolio[:, :placeName])
 println("  transitions        : ", [portfolio[i, :transName] for i in row_ids(portfolio, :T)])
 println(
-    "  parts              : ", nrows(portfolio, :S), " species, ",
+    "  parts              : ", nrows(portfolio, :S), " place, ",
     nrows(portfolio, :T), " transitions"
 )
 println("  per-edge (ct, pos) :")
@@ -93,7 +93,7 @@ for i in row_ids(portfolio, :T)
 end
 # A flow transition consumes its upstream phase on the LHS (the §2.8 flow idiom).
 p2ix = find_index(:Phase2, portfolio)
-consumes_phase2 = any(r -> r.species == p2ix && r.side === :lhs, arcs(portfolio))
+consumes_phase2 = any(r -> r.place == p2ix && r.side === :lhs, arcs(portfolio))
 println(
     "  flow_Phase2_Phase3 consumes :Phase2 on its LHS? ", consumes_phase2,
     "  (token-gated genesis, §2.8)"
@@ -111,23 +111,23 @@ banner("§2. Reusable fragments + open ports: @process / @port / @compose (§A,�
 # structurally into the reaction AST BEFORE parsing (eval-free, no `$`-interpolation).
 #
 # Fragments compose by DECLARED PORTS instead of "remember which names to @equalize".
-# A port is a boundary species tagged with a role (§A): :input (consumed-from
+# A port is a boundary place tagged with a role (§A): :input (consumed-from
 # boundary), :output (produced-into boundary), :shared (identified by bare name),
 # or the default :private (auto-namespaced). `@port net A => input  B => output`
 # tags them (note the `=>` pairs). `@compose f1 f2 …` is `@join` PLUS automatic port
 # matching: an :output port of one fragment is identified with a same-named :input
-# port of another by the FK-repoint (not string surgery), :private species are
+# port of another by the FK-repoint (not string surgery), :private place are
 # namespaced per fragment, :shared stay bare.
 
 @process phase_gate(inp, outp; ct, pos) = begin
     1.0, inp --> outp, name => gate, cycletime => ct, probability => pos
 end
 
-# Two instances of the SAME fragment, wired head-to-tail on the shared species `Lead`.
+# Two instances of the SAME fragment, wired head-to-tail on the shared place `Lead`.
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  species   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
+println("  place   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # Tag the boundary: `Lead` is the output of screening and the input of lead_opt — the
@@ -143,25 +143,25 @@ println(
 )
 
 chain = @compose screening lead_opt
-RD.populate_reactant_specs!(chain)
+RD.populate_arcs!(chain)
 names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
-println("  merged species : ", names_chain)
+println("  merged place : ", names_chain)
 println(
-    "  shared port `Lead` collapsed to ONE species? ",
+    "  shared port `Lead` collapsed to ONE place? ",
     count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
 )
 println(
-    "  private species namespaced per fragment (f1__Screen, f2__Candidate)? ",
+    "  private place namespaced per fragment (f1__Screen, f2__Candidate)? ",
     (:f1__Screen in names_chain) && (:f2__Candidate in names_chain)
 )
 println("  transitions preserved : ", nrows(chain, :T), " (1 + 1, none lost)")
 # The promoted incidence table is FK-EXACT: every static FK resolves, and both
 # transitions route through the single shared `Lead` index.
 leadix = find_index(:Lead, chain)
-through_lead = count(r -> r.species == leadix, arcs(chain))
-all_fk_ok = all(r -> r.species == 0 || 1 <= r.species <= nrows(chain, :S), arcs(chain))
-println("  every reactant FK in range?  ", all_fk_ok)
+through_lead = count(r -> r.place == leadix, arcs(chain))
+all_fk_ok = all(r -> r.place == 0 || 1 <= r.place <= nrows(chain, :S), arcs(chain))
+println("  every arc FK in range?  ", all_fk_ok)
 println("  rows routed through `Lead`:  ", through_lead, "  (produced by screening, consumed by lead_opt)")
 
 
@@ -177,10 +177,10 @@ banner("§3. REFINE one transition — the multifidelity payoff (§B)  ★ headl
 #
 # `refine(spec, transition, submodel; ports)` splices the sub-model into the named
 # coarse transition in four authoring-time structural moves: (1) namespace the sub's
-# :private species; (2) identify the sub's open ports with the parent boundary
-# species via `ports` by FK-repoint; (3) append the sub's transitions + remaining
-# species/params/obs/EVENTS; (4) drop the coarse transition. It is NON-mutating
-# (refine = refine! on a deepcopy). Because move (2) leaves the BOUNDARY species
+# :private place; (2) identify the sub's open ports with the parent boundary
+# place via `ports` by FK-repoint; (3) append the sub's transitions + remaining
+# place/params/obs/EVENTS; (4) drop the coarse transition. It is NON-mutating
+# (refine = refine! on a deepcopy). Because move (2) leaves the BOUNDARY place
 # (Phase2, Phase3) at their same indices/names, coarse and refined are PLUG-
 # COMPATIBLE (Invariant 1): every OTHER transition is structurally untouched.
 
@@ -221,7 +221,7 @@ println(
 #    transition is byte-for-byte structurally identical before and after. ──
 println()
 println("PLUG-COMPATIBILITY (Invariant 1):")
-println("  boundary species keep their indices:")
+println("  boundary place keep their indices:")
 println(
     "    Phase2 : ", phase2_ix_before, " → ", find_index(:Phase2, refined),
     "   Phase3 : ", phase3_ix_before, " → ", find_index(:Phase3, refined)
@@ -242,9 +242,9 @@ println(
     "  — the rest of the portfolio does not notice the zoom."
 )
 
-# The sub's PRIVATE species are namespaced (not leaked as bare names).
+# The sub's PRIVATE place are namespaced (not leaked as bare names).
 println(
-    "  sub-private species namespaced (bare `screen` NOT present): ",
+    "  sub-private place namespaced (bare `screen` NOT present): ",
     !(:screen in refined[:, :placeName]),
     " ; namespaced form present: ",
     any(n -> occursin("__sub__screen", string(n)), refined[:, :placeName])
@@ -289,7 +289,7 @@ for w in warns_drift
     println("  ⚠ ", w)
 end
 
-# And a DANGLING PORT: a species declared :input but only ever PRODUCED (RHS) —
+# And a DANGLING PORT: a place declared :input but only ever PRODUCED (RHS) —
 # a common wiring mistake the port-balance check catches.
 dangling = @reaction_network begin
     1.0, feed --> shelf, name => stock
@@ -311,7 +311,7 @@ banner("§5. Round-tripping the ladder: abstract (§B) and JSON (Invariant 5)")
 # transition whose boundary reaction line is `lhs --> rhs`, carrying summarized
 # attrs. It is a structural convenience for climbing back UP the granularity ladder.
 # (Honest scope: it drops the sub-transition rows and adds the coarse one; it does
-# NOT garbage-collect the now-orphaned internal species — those rows remain, inert.)
+# NOT garbage-collect the now-orphaned internal place — those rows remain, inert.)
 
 sub_transitions = [n for n in tnames_after if occursin("__sub__", string(n))]
 collapsed = RD.abstract_transitions(
@@ -338,11 +338,11 @@ json = RD.to_json_model(refined; meta = Dict{String, Any}("tspan" => 5.0))
 reloaded = RD.build_network_from_dict(RD.JSON.parse(json))
 println("JSON round-trip of the refined model (Invariant 5 — no runtime trace):")
 println(
-    "  species : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
+    "  place : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
     "   transitions : ", nrows(refined, :T), " → reload ", nrows(reloaded, :T)
 )
 println(
-    "  same species set after reload? ",
+    "  same place set after reload? ",
     Set(reloaded[:, :placeName]) == Set(refined[:, :placeName])
 )
 
@@ -398,7 +398,7 @@ println(
           repoint, private namespaced, shared bare) — compositionality without
           remembering which names to @equalize.
       §3  ★ refine — substitute a finer sub-model for one coarse transition, PLUG-
-          COMPATIBLY: the boundary species keep their indices/names, so every OTHER
+          COMPATIBLY: the boundary place keep their indices/names, so every OTHER
           transition is structurally untouched. The portfolio doesn't notice Phase-2
           became four sub-steps. (Non-mutating; refine! is the in-place form.)
       §4  refinement_diagnostics — ADVISORY §C checks (dangling ports; Σct / ΠPoS drift

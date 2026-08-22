@@ -38,7 +38,7 @@ agg_reward(p) = sum(r[3] for r in p.log if r[1] == :valuation_reward; init = 0.0
 
 # A coarse one-step advance model: @select a Phase1 Project, burn 2 budget per tick at @rate over
 # cycletime 1, and @advance(phase,:Phase2) on success. `budget` carries placeCost so the burn is a
-# real ledger cost; the advanced Project species carries placeReward so a successful advance realizes
+# real ledger cost; the advanced Project place carries placeReward so a successful advance realizes
 # reward — the minimal model where BOTH sides of the per-program ledger are non-trivial. (Macro
 # arguments are literal: @prob_init/@reaction_network eval their RHS in MODULE scope, so a
 # parameterized burn/budget would be undefined there — we set cost/reward/budget on the ACSet
@@ -206,9 +206,9 @@ end
         end
     end
 
-    # ── valuation: a species with placeValuation marks its live programs to market ─────────
-    @testset "live programs are marked to market by their species' placeValuation" begin
-        # Give the Project species a placeValuation; a live (unblocked) program then carries that
+    # ── valuation: a place with placeValuation marks its live programs to market ─────────
+    @testset "live programs are marked to market by their place' placeValuation" begin
+        # Give the Project place a placeValuation; a live (unblocked) program then carries that
         # mark in the ledger's `valuation` column (a stock, recomputed each tick — not a flow).
         net = advance_cost_model(; reward = 0.0)
         pi = findfirst(==(:Project), net[:, :placeName])
@@ -222,7 +222,7 @@ end
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 1
-        @test df[1, :valuation] == 50.0           # marked at the species' placeValuation
+        @test df[1, :valuation] == 50.0           # marked at the place' placeValuation
         @test df[1, :species] == :Project
     end
 end

@@ -14,7 +14,7 @@
 #
 # **The mental model in one paragraph.** A `ReactionNetworkProblem` is not a closed world. It is
 # a first-class node in an [AlgebraicAgents](https://github.com/Merck/AlgebraicAgents.jl) (AA)
-# hierarchy: it can be read by its neighbours (they pull its species through `getobservable`) and
+# hierarchy: it can be read by its neighbours (they pull its place through `getobservable`) and
 # it can read them back (it declares named *input ports* and consumes their observables through
 # an `ExternalRef` leaf). The document that describes the network stays inert data — it names the
 # ports it reads but never the agents that fill them; that wiring is host-side. And because the
@@ -122,7 +122,7 @@ println("its pre-wire `sentiment` buffer value  : ", rd0.external_inputs[:sentim
 # `@pipeline` writes a whole phase chain compactly; a `@process` fragment is a reusable,
 # parameterized sub-model; `@compose` joins fragments by *declared open ports* (an `:output` port
 # of one identified with a same-named `:input` port of another); and `refine` substitutes a finer
-# sub-model for a single coarse transition, *plug-compatibly* — the boundary species keep their
+# sub-model for a single coarse transition, *plug-compatibly* — the boundary place keep their
 # indices, so every other transition is structurally untouched. All of it is authoring-time and
 # additive: the result is an ordinary network that constructs, serializes, and simulates like a
 # hand-written flat one, and (like reindexing) it is forbidden on a live, stepping model.
@@ -270,7 +270,7 @@ println("   finance reads identical?                ", a.finance.cash_seen == b.
 #
 # Because the model is data, so is a *run*. `dump_state(prob)` serializes a live run at a clean tick
 # boundary into an eval-free, JSON-able artifact — the clock, the RNG state, creation counters, the
-# plain species column `u`, the token population with current field values, and the once-rule
+# plain place column `u`, the token population with current field values, and the once-rule
 # latches. `restore(spec, dump)` rebuilds an identical problem *from the same network `spec`* (not
 # from the JSON text — `restore` takes the constructed `ReactionNetwork`, overlaying the dumped
 # state onto a fresh build of it), and resuming the restored copy reproduces the original's
@@ -278,7 +278,7 @@ println("   finance reads identical?                ", a.finance.cash_seen == b.
 # dump schema; dumping requires an empty in-flight set — a clean tick boundary — which is the
 # Milestone-1 scope.)
 #
-# We demonstrate the round-trip on a small self-contained model. It is a plain-species work queue: a
+# We demonstrate the round-trip on a small self-contained model. It is a plain-place work queue: a
 # `backlog` pool drained by an instantaneous `work` transition (`cycletime => 0.0`, so nothing is
 # ever in-flight at a boundary) and refilled by a Poisson `intake`. We hold the built network as
 # `spec` so we can both construct the run and, later, hand the same `spec` to `restore`.
@@ -336,15 +336,15 @@ println("buffer equals the declared defaults snapshot? ", spent.rd.external_inpu
 # ### The exec map (hero visual)
 #
 # The analysis layer renders a network as a three-layer diagram. `network_graph(prob)` is a pure,
-# dependency-free Petri-net view (species places, transition nodes, arcs). `to_graphviz(g)` emits
+# dependency-free Petri-net view (place places, transition nodes, arcs). `to_graphviz(g)` emits
 # DOT; `draw_network(prob)` renders it through Graphviz. `exec_map(prob)` decorates that structure
-# with run statistics — species painted where their pool ran to a trough, and (for structured
+# with run statistics — place painted where their pool ran to a trough, and (for structured
 # models) a selected cohort's path drawn as thick arcs. It is strictly read-only: it never mutates
 # the run. Rendering is best-effort: if no Graphviz backend is present we still emit the DOT source,
 # so a backend hiccup cannot fail the build.
 
 g = network_graph(sys.rd)
-println("network_graph — species : ", [s.name for s in g.species])
+println("network_graph — place : ", [s.name for s in g.places])
 println("               transitions: ", [t.name for t in g.transitions])
 println("               arcs       : ", length(g.arcs))
 

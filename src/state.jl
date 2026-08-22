@@ -10,31 +10,31 @@ using Random
 # append-only `(t, kind, amount, transition_name)` audit trail. See ledger.jl for the attribution
 # rule and its documented boundary.
 """
-    ProgramLedger(species, creation_index)
+    ProgramLedger(place, creation_index)
 
-Per-program (per-structured-token) ledger accumulator (CONTRACT §12, MVP finding D — the attribution logic lives in `src/ledger.jl`). Tracks one structured token's running economics: `cost_incurred` (capital burned on its behalf), `reward_realized` (reward credited when a transition it was bound to finished successfully), `valuation` (current mark-to-market), and `entries` — the append-only `(t, kind, amount, transition_name)` audit trail. `species`/`creation_index` identify the program. Per-program rows plus the state's `unattributed_cost`/`unattributed_reward` buckets sum exactly to the aggregate ledger rows.
+Per-program (per-structured-token) ledger accumulator (CONTRACT §12, MVP finding D — the attribution logic lives in `src/ledger.jl`). Tracks one structured token's running economics: `cost_incurred` (capital burned on its behalf), `reward_realized` (reward credited when a transition it was bound to finished successfully), `valuation` (current mark-to-market), and `entries` — the append-only `(t, kind, amount, transition_name)` audit trail. `place`/`creation_index` identify the program. Per-program rows plus the state's `unattributed_cost`/`unattributed_reward` buckets sum exactly to the aggregate ledger rows.
 """
 mutable struct ProgramLedger
-    species::Symbol
+    place::Symbol
     creation_index::Int
     cost_incurred::Float64
     reward_realized::Float64
     valuation::Float64
     entries::Vector{Tuple{Float64, Symbol, Float64, String}}
 end
-ProgramLedger(species::Symbol, creation_index::Int) =
-    ProgramLedger(species, creation_index, 0.0, 0.0, 0.0, Tuple{Float64, Symbol, Float64, String}[])
+ProgramLedger(place::Symbol, creation_index::Int) =
+    ProgramLedger(place, creation_index, 0.0, 0.0, 0.0, Tuple{Float64, Symbol, Float64, String}[])
 
-struct UnfoldedReactant
+struct UnfoldedArc
     index::Int
-    species::Symbol
+    place::Symbol
     stoich::ActionableValues
     modality::Set{Symbol}
     predicate::Any   # nothing (kind-only bind, the default) or a TokenPredicate (ADR 0008 §B)
 end
 # Backward-compatible constructor: no predicate ⇒ today's kind-only binding.
-UnfoldedReactant(index, species, stoich, modality) =
-    UnfoldedReactant(index, species, stoich, modality, nothing)
+UnfoldedArc(index, place, stoich, modality) =
+    UnfoldedArc(index, place, stoich, modality, nothing)
 
 """
 One in-flight transition instance — an AlgebraicAgents `@aagent`, so a live transition is itself a node
@@ -80,7 +80,7 @@ value.
 end
 
 """
-The live simulation state — an AlgebraicAgents `@aagent`, so a running network is itself a node in a larger heterogeneous AA hierarchy (an `AbstractAlgebraicAgent`). It is constructed from a static authoring store by the `ReactionNetworkProblem(net; …)` outer constructor and advanced by the `_step!` loop. Key fields: `.network` (the static `ReactionNetwork` IR store the run was compiled from), `.u` (the current plain-species marking vector), `.p` (parameters), `.t`/`.tspan`/`.dt` (time control), `.sol` (the per-step marking log as a `DataFrame`), `.log` (the event/message log), `.observables`, `.ongoing_transitions` (in-flight transition instances), `.program_ledgers` (per-program economics, §12), and `.token_trajectory` (per-token trajectory log, §14.1). Determinism is contractual (§4): `.rng` is the state-owned RNG that is the SOLE source of randomness in the step loop, `.seed` records the realized construction seed, and `.initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly. The endogenous decision channel lives in `.rules`/`.registry`; the runtime store is append-only (ADR 0004), so compiled attribute closures may position-index it safely.
+The live simulation state — an AlgebraicAgents `@aagent`, so a running network is itself a node in a larger heterogeneous AA hierarchy (an `AbstractAlgebraicAgent`). It is constructed from a static authoring store by the `ReactionNetworkProblem(net; …)` outer constructor and advanced by the `_step!` loop. Key fields: `.network` (the static `ReactionNetwork` IR store the run was compiled from), `.u` (the current plain-place marking vector), `.p` (parameters), `.t`/`.tspan`/`.dt` (time control), `.sol` (the per-step marking log as a `DataFrame`), `.log` (the event/message log), `.observables`, `.ongoing_transitions` (in-flight transition instances), `.program_ledgers` (per-program economics, §12), and `.token_trajectory` (per-token trajectory log, §14.1). Determinism is contractual (§4): `.rng` is the state-owned RNG that is the SOLE source of randomness in the step loop, `.seed` records the realized construction seed, and `.initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly. The endogenous decision channel lives in `.rules`/`.registry`; the runtime store is append-only (ADR 0004), so compiled attribute closures may position-index it safely.
 """
 @aagent struct ReactionNetworkProblem
     network::ReactionNetwork
@@ -120,19 +120,19 @@ The live simulation state — an AlgebraicAgents `@aagent`, so a running network
     rules::Vector
     registry::Dict{Symbol, Any}
 
-    # Structured-token determinism (ADR 0006 §E / ADR 0008): per-species monotonic creation
-    # counter, and the realized (token-name → creation_index) map that fixes the (species,
+    # Structured-token determinism (ADR 0006 §E / ADR 0008): per-place monotonic creation
+    # counter, and the realized (token-name → creation_index) map that fixes the (place,
     # creation_index) total order tokens are selected in. Reset by _reinit! (§4 D7).
     creation_counters::Dict{Symbol, Int}
     creation_index::Dict{String, Int}
 
     # Declarative initial marking (ADR 0007 §B). `population` is the structured-token initial
-    # state (the analogue of placeInitVal for plain species): either a vector of declarative
+    # state (the analogue of placeInitVal for plain place): either a vector of declarative
     # PopulationEntry specs (count + seeded attribute exprs) OR already-constructed host token
     # agents. Stored so _reinit! can rebuild the exact t=0 marking (§D, closing §4 D7 for
     # structured runs). For the explicit-host-token form `init_snapshot` records each token's
     # initial field values (by token name) so _reinit! can restore the SAME objects to their t=0
-    # attributes (species/phase/…), not just reset their bonds. `live` arms the §A phase guard:
+    # attributes (place/phase/…), not just reset their bonds. `live` arms the §A phase guard:
     # once constructed, reindexers (rem_parts!) refuse.
     population::Vector
     init_snapshot::Dict{String, Dict{Symbol, Any}}
@@ -164,11 +164,11 @@ The live simulation state — an AlgebraicAgents `@aagent`, so a running network
     external_input_defaults::Dict{Symbol, Any}
 
     # Per-token trajectory log (ADR 0013 §A / CONTRACT §14.1). The time-indexed companion to the
-    # per-program ledger: each tick `push_token_trajectory_row!` appends `(t, token_name, species,
+    # per-program ledger: each tick `push_token_trajectory_row!` appends `(t, token_name, place,
     # fields)` for every token whose KIND opts in via `log_token_fields(tok)::NamedTuple` (default
     # empty), iterated in `token_sortkey` order — the same seam (`solvers.jl`, right after
     # `push_program_ledger_row!`), observation point, and determinism guarantee as the ledger row it
-    # generalizes (§4 D4). `species` is captured at log time (it can change under soft-retire). Sibling
+    # generalizes (§4 D4). `place` is captured at log time (it can change under soft-retire). Sibling
     # of `log`; bounded by per-kind opt-in (Invariant 2); reset by `_reinit!` like the ledger (§4 D7).
     token_trajectory::Vector{Tuple{Float64, String, Symbol, NamedTuple}}
 end
@@ -204,16 +204,16 @@ save!(state::ReactionNetworkProblem) = push!(state.sol, (state.t, state.u[:]...)
 
 function compile_observables(net::ReactionNetwork)
     observables = Dict{Symbol, Observable}()
-    species_names = collect(net[:, :placeName])
+    place_names = collect(net[:, :placeName])
     prm_names = collect(net[:, :prmName])
-    varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(species_names)])
+    varmap = Dict([name => :(state.u[$i]) for (i, name) in enumerate(place_names)])
 
     for (name, opts) in Iterators.zip(net[:, :obsName], net[:, :obsOpts])
-        on = map(on -> wrap_expr(on, species_names, prm_names, varmap), opts.on)
+        on = map(on -> wrap_expr(on, place_names, prm_names, varmap), opts.on)
         range = map(
             r -> begin
                 r = r isa Tuple ? r : (1.0, r)
-                (r[1], wrap_expr(r[2], species_names, prm_names, varmap))
+                (r[1], wrap_expr(r[2], place_names, prm_names, varmap))
             end,
             opts.range,
         )
@@ -284,8 +284,8 @@ function prune_r_line(r_line)
     end
 end
 
-function find_index(species::Symbol, state::ReactionNetworkProblem)
-    return findfirst(i -> state[i, :placeName] == species, row_ids(state, :S))
+function find_index(place::Symbol, state::ReactionNetworkProblem)
+    return findfirst(i -> state[i, :placeName] == place, row_ids(state, :S))
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
@@ -321,14 +321,14 @@ function sample_transitions!(state::ReactionNetworkProblem)
             )
         end
 
-        reactants = []
-        for r in extract_reactants(l_line, state)
-            j = find_index(r.species, state)
+        arcs = []
+        for r in extract_arcs(l_line, state)
+            j = find_index(r.place, state)
             push!(
-                reactants,
-                UnfoldedReactant(
+                arcs,
+                UnfoldedArc(
                     j,
-                    r.species,
+                    r.place,
                     context_eval(state, nothing, state.wrap_fun(r.stoich)),
                     r.modality ∪ state[j, :placeModality],
                     r.predicate,
@@ -336,7 +336,7 @@ function sample_transitions!(state::ReactionNetworkProblem)
             )
         end
 
-        push!(state.transitions[:transLHS], reactants)
+        push!(state.transitions[:transLHS], arcs)
         push!(state.transitions[:transRHS], r_line)
         push!(state.transitions[:transFiring], fires)
 

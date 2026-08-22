@@ -10,11 +10,11 @@ function get_sampled_transition(state, i)
     return transition
 end
 
-# The token-selection predicate (ADR 0008) for structured species `type` in an LHS reactant
-# list, or `nothing` (kind-only bind) when that reactant carries none.
+# The token-selection predicate (ADR 0008) for structured place `type` in an LHS arc
+# list, or `nothing` (kind-only bind) when that arc carries none.
 function lhs_predicate(lhs, type::Symbol)
     for r in lhs
-        r isa UnfoldedReactant && r.species == type && return r.predicate
+        r isa UnfoldedArc && r.place == type && return r.predicate
     end
     return nothing
 end
@@ -24,8 +24,8 @@ isinteger(x::Number) = x == trunc(x)
 # ── Priority-weighted progressive-filling allocator (ADR 0002) ───────────────────────────
 #
 # Each tick, transition instances compete for the finite shared supply `u[s]`. Demand is
-# conjunctive (Leontief): an instance needs ALL of its required species at once, so a partial
-# share of one species without the others is wasted. ADR 0002 fixes the policy as priority-
+# conjunctive (Leontief): an instance needs ALL of its required place at once, so a partial
+# share of one place without the others is wasted. ADR 0002 fixes the policy as priority-
 # weighted max-min fairness, computed by weighted progressive filling (water-filling). The
 # single allocator below replaces the old seven-function tangle (`get_reqs_init!`,
 # `get_reqs_ongoing!`, `get_allocs!`/`alloc_weighted!`/`alloc_greedy!`, `get_frac_satisfied`,
@@ -42,11 +42,11 @@ Struct-of-arrays scratch for the progressive-filling allocator (ADR 0002 "Propos
 surface"). One workspace is built per `evolve!` call site each tick; `req` is filled by
 `build_requirements!`. The other fields are the iteration state:
 
-  - `req::Matrix` — S×T, units of species `s` per unit fill of transition `t`.
+  - `req::Matrix` — S×T, units of place `s` per unit fill of transition `t`.
   - `f::Vector`   — T, the per-transition fill fraction (the allocator's output).
   - `r::Vector`   — S, remaining supply during filling.
   - `active`      — T, which transitions are still being filled.
-  - `D::Vector`   — S, per-species weighted demand of the currently active transitions.
+  - `D::Vector`   — S, per-place weighted demand of the currently active transitions.
 
 `AllocWorkspace(req::Matrix)` builds a workspace sized to a given requirement matrix (the
 unit-test entry point); `AllocWorkspace(nS, nT)` allocates a zeroed workspace of a given shape.
@@ -111,8 +111,8 @@ function build_requirements!(
         for i in eachindex(state.ongoing_transitions)
             for tok in state.ongoing_transitions[i][:transLHS]
                 if in(:rate, tok.modality)
-                    in(tok.species, state.structured_token) && error(
-                        "Modality `:rate` is not supported for structured species in transition $(state.ongoing_transitions[i][:transName]).",
+                    in(tok.place, state.structured_token) && error(
+                        "Modality `:rate` is not supported for structured place in transition $(state.ongoing_transitions[i][:transName]).",
                     )
                     (state.ongoing_transitions[i][:transCycleTime] > 0) &&
                         (reqs[tok.index, i] += qs[i] * tok.stoich * dt_scale)
@@ -157,7 +157,7 @@ that needs a now-saturated resource is frozen. Properties (ADR 0002):
 from genuinely leftover resource": stage 1 fills the positive-priority transitions; stage 2 fills
 the zero-priority transitions, at equal weight, from the supply that stage 1 left behind. A
 zero-priority transition therefore never competes with positive-priority demand and advances only
-if positive-priority demand did not exhaust its required species.
+if positive-priority demand did not exhaust its required place.
 """
 function progressive_fill!(ws::AllocWorkspace, u, w; fmax = fill(Inf, length(w)))
     nT = length(w)
@@ -388,26 +388,26 @@ function evolve!(state)
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
-                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                            "For structured place, stoichiometry coefficient must be integer in transition $i.",
                         )
                     end
 
-                    # ADR 0008 §B: narrow the candidate set by the LHS reactant's predicate
+                    # ADR 0008 §B: narrow the candidate set by the LHS arc's predicate
                     # (kind-only when none), then the unchanged priority sort + integer take.
                     pred = lhs_predicate(state.transitions[:transLHS][i], type)
-                    available_species = filter(
+                    available_places = filter(
                         a ->
-                        get_species(a) == type &&
+                        get_place(a) == type &&
                             !isblocked(a) &&
                             matches(pred, a, state, transition),
                         structured_token,
                     )
 
                     # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
-                    # deterministic (species, creation_index) key — NOT the AA Dict / random-name
+                    # deterministic (place, creation_index) key — NOT the AA Dict / random-name
                     # order, which would make WHICH equal-priority token binds non-reproducible.
                     sort!(
-                        available_species;
+                        available_places;
                         by = a -> (
                             -priority(a, state.network[i, :transName]),
                             token_sortkey(state, a),
@@ -415,12 +415,12 @@ function evolve!(state)
                     )
 
                     ix = 1
-                    while allocs[j, i] > 0 && ix <= length(available_species)
-                        set_bound_transition!(available_species[ix], transition)
+                    while allocs[j, i] > 0 && ix <= length(available_places)
+                        set_bound_transition!(available_places[ix], transition)
 
-                        push!(bound, available_species[ix])
-                        push!(structured_to_agents, type => available_species[ix])
-                        add_to_log!(available_species[ix], type, state.t, transition)
+                        push!(bound, available_places[ix])
+                        push!(structured_to_agents, type => available_places[ix])
+                        add_to_log!(available_places[ix], type, state.t, transition)
 
                         allocs[j, i] -= 1
                         ix += 1
@@ -487,28 +487,28 @@ function evolve!(state)
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
-                            "For structured species, stoichiometry coefficient must be integer in transition $i.",
+                            "For structured place, stoichiometry coefficient must be integer in transition $i.",
                         )
                     end
 
                     # ADR 0008 §B: narrow by the in-flight transition's LHS predicate.
                     pred = lhs_predicate(transition[:transLHS], type)
-                    available_species = filter(
+                    available_places = filter(
                         a ->
-                        get_species(a) == type &&
+                        get_place(a) == type &&
                             !isblocked(a) &&
                             matches(pred, a, state, transition),
                         structured_token,
                     )
 
                     # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
-                    # deterministic (species, creation_index) key. NB use `transition.i` (the recipe
+                    # deterministic (place, creation_index) key. NB use `transition.i` (the recipe
                     # index stored at spawn), NOT the loop var `i` — here `i` indexes the
                     # ongoing_transitions array, not the :T schema row, so `state.network[i, …]` would
                     # read the wrong transition's priority (latent: harmless only while priority is
                     # the default 0.0 for all tokens; a per-transition priority override would hit it).
                     sort!(
-                        available_species;
+                        available_places;
                         by = a -> (
                             -priority(a, state.network[transition.i, :transName]),
                             token_sortkey(state, a),
@@ -516,12 +516,12 @@ function evolve!(state)
                     )
 
                     ix = 1
-                    while allocs[j, i] > 0 && ix <= length(available_species)
-                        set_bound_transition!(available_species[ix], transition)
+                    while allocs[j, i] > 0 && ix <= length(available_places)
+                        set_bound_transition!(available_places[ix], transition)
 
-                        push!(bound, available_species[ix])
-                        push!(structured_to_agents, type => available_species[ix])
-                        add_to_log!(available_species[ix], type, state.t, transition)
+                        push!(bound, available_places[ix])
+                        push!(structured_to_agents, type => available_places[ix])
+                        add_to_log!(available_places[ix], type, state.t, transition)
 
                         allocs[j, i] -= 1
                         ix += 1
@@ -584,12 +584,12 @@ function structured_rhs(expr::Expr, state, transition)
             end
             token = ctor(state, fieldvals)
             entangle!(getagent(state, "structured"), token)
-            return token, get_species(token)
+            return token, get_place(token)
         else
-            # The raw `@structured(Ctor(…))` / `@structured(token, species)` forms were removed —
+            # The raw `@structured(Ctor(…))` / `@structured(token, place)` forms were removed —
             # the named, registry-resolved form above is the only supported genesis product (it is
             # the sole one that serializes eval-free; ADR 0005 §39 / 0006 §C). Construction rejects
-            # a raw line (recursively_find_reactants!, create.jl), so reaching here means a
+            # a raw line (recursively_find_arcs!, create.jl), so reaching here means a
             # hand-built :trans Expr bypassed that check — surface it rather than eval host code.
             error(
                 "@structured: only the named form `@structured(:Kind, field = value, …)` is " *
@@ -608,13 +608,13 @@ function structured_rhs(expr::Expr, state, transition)
             Symbol.(context_eval(state, transition, state.wrap_fun(expr)))
 
         tokens =
-            filter(x -> get_species(x) == species_from, transition.bound_structured_agents)
+            filter(x -> get_place(x) == species_from, transition.bound_structured_agents)
 
         if !isempty(tokens)
             token = first(tokens)
             entangle!(getagent(state, "structured"), token)
 
-            set_species!(token, species_to)
+            set_place!(token, species_to)
             ix = findfirst(
                 i -> transition.bound_structured_agents[i] == token,
                 eachindex(transition.bound_structured_agents),
@@ -625,8 +625,8 @@ function structured_rhs(expr::Expr, state, transition)
             return token, species_to
         else
             # No bound token of species_from to move — a graceful no-op (finish! skips a nothing
-            # species), consistent with @advance; do NOT fall through to an implicit nothing that
-            # would crash the (token, species) unpack at the call site.
+            # place), consistent with @advance; do NOT fall through to an implicit nothing that
+            # would crash the (token, place) unpack at the call site.
             @error "Not enough tokens to allocate for a move."
             return nothing, nothing
         end
@@ -634,7 +634,7 @@ function structured_rhs(expr::Expr, state, transition)
     elseif isexpr(expr, :macrocall) && macroname(expr) == :advance
         # @advance(field, value): advance a bound token's lifecycle by writing one field, keeping
         # its identity/kind/uuid/creation_index/past_bonds (ADR 0008 §D). The phase-as-attribute
-        # generalization of @move (which writes the `species` field). `value` may read the token's
+        # generalization of @move (which writes the `place` field). `value` may read the token's
         # own current fields via @field(name), and MAY draw (§F). The advanced token is then
         # released. It is consumed from the first bound token of this transition.
         field = expr.args[3]
@@ -648,19 +648,19 @@ function structured_rhs(expr::Expr, state, transition)
         # Evaluate the value with the bound token in scope so @field(name) reads its attributes.
         val = eval_with_token(state, transition, token, valex)
         if field === :species
-            set_species!(token, Symbol(val))
+            set_place!(token, Symbol(val))
         else
             setproperty!(token, field, val)
         end
         deleteat!(transition.bound_structured_agents, 1)
         set_bound_transition!(token, nothing)
-        return token, get_species(token)
+        return token, get_place(token)
 
     else
         token = context_eval(state, transition, state.wrap_fun(expr))
         entangle!(getagent(state, "structured"), token)
 
-        return token, get_species(token)
+        return token, get_place(token)
     end
 end
 
@@ -690,21 +690,21 @@ function finish!(state)
         reward_before = val_reward
         finishing_tokens = _bound_tokens(trans_)
 
-        for r in extract_reactants(trans_[:transRHS], state)
-            if r.species isa Expr
+        for r in extract_arcs(trans_[:transRHS], state)
+            if r.place isa Expr
                 stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
 
                 for _ in 1:(q * stoich)
-                    token, species = structured_rhs(r.species, state, trans_)
+                    token, place = structured_rhs(r.place, state, trans_)
                     # A structured-RHS op may legitimately produce nothing (e.g. @advance with no
                     # bound token to advance) — skip the count/reward in that case.
-                    species === nothing && continue
-                    i = find_index(species, state)
+                    place === nothing && continue
+                    i = find_index(place, state)
                     state.u[i] += 1
                     val_reward += state[i, :placeReward]
                 end
             else
-                i = find_index(r.species, state)
+                i = find_index(r.place, state)
                 stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
 
                 state.u[i] += q * stoich
@@ -724,14 +724,14 @@ function finish!(state)
                     trans_.q *
                     tok.stoich *
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
-                if tok.species ∈ state.structured_token
+                if tok.place ∈ state.structured_token
                     for _ in 1:(trans_.q * tok.stoich)
                         agent_ix = findfirst(
-                            a -> get_species(a) == tok.species,
+                            a -> get_place(a) == tok.place,
                             trans_.bound_structured_agents,
                         )
-                        # No more bound tokens of this species to release (a multi-species
-                        # transition may exhaust one species before the q*stoich count) — stop.
+                        # No more bound tokens of this place to release (a multi-place
+                        # transition may exhaust one place before the q*stoich count) — stop.
                         isnothing(agent_ix) && break
 
                         set_bound_transition!(
@@ -751,13 +751,13 @@ function finish!(state)
                 end
 
                 state.u[tok.index] += trans_.q * tok.stoich
-                if tok.species ∈ state.structured_token
+                if tok.place ∈ state.structured_token
                     for _ in 1:(trans_.q * tok.stoich)
                         agent_ix = findfirst(
-                            a -> get_species(a) == tok.species,
+                            a -> get_place(a) == tok.place,
                             trans_.nonblock_structured_agents,
                         )
-                        isnothing(agent_ix) && break   # no more nonblock tokens of this species
+                        isnothing(agent_ix) && break   # no more nonblock tokens of this place
 
                         set_bound_transition!(
                             trans_.nonblock_structured_agents[agent_ix],
@@ -776,7 +776,7 @@ function finish!(state)
         )
 
         for agent in trans_.bound_structured_agents
-            set_species!(agent, :removed)
+            set_place!(agent, :removed)
             set_bound_transition!(agent, nothing)
         end
 
@@ -806,7 +806,7 @@ function finish!(state)
     return state.u
 end
 
-function free_blocked_species!(state)
+function free_blocked_places!(state)
     for trans in state.ongoing_transitions, tok in trans[:transLHS]
         in(:nonblock, tok.modality) && (state.u[tok.index] += trans.q * tok.stoich)
     end
@@ -841,16 +841,16 @@ end
 # errors are thereby UNREACHABLE for these cases (the construction check fires first) but are left in
 # place as defensive belt-and-suspenders:
 #   1. {:nonblock, :conserved}    — else errors in finish! (solvers.jl ~735) / crashes on `q` in
-#                                    free_blocked_species! on the 2nd tick.
+#                                    free_blocked_places! on the 2nd tick.
 #   2. :rate (perstep) with C==0  — else constructs and runs SILENTLY (build_requirements! gates the
 #                                    per-step draw on C>0, ~117, so the token never meters).
 #   3. :rate (perstep) on a       — else errors deep in build_requirements! (~114).
-#      structured/agent species
+#      structured/agent place
 #
-# Reactants are read via the eval-free static decomposition (`_split_reaction_line` +
-# `_static_reactants`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
+# Arcs are read via the eval-free static decomposition (`_split_reaction_line` +
+# `_static_arcs`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
 # modality Set matches what the engine forms per tick. The effective per-token modality unions the
-# reactant's wrapper tags with the species' `:placeModality` (the `@mode` channel), exactly as the
+# arc's wrapper tags with the place' `:placeModality` (the `@mode` channel), exactly as the
 # runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
 # are the escape hatch and are left un-validated (they are un-validatable statically).
 function validate_modalities(net::ReactionNetwork)
@@ -863,9 +863,9 @@ function validate_modalities(net::ReactionNetwork)
         tname = net[t, :transName]
         tlabel = (tname === missing || tname === nothing) ? "t$t" : string(tname)
         ct = net[t, :transCycleTime]
-        for r in _static_reactants(lhs)
-            sname = string(r.species)
-            i = r.species isa Symbol ? find_index(r.species, net) : nothing
+        for r in _static_arcs(lhs)
+            sname = string(r.place)
+            i = r.place isa Symbol ? find_index(r.place, net) : nothing
             mod = i === nothing ? r.modality : (r.modality ∪ net[i, :placeModality])
 
             # Rule 1 — blocking = nonblock requires return = consumed.
@@ -893,14 +893,14 @@ function validate_modalities(net::ReactionNetwork)
                 )
             end
 
-            # Rule 3 — allocation = perstep requires a non-structured (countable) species.
+            # Rule 3 — allocation = perstep requires a non-structured (countable) place.
             if in(:rate, mod) && i !== nothing && net[i, :placeStructured] === true
                 throw(
                     ArgumentError(
                         "Transition `$tlabel`, LHS token `$sname`: modality :rate (perstep) on a " *
-                            "structured/agent species is illegal (CONTRACT §1.4) — you cannot reserve a " *
+                            "structured/agent place is illegal (CONTRACT §1.4) — you cannot reserve a " *
                             "fractional, dt-scaled slice of an indivisible agent. `allocation = perstep` " *
-                            "requires a non-structured (countable) species.",
+                            "requires a non-structured (countable) place.",
                     ),
                 )
             end
@@ -912,7 +912,7 @@ end
 """
     ReactionNetworkProblem(net::ReactionNetwork, u0 = Dict(), p = Dict(); name = "reaction_network", seed = nothing, tspan, dt = 1, kwargs...)
 
-Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-species initial markings by name (defaulting to each species' `placeInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
+Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-place initial markings by name (defaulting to each place' `placeInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
 
 The `seed` kwarg owns the per-run RNG (CONTRACT §4): it fixes the state-owned stream so a run is fully determined by `(model, seed)`; absent, a fresh seed is drawn from system entropy and the REALIZED value stored on `.seed`, so any run stays replayable. `initial_rng` snapshots the stream at t=0 for `_reinit!`.
 """
@@ -1132,7 +1132,7 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem; seed = nothing)
         if !(entry isa PopulationEntry)
             set_bound_transition!(entry, nothing)
             empty!(entry.past_bonds)
-            # restore the SAME object's attributes (species/phase/…) to their captured t=0 values
+            # restore the SAME object's attributes (place/phase/…) to their captured t=0 values
             restore_token_snapshot!(state, entry)
         end
     end
@@ -1164,10 +1164,10 @@ end
 
 function update_u_structured!(state)
     structured_tokens = collect(values(inners(getagent(state, "structured"))))
-    for (i, species) in enumerate(state.network[:, :placeName])
+    for (i, place) in enumerate(state.network[:, :placeName])
         if state.network[i, :placeStructured]
             state.u[i] =
-                count(a -> get_species(a) == species && !isblocked(a), structured_tokens)
+                count(a -> get_place(a) == place && !isblocked(a), structured_tokens)
         end
     end
 
@@ -1180,7 +1180,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         save!(state)
     end
 
-    free_blocked_species!(state)
+    free_blocked_places!(state)
     update_u_structured!(state)
     update_observables(state)
     sample_transitions!(state)
@@ -1204,7 +1204,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         ),
     )
 
-    # MVP finding D — mark each live program to market (its species' placeValuation) and push the
+    # MVP finding D — mark each live program to market (its place' placeValuation) and push the
     # per-tick per-program ledger row, in deterministic token order, right after the aggregate
     # :valuation row so the per-program and aggregate views are consistent (src/ledger.jl).
     attribute_valuation!(state)

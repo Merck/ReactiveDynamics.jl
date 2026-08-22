@@ -20,7 +20,7 @@
 # (§5) → the marginal value of that lever, with a standard error (§6).
 
 using ReactiveDynamics
-using ReactiveDynamics: register_token_kind!, get_species, inners, getagent,
+using ReactiveDynamics: register_token_kind!, get_place, inners, getagent,
     Rule, Seq, SetMarking, AddToken, Log, PopulationEntry
 using Statistics                # mean / std for the ensemble reductions
 using Distributions             # Normal, for a sampled starting portfolio
@@ -32,7 +32,7 @@ const RD = ReactiveDynamics
 
 # ## 1. Structured tokens: a program is an entity, not a count
 #
-# A *classical* species is a scalar — a single `Float64` saying "how many `A` there are." That is
+# A *classical* place is a scalar — a single `Float64` saying "how many `A` there are." That is
 # exactly right for indistinguishable molecules, but a program in a portfolio is not a molecule. We
 # want each program to carry **attributes** (its current phase, its value) and a stable **identity**
 # — the *same* object as it advances Phase1 → Phase2 → …, so a downstream report can follow it.
@@ -41,7 +41,7 @@ const RD = ReactiveDynamics
 # (uuid / kind / creation index) is preserved as the engine mutates its fields. We define the kind
 # in ReactiveDynamics' own scope with the `@register` / `@aagent` idiom, because the engine's
 # selection and advancement machinery lives there and must see the type. The four leading
-# constructor arguments are the `@aagent` protocol fields, in order — a unique `name`, the `species`
+# constructor arguments are the `@aagent` protocol fields, in order — a unique `name`, the `place`
 # kind tag (here `:Project`; every program shares one kind), a `bound_transition` (`nothing` until a
 # transition binds the token), and an empty `past_bonds` history — followed by our two modeling
 # attributes, `phase` and `npv`.
@@ -76,9 +76,9 @@ const REGISTRY = Dict{Symbol, Any}(
 # name; we usually want the values):
 
 livetokens(p) = collect(values(inners(getagent(p, "structured"))))
-nphase(p, ph) = count(t -> get_species(t) == :Project && t.phase == ph, livetokens(p))
+nphase(p, ph) = count(t -> get_place(t) == :Project && t.phase == ph, livetokens(p))
 nlaunched(p) = nphase(p, :Launched)
-nretired(p) = count(t -> get_species(t) == :removed, livetokens(p))
+nretired(p) = count(t -> get_place(t) == :removed, livetokens(p))
 
 # We seed the starting portfolio with the **declarative** `population` initial marking, passed to the
 # constructor and instantiated before `t = 0`. This is preferred over an imperative post-construction
@@ -117,7 +117,7 @@ sampled_portfolio() = [
 # A demo token, and the two population forms materialized under a seed:
 
 demo_tok = RD.ProjectToken(:Phase1, 120.0)
-println("A single ProjectToken : phase=", demo_tok.phase, "  npv=", demo_tok.npv, "  kind=", get_species(demo_tok))
+println("A single ProjectToken : phase=", demo_tok.phase, "  npv=", demo_tok.npv, "  kind=", get_place(demo_tok))
 println(
     "Form A explicit portfolio: ", length(explicit_portfolio()), " programs, phases = ",
     sort(string.([t.phase for t in explicit_portfolio()]))
@@ -125,9 +125,9 @@ println(
 
 # ## 2. A phase-as-attribute lifecycle
 #
-# A naive design would make a *species per phase* (`Phase1`, `Phase2`, …) and "advance" by destroying
+# A naive design would make a *place per phase* (`Phase1`, `Phase2`, …) and "advance" by destroying
 # a `Phase1` token and creating a `Phase2` token. That breaks identity — the new token is a different
-# object — and multiplies the species count. The canonical ReactiveDynamics design is
+# object — and multiplies the place count. The canonical ReactiveDynamics design is
 # **phase-as-attribute**: there is one `:Project` kind, and `phase` is a field. A pipeline step reads
 #
 #     @select(Project, <clause>) --> @advance(phase, :NextPhase)
@@ -137,8 +137,8 @@ println(
 # bound token's `phase` field **in place** — the same object, identity preserved.
 #
 # A stage gate can also *fail*: `probability => q` makes each advance a `Binomial(·, q)` trial. On
-# failure the bound token **soft-retires** — its species flips to `:removed` and its `phase` records
-# how far it got (a killed Phase2 program stays at `phase == :Phase2` but `species == :removed`).
+# failure the bound token **soft-retires** — its place flips to `:removed` and its `phase` records
+# how far it got (a killed Phase2 program stays at `phase == :Phase2` but `place == :removed`).
 #
 # We build the portfolio's lifecycle as three timed advances. Each advance also holds a shared
 # `capital` pool via `@conserved` — capital is *occupied* for the duration of an in-flight advance
@@ -238,8 +238,8 @@ println("After : Phase1=", nphase(p_sel, :Phase1), " Phase2=", nphase(p_sel, :Ph
 
 # ## 4. Resource modalities and the allocator under contention
 #
-# A reactant is not simply "consumed." The engine has a small **algebra** of resource behaviors, set
-# by wrapping a species in a modality macro on the left-hand side. The behavior depends on *when* the
+# A arc is not simply "consumed." The engine has a small **algebra** of resource behaviors, set
+# by wrapping a place in a modality macro on the left-hand side. The behavior depends on *when* the
 # resource is drawn and *whether* it comes back — this is the engine's signature feature, and the
 # truth table lands here:
 #
@@ -359,7 +359,7 @@ println(
 #
 #     Rule(id, guard::Expr, action; fire_mode = :once | :every_tick)
 #
-# The guard is evaluated against the live state (`@t()` is the clock; species and params are in
+# The guard is evaluated against the live state (`@t()` is the clock; place and params are in
 # scope). `fire_mode = :once` fires the action the first tick its guard holds, then latches off
 # (`_reinit!` re-arms it). Actions compose via `Seq`: `SetMarking` injects into a resource pool,
 # `SetParams` flips a model parameter, `AddToken` injects a fresh token *by kind* through the
@@ -484,7 +484,7 @@ vline!([te.baseline, te.deal]; label = "means", lw = 2, color = :black, ls = :da
 #    ending on +Δ expected launches ± SE.
 #
 # Two deep-dives go further on the machinery touched here: the [serialization deep-dive](../deep_dives/serialization.md)
-# shows how this whole model — species, pipeline, lever, and portfolio — becomes an eval-free JSON
+# shows how this whole model — place, pipeline, lever, and portfolio — becomes an eval-free JSON
 # document that round-trips loss-free, and the [composition deep-dive](../deep_dives/composition.md)
 # covers `@join` / `@compose` / `refine` for building a portfolio out of fragments and moving between
 # granularities. The [expert tutorial](expert.md) then places the portfolio as a node in a larger

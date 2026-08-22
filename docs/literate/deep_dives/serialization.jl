@@ -100,7 +100,7 @@ println("export idempotent (re-export == export): ", idempotent)
 #
 # `validate(dict; registry)` is a PURE walk over the parsed document — no `node_from_dict`, no `to_expr`, no `eval`. It returns a `Vector{Diagnostic}`; an empty vector means clean, and `from_json_model` gates construction on exactly that. This is the pass an agent (or a colleague) runs to self-check a model *before* loading it.
 #
-# We reuse the pipeline as a hand-authored JSON document — structured species carry `"structured": true`, and a pipeline step's reactants are an LHS `predicate` plus an RHS `advance`.
+# We reuse the pipeline as a hand-authored JSON document — structured place carry `"structured": true`, and a pipeline step's arcs are an LHS `predicate` plus an RHS `advance`.
 
 const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",
@@ -125,7 +125,7 @@ const PIPELINE_JSON = """
 clean_diags = validate(JSON.parse(PIPELINE_JSON); registry = REGISTRY)
 println("validate(clean model)  -> ", isempty(clean_diags) ? "OK (no diagnostics)" : clean_diags)
 
-# Now break it deliberately: point a reactant's foreign key at a transition that does not exist. `validate` reports it as a diagnostic — it does not throw, and it certainly does not evaluate anything.
+# Now break it deliberately: point a arc's foreign key at a transition that does not exist. `validate` reports it as a diagnostic — it does not throw, and it certainly does not evaluate anything.
 
 broken = JSON.parse(PIPELINE_JSON)
 broken["reactants"][1]["transition"] = "ghost"        # no transition with id "ghost"
@@ -175,9 +175,9 @@ node_dict = node_to_dict(rate_tree)
 recovered = node_from_dict(node_dict)
 println("node dict round-trips: ", to_expr(recovered) == to_expr(rate_tree))
 
-# `from_expr` is the inverse direction — a stored attribute `Expr` classified back into the typed tree, with the species/param name sets telling a bare symbol which kind of `NodeRef` it is:
+# `from_expr` is the inverse direction — a stored attribute `Expr` classified back into the typed tree, with the place/param name sets telling a bare symbol which kind of `NodeRef` it is:
 
-back = from_expr(lowered; species = Set([:Preclinical]), params = Set([:beta]))
+back = from_expr(lowered; places = Set([:Preclinical]), params = Set([:beta]))
 println("from_expr ∘ to_expr is identity (on Expr): ", to_expr(back) == to_expr(rate_tree))
 
 # The algebra is *closed*: an operator outside `OP_WHITELIST` cannot enter the IR. `from_expr` rejects it rather than admitting arbitrary calls — the whitelist is the gate, not a convention.

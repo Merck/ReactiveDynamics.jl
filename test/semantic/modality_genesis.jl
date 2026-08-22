@@ -105,16 +105,16 @@ using Statistics
 
     # [mod-row5-perstep-consumed-nonblock] tier=T1-characterization expectedStatus=pass-now
     # contract: §1.3 row 5 ({:nonblock} ⇒ perstep,consumed,nonblock; token freed every step); §3.4 Invariant 1; FIXED solvers.jl:512
-    # note: STAGE-A FIX (was a KNOWN BUG): free_blocked_species! previously referenced an undefined bare `q` and
+    # note: STAGE-A FIX (was a KNOWN BUG): free_blocked_places! previously referenced an undefined bare `q` and
     # note: raised `UndefVarError: q` on the 2nd tick once a :nonblock instance was in-flight. The free path now
     # note: credits `trans.q * tok.stoich` back every step, so the run completes. CRUCIAL: cycletime MUST be >0 to
-    # note: keep an instance in-flight across a tick boundary and exercise free_blocked_species! at all.
+    # note: keep an instance in-flight across a tick boundary and exercise free_blocked_places! at all.
     # note: Verified live: sensor=[10,9,8,8,8,8,8] (non-negative, finite) — the per-step free credit makes the
     # note: :nonblock pool plateau (held token returned each tick) rather than crash. Assertions are robust
     # note: invariants (no throw; non-negative; finite), not exact sensor numerals.
     # action: simulate(prob) — runs to completion
     @testset "Row 5 (perstep/consumed/nonblock): in-flight @nonblock token frees q·s every step and runs to completion" begin
-        # cycletime>0 keeps a :nonblock instance in-flight across a tick boundary, so free_blocked_species!
+        # cycletime>0 keeps a :nonblock instance in-flight across a tick boundary, so free_blocked_places!
         # (step 3 of _step!) iterates it; the freed :nonblock resource is credited back rather than crashing on `q`.
         net = @reaction_network begin
             @deterministic(1.0),
@@ -125,7 +125,7 @@ using Statistics
         @prob_init net sensor = 10 reading = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 5, dt = 1.0)
-        @test (simulate(prob); true)              # FIXED: free_blocked_species! no longer hits undefined `q`
+        @test (simulate(prob); true)              # FIXED: free_blocked_places! no longer hits undefined `q`
         df = prob.sol
         # the freed :nonblock resource is credited back every step ⇒ non-negative, finite trajectory
         @test all(>=(-1.0e-9), df.sensor)
@@ -154,11 +154,11 @@ using Statistics
     # contract: §5.4 placeModality; FIXED update.jl:108 (now uses `:placeModality` not bare `placeModality`)
     # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: placeModality` because
     # note: update.jl:108 referenced a bare `placeModality` instead of the column symbol `:placeModality`. @mode now
-    # note: unions the named modality into the species' modality set. Verified live: after `@mode net X conserved`,
+    # note: unions the named modality into the place' modality set. Verified live: after `@mode net X conserved`,
     # note: `net[1,:placeModality] == Set([:conserved])`. Note `net[1,:placeModality]` indexes the SCHEMA (net),
     # note: not the problem.
     # action: invoke `@mode net X conserved`
-    @testset "@mode unions :conserved into the species' modality set (placeModality)" begin
+    @testset "@mode unions :conserved into the place' modality set (placeModality)" begin
         net = @reaction_network begin
             1.0, X --> Y, name => t1
         end
@@ -169,7 +169,7 @@ using Statistics
     # [mod-construct-rejects-nonblock-conserved] tier=T2-acceptance expectedStatus=errors-until-implemented
     # contract: §1.4 illegal row ('blocking = nonblock requires return = consumed'); §1.1 typed Modality; replaces error at solvers.jl:461-465 with construction-time validation
     # note: Today this does NOT raise ArgumentError at construction — it constructs fine and then, on simulate,
-    # note: throws `UndefVarError: q` from free_blocked_species! (solvers.jl:512) on the SECOND tick (verified),
+    # note: throws `UndefVarError: q` from free_blocked_places! (solvers.jl:512) on the SECOND tick (verified),
     # note: i.e. the q-bug masks the intended :conserved+:nonblock error at solvers.jl:461-465, which is itself
     # note: never reached for in-flight tokens. So this @test_throws ArgumentError currently FAILS (wrong type,
     # note: wrong site, wrong time) — it encodes the §1.4 target of a single construction-time validation rule.
@@ -202,15 +202,15 @@ using Statistics
     end
 
     # [mod-construct-rejects-perstep-structured] tier=T2-acceptance expectedStatus=errors-until-implemented
-    # contract: §1.4 illegal rule 'allocation = perstep requires a non-structured (countable) species'; current deep error get_reqs_ongoing! solvers.jl:38-42
+    # contract: §1.4 illegal rule 'allocation = perstep requires a non-structured (countable) place'; current deep error get_reqs_ongoing! solvers.jl:38-42
     # note: Today the structured+:rate clash only errors DEEP in get_reqs_ongoing! at simulate time
     # note: (solvers.jl:38-42), and `set_structured!` is a target helper (the engine currently sets structured-
     # note: ness via the `placeStructured` schema column / @structured token authoring, not a one-liner). This
     # note: test assumes the §1.1 typed re-model + a construction validator; it errors-until-implemented on both
     # note: the helper and the validation.
     # action: construct and expect rejection
-    @testset "TARGET: perstep (@rate) on a structured/agent species rejected at construction" begin
-        # Mark a species structured, then try to draw it per-step. TARGET: construction-time rejection.
+    @testset "TARGET: perstep (@rate) on a structured/agent place rejected at construction" begin
+        # Mark a place structured, then try to draw it per-step. TARGET: construction-time rejection.
         net = @reaction_network begin
             @deterministic(1.0), @rate(robot) --> task, name => run, cycletime => 3.0
         end
@@ -299,7 +299,7 @@ using Statistics
     # contract: §2.8 flow mode (Routing; EXISTING upfront-LHS gate solvers.jl:110-128); 'flow-triggered genesis works today with zero new mechanism'
     # note: Verified live: product 0,0,0,2,4,6,8,10 while feed plateaus at 2. The upfront-LHS gate (reqs>0 ⇒
     # note: floor(alloc/stoich), solvers.jl:121-124) clamps the rate-100 proposal to available feed tokens — the
-    # note: §2.8 'flow' idiom (high nominal rate + upstream species as consumed LHS). Demonstrates token-bounded
+    # note: §2.8 'flow' idiom (high nominal rate + upstream place as consumed LHS). Demonstrates token-bounded
     # note: firing min(proposal, tokens) = tokens.
     @testset "Genesis `flow`: non-empty upfront LHS spawns ZERO when input empty, fires once upstream deposits tokens" begin
         net = @reaction_network begin
@@ -410,12 +410,12 @@ using Statistics
     # note: 10) evaluates the guard and RUNS the action (no longer the bare no-op fetch). A scheduled
     # note: injection `(@t() > T) && (budget += N)` now takes effect on schedule — the §2.8 acquisition-lever
     # note: idiom is live (and the typed Rule/SetMarking form in rules_decisions.jl is the preferred surface).
-    # note: `budget` must be a real species column (it is set by the action), so it appears on an inert
+    # note: `budget` must be a real place column (it is set by the action), so it appears on an inert
     # note: transition to enter :S.
     @testset "Event action takes effect on schedule — Invariant 7 met (the in-model lever)" begin
         # A scheduled budget injection expressed as an event: from t>2 the action adds 999 each tick.
         net = @reaction_network begin
-            0.0, budget --> budget, name => budget_holder   # inert; declares `budget` as a species
+            0.0, budget --> budget, name => budget_holder   # inert; declares `budget` as a place
             0.0, raw --> product, name => t1
             (@t() > 2.0) && (budget += 999.0)
         end

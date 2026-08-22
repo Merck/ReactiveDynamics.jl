@@ -5,8 +5,8 @@
 # check the granularity ladder with advisory diagnostics (§C), and author compactly (§D @pipeline /
 # @process, §E @compose). Everything here is AUTHORING-time and additive — it produces a plain
 # ModelSpec that constructs/serializes/simulates exactly as a hand-written flat model. The enabling
-# mechanism is the ADR-0003 Phase-2 ArcSpec FK-repoint: species identification is repointing an
-# integer `species` FK, not string surgery. All of §11 is FORBIDDEN on a live/stepping model (it
+# mechanism is the ADR-0003 Phase-2 ArcSpec FK-repoint: place identification is repointing an
+# integer `place` FK, not string surgery. All of §11 is FORBIDDEN on a live/stepping model (it
 # reindexes) — these operate on a static ReactionNetwork, never a ReactionNetworkProblem.
 
 export refine!, refine, abstract!, abstract_transitions, set_port_role!, @port, @compose,
@@ -18,7 +18,7 @@ export refine!, refine, abstract!, abstract_transitions, set_port_role!, @port, 
     set_port_role!(net, name => role, …)
 
 Set the open-port `role ∈ (:private, :input, :output, :shared)` (CONTRACT §11.1) of one or more
-species by name. `:private` (default) auto-namespaces on compose; `:input`/`:output` are open ports
+place by name. `:private` (default) auto-namespaces on compose; `:input`/`:output` are open ports
 matched by `@compose`; `:shared` is identified by bare name (first-class `@catchall`).
 """
 function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol, Symbol}...)
@@ -26,7 +26,7 @@ function set_port_role!(net::ReactionNetwork, pairs::Pair{Symbol, Symbol}...)
         role in PORT_ROLES ||
             error("set_port_role!: role must be one of $(PORT_ROLES), got $(repr(role))")
         i = find_index(name, net)
-        i === nothing && error("set_port_role!: no species named $(repr(name))")
+        i === nothing && error("set_port_role!: no place named $(repr(name))")
         net[i, :placeRole] = role
     end
     return net
@@ -35,7 +35,7 @@ end
 """
     @port net A => input  B => input  C => output  clock => shared
 
-Declarative sugar for `set_port_role!`: tag species with a port role via `species => role` pairs
+Declarative sugar for `set_port_role!`: tag place with a port role via `place => role` pairs
 (role ∈ input/output/shared; anything unlisted keeps its default :private). Each pair is written with
 `=>` (not `=`, which macro-call syntax parses as a keyword argument).
 """
@@ -44,7 +44,7 @@ macro port(netex, pairs...)
     valid = (:input, :output, :shared, :private)
     for p in pairs
         (Meta.isexpr(p, :call) && p.args[1] === :(=>)) ||
-            error("@port: each entry must be `species => role`, got $(p)")
+            error("@port: each entry must be `place => role`, got $(p)")
         sp = p.args[2]
         role = p.args[3]
         role in valid || error("@port: role must be one of $(valid), got $(role)")
@@ -58,8 +58,8 @@ end
 #
 # `compose(f1, f2, …)` is `merge_networks!`/@join PLUS automatic port matching: each fragment's `output`
 # ports are identified with same-named `input` ports of the other fragments by the §7.4/J7 FK-repoint
-# (via equalize!, which now repoints ArcSpec FKs — ADR 0003 Phase 2), `private` species are
-# namespaced (m__X), and `shared` species are identified by bare name (prepend! skips them). Because
+# (via equalize!, which now repoints ArcSpec FKs — ADR 0003 Phase 2), `private` place are
+# namespaced (m__X), and `shared` place are identified by bare name (prepend! skips them). Because
 # it composes already-parsed ModelSpecs it CLOSES the §7/J4 (:E/:obs dropped — merge_networks! now merges
 # them) and J9 (undefined include_model — never taken) bugs en route.
 
@@ -67,12 +67,12 @@ end
     compose(fragments…; namespace=true)
 
 Compose model fragments by matching open ports. `output` ports are identified with same-named
-`input` ports across fragments (FK-repoint), `shared` species by bare name, `private` species are
+`input` ports across fragments (FK-repoint), `shared` place by bare name, `private` place are
 namespaced per fragment. Returns a new `ReactionNetwork`. `@compose f1 f2 …` is the macro form.
 """
 function compose(fragments::ReactionNetwork...)
     isempty(fragments) && return ReactionNetwork()
-    # Collect, per fragment, its open-port species names (input/output) and shared names BEFORE any
+    # Collect, per fragment, its open-port place names (input/output) and shared names BEFORE any
     # namespacing, so we know which bare names to re-identify after the namespaced union.
     portnames = Set{Symbol}()
     for f in fragments
@@ -83,7 +83,7 @@ function compose(fragments::ReactionNetwork...)
     end
 
     merged = ReactionNetwork()
-    # union each fragment under its own namespace. prepend! leaves `shared` species bare; open ports
+    # union each fragment under its own namespace. prepend! leaves `shared` place bare; open ports
     # (input/output) are namespaced here, then re-identified below by matching the ORIGINAL name.
     portmap = Dict{Symbol, Vector{Symbol}}()   # original port name → its namespaced aliases in merged
     for (k, f) in enumerate(fragments)
@@ -100,7 +100,7 @@ function compose(fragments::ReactionNetwork...)
     end
 
     # Identify open ports that appear (as the same original name) in ≥2 fragments: their namespaced
-    # aliases collapse to one species via equalize! (FK-repoint). A port present in only one fragment
+    # aliases collapse to one place via equalize! (FK-repoint). A port present in only one fragment
     # stays a namespaced (dangling) open port — §C validate warns on it.
     eqs = Vector{Any}()
     for (orig, aliases) in portmap
@@ -113,7 +113,7 @@ function compose(fragments::ReactionNetwork...)
     end
     isempty(eqs) || equalize!(merged, eqs)
 
-    populate_reactant_specs!(merged)
+    populate_arcs!(merged)
     return merged
 end
 
@@ -132,18 +132,18 @@ end
 #
 # `refine!(spec, T, sub; ports)` replaces the coarse transition named `T` with the sub-model `sub`,
 # plug-compatibly at its boundary, in four authoring-time structural moves (CONTRACT §11.2):
-#   1. namespace `sub`'s `private` species (leave input/output/shared un-prefixed for matching);
-#   2. identify `sub`'s open ports with the parent's boundary species per `ports` by FK-repoint;
-#   3. append `sub`'s transitions + remaining species/params/obs/EVENTS (this also merges :E/:obs);
+#   1. namespace `sub`'s `private` place (leave input/output/shared un-prefixed for matching);
+#   2. identify `sub`'s open ports with the parent's boundary place per `ports` by FK-repoint;
+#   3. append `sub`'s transitions + remaining place/params/obs/EVENTS (this also merges :E/:obs);
 #   4. remove the coarse transition `T` (and its ArcSpec rows).
-# Because the boundary species keep their indices/names/attributes, every transition NOT in {T}∪sub
+# Because the boundary place keep their indices/names/attributes, every transition NOT in {T}∪sub
 # is structurally unchanged (Invariant 1, plug-compatibility). Forbidden on a live model (reindexes).
 
 """
-    refine!(spec, transition, submodel; ports = Dict(boundary_species => sub_port, …))
+    refine!(spec, transition, submodel; ports = Dict(boundary_places => sub_port, …))
 
 Splice `submodel` into the coarse `transition` (named `Symbol`) of `spec`, identifying each of the
-submodel's open ports (`sub_port`) with the parent boundary species (`boundary_species`) given in
+submodel's open ports (`sub_port`) with the parent boundary place (`boundary_places`) given in
 `ports`. Mutates and returns `spec`. Authoring-time only.
 """
 function refine!(
@@ -156,20 +156,20 @@ function refine!(
 
     name = Symbol(transition, :__sub)
 
-    # Validate the port map: each parent boundary species and each sub port must exist.
+    # Validate the port map: each parent boundary place and each sub port must exist.
     for (boundary, subport) in ports
         find_index(boundary, spec) === nothing &&
-            error("refine!: boundary species $(repr(boundary)) not found in parent")
+            error("refine!: boundary place $(repr(boundary)) not found in parent")
         find_index(subport, submodel) === nothing &&
-            error("refine!: port species $(repr(subport)) not found in submodel")
+            error("refine!: port place $(repr(subport)) not found in submodel")
     end
 
     # Moves 1+2 are delegated to merge_networks!'s own namespacing + equation-alias mechanism (§7.4/J7):
-    # build one eqs block PER port that aliases the sub's port species to the parent boundary name, so
+    # build one eqs block PER port that aliases the sub's port place to the parent boundary name, so
     # `prepend!`/`normalize_name` rename the port to the boundary name (bare) while every PRIVATE
-    # species is namespaced `<name>__X`. merge_networks! then merges the boundary-named port onto the
+    # place is namespaced `<name>__X`. merge_networks! then merges the boundary-named port onto the
     # existing parent row (incident by placeName) — the structural FK-repoint — and appends the rest.
-    # `shared`-role sub species are left bare by prepend! (§A) and merge onto any same-named parent row.
+    # `shared`-role sub place are left bare by prepend! (§A) and merge onto any same-named parent row.
     eqs = Any[]
     for (boundary, subport) in ports
         push!(eqs, Any[(:alias, boundary), (:catchall, subport)])
@@ -179,16 +179,16 @@ function refine!(
     # merges :E/:obs uniformly (WS-3), so the sub's events/observables come along.
     merge_networks!(spec, submodel, name, eqs)
 
-    # Move 4: remove the coarse transition T (drop its :T row). Its reactant relation lived only in
+    # Move 4: remove the coarse transition T (drop its :T row). Its arc relation lived only in
     # its :trans Expr, so dropping the row removes it; the sub's transitions now carry the dynamics.
     rem_rows!(spec, :T, [ti])
 
-    populate_reactant_specs!(spec)
+    populate_arcs!(spec)
     return spec
 end
 
 """
-    refine(spec, transition, submodel; ports = Dict(boundary_species => sub_port, …)) -> ReactionNetwork
+    refine(spec, transition, submodel; ports = Dict(boundary_places => sub_port, …)) -> ReactionNetwork
 
 Non-mutating convenience over [`refine!`](@ref): splice `submodel` into the coarse `transition` of a `deepcopy` of `spec`, returning the refined copy and leaving `spec` untouched. Same port-matching semantics and authoring-time-only restriction as `refine!`.
 """
@@ -200,7 +200,7 @@ refine(spec::ReactionNetwork, transition::Symbol, submodel::ReactionNetwork; kwa
 
 Inverse of `refine!`: collapse a connected set of sub-transitions (by name) into a single coarse
 transition named `into`, whose boundary reaction line consumes/produces the given `boundary`
-species. A structural convenience for round-tripping the granularity ladder; the collapsed coarse
+place. A structural convenience for round-tripping the granularity ladder; the collapsed coarse
 transition's attributes (cycletime/pos/cost) are the caller's to summarize (§C advises on drift).
 """
 function abstract_transitions(
@@ -215,7 +215,7 @@ function abstract_transitions(
         i === nothing && error("abstract_transitions: no transition named $(repr(tn))")
         push!(tis, i)
     end
-    # build the coarse reaction line LHS --> RHS from the boundary species
+    # build the coarse reaction line LHS --> RHS from the boundary place
     lhs_ex = isempty(lhs) ? :∅ : foldl((a, b) -> :($a + $b), lhs)
     rhs_ex = isempty(rhs) ? :∅ : foldl((a, b) -> :($a + $b), rhs)
     line = :($lhs_ex --> $rhs_ex)
@@ -225,7 +225,7 @@ function abstract_transitions(
     end
     assign_defaults!(spec)
     rem_rows!(spec, :T, sort(tis))
-    populate_reactant_specs!(spec)
+    populate_arcs!(spec)
     return spec
 end
 
@@ -261,15 +261,15 @@ function refinement_diagnostics(
     # port-balance: an `input` port should be consumed by some sub-transition LHS; an `output` port
     # produced by some RHS. We check via the promoted ArcSpec table on a populated copy.
     sub = deepcopy(submodel)
-    populate_reactant_specs!(sub)
-    lhs_species = Set(r.species for r in arcs(sub) if r.side === :lhs && r.species > 0)
-    rhs_species = Set(r.species for r in arcs(sub) if r.side === :rhs && r.species > 0)
+    populate_arcs!(sub)
+    lhs_places = Set(r.place for r in arcs(sub) if r.side === :lhs && r.place > 0)
+    rhs_places = Set(r.place for r in arcs(sub) if r.side === :rhs && r.place > 0)
     for i in row_ids(sub, :S)
         role = port_role(sub, i)
         nm = sub[i, :placeName]
-        if role === :input && !(i in lhs_species)
+        if role === :input && !(i in lhs_places)
             push!(warns, "input port $(nm) is not consumed by any sub-transition (dangling input)")
-        elseif role === :output && !(i in rhs_species)
+        elseif role === :output && !(i in rhs_places)
             push!(warns, "output port $(nm) is not produced by any sub-transition (dangling output)")
         end
     end
@@ -325,7 +325,7 @@ per-edge cycletime/prob_of_success. Returns a `ReactionNetwork`.
 macro pipeline(nameex, block)
     Meta.isexpr(block, :block) || error("@pipeline: expected a begin…end block of `From => To : opts`")
     # Build a standard @reaction_network authoring block, one reaction line per edge, and reuse
-    # the full parse pipeline (rate expansion, species extraction, attr handling) via get_data.
+    # the full parse pipeline (rate expansion, place extraction, attr handling) via get_data.
     lines = Expr(:block)
     for stmt in block.args
         stmt isa LineNumberNode && continue
@@ -381,7 +381,7 @@ end
 Define a reusable parameterized model-fragment factory. Expands to a function `name(params…)` that
 returns a `ReactionNetwork`. Inside the body, write ordinary reaction lines (as in
 `@reaction_network`); each occurrence of a PARAMETER name is substituted by its call-time value
-(a species symbol, a number, …) into the reaction-line AST BEFORE parsing — eval-free
+(a place symbol, a number, …) into the reaction-line AST BEFORE parsing — eval-free
 (`replace_in_expr`), sidestepping the DSL's lack of `\$`-interpolation. Compose instances by ports
 with `@compose` (§E).
 

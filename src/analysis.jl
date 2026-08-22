@@ -26,8 +26,8 @@ export ensemble, summarize, treatment_effect, EnsembleProblem
 
 Append this tick's per-token snapshot to `state.token_trajectory` (ADR 0013 §A / CONTRACT §14.1).
 For every structured token whose kind opts in (`log_token_fields(tok)` returns a non-empty
-NamedTuple), record `(t, token_name, species, fields)`. Tokens are iterated in `token_sortkey`
-order (species, creation_index, uuid) — the SAME deterministic order, and the SAME tick seam (right
+NamedTuple), record `(t, token_name, place, fields)`. Tokens are iterated in `token_sortkey`
+order (place, creation_index, uuid) — the SAME deterministic order, and the SAME tick seam (right
 after `push_program_ledger_row!`), as the per-program ledger row this generalizes, so the log is
 byte-reproducible under `(model, seed)` (§4 D4). The hook is a pure 𝓕ₜ-measurable field read — no
 RNG, no future (Invariant 1). A kind that doesn't opt in contributes no rows (Invariant 2).
@@ -41,14 +41,14 @@ function push_token_trajectory_row!(state::ReactionNetworkProblem)
         isempty(fields) && continue
         push!(
             state.token_trajectory,
-            (state.t, String(AlgebraicAgents.getname(tok)), get_species(tok), fields),
+            (state.t, String(AlgebraicAgents.getname(tok)), get_place(tok), fields),
         )
     end
     return state
 end
 
 # The union of field names appearing in the stored rows, in first-seen order — the columns the long
-# DataFrame carries beyond (t, program, species). A field absent from a given row is `missing`.
+# DataFrame carries beyond (t, program, place). A field absent from a given row is `missing`.
 function _trajectory_field_names(rows)
     names = Symbol[]
     for (_, _, _, fields) in rows
@@ -64,7 +64,7 @@ end
     token_trajectory(state, name::AbstractString) -> DataFrame
     token_trajectory(state, pred::TokenPredicate) -> DataFrame
 
-The per-token trajectory log in long form: columns `t, program, species, <field>…`, one row per
+The per-token trajectory log in long form: columns `t, program, place, <field>…`, one row per
 (tick, opted-in token), in append (= `token_sortkey`-per-tick) order (§14.1). With a `name` it is one
 token's life; with a `TokenPredicate` (ADR 0008 / §9.5) it is the rows of the tokens that CURRENTLY
 match the predicate (the same selection machinery the model dynamics use — `select_tokens`), so e.g.
@@ -92,8 +92,8 @@ function _trajectory_dataframe(rows)
     for f in fieldnames
         df[!, f] = Vector{Any}()
     end
-    for (t, name, species, fields) in rows
-        row = Dict{Symbol, Any}(:t => t, :program => name, :species => species)
+    for (t, name, place, fields) in rows
+        row = Dict{Symbol, Any}(:t => t, :program => name, :species => place)
         for f in fieldnames
             row[f] = haskey(fields, f) ? fields[f] : missing
         end
@@ -495,7 +495,7 @@ MarkingPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :placeN
     MarkingPlot(prob, collect(String.(vars)))
 
 """
-    SaturationPlot(prob; vars = all species)
+    SaturationPlot(prob; vars = all place)
 
 Plot spec (ADR 0014 recipe 2) for RESOURCE UTILIZATION over time — the troughs of the named resource pools `vars` across a finished run, showing when a `@conserved`/`@rate` resource is drawn down (saturated). Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
 """

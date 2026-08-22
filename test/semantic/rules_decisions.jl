@@ -27,7 +27,7 @@ const RDX = ReactiveDynamics
     end
 end
 
-# A minimal model with a `cash` pool and an inert holder so cash is a real species column.
+# A minimal model with a `cash` pool and an inert holder so cash is a real place column.
 # `@prob_meta` eval's its values in module scope, so tspan/dt are passed via the constructor
 # (the `tspan=`/`dt=` kwargs) rather than threaded through the macro.
 function lever_model()

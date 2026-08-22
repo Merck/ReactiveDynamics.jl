@@ -4,7 +4,7 @@
 # Holds the model-agnostic Plots.jl `@recipe` set, each keyed off a thin wrapper type defined in the
 # core (src/analysis.jl) over a raw result artifact (`prob.sol`, `prob.log`, `program_ledger(prob)`,
 # the ADR 0013 `token_trajectory`/`ensemble`) so the recipes work on ANY model (§15.4 Invariant 5),
-# plus the live `_draw` species-trajectory reduction relocated from src/interface/plots.jl.
+# plus the live `_draw` place-trajectory reduction relocated from src/interface/plots.jl.
 module RDPlotsExt
 
 using ReactiveDynamics
@@ -16,7 +16,7 @@ using ReactiveDynamics: DataFrames
 using Plots
 using Statistics
 
-# ── Recipe 1: marking trajectory (species/token counts over time) ───────────────────────
+# ── Recipe 1: marking trajectory (place/token counts over time) ───────────────────────
 @recipe function f(m::MarkingPlot)
     xguide --> "time"
     yguide --> "quantity"

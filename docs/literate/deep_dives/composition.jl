@@ -16,7 +16,7 @@
 # **reindexes** the store as it does so. That makes the whole layer *forbidden on a live,
 # stepping model* — you compose, refine, and abstract a network, and only then hand the
 # result to `ReactionNetworkProblem`. The theory (open-port semantics, the FK-repoint that
-# makes species-identification cheap, the plug-compatibility invariants) lives in the normative
+# makes place-identification cheap, the plug-compatibility invariants) lives in the normative
 # [operational-semantics contract §11](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md)
 # and [ADR 0009](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/adr/0009-refinement-and-composition.md); here we exercise the operators.
 
@@ -26,14 +26,14 @@ using Plots                     # inline figures
 
 # A handful of *internal* store accessors let us look inside a network to check our work.
 # They are not part of the modeling surface — they read the typed struct-of-columns store
-# (row ids, the promoted reactant-incidence table) so we can assert an operator did what it
+# (row ids, the promoted arc-incidence table) so we can assert an operator did what it
 # claims. We import them explicitly to keep that boundary visible.
 using ReactiveDynamics: nrows, row_ids, find_index, arcs, placename,
-    populate_reactant_specs!, port_role
+    populate_arcs!, port_role
 const RD = ReactiveDynamics
 
 # The **structural signature** of a named transition — its cycletime, probability-of-success,
-# and the reactant rows read off the promoted incidence table as `(species name, side,
+# and the arc rows read off the promoted incidence table as `(place name, side,
 # stoich)`. Two transitions with equal signatures are structurally identical; keying by
 # transition *name* (not row index) makes the comparison robust to the row-reordering that
 # composition and refinement perform. We use it to *prove* plug-compatibility in §4.
@@ -42,20 +42,20 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(placename(m, r.species)), r.side, r.stoich)
-                for r in arcs(m) if r.trans == ti && r.species > 0
+            (string(placename(m, r.place)), r.side, r.stoich)
+                for r in arcs(m) if r.trans == ti && r.place > 0
         ]
     )
-    return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
+    return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], arcs = rows)
 end
 
 # ## 1. Manual composition: `@join` and `@equalize`
 #
-# The lowest rung. `@join` takes the **union** of two networks' species, transitions, and
-# parameters (and their events and observables), optionally *identifying* shared species
-# across the two via equations. `@equalize` collapses two species *within* one network into a
+# The lowest rung. `@join` takes the **union** of two networks' place, transitions, and
+# parameters (and their events and observables), optionally *identifying* shared place
+# across the two via equations. `@equalize` collapses two place *within* one network into a
 # single pool and rewrites every reference. Both are the **manual, no-declared-ports** path:
-# you name the species to identify by hand. Both operate on a static network, before
+# you name the place to identify by hand. Both operate on a static network, before
 # construction.
 #
 # Two reaction sub-systems each consume a shared resource `A`; we join them, identifying the
@@ -68,14 +68,14 @@ acs2 = @reaction_network begin
     1.0, A --> C, name => t2
 end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
-println("@join acs1 acs2 (identifying the shared species A)")
+println("@join acs1 acs2 (identifying the shared place A)")
 println(
-    "  species in join : ", nrows(joined, :S),
+    "  place in join : ", nrows(joined, :S),
     "  (union {A,B,C} ⇒ 3; the two A's merged into one)"
 )
 println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
-# `@equalize` collapses two conceptually-identical species `A` and `A2` into one pool.
+# `@equalize` collapses two conceptually-identical place `A` and `A2` into one pool.
 
 eqacs = @reaction_network begin
     1.0, A  --> B, name => t1
@@ -85,7 +85,7 @@ before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
 println(
-    "  species before  : ", before_S, "  → after : ", nrows(equalized, :S),
+    "  place before  : ", before_S, "  → after : ", nrows(equalized, :S),
     "  (dropped by exactly 1; references rewritten)"
 )
 println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
@@ -104,17 +104,17 @@ println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was
     1.0, inp --> outp, name => gate, cycletime => ct, probability => pos
 end
 
-# We instantiate the *same* fragment twice, wired head-to-tail on the shared species `Lead`.
+# We instantiate the *same* fragment twice, wired head-to-tail on the shared place `Lead`.
 
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  species   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
+println("  place   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
-# A **port** is a boundary species tagged with a role: `:input` (consumed-from boundary),
+# A **port** is a boundary place tagged with a role: `:input` (consumed-from boundary),
 # `:output` (produced-into boundary), `:shared` (identified by bare name), or the default
-# `:private` (auto-namespaced on compose). `@port` tags them via `species => role` pairs
+# `:private` (auto-namespaced on compose). `@port` tags them via `place => role` pairs
 # (written with `=>`, not `=`). Here `Lead` is the *output* of screening and the *input* of
 # lead_opt — the same-named port `@compose` will identify; `Screen`/`Candidate` stay dangling.
 
@@ -129,20 +129,20 @@ println(
 
 # `@compose` is `@join` **plus automatic port matching**: an `:output` port of one fragment
 # is identified with a same-named `:input` port of another by repointing an integer foreign
-# key (not string surgery), `:private` species are namespaced per fragment, and `:shared`
-# species stay bare.
+# key (not string surgery), `:private` place are namespaced per fragment, and `:shared`
+# place stay bare.
 
 chain = @compose screening lead_opt
-populate_reactant_specs!(chain)   # promote the incidence table so we can read it
+populate_arcs!(chain)   # promote the incidence table so we can read it
 names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
-println("  merged species : ", names_chain)
+println("  merged place : ", names_chain)
 println(
-    "  shared port `Lead` collapsed to ONE species? ",
+    "  shared port `Lead` collapsed to ONE place? ",
     count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
 )
 leadix = find_index(:Lead, chain)
-through_lead = count(r -> r.species == leadix, arcs(chain))
+through_lead = count(r -> r.place == leadix, arcs(chain))
 println(
     "  rows routed through `Lead` : ", through_lead,
     "  (produced by screening, consumed by lead_opt ⇒ one seam, not two)"
@@ -167,11 +167,11 @@ build_portfolio() = @pipeline Project begin
 end
 
 portfolio = build_portfolio()
-populate_reactant_specs!(portfolio)
+populate_arcs!(portfolio)
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  species (phases) : ", portfolio[:, :placeName])
+println("  place (phases) : ", portfolio[:, :placeName])
 println(
-    "  parts            : ", nrows(portfolio, :S), " species, ",
+    "  parts            : ", nrows(portfolio, :S), " place, ",
     nrows(portfolio, :T), " transitions"
 )
 println("  per-edge (ct, pos):")
@@ -204,8 +204,8 @@ phase2_ix_before = find_index(:Phase2, portfolio)
 phase3_ix_before = find_index(:Phase3, portfolio)
 
 # `refine(spec, transition, submodel; ports)` splices the sub-model into the named coarse
-# transition: it namespaces the sub's private species, identifies the sub's ports with the
-# parent boundary species by FK-repoint, appends the sub's transitions, and drops the coarse
+# transition: it namespaces the sub's private place, identifies the sub's ports with the
+# parent boundary place by FK-repoint, appends the sub's transitions, and drops the coarse
 # transition. It is **non-mutating** (`refine` = `refine!` on a `deepcopy`); `portfolio` is
 # left intact.
 
@@ -220,7 +220,7 @@ println("transitions BEFORE refine : ", tnames_before)
 println("transitions AFTER  refine : ", tnames_after)
 println("  coarse `flow_Phase2_Phase3` removed? ", !(:flow_Phase2_Phase3 in tnames_after))
 
-# **Plug-compatibility (the point of the whole rung).** Because the boundary species keep
+# **Plug-compatibility (the point of the whole rung).** Because the boundary place keep
 # their indices *and* their names, every transition *other* than the one we refined is
 # structurally byte-for-byte identical before and after. The rest of the portfolio does not
 # notice that Phase-2 became four sub-steps.
@@ -228,7 +228,7 @@ println("  coarse `flow_Phase2_Phase3` removed? ", !(:flow_Phase2_Phase3 in tnam
 println()
 println("PLUG-COMPATIBILITY:")
 println(
-    "  boundary species keep their indices — Phase2: ", phase2_ix_before, " → ",
+    "  boundary place keep their indices — Phase2: ", phase2_ix_before, " → ",
     find_index(:Phase2, refined), "   Phase3: ", phase3_ix_before, " → ", find_index(:Phase3, refined)
 )
 untouched = [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase3_Filed, :flow_Filed_Market]
@@ -302,7 +302,7 @@ end
 # sub-transitions back into one coarse transition whose boundary reaction line is `lhs -->
 # rhs`, carrying summarized attributes. It is a structural convenience for moving *up* the
 # granularity ladder (it drops the sub rows and adds the coarse one; it does not garbage-collect
-# the now-inert internal species).
+# the now-inert internal place).
 
 collapsed = abstract_transitions(
     refined, sub_transitions, :flow_Phase2_Phase3;
@@ -398,7 +398,7 @@ plot(p_ct, p_pos; layout = (1, 2), size = (760, 320), plot_title = "Granularity 
 #    matched automatically by FK-repoint;
 # 3. `@pipeline` — a whole phase chain authored in one block as `flow` routing transitions;
 # 4. `refine` — substitute a finer sub-model for one coarse transition, **plug-compatibly**
-#    (boundary species keep their indices/names; every other transition is untouched);
+#    (boundary place keep their indices/names; every other transition is untouched);
 # 5. `abstract` — the inverse, collapsing sub-steps back into one coarse transition;
 # 6. `refinement_diagnostics` — the advisory Σ-ct / Π-PoS boundary check that makes the ladder
 #    auditable, the granularity-substitution guarantee in computable form.

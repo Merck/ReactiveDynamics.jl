@@ -65,7 +65,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
         )
         @test ntok(p) == 5                                   # 5 instances created at construction
         @test all(==(:Phase2), [t.phase for t in values(RDX.inners(RDX.getagent(p, "structured")))])
-        @test sort(collect(values(p.creation_index))) == [1, 2, 3, 4, 5]   # per-species creation indices
+        @test sort(collect(values(p.creation_index))) == [1, 2, 3, 4, 5]   # per-place creation indices
     end
 
     # ── (B) explicit host-token list form ──────────────────────────────────────────────
@@ -141,7 +141,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
     # ── invariant 6 (explicit-token form): reinit! restores the SAME objects' t=0 attributes ──
     @testset "reinit! restores explicit host-token attributes (advanced/retired tokens reset to t=0)" begin
         # explicit-host-token population: the SAME objects are re-entangled on reinit, so their
-        # mutated fields (phase advanced to :Phase3, or species soft-retired to :removed) must be
+        # mutated fields (phase advanced to :Phase3, or place soft-retired to :removed) must be
         # restored to the captured t=0 snapshot — else the second run does not reproduce.
         toks = [RDX.InitProjectToken(:Phase2, 100.0), RDX.InitProjectToken(:Phase2, 200.0)]
         p = ReactionNetworkProblem(
@@ -151,9 +151,9 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
         simulate(p); ph1 = phases(p)
         @test any(!=(:Phase2), [t.phase for t in toks])   # at least one advanced/changed during the run
         AlgebraicAgents._reinit!(p)
-        # the same token objects are back at their t=0 phase/species
+        # the same token objects are back at their t=0 phase/place
         @test all(==(:Phase2), [t.phase for t in toks])
-        @test all(==(:Project), [RDX.get_species(t) for t in toks])
+        @test all(==(:Project), [RDX.get_place(t) for t in toks])
         simulate(p)
         @test phases(p) == ph1                             # second run reproduces the first
     end

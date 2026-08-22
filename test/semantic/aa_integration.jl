@@ -1,8 +1,8 @@
 # Phase-1 semantic tests — AlgebraicAgents integration & external coupling (ADR 0012, CONTRACT §13).
 #
 # Covers, in BOTH coupling directions:
-#   (A) OUTBOUND — RD as a readable hierarchy node: observables(rd) lists species + named
-#       observables; getobservable(rd, name|i) resolves a species count and a named observable's
+#   (A) OUTBOUND — RD as a readable hierarchy node: observables(rd) lists place + named
+#       observables; getobservable(rd, name|i) resolves a place count and a named observable's
 #       sampled value; _getparameters/_setparameters! round-trip state.p (param-only, index-safe).
 #   (B) INBOUND  — the ExternalRef leaf round-trips (node_to_dict/from_dict and to_expr/from_expr);
 #       validate rule 8 flags an undeclared inputs[] port and passes a declared one; the _prestep!
@@ -57,7 +57,7 @@ const _COUPLED_JSON = """
 @testset "AlgebraicAgents integration & external coupling (ADR 0012)" begin
 
     # ── (A) OUTBOUND read surface — RD as a readable hierarchy node ─────────────────────
-    @testset "A: observables/getobservable resolve species + named observables" begin
+    @testset "A: observables/getobservable resolve place + named observables" begin
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[{"name":"beta","value":0.4}],
@@ -69,12 +69,12 @@ const _COUPLED_JSON = """
         """
         p = RD.from_json_model(json; seed = 1)
 
-        # observables() lists every species name (named observables would follow; none here).
+        # observables() lists every place name (named observables would follow; none here).
         obs = AlgebraicAgents.observables(p)
         @test :A in obs && :B in obs
-        @test obs[1:2] == [:A, :B]                       # species first, in declared order
+        @test obs[1:2] == [:A, :B]                       # place first, in declared order
 
-        # getobservable by name = the live species count; identical via Symbol and String.
+        # getobservable by name = the live place count; identical via Symbol and String.
         @test AlgebraicAgents.getobservable(p, :A) == 100.0
         @test AlgebraicAgents.getobservable(p, "A") == 100.0
         @test AlgebraicAgents.getobservable(p, :B) == 7.0
@@ -120,7 +120,7 @@ const _COUPLED_JSON = """
         @test ps === p.p                                   # exposes the live param dict
         @test ps[:beta] == 0.4 && ps[:gamma] == 2.0
 
-        # a param-only patch merges into state.p; structure (species count) is untouched.
+        # a param-only patch merges into state.p; structure (place count) is untouched.
         nS_before = RD.nrows(p, :S)
         AlgebraicAgents._setparameters!(p, Dict(:beta => 0.9, :delta => 3.0))
         @test p.p[:beta] == 0.9                            # existing param overwritten

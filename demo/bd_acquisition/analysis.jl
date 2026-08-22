@@ -15,16 +15,16 @@
 # engine's symmetric `treatment_effect` does not model), and the per-program ledger views.
 
 using ReactiveDynamics
-using ReactiveDynamics: inners, getagent, get_species, find_index
+using ReactiveDynamics: inners, getagent, get_place, find_index
 using ReactiveDynamics: program_ledger, program_ledger_entries
 using Statistics
 using DataFrames
 
 const RD = ReactiveDynamics
 
-# A program is RETIRED when its species (kind) has been flipped to :removed on failure/timeout
+# A program is RETIRED when its place (kind) has been flipped to :removed on failure/timeout
 # (ADR 0006 soft-retire). Its `phase` ATTRIBUTE records how far it got (phase-as-attribute).
-is_active(t) = get_species(t) != :removed
+is_active(t) = get_place(t) != :removed
 reached_market(t) = t.phase == :Market
 
 tokens(prob) = collect(values(inners(getagent(prob, "structured"))))
@@ -139,7 +139,7 @@ end
 # final token population and reads host fields). Finding D asked the ENGINE to attribute the ledger
 # per program DURING the run. It now does: with `placeCost` priced on `budget` (host.jl), each
 # program's capital burn is accrued onto it at every advance it sits in, and `program_ledger(prob)`
-# returns the per-program cost/reward/valuation summary in deterministic (species, creation_index)
+# returns the per-program cost/reward/valuation summary in deterministic (place, creation_index)
 # order. These functions surface that engine ledger and CROSS-CHECK it against the aggregate row and
 # the post-hoc rNPV roll-up.
 
@@ -151,7 +151,7 @@ total_engine_cost(prob) = sum(r[3] for r in prob.log if r[1] == :valuation_cost;
 # acquired flag so the engine-attributed `cost_incurred` sits next to the program's modeling
 # descriptors. Programs that never bound a costed transition show cost_incurred 0.
 function program_economics(prob)
-    led = program_ledger(prob)                       # engine ledger: program, species, cost, ...
+    led = program_ledger(prob)                       # engine ledger: program, place, cost, ...
     toks = Dict(ReactiveDynamics.AlgebraicAgents.getname(t) => t for t in tokens(prob))
     led.phase = [haskey(toks, n) ? toks[n].phase : :removed for n in led.program]
     led.npv_peak = [haskey(toks, n) ? toks[n].npv_peak : NaN for n in led.program]

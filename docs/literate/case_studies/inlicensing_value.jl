@@ -23,7 +23,7 @@
 
 using ReactiveDynamics
 using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!,
-    Rule, Seq, SetMarking, SetParams, AddToken, get_species, inners, getagent, program_ledger
+    Rule, Seq, SetMarking, SetParams, AddToken, get_place, inners, getagent, program_ledger
 using Random, Distributions, DataFrames, Statistics, Printf
 using Plots
 
@@ -33,7 +33,7 @@ const RD = ReactiveDynamics
 #
 # **A program is a structured token.** Each asset carries identity across its whole lifecycle: its
 # `phase` (Discovery → Phase1 → Phase2 → Phase3 → Filed → Market) is an *attribute*, not a separate
-# species, so one `ProjectToken` kind represents every program and we advance it in place. The other
+# place, so one `ProjectToken` kind represents every program and we advance it in place. The other
 # fields are what the valuation reads — peak sales value, remaining probability of success, and whether
 # it arrived organically or via the deal. The kind is host Julia (never serialized): we define it into
 # the `ReactiveDynamics` module with the `@register` / `@aagent` idiom, so the engine's bind/advance
@@ -246,7 +246,7 @@ const YEARS_TO_MARKET = Dict(
     :Discovery => 9.0, :Phase1 => 7.0, :Phase2 => 5.0, :Phase3 => 3.0, :Filed => 1.0, :Market => 0.0,
 )
 tokens(prob) = collect(values(inners(getagent(prob, "structured"))))
-is_active(t) = get_species(t) != :removed
+is_active(t) = get_place(t) != :removed
 reached_market(t) = t.phase == :Market
 
 function portfolio_rnpv(prob; discount = 0.1, acq_price = 0.0)

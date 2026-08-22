@@ -19,8 +19,8 @@ export NetworkGraph, network_graph, to_graphviz, draw_network, exec_map
 # Layer A — structure extraction (dep-free, pure data)
 # ════════════════════════════════════════════════════════════════════════════════════════
 
-# A species (place) node: its name and whether it is a structured/agentic species.
-struct SpeciesNode
+# A place (place) node: its name and whether it is a structured/agentic place.
+struct PlaceNode
     name::Symbol
     structured::Bool
 end
@@ -34,12 +34,12 @@ struct TransitionNode
     label::String
 end
 
-# An arc: LHS species → transition (`:in`) or transition → RHS species (`:out`), with stoichiometry
+# An arc: LHS place → transition (`:in`) or transition → RHS place (`:out`), with stoichiometry
 # and the modality set (the §1 truth-table tags consumed/conserved/nonblock/rate) that styles it.
 struct Arc
     from::Symbol
     to::Symbol
-    dir::Symbol                 # :in (species→transition) or :out (transition→species)
+    dir::Symbol                 # :in (place→transition) or :out (transition→place)
     stoich::Float64
     modality::Set{Symbol}
 end
@@ -47,22 +47,22 @@ end
 """
     NetworkGraph
 
-A plain, inspectable Petri-net view of a model (ADR 0014 Layer A / §15.2 Invariant 1): species
+A plain, inspectable Petri-net view of a model (ADR 0014 Layer A / §15.2 Invariant 1): place
 (place) nodes, transition nodes, and the arcs between them with stoichiometry + modality. Built by
 `network_graph` with NO plotting/Graphviz dependency and NO simulation — a pure function of the
 model — so the diagram is authoring-time documentation as well as a run artifact.
 """
 struct NetworkGraph
-    species::Vector{SpeciesNode}
+    places::Vector{PlaceNode}
     transitions::Vector{TransitionNode}
     arcs::Vector{Arc}
 end
 
-# Normalize a reactant's `species` to a Symbol node id. A plain species is already a Symbol; a
-# structured/parameterized product can be an `Expr` (FoldedReactant.species is `Union{Expr,Symbol}`)
+# Normalize a arc's `place` to a Symbol node id. A plain place is already a Symbol; a
+# structured/parameterized product can be an `Expr` (FoldedArc.place is `Union{Expr,Symbol}`)
 # — render it as a Symbol of its source text so the place node is still well-defined and stable.
-_species_sym(s::Symbol) = s
-_species_sym(s) = Symbol(string(s))
+_place_sym(s::Symbol) = s
+_place_sym(s) = Symbol(string(s))
 
 # The DOT node id for transition index `i` — the single source of truth shared by `network_graph`
 # (which builds the nodes) and `exec_map` (which must reference the SAME id when highlighting a
@@ -87,18 +87,18 @@ end
 """
     network_graph(prob::ReactionNetworkProblem) -> NetworkGraph
 
-Extract the Petri-net structure of a constructed model (Layer A). Walks the species table for the
-place nodes (flagging structured/agentic species) and the transition incidence for the arcs — today
-via `transLHS`/`transRHS` (the parsed reactant lists + the RHS expression). Because that incidence is
+Extract the Petri-net structure of a constructed model (Layer A). Walks the place table for the
+place nodes (flagging structured/agentic place) and the transition incidence for the arcs — today
+via `transLHS`/`transRHS` (the parsed arc lists + the RHS expression). Because that incidence is
 realized by `sample_transitions!` (which draws stoichiometries through the RNG), this runs on a
 `deepcopy` of `prob` so the caller's `state.rng` is NOT perturbed — `network_graph` is observationally
-pure (no simulation, Invariant 1). The extraction simplifies (typed FKs, no reactant re-parse) when
+pure (no simulation, Invariant 1). The extraction simplifies (typed FKs, no arc re-parse) when
 the ADR 0003 `ArcSpec` table lands; this is the `transLHS`/`transRHS` form noted in §15.2.
 """
 function network_graph(prob::ReactionNetworkProblem)
     net = prob.network
-    species = SpeciesNode[
-        SpeciesNode(net[i, :placeName], net[i, :placeStructured] === true) for i in row_ids(net, :S)
+    places = PlaceNode[
+        PlaceNode(net[i, :placeName], net[i, :placeStructured] === true) for i in row_ids(net, :S)
     ]
 
     # Realize the incidence on a copy so the original RNG is untouched.
@@ -109,18 +109,18 @@ function network_graph(prob::ReactionNetworkProblem)
     arcs = Arc[]
     lhs = work.transitions[:transLHS]
     rhs = work.transitions[:transRHS]
-    known_species = Set(net[i, :placeName] for i in row_ids(net, :S))
+    known_places = Set(net[i, :placeName] for i in row_ids(net, :S))
     for i in eachindex(lhs)
         tnode_name = _transition_node_name(net, i)
         push!(transitions, TransitionNode(tnode_name, i, _transition_label(net, i)))
 
-        # LHS reactants → transition (consumed/blocking/nonblock arcs). The structured LHS species of
+        # LHS arcs → transition (consumed/blocking/nonblock arcs). The structured LHS place of
         # this transition (if any) is the @advance/@move target's true place — the produced token IS
         # the bound program (identity preserved, ADR 0008 §D), so an @advance RHS resolves back to it.
         struct_lhs = nothing
         for r in lhs[i]
-            sp = _species_sym(r.species)
-            (sp in known_species && net[find_index(sp, work), :placeStructured] === true) && (struct_lhs = sp)
+            sp = _place_sym(r.place)
+            (sp in known_places && net[find_index(sp, work), :placeStructured] === true) && (struct_lhs = sp)
             push!(
                 arcs, Arc(
                     sp, tnode_name, :in,
@@ -128,25 +128,25 @@ function network_graph(prob::ReactionNetworkProblem)
                 )
             )
         end
-        # transition → RHS products. The RHS expr is parsed by extract_reactants on the copy.
+        # transition → RHS products. The RHS expr is parsed by extract_arcs on the copy.
         rprods = try
-            extract_reactants(rhs[i], work)
+            extract_arcs(rhs[i], work)
         catch
             []
         end
         for r in rprods
             modality = r.modality isa Set ? r.modality : Set{Symbol}()
             stoich = hasproperty(r, :stoich) && r.stoich isa Real ? Float64(r.stoich) : 1.0
-            sp = _species_sym(r.species)
-            # An @advance/@move RHS is a macro Expr, not a plain species; its destination place is the
-            # transition's structured LHS species (phase is an attribute, the kind is unchanged). Map
-            # such a non-species RHS node back to that place so the arc connects to a real place rather
+            sp = _place_sym(r.place)
+            # An @advance/@move RHS is a macro Expr, not a plain place; its destination place is the
+            # transition's structured LHS place (phase is an attribute, the kind is unchanged). Map
+            # such a non-place RHS node back to that place so the arc connects to a real place rather
             # than a synthetic node named after the raw macro text.
-            sp in known_species || (struct_lhs === nothing || (sp = struct_lhs))
+            sp in known_places || (struct_lhs === nothing || (sp = struct_lhs))
             push!(arcs, Arc(tnode_name, sp, :out, stoich, modality))
         end
     end
-    return NetworkGraph(species, transitions, arcs)
+    return NetworkGraph(places, transitions, arcs)
 end
 
 # ════════════════════════════════════════════════════════════════════════════════════════
@@ -166,27 +166,27 @@ end
 _dotstr(s) = "\"" * replace(string(s), "\"" => "\\\"") * "\""
 
 """
-    to_graphviz(g::NetworkGraph; highlight_species = Symbol[], highlight_arcs = Tuple{Symbol,Symbol}[]) -> String
+    to_graphviz(g::NetworkGraph; highlight_places = Symbol[], highlight_arcs = Tuple{Symbol,Symbol}[]) -> String
 
-Emit Graphviz DOT for the Petri net (Layer B): species as circles, transitions as boxes, arcs with
-stoichiometry labels and color by §1 modality. `highlight_species`/`highlight_arcs` paint a subset
+Emit Graphviz DOT for the Petri net (Layer B): place as circles, transitions as boxes, arcs with
+stoichiometry labels and color by §1 modality. `highlight_places`/`highlight_arcs` paint a subset
 (used by Layer C's overlay). Returns a DOT digraph STRING — rendering is deferred to `draw_network`
 (via AA's `run_graphviz`), so emitting the structure needs no Graphviz backend (Invariant 2). Valid
 DOT for any model; the smoke tests check `dot` accepts it for SIR/toy-pharma.
 """
 function to_graphviz(
         g::NetworkGraph;
-        highlight_species::AbstractVector = Symbol[],
+        highlight_places::AbstractVector = Symbol[],
         highlight_arcs::AbstractVector = Tuple{Symbol, Symbol}[]
     )
-    hs = Set(Symbol.(highlight_species))
+    hs = Set(Symbol.(highlight_places))
     ha = Set(highlight_arcs)
     io = IOBuffer()
     println(io, "digraph \"reactive_network\" {")
     println(io, "  rankdir=LR;")
     println(io, "  node [fontsize=9];")
-    # species = circles (double circle / filled if highlighted)
-    for s in g.species
+    # place = circles (double circle / filled if highlighted)
+    for s in g.places
         shape = s.structured ? "doublecircle" : "circle"
         fill = s.name in hs ? ", style=filled, fillcolor=gold" : ""
         println(io, "  $(_dotstr(s.name)) [shape=$shape$fill];")
@@ -236,7 +236,7 @@ end
 # Layer C — the result overlay ("exec map" / inefficiency view)
 # ════════════════════════════════════════════════════════════════════════════════════════
 
-# Pool trough (lowest level reached) per species over a run — the starvation signal.
+# Pool trough (lowest level reached) per place over a run — the starvation signal.
 function _pool_troughs(prob::ReactionNetworkProblem)
     troughs = Dict{Symbol, Float64}()
     for s in prob.network[:, :placeName]
@@ -252,7 +252,7 @@ end
     exec_map(prob; highlight = nothing, format = "svg", path = nothing, prog = :dot) -> String or path
 
 The result-decorated "exec map" (Layer C / §15.2): the Petri net of `prob` with run statistics
-painted on — species nodes filled where their pool ran to a trough (starvation), and, when a
+painted on — place nodes filled where their pool ran to a trough (starvation), and, when a
 `highlight::TokenPredicate` (a `@select` set, ADR 0008 / §9.5 — Invariant 4) is given, the matching
 cohort's `past_bonds` path THROUGH the net drawn as thickened arcs ("where did these programs go").
 Decorates Layer A with finished-run statistics ONLY — it never mutates state or re-runs dynamics
@@ -265,25 +265,25 @@ function exec_map(
     )
     g = network_graph(prob)
 
-    # Starvation: species whose pool hit (near) zero at its trough.
+    # Starvation: place whose pool hit (near) zero at its trough.
     troughs = _pool_troughs(prob)
     starved = Symbol[s for (s, v) in troughs if v <= 0.0]
 
     # Token-path highlighting from past_bonds, scoped by the @select predicate. A bond is a
-    # `(species, t, transition)` triple; the transition node id must be the SAME `_transition_node_name`
+    # `(place, t, transition)` triple; the transition node id must be the SAME `_transition_node_name`
     # the graph uses — derived from the transition's INDEX (`Transition.i`), NOT the bond's per-instance
     # name `"<transName>_@<t>"` (which would never match a graph node). Each bond highlights the
-    # species→transition arc the token traversed.
+    # place→transition arc the token traversed.
     hi_arcs = Tuple{Symbol, Symbol}[]
     if highlight isa TokenPredicate
         for tok in select_tokens(prob, highlight)
-            for (species, _t, transition) in tok.past_bonds
-                push!(hi_arcs, (species, _transition_node_name(prob.network, transition.i)))
+            for (place, _t, transition) in tok.past_bonds
+                push!(hi_arcs, (place, _transition_node_name(prob.network, transition.i)))
             end
         end
     end
 
-    dot = to_graphviz(g; highlight_species = starved, highlight_arcs = hi_arcs)
+    dot = to_graphviz(g; highlight_places = starved, highlight_arcs = hi_arcs)
     if path === nothing
         io = IOBuffer()
         AlgebraicAgents.run_graphviz(io, dot; prog = prog, format = format)

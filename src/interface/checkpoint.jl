@@ -17,7 +17,7 @@ export StateDump, dump_state, restore
 """
     StateDump
 
-An eval-free, JSON-representable snapshot of a live run at a TICK BOUNDARY (ADR 0007 §C / CONTRACT §10.5), produced by [`dump_state`](@ref) and consumed by [`restore`](@ref). It holds the declarative initial marking (§B) PLUS the dynamic run state: the model hash, the clock (`t`, `tspan`, `dt`), the RNG state (Xoshiro `s0..s4`), the creation counters and `name → creation_index` map, the plain-species column vector `u`, the full token population as `(species, name, creation_index, fields, bound)` tuples with CURRENT field values, and the `once`-rule enabled latches. Eval-free by construction: tokens carry field VALUES + a kind NAME resolved through the host registry on restore, never Julia source (§8.4 S4 / ADR 0006 §B). A zero-tick dump with nothing in flight IS an initial marking — the "initial marking = checkpoint" identity (§C).
+An eval-free, JSON-representable snapshot of a live run at a TICK BOUNDARY (ADR 0007 §C / CONTRACT §10.5), produced by [`dump_state`](@ref) and consumed by [`restore`](@ref). It holds the declarative initial marking (§B) PLUS the dynamic run state: the model hash, the clock (`t`, `tspan`, `dt`), the RNG state (Xoshiro `s0..s4`), the creation counters and `name → creation_index` map, the plain-place column vector `u`, the full token population as `(place, name, creation_index, fields, bound)` tuples with CURRENT field values, and the `once`-rule enabled latches. Eval-free by construction: tokens carry field VALUES + a kind NAME resolved through the host registry on restore, never Julia source (§8.4 S4 / ADR 0006 §B). A zero-tick dump with nothing in flight IS an initial marking — the "initial marking = checkpoint" identity (§C).
 """
 struct StateDump
     model_hash::UInt64
@@ -27,8 +27,8 @@ struct StateDump
     rng_state::NTuple{5, UInt64}      # Xoshiro s0..s4 (eval-free, JSON-representable)
     creation_counters::Dict{Symbol, Int}
     creation_index::Dict{String, Int}
-    u::Vector{Float64}               # plain-species columns; structured columns are re-derived
-    tokens::Vector{NamedTuple}       # (species, name, creation_index, fields::Dict, bound::Bool)
+    u::Vector{Float64}               # plain-place columns; structured columns are re-derived
+    tokens::Vector{NamedTuple}       # (place, name, creation_index, fields::Dict, bound::Bool)
     rule_latches::Dict{Symbol, Bool}  # `once`-rule enabled state
 end
 
@@ -36,14 +36,14 @@ end
 # attributes (phase, npv, …) we snapshot as current literal values.
 const _PROTOCOL_FIELDS = (
     :uuid, :name, :parent, :inners, :relpathrefs, :opera,
-    :species, :bound_transition, :past_bonds,
+    :place, :bound_transition, :past_bonds,
 )
 _token_attr_fields(tok) = filter(f -> !(f in _PROTOCOL_FIELDS), fieldnames(typeof(tok)))
 
 """
     dump_state(problem) -> StateDump
 
-Serialize a live `problem` into an eval-free [`StateDump`](@ref) for halt/resume or the zero-tick "dump == initial marking" identity (ADR 0007 §C / CONTRACT §10.5). Captures the clock, RNG state, creation counters, plain-species `u`, the token population with each token's CURRENT field values, and the `once`-rule latches; pair with [`restore`](@ref) to reconstruct the run.
+Serialize a live `problem` into an eval-free [`StateDump`](@ref) for halt/resume or the zero-tick "dump == initial marking" identity (ADR 0007 §C / CONTRACT §10.5). Captures the clock, RNG state, creation counters, plain-place `u`, the token population with each token's CURRENT field values, and the `once`-rule latches; pair with [`restore`](@ref) to reconstruct the run.
 
 DELIBERATE DEFERRAL (Milestone-1): `dump_state` requires a CLEAN TICK BOUNDARY — an empty `ongoing` transition set — and `error`s otherwise. Mid-cycle in-flight `Transition` instances (their frozen sampled-attr dicts and bound-token relink-by-uuid — the §C open question) are NOT serialized; the heavier mid-cycle resume is deferred. Step to a boundary where no instance is mid-cycle (or `reinit!`) before dumping.
 """
@@ -59,7 +59,7 @@ function dump_state(problem::ReactionNetworkProblem)
         push!(
             toks,
             (
-                species = get_species(tok),
+                place = get_place(tok),
                 name = AlgebraicAgents.getname(tok),
                 creation_index = get(problem.creation_index, AlgebraicAgents.getname(tok), 0),
                 fields = fields,
@@ -106,9 +106,9 @@ function restore(spec, dump::StateDump; registry = Dict{Symbol, Any}(), kwargs..
     empty!(problem.creation_counters)
     empty!(problem.creation_index)
     for td in sort(dump.tokens; by = t -> t.creation_index)
-        haskey(registry, td.species) ||
-            error("restore: no registry constructor for kind $(td.species)")
-        tok = registry[td.species](problem, td.fields)
+        haskey(registry, td.place) ||
+            error("restore: no registry constructor for kind $(td.place)")
+        tok = registry[td.place](problem, td.fields)
         for (f, v) in td.fields
             hasproperty(tok, f) && setproperty!(tok, f, v)
         end
@@ -120,7 +120,7 @@ function restore(spec, dump::StateDump; registry = Dict{Symbol, Any}(), kwargs..
     problem.rng = Random.Xoshiro(dump.rng_state...)
     # Restore the creation counters AND the realized (name → creation_index) map from the dump,
     # rather than relying on the rebuild order to reproduce them — the dump is the source of truth
-    # for the (species, creation_index) selection order (defensive against future rebuild changes).
+    # for the (place, creation_index) selection order (defensive against future rebuild changes).
     merge!(empty!(problem.creation_counters), dump.creation_counters)
     merge!(empty!(problem.creation_index), dump.creation_index)
     for r in problem.rules
