@@ -58,3 +58,16 @@ Each retired name still resolves for one release and warns; see [ADR 0017](https
 | `specname` | [`placename`](@ref) |
 | `register_structured_species!` | [`register_token_kind!`](@ref) |
 | the `specName`/`specInitVal`/`specModality`/… store columns | `placeName`/`placeInitVal`/`placeModality`/… |
+
+The serialized [JSON document](reference/json_schema.md) renamed with them. The exporter emits only the new keys, so re-exporting a document written before v0.3 migrates it; the loader reads the retired keys for one release and warns.
+
+| Retired key | Use instead |
+|:--- |:--- |
+| top-level `"species"` array | `"places"` |
+| top-level `"reactants"` array | `"arcs"` |
+| an arc's `"species"` | `"place"` |
+| a `population[]` entry's `"species"` | `"place"` |
+| the action verb `"set_species"` | `"set_marking"` |
+| a `ref` node's `"kind": "species"` | `"kind": "place"` |
+| the result-frame / export column `:species` | `:place` |
+| the `@select`/`@advance` field `:species` | `:place` (accepted silently — a warning would fire once per tick) |

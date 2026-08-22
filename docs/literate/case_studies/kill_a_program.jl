@@ -120,7 +120,7 @@ kill_rule(θ) = RD.Rule(
             :Project,
             [RD.Clause(:phase, :(==), :(:Phase1)), RD.Clause(:pos, :(<), θ)],
         ),
-        [:species => :(:removed)],
+        [:place => :(:removed)],
     );
     fire_mode = :every_tick,
 )

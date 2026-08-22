@@ -172,7 +172,7 @@ println("program_ledger(prob) — one row per program (", nrow(led), " rows):")
 for row in eachrow(led)
     @printf(
         "  %-14s  place=%-8s  cost=%5.2f  reward=%5.2f  net=%6.2f\n",
-        row.program, row.species, row.cost_incurred, row.reward_realized, row.net
+        row.program, row.place, row.cost_incurred, row.reward_realized, row.net
     )
 end
 # The append-only audit trail for the first program: (t, kind, amount, transition).

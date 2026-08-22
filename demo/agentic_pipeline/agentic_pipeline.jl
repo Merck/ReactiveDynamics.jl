@@ -533,12 +533,12 @@ const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",
   "meta":{ "tspan":6.0, "dt":1.0 },
   "params":[],
-  "species":[ {"name":"Project","structured":true} ],
+  "places":[ {"name":"Project","structured":true} ],
   "transitions":[
     {"id":"adv12","name":"adv12","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0},
     {"id":"adv23","name":"adv23","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":0.6},
     {"id":"adv3L","name":"adv3L","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":0.9} ],
-  "reactants":[
+  "arcs":[
     {"transition":"adv12","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase1"]]}},
     {"transition":"adv12","side":"rhs","advance":{"field":"phase","value":"Phase2"}},
     {"transition":"adv23","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
@@ -555,7 +555,7 @@ println("(b) validate(clean model) -> ", isempty(diags_ok) ? "OK (no diagnostics
 
 # (c) a deliberately broken model: a dangling arc foreign-key (transition that doesn't exist).
 broken = JSON.parse(PIPELINE_JSON)
-broken["reactants"][1]["transition"] = "ghost"   # no transition with id "ghost"
+broken["arcs"][1]["transition"] = "ghost"  # no transition with id "ghost"
 diags_bad = validate(broken; registry = REGISTRY)
 println("(c) validate(broken: dangling FK) -> ", length(diags_bad), " diagnostic(s):")
 for d in diags_bad
@@ -588,8 +588,8 @@ println(
 malicious = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0", "meta":{"tspan":3.0,"dt":1.0},
   "params":[ {"name":"k","value":"run(`echo pwned`)"} ],
-  "species":[ {"name":"A","init":0} ],
-  "transitions":[], "reactants":[] }
+  "places":[ {"name":"A","init":0} ],
+  "transitions":[], "arcs":[] }
 """
 p_mal = from_json_model(malicious; seed = 1)
 println("(e) security: a param whose value is the string \"run(`echo pwned`)\" loads as inert data:")
@@ -613,7 +613,7 @@ rm(tmp; force = true)
 # (g) the INVERSE direction — emit a LIVE model back to a full JSON document. `to_json_model`
 # (and the `@export_model` macro) is the structural inverse of `from_json_model`: it walks the
 # constructed model's stored columns — the rate (Poisson-unwrapped to its bare intensity + a
-# rate_mode), the ExprNode-valued attrs, and the reaction line decomposed back into reactants[]
+# rate_mode), the ExprNode-valued attrs, and the reaction line decomposed back into arcs[]
 # (the inverse of the import-time reaction-line assembly) — and re-emits the eval-free document.
 # A model is therefore DATA in both directions: author-as-JSON → load, AND build/load → export.
 # We export the live DSL-built model, reload the emitted JSON, and confirm the reload is the SAME

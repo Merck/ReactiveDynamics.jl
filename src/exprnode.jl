@@ -25,7 +25,7 @@ end
 """
     NodeRef(kind, name)
 
-A named reference to a declared model entity — `kind ∈ `[`REF_KINDS`](@ref)` (:species/:param/:obs) selects which namespace `name` lives in. Lowers to the bare `name` Symbol; `wrap_fun`/`compile_attrs` then substitute a place → `state.u[i]` and a param → `state.p[:name]` at compile time. It is `NodeRef`, NOT `Ref` — a distinct IR leaf, not Julia's `Base.Ref`.
+A named reference to a declared model entity — `kind ∈ `[`REF_KINDS`](@ref)` (:place/:param/:obs) selects which namespace `name` lives in. Lowers to the bare `name` Symbol; `wrap_fun`/`compile_attrs` then substitute a place → `state.u[i]` and a param → `state.p[:name]` at compile time. It is `NodeRef`, NOT `Ref` — a distinct IR leaf, not Julia's `Base.Ref`.
 """
 struct NodeRef <: ExprNode
     kind::Symbol   # ∈ REF_KINDS — what `name` refers to
@@ -119,9 +119,9 @@ const DIST_WHITELIST =
 """
     REF_KINDS
 
-The closed tuple of reference kinds a [`NodeRef`](@ref) may carry: `:species`, `:param`, `:obs`. `validate` checks a ref's kind is in this set AND that its name is declared in the corresponding pool — part of the eval-free trust boundary.
+The closed tuple of reference kinds a [`NodeRef`](@ref) may carry: `:place`, `:param`, `:obs`. `validate` checks a ref's kind is in this set AND that its name is declared in the corresponding pool — part of the eval-free trust boundary.
 """
-const REF_KINDS = (:species, :param, :obs)
+const REF_KINDS = (:place, :param, :obs)
 # Short-circuit boolean ops use an Expr HEAD (not a :call); the rest are ordinary calls.
 const _SHORTCIRCUIT_OPS = (:&&, :||)
 
@@ -180,7 +180,7 @@ to_expr(n::ExternalRef) = :(state.external_inputs[$(QuoteNode(n.port))])
 """
     from_expr(ex; places = Set{Symbol}(), params = Set{Symbol}()) -> ExprNode
 
-Structural inverse of [`to_expr`](@ref): lower a DSL-authored attribute `Expr` back to a typed [`ExprNode`](@ref) tree (so a DSL/loaded model can be serialized to JSON). Bare symbols are classified via the known `places`/`params` name sets — a symbol in `params` becomes a `NodeRef(:param, …)`, otherwise a `NodeRef(:species, …)` (the default for an unclassified bare symbol). Recognizes the exact lowered shapes `to_expr` emits — `rand(state.rng, Dist(…))` → [`Sample`](@ref), `state.external_inputs[:port]` → [`ExternalRef`](@ref), the `@t`/`@field`/`@choose` macrocalls, short-circuit boolean heads — and rejects a call head outside [`OP_WHITELIST`](@ref). Result nodes are [`NodeRef`](@ref)s (not Julia `Ref`s).
+Structural inverse of [`to_expr`](@ref): lower a DSL-authored attribute `Expr` back to a typed [`ExprNode`](@ref) tree (so a DSL/loaded model can be serialized to JSON). Bare symbols are classified via the known `places`/`params` name sets — a symbol in `params` becomes a `NodeRef(:param, …)`, otherwise a `NodeRef(:place, …)` (the default for an unclassified bare symbol). Recognizes the exact lowered shapes `to_expr` emits — `rand(state.rng, Dist(…))` → [`Sample`](@ref), `state.external_inputs[:port]` → [`ExternalRef`](@ref), the `@t`/`@field`/`@choose` macrocalls, short-circuit boolean heads — and rejects a call head outside [`OP_WHITELIST`](@ref). Result nodes are [`NodeRef`](@ref)s (not Julia `Ref`s).
 """
 function from_expr(ex; places::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} = Set{Symbol}())
     if ex isa Bool
@@ -191,8 +191,8 @@ function from_expr(ex; places::Set{Symbol} = Set{Symbol}(), params::Set{Symbol} 
         return Const(ex.value)   # a literal symbol
     elseif ex isa Symbol
         ex in params && return NodeRef(:param, ex)
-        ex in places && return NodeRef(:species, ex)
-        return NodeRef(:species, ex)   # default: an unclassified bare symbol is a place ref
+        ex in places && return NodeRef(:place, ex)
+        return NodeRef(:place, ex)   # default: an unclassified bare symbol is a place ref
     elseif ex isa Expr
         return _from_expr_compound(ex; places = places, params = params)
     else

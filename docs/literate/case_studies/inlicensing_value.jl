@@ -424,7 +424,7 @@ for r in eachrow(first(led, min(6, nrow(led))))
 end
 
 launched_capital = sum(led.cost_incurred[led.phase .== :Market]; init = 0.0)
-retired_capital = sum(led.cost_incurred[led.species .== :removed]; init = 0.0)
+retired_capital = sum(led.cost_incurred[led.place .== :removed]; init = 0.0)
 @printf("\n  capital that reached a launched program : %.1f\n", launched_capital)
 @printf("  capital sunk into failed/retired programs: %.1f\n", retired_capital)
 

@@ -36,8 +36,10 @@ end
 
 # Read a token field (protocol `place` or a host-struct extra like `phase`/`npv_estimate`),
 # guarded so a typo is a clear error rather than AA's silent-false swallow (ADR 0008 §A).
+# `:species` is the retired ADR-0017 spelling of `:place`, accepted for one release — SILENTLY,
+# because a `depwarn` here would fire per token per clause inside the step loop.
 function _token_field(token, field::Symbol)
-    field === :species && return get_place(token)
+    (field === :place || field === :species) && return get_place(token)
     hasproperty(token, field) ||
         error("token of kind $(get_place(token)) has no field $field (predicate/SetField)")
     return getproperty(token, field)

@@ -49,9 +49,9 @@ const _COUPLED_JSON = """
 { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
   "params":[],
   "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
-  "species":[{"name":"A","init":0}],
+  "places":[{"name":"A","init":0}],
   "transitions":[{"id":"t1","name":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-  "reactants":[{"transition":"t1","side":"rhs","species":"A","stoich":1}] }
+  "arcs":[{"transition":"t1","side":"rhs","place":"A","stoich":1}] }
 """
 
 @testset "AlgebraicAgents integration & external coupling (ADR 0012)" begin
@@ -61,11 +61,11 @@ const _COUPLED_JSON = """
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[{"name":"beta","value":0.4}],
-          "species":[{"name":"A","init":100},{"name":"B","init":7}],
+          "places":[{"name":"A","init":100},{"name":"B","init":7}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic",
                           "cycletime":0.0,"prob_of_success":1.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         p = RD.from_json_model(json; seed = 1)
 
@@ -94,11 +94,11 @@ const _COUPLED_JSON = """
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":4.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"A","init":50}],
+          "places":[{"name":"A","init":50}],
           "transitions":[{"id":"t1","name":"t1","rate":0.0,"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1}],
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}],
           "observables":[{"name":"a_level","every":1.0,
-                          "range":[{"weight":1.0,"value":{"node":"ref","kind":"species","name":"A"}}]}] }
+                          "range":[{"weight":1.0,"value":{"node":"ref","kind":"place","name":"A"}}]}] }
         """
         p = RD.from_json_model(json; seed = 1)
         @test :a_level in AlgebraicAgents.observables(p)   # named observable is exported
@@ -111,9 +111,9 @@ const _COUPLED_JSON = """
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":3.0,"dt":1.0},
           "params":[{"name":"beta","value":0.4},{"name":"gamma","value":2.0}],
-          "species":[{"name":"A","init":1}],
+          "places":[{"name":"A","init":1}],
           "transitions":[{"id":"t1","name":"t1","rate":0.0,"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}] }
         """
         p = RD.from_json_model(json; seed = 1)
         ps = AlgebraicAgents._getparameters(p)
@@ -162,9 +162,9 @@ const _COUPLED_JSON = """
             """
             { "meta":{"tspan":5.0,"dt":1.0},"params":[],
               "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
-              "species":[{"name":"A","init":0}],
+              "places":[{"name":"A","init":0}],
               "transitions":[{"id":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-              "reactants":[{"transition":"t1","species":"A","side":"rhs","stoich":1}] }
+              "arcs":[{"transition":"t1","place":"A","side":"rhs","stoich":1}] }
             """
         )
         # the declared port validates clean.
@@ -193,7 +193,7 @@ const _COUPLED_JSON = """
                     ]
                 ),
                 "action" => Dict(
-                    "verb" => "set_species", "name" => "A", "mode" => "inc",
+                    "verb" => "set_marking", "name" => "A", "mode" => "inc",
                     "value" => Dict("node" => "const", "value" => 1)
                 )
             ),
@@ -248,12 +248,12 @@ const _COUPLED_JSON = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":3.0,"dt":1.0},
           "params":[],
           "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
-          "species":[{"name":"A","init":0},{"name":"B","init":0}],
+          "places":[{"name":"A","init":0},{"name":"B","init":0}],
           "transitions":[
             {"id":"ta","name":"ta","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"},
             {"id":"tb","name":"tb","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"ta","side":"rhs","species":"A","stoich":1},
-                       {"transition":"tb","side":"rhs","species":"B","stoich":1}] }
+          "arcs":[{"transition":"ta","side":"rhs","place":"A","stoich":1},
+                 {"transition":"tb","side":"rhs","place":"B","stoich":1}] }
         """
         rd = RD.from_json_model(json; seed = 1)
         src = AATestSource("src", 4.0, 1.0)

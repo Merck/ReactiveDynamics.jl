@@ -92,7 +92,7 @@ content(df) = select(df, Not(:program))
         df = token_trajectory(p)
         @test nrow(df) > 0
         # the long form carries t, program, place, then the opted-in fields
-        @test issubset(["t", "program", "species", "phase", "value"], names(df))
+        @test issubset(["t", "program", "place", "phase", "value"], names(df))
         # one token's life is a subset filtered by name
         nm = df[1, :program]
         one = token_trajectory(p, nm)

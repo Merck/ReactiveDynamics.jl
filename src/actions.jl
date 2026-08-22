@@ -124,12 +124,14 @@ struct RawExpr <: ActionStmt
     expr::Any
 end
 
-# The SERIALIZED verb tags (ADR 0005 §E5 wire vocabulary), one per concrete `ActionStmt`.
-# NOTE (ADR 0017 staging, deliberate): `:set_species` is the wire tag of `SetMarking`. The Tier-1
-# rename moved Julia names only; wire keys are Tier 3 and land as their own commit, so this list
-# stays byte-identical to what previously-written models carry until that step.
+# The SERIALIZED verb tags (ADR 0005 §E5 wire vocabulary), one per concrete `ActionStmt`. This is
+# the CURRENT vocabulary; the retired `:set_species` spelling of `:set_marking` is accepted by the
+# loader for one release (ADR 0017 Tier 3, `_LEGACY_ACTION_VERBS`) but is not a member here.
 const ACTION_VERBS =
-    (:set_species, :set_params, :set_field, :set_tokens, :add_token, :activate, :deactivate, :invoke, :log, :seq)
+    (:set_marking, :set_params, :set_field, :set_tokens, :add_token, :activate, :deactivate, :invoke, :log, :seq)
+
+# Retired ADR-0017 verb spellings a document may still carry for one release.
+const _LEGACY_ACTION_VERBS = (:set_species,)
 
 # ── A Rule is the repaired Event (ADR 0010 §A) ──────────────────────────────────────────
 """

@@ -6,7 +6,7 @@
     { "name": "synergy_pos", "value": 0 },
     { "name": "synergy_eff", "value": 0 }
   ],
-  "species": [
+  "places": [
     { "name": "Project", "structured": true },
     { "name": "scientist", "init": 40 },
     { "name": "budget", "init": 150 }
@@ -35,42 +35,42 @@
       "cycletime": 1.0, "prob_of_success": 0.9, "priority": 4.0 },
     { "id": "financing", "name": "financing", "rate": 16.0, "rate_mode": "deterministic" }
   ],
-  "reactants": [
+  "arcs": [
     { "transition": "adv_discovery", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Discovery"] ] } },
-    { "transition": "adv_discovery", "side": "lhs", "species": "scientist", "stoich": 2,
+    { "transition": "adv_discovery", "side": "lhs", "place": "scientist", "stoich": 2,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_discovery", "side": "lhs", "species": "budget", "stoich": 2,
+    { "transition": "adv_discovery", "side": "lhs", "place": "budget", "stoich": 2,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_discovery", "side": "rhs", "advance": { "field": "phase", "value": "Phase1" } },
 
     { "transition": "adv_phase1", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase1"] ] } },
-    { "transition": "adv_phase1", "side": "lhs", "species": "scientist", "stoich": 3,
+    { "transition": "adv_phase1", "side": "lhs", "place": "scientist", "stoich": 3,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_phase1", "side": "lhs", "species": "budget", "stoich": 3,
+    { "transition": "adv_phase1", "side": "lhs", "place": "budget", "stoich": 3,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_phase1", "side": "rhs", "advance": { "field": "phase", "value": "Phase2" } },
 
     { "transition": "adv_phase2", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase2"] ] } },
-    { "transition": "adv_phase2", "side": "lhs", "species": "scientist", "stoich": 4,
+    { "transition": "adv_phase2", "side": "lhs", "place": "scientist", "stoich": 4,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_phase2", "side": "lhs", "species": "budget", "stoich": 5,
+    { "transition": "adv_phase2", "side": "lhs", "place": "budget", "stoich": 5,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_phase2", "side": "rhs", "advance": { "field": "phase", "value": "Phase3" } },
 
     { "transition": "adv_phase3", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Phase3"] ] } },
-    { "transition": "adv_phase3", "side": "lhs", "species": "scientist", "stoich": 5,
+    { "transition": "adv_phase3", "side": "lhs", "place": "scientist", "stoich": 5,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_phase3", "side": "lhs", "species": "budget", "stoich": 8,
+    { "transition": "adv_phase3", "side": "lhs", "place": "budget", "stoich": 8,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_phase3", "side": "rhs", "advance": { "field": "phase", "value": "Filed" } },
 
     { "transition": "adv_filed", "side": "lhs", "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Filed"] ] } },
-    { "transition": "adv_filed", "side": "lhs", "species": "scientist", "stoich": 1,
+    { "transition": "adv_filed", "side": "lhs", "place": "scientist", "stoich": 1,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_filed", "side": "lhs", "species": "budget", "stoich": 2,
+    { "transition": "adv_filed", "side": "lhs", "place": "budget", "stoich": 2,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_filed", "side": "rhs", "advance": { "field": "phase", "value": "Market" } },
 
-    { "transition": "financing", "side": "rhs", "species": "budget", "stoich": 1 }
+    { "transition": "financing", "side": "rhs", "place": "budget", "stoich": 1 }
   ]
 }

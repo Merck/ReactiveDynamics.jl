@@ -647,7 +647,9 @@ function structured_rhs(expr::Expr, state, transition)
         token = first(transition.bound_structured_agents)
         # Evaluate the value with the bound token in scope so @field(name) reads its attributes.
         val = eval_with_token(state, transition, token, valex)
-        if field === :species
+        # `:species` is the retired ADR-0017 spelling of `:place`, accepted (silently — this is
+        # inside the step loop) for one release.
+        if field === :place || field === :species
             set_place!(token, Symbol(val))
         else
             setproperty!(token, field, val)

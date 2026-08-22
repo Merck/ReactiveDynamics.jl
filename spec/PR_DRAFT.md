@@ -121,10 +121,10 @@ A model IS data: the same pipeline as an eval-free JSON document, which `validat
 ```json
 { "rd_format":"reactive-dynamics-model", "version":"1.0",
   "meta":{ "tspan":6.0, "dt":1.0 },
-  "species":[ {"name":"Project","structured":true} ],
+  "places":[ {"name":"Project","structured":true} ],
   "transitions":[
     {"id":"adv12","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0} ],
-  "reactants":[
+  "arcs":[
     {"transition":"adv12","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase1"]]}},
     {"transition":"adv12","side":"rhs","advance":{"field":"phase","value":"Phase2"}} ] }
 ```

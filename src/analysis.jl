@@ -88,12 +88,12 @@ end
 
 function _trajectory_dataframe(rows)
     fieldnames = _trajectory_field_names(rows)
-    df = DataFrame(t = Float64[], program = String[], species = Symbol[])
+    df = DataFrame(t = Float64[], program = String[], place = Symbol[])
     for f in fieldnames
         df[!, f] = Vector{Any}()
     end
     for (t, name, place, fields) in rows
-        row = Dict{Symbol, Any}(:t => t, :program => name, :species => place)
+        row = Dict{Symbol, Any}(:t => t, :program => name, :place => place)
         for f in fieldnames
             row[f] = haskey(fields, f) ? fields[f] : missing
         end

@@ -32,7 +32,7 @@ end
         @test RDX.to_expr(RDX.Const(5)) === 5
         @test RDX.to_expr(RDX.Const(true)) === true
         @test RDX.to_expr(RDX.Const(:Phase2)) == QuoteNode(:Phase2)   # literal symbol ⇒ QuoteNode
-        @test RDX.to_expr(RDX.NodeRef(:species, :X)) === :X                # bare symbol
+        @test RDX.to_expr(RDX.NodeRef(:place, :X)) === :X                # bare symbol
         @test RDX.to_expr(RDX.NodeRef(:param, :beta)) === :beta
 
         # arithmetic: 0.3 * beta
@@ -40,7 +40,7 @@ end
         @test RDX.to_expr(n) == :(0.3 * beta)
 
         # comparison nested under short-circuit && uses the :&& HEAD, not a :call
-        g = RDX.Call(:&&, [RDX.Call(:>, [RDX.NodeRef(:species, :X), RDX.Const(0)]), RDX.Const(true)])
+        g = RDX.Call(:&&, [RDX.Call(:>, [RDX.NodeRef(:place, :X), RDX.Const(0)]), RDX.Const(true)])
         gx = RDX.to_expr(g)
         @test gx.head == :(&&)
         @test gx.args[1] == :(X > 0)
@@ -65,7 +65,7 @@ end
                 RDX.Const(0.3), RDX.Const(5), RDX.Const(true), RDX.Const(:Phase2),
                 RDX.NodeRef(:param, :beta),
                 RDX.Call(:*, [RDX.Const(0.3), RDX.NodeRef(:param, :beta)]),
-                RDX.Call(:&&, [RDX.Call(:>, [RDX.NodeRef(:species, :X), RDX.Const(0)]), RDX.Const(true)]),
+                RDX.Call(:&&, [RDX.Call(:>, [RDX.NodeRef(:place, :X), RDX.Const(0)]), RDX.Const(true)]),
             )
             @test RDX.node_from_dict(RDX.node_to_dict(n)) == n
         end
@@ -77,13 +77,13 @@ end
           "rd_format": "reactive-dynamics-model", "version": "1.0",
           "meta": { "tspan": 5.0, "dt": 1.0 },
           "params": [ { "name": "beta", "value": 0.4 } ],
-          "species": [ { "name": "A", "init": 100 }, { "name": "B", "init": 0 } ],
+          "places": [ { "name": "A", "init": 100 }, { "name": "B", "init": 0 } ],
           "transitions": [
             { "id": "t1", "name": "t1", "rate": 1.0, "rate_mode": "deterministic",
               "cycletime": 0.0, "prob_of_success": 1.0 } ],
-          "reactants": [
-            { "transition": "t1", "species": "A", "side": "lhs", "stoich": 1 },
-            { "transition": "t1", "species": "B", "side": "rhs", "stoich": 1 } ]
+          "arcs": [
+            { "transition": "t1", "place": "A", "side": "lhs", "stoich": 1 },
+            { "transition": "t1", "place": "B", "side": "rhs", "stoich": 1 } ]
         }
         """
         p = RDX.from_json_model(json; seed = 1)
@@ -123,23 +123,23 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":10.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"A","init":1000},{"name":"B"}],
+          "places":[{"name":"A","init":1000},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":3.0,"rate_mode":"deterministic",
                           "cycletime":0.0,"prob_of_success":1.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         p1 = RDX.from_json_model(json; seed = 42); simulate(p1)
         p2 = RDX.from_json_model(json; seed = 42); simulate(p2)
         @test p1.sol == p2.sol           # same (model, seed) ⇒ identical
     end
 
-    # ── E4: reactants[] → reaction-line :trans Expr (stoich, modality, @select, @advance) ──
+    # ── E4: arcs[] → reaction-line :trans Expr (stoich, modality, @select, @advance) ──
     @testset "E4: multi-LHS + integer stoich assembles to the runtime-parsed reaction line" begin
         rs = [
-            Dict("transition" => "t", "species" => "X", "side" => "lhs", "stoich" => 1),
-            Dict("transition" => "t", "species" => "Y", "side" => "lhs", "stoich" => 2),
-            Dict("transition" => "t", "species" => "Z", "side" => "rhs", "stoich" => 1),
+            Dict("transition" => "t", "place" => "X", "side" => "lhs", "stoich" => 1),
+            Dict("transition" => "t", "place" => "Y", "side" => "lhs", "stoich" => 2),
+            Dict("transition" => "t", "place" => "Z", "side" => "rhs", "stoich" => 1),
         ]
         line = RDX.assemble_reaction_line(rs)
         @test line == :((X + 2Y) → Z)
@@ -148,14 +148,14 @@ end
     @testset "E4: LHS modality macros (@conserved/@rate) are emitted per the 3-axis modality" begin
         rs = [
             Dict(
-                "transition" => "t", "species" => "scientist", "side" => "lhs", "stoich" => 3,
+                "transition" => "t", "place" => "scientist", "side" => "lhs", "stoich" => 3,
                 "modality" => Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
             ),
             Dict(
-                "transition" => "t", "species" => "budget", "side" => "lhs", "stoich" => 1,
+                "transition" => "t", "place" => "budget", "side" => "lhs", "stoich" => 1,
                 "modality" => Dict("allocation" => "perstep", "return" => "consumed", "blocking" => "block")
             ),
-            Dict("transition" => "t", "species" => "out", "side" => "rhs", "stoich" => 1),
+            Dict("transition" => "t", "place" => "out", "side" => "rhs", "stoich" => 1),
         ]
         line = RDX.assemble_reaction_line(rs)
         # the LHS terms wrap their place in @conserved / @rate; the runtime parser unions these
@@ -169,10 +169,10 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"Project","structured":true}],
+          "places":[{"name":"Project","structured":true}],
           "transitions":[{"id":"adv","name":"adv","rate":1.0,"rate_mode":"deterministic",
                           "cycletime":1.0,"prob_of_success":1.0}],
-          "reactants":[
+          "arcs":[
             {"transition":"adv","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
             {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Phase3"}} ] }
         """
@@ -222,13 +222,13 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
+          "places":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
           "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"inert","species":"A","side":"lhs","stoich":1},
-                       {"transition":"inert","species":"B","side":"rhs","stoich":1}],
+          "arcs":[{"transition":"inert","place":"A","side":"lhs","stoich":1},
+                 {"transition":"inert","place":"B","side":"rhs","stoich":1}],
           "rules":[ { "id":"lever", "fire_mode":"once",
                       "guard": {"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
-                      "action": {"verb":"set_species","name":"cash","mode":"inc","value":{"node":"const","value":500}} } ] }
+                      "action": {"verb":"set_marking","name":"cash","mode":"inc","value":{"node":"const","value":500}} } ] }
         """
         p = RDX.from_json_model(json; seed = 1)
         @test length(p.rules) == 1
@@ -265,11 +265,11 @@ end
             """
             { "meta":{"tspan":5.0,"dt":1.0},
               "params":[{"name":"beta","value":0.4}],
-              "species":[{"name":"A","init":100},{"name":"B"}],
+              "places":[{"name":"A","init":100},{"name":"B"}],
               "transitions":[{"id":"t1","rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
                               "prob_of_success":0.5,"cycletime":2.0}],
-              "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                           {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+              "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                     {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
             """
         )
         @test isempty(RDX.validate(valid))
@@ -277,13 +277,13 @@ end
         # rule 1: unknown ref name
         bad_ref = deepcopy(valid); bad_ref["transitions"][1]["rate"]["args"][2]["name"] = "nonexistent"
         @test any(d -> occursin("undeclared", d.msg), RDX.validate(bad_ref))
-        # rule 1, PLACE pool: a `ref` of kind `species` resolves against the declared PLACE names,
+        # rule 1, PLACE pool: a `ref` of kind `place` resolves against the declared PLACE names,
         # not the params. Regression pin (ADR 0017): the only ref in the document above is a param,
         # so the place-pool branch of `_validate_node!` was entirely uncovered — a typo in it threw
         # `UndefVarError` on every place-referencing document while the suite stayed green.
         place_ref = deepcopy(valid)
         place_ref["transitions"][1]["rate"]["args"][2] =
-            Dict("node" => "ref", "kind" => "species", "name" => "A")
+            Dict("node" => "ref", "kind" => "place", "name" => "A")
         @test isempty(RDX.validate(place_ref))
         bad_place_ref = deepcopy(place_ref)
         bad_place_ref["transitions"][1]["rate"]["args"][2]["name"] = "nonexistent"
@@ -292,7 +292,7 @@ end
         bad_op = deepcopy(valid); bad_op["transitions"][1]["rate"]["op"] = "system"
         @test any(d -> occursin("OP_WHITELIST", d.msg), RDX.validate(bad_op))
         # rule 2: dangling arc FK
-        bad_fk = deepcopy(valid); bad_fk["reactants"][1]["transition"] = "ghost"
+        bad_fk = deepcopy(valid); bad_fk["arcs"][1]["transition"] = "ghost"
         @test any(d -> occursin("dangling", d.msg), RDX.validate(bad_fk))
         # rule 3: prob_of_success out of [0,1]
         bad_pos = deepcopy(valid); bad_pos["transitions"][1]["prob_of_success"] = 1.5
@@ -302,11 +302,11 @@ end
         @test any(d -> occursin("≥ 0", d.msg), RDX.validate(bad_ct))
         # rule 4: illegal modality (nonblock+conserved)
         bad_mod = deepcopy(valid)
-        bad_mod["species"][1]["modality"] = Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "nonblock")
+        bad_mod["places"][1]["modality"] = Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "nonblock")
         @test any(d -> occursin("§1.4", d.msg), RDX.validate(bad_mod))
         # rule 1 in a predicate: Sample is not 𝓕ₜ-measurable
         bad_pred = deepcopy(valid)
-        bad_pred["reactants"][1] = Dict(
+        bad_pred["arcs"][1] = Dict(
             "transition" => "t1", "side" => "lhs",
             "predicate" => Dict("kind" => "A", "clauses" => [["phase", "==", Dict("node" => "sample", "dist" => "Poisson", "args" => [Dict("node" => "const", "value" => 1.0)])]])
         )
@@ -321,9 +321,9 @@ end
         import JSON
         m = JSON.parse(
             """
-            { "meta":{"tspan":5.0,"dt":1.0},"params":[],"species":[{"name":"A","init":0}],
+            { "meta":{"tspan":5.0,"dt":1.0},"params":[],"places":[{"name":"A","init":0}],
               "transitions":[{"id":"t1","rate":1.0,"rate_mode":"deterministic"}],
-              "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1}],
+              "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}],
               "rules":[{"id":"r","fire_mode":"once",
                         "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
                         "action":{"verb":"add_token","kind":"Unregistered","fields":[]}}] }
@@ -348,9 +348,9 @@ end
         m = JSON.parse(
             """
             { "meta":{"tspan":5.0,"dt":1.0},"params":[],
-              "species":[{"name":"Project","structured":true}],
+              "places":[{"name":"Project","structured":true}],
               "transitions":[{"id":"adv","rate":1.0,"rate_mode":"deterministic"}],
-              "reactants":[{"transition":"adv","side":"lhs",
+              "arcs":[{"transition":"adv","side":"lhs",
                 "predicate":{"kind":"Project","clauses":[["npv",">",{"node":"field","name":"npv"}]]}},
                 {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Done"}}] }
             """
@@ -410,7 +410,7 @@ end
         bad = JSON.parse(
             """
             { "meta":{"tspan":5.0,"dt":1.0},"params":[{"name":"k","value":"run(`echo pwned`)"}],
-              "species":[{"name":"A","init":0}],"transitions":[],"reactants":[] }
+              "places":[{"name":"A","init":0}],"transitions":[],"arcs":[] }
             """
         )
         # the malicious string is inert data — it is never parsed/eval'd (param value stays a string;
@@ -423,10 +423,10 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[{"name":"k","value":0.5}],
-          "species":[{"name":"A","init":10},{"name":"B"}],
+          "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         tmp = tempname() * ".rdj.json"
         write(tmp, json)
@@ -440,10 +440,10 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{},
           "params":[{"name":"k","value":0.5}],
-          "species":[{"name":"A","init":10},{"name":"B"}],
+          "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         import JSON
         d = JSON.parse(json)
@@ -451,7 +451,7 @@ end
         # params + place survive the round-trip through the acset
         back = RDX.model_to_dict(net)
         @test any(pr -> pr["name"] == "k" && pr["value"] == 0.5, back["params"])
-        @test Set(pl["name"] for pl in back["species"]) == Set(["A", "B"])
+        @test Set(pl["name"] for pl in back["places"]) == Set(["A", "B"])
     end
 
     # ── E10: the EXPORT path — to_json_model is the inverse of from_json_model ───────────
@@ -466,13 +466,13 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
           "params":[{"name":"beta","value":0.4}],
-          "species":[{"name":"cash","init":0,"cost":2.0,"valuation":-1.0},
-                     {"name":"A","init":10},{"name":"B","reward":50.0}],
+          "places":[{"name":"cash","init":0,"cost":2.0,"valuation":-1.0},
+                    {"name":"A","init":10},{"name":"B","reward":50.0}],
           "transitions":[{"id":"t1","name":"t1",
               "rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
               "rate_mode":"poisson","prob_of_success":0.8,"cycletime":2.0,"priority":3.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":2},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":2},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         p = RDX.from_json_model(json; seed = 1)
         back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
@@ -487,11 +487,11 @@ end
         @test RDX.node_from_dict(t1["cycletime"]) == RDX.Const(2.0)
         @test RDX.node_from_dict(t1["priority"]) == RDX.Const(3.0)
         # non-default place attrs are emitted; defaults (e.g. cash.reward=0) are omitted
-        cash = first(filter(s -> s["name"] == "cash", back["species"]))
+        cash = first(filter(s -> s["name"] == "cash", back["places"]))
         @test cash["cost"] == 2.0 && cash["valuation"] == -1.0 && !haskey(cash, "reward")
-        @test first(filter(s -> s["name"] == "B", back["species"]))["reward"] == 50.0
-        # the reactants[] decompose back to the same (place, side, stoich) the loader consumes
-        ra = Set((r["species"], r["side"], get(r, "stoich", 1)) for r in back["reactants"])
+        @test first(filter(s -> s["name"] == "B", back["places"]))["reward"] == 50.0
+        # the arcs[] decompose back to the same (place, side, stoich) the loader consumes
+        ra = Set((r["place"], r["side"], get(r, "stoich", 1)) for r in back["arcs"])
         @test ra == Set([("A", "lhs", 2), ("B", "rhs", 1)])
 
         # full equivalence: re-import and simulate — identical trajectory under the same seed
@@ -507,13 +507,13 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"Project","structured":true},{"name":"sci","init":10},{"name":"bud","init":20}],
+          "places":[{"name":"Project","structured":true},{"name":"sci","init":10},{"name":"bud","init":20}],
           "transitions":[{"id":"adv","name":"adv","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0}],
-          "reactants":[
+          "arcs":[
             {"transition":"adv","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
-            {"transition":"adv","side":"lhs","species":"sci","stoich":3,
+            {"transition":"adv","side":"lhs","place":"sci","stoich":3,
              "modality":{"allocation":"upfront","return":"conserved","blocking":"block"}},
-            {"transition":"adv","side":"lhs","species":"bud","stoich":5,
+            {"transition":"adv","side":"lhs","place":"bud","stoich":5,
              "modality":{"allocation":"perstep","return":"consumed","blocking":"block"}},
             {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Phase3"}} ] }
         """
@@ -523,18 +523,18 @@ end
         back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 5.0, "dt" => 1.0)))
 
         # the @select predicate is recovered exactly (kind + clause)
-        sel = first(filter(r -> haskey(r, "predicate"), back["reactants"]))
+        sel = first(filter(r -> haskey(r, "predicate"), back["arcs"]))
         @test sel["predicate"]["kind"] == "Project"
         @test RDX.node_from_dict(sel["predicate"]["clauses"][1][3]) == RDX.Const(:Phase2)
         # the @advance RHS field-write is recovered
-        adv = first(filter(r -> haskey(r, "advance"), back["reactants"]))
+        adv = first(filter(r -> haskey(r, "advance"), back["arcs"]))
         @test adv["advance"]["field"] == "phase"
         @test RDX.node_from_dict(adv["advance"]["value"]) == RDX.Const(:Phase3)
         # the 3-axis modality is recovered per place
-        sci = first(filter(r -> get(r, "species", "") == "sci", back["reactants"]))
+        sci = first(filter(r -> get(r, "place", "") == "sci", back["arcs"]))
         @test sci["modality"] == Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
         @test sci["stoich"] == 3
-        bud = first(filter(r -> get(r, "species", "") == "bud", back["reactants"]))
+        bud = first(filter(r -> get(r, "place", "") == "bud", back["arcs"]))
         @test bud["modality"]["allocation"] == "perstep" && bud["stoich"] == 5
 
         # re-imported :trans is the SAME reaction-line Expr (striplines: macrocalls carry line meta)
@@ -550,19 +550,19 @@ end
         import JSON
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
-          "params":[],"species":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
+          "params":[],"places":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
           "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"inert","species":"A","side":"lhs","stoich":1},
-                       {"transition":"inert","species":"B","side":"rhs","stoich":1}],
+          "arcs":[{"transition":"inert","place":"A","side":"lhs","stoich":1},
+                 {"transition":"inert","place":"B","side":"rhs","stoich":1}],
           "rules":[{"id":"lever","fire_mode":"once",
                     "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
-                    "action":{"verb":"set_species","name":"cash","mode":"inc","value":{"node":"const","value":500}}}] }
+                    "action":{"verb":"set_marking","name":"cash","mode":"inc","value":{"node":"const","value":500}}}] }
         """
         p = RDX.from_json_model(json; seed = 1)
         back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
         @test haskey(back, "rules") && length(back["rules"]) == 1
         @test back["rules"][1]["id"] == "lever" && back["rules"][1]["fire_mode"] == "once"
-        @test back["rules"][1]["action"]["verb"] == "set_species"
+        @test back["rules"][1]["action"]["verb"] == "set_marking"
         # re-import fires the lever identically
         p2 = RDX.from_json_model(JSON.json(back); seed = 1)
         @test length(p2.rules) == 1
@@ -630,10 +630,10 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[{"name":"k","value":0.5}],
-          "species":[{"name":"A","init":10},{"name":"B"}],
+          "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
+                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
         """
         prob = RDX.from_json_model(json; seed = 7)
         tmp = tempname() * ".rdj.json"
@@ -656,9 +656,9 @@ end
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
           "params":[],
-          "species":[{"name":"x","init":10}],
+          "places":[{"name":"x","init":10}],
           "transitions":[{"id":"t1","rate":{"node":"const","value":1.0},"rate_mode":"deterministic"}],
-          "reactants":[{"transition":"t1","species":"x","side":"lhs"}],
+          "arcs":[{"transition":"t1","place":"x","side":"lhs"}],
           "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.5}},
                     {"port":"sentiment","default":{"node":"const","value":1.0}}] }
         """
@@ -711,6 +711,69 @@ end
         RDX.populate_arcs!(acs3)
         rs3 = RDX.arcs(acs3)
         @test any(r -> r.place == 0 && r.expr !== nothing, rs3)   # a dynamic term is escape-hatched
+    end
+
+    # ── ADR 0017 Tier 3: the retired wire keys still LOAD, for one release ──────────────────
+    # The vocabulary rename reached the format last: `species[]` → `places[]`, `reactants[]` →
+    # `arcs[]`, an arc's `species` → `place`, a `ref` kind `species` → `place`, the verb
+    # `set_species` → `set_marking`. The WRITER emits only the new spellings; the READER accepts
+    # the retired ones for ONE release and `Base.depwarn`s on the first one it meets (depwarn is
+    # maxlog=1 per call site and a no-op unless `--depwarn=yes` — the same contract as the Tier-1
+    # `@deprecate` name shims, which retire in the same release). So: a pre-rename document must
+    # still produce the SAME model, and re-exporting it must migrate its keys.
+    @testset "ADR 0017: a retired-key document still loads (deprecated) and re-exports renamed" begin
+        import JSON
+        # one model, two spellings — the only difference is the key names
+        legacy = """
+        { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
+          "params":[{"name":"beta","value":0.4}],
+          "species":[{"name":"cash","init":0},{"name":"A","init":100},{"name":"B"}],
+          "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic",
+                          "cycletime":0.0,"prob_of_success":1.0}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
+                       {"transition":"t1","species":"B","side":"rhs","stoich":1}],
+          "rules":[{"id":"lever","fire_mode":"once",
+                    "guard":{"node":"call","op":">","args":[{"node":"ref","kind":"species","name":"A"},
+                                                            {"node":"const","value":0}]},
+                    "action":{"verb":"set_species","name":"cash","mode":"inc","value":{"node":"const","value":500}}}] }
+        """
+        renamed = replace(
+            legacy,
+            "\"species\":[" => "\"places\":[", "\"reactants\":[" => "\"arcs\":[",
+            "\"species\":\"" => "\"place\":\"", "\"kind\":\"species\"" => "\"kind\":\"place\"",
+            "\"set_species\"" => "\"set_marking\"",
+        )
+        @test !occursin("species", renamed)      # the twin really is fully renamed
+
+        if Base.JLOptions().depwarn == 2
+            # `--depwarn=error` turns every retired-key read into a throw; that is all that is
+            # assertable under it, and the functional checks below cannot run.
+            @test_throws ErrorException RDX.validate(JSON.parse(legacy))
+        else
+            # The FIRST retired key met in the session warns (maxlog=1 per call site), so this
+            # assertion has to come before any other read of a legacy document.
+            Base.JLOptions().depwarn == 1 && @test_deprecated RDX.validate(JSON.parse(legacy))
+
+            @test isempty(RDX.validate(JSON.parse(legacy)))     # a legacy document validates clean
+            p_old = RDX.from_json_model(legacy; seed = 11)
+            p_new = RDX.from_json_model(renamed; seed = 11)
+            # same places, same arcs, same rule — and therefore the same trajectory
+            @test p_old.network[:, :placeName] == p_new.network[:, :placeName]
+            @test p_old.network[:, :trans] == p_new.network[:, :trans]
+            @test p_old.rules[1].action isa RDX.SetMarking
+            simulate(p_old)
+            simulate(p_new)
+            @test p_old.sol == p_new.sol
+
+            # The writer emits ONLY the new spellings, so re-exporting migrates the document.
+            back = JSON.parse(RDX.to_json_model(p_old; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
+            @test haskey(back, "places") && !haskey(back, "species")
+            @test haskey(back, "arcs") && !haskey(back, "reactants")
+            @test !any(haskey(r, "species") for r in back["arcs"])
+            @test Set(r["place"] for r in back["arcs"]) == Set(["A", "B"])
+            @test back["rules"][1]["action"]["verb"] == "set_marking"
+            @test isempty(RDX.validate(back))
+        end
     end
 
 end

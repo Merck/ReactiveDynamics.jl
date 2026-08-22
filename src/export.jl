@@ -72,12 +72,12 @@ _jsonable(x::NamedTuple) = Dict{String, Any}(string(k) => _jsonable(getfield(x, 
 _jsonable(x::Tuple) = map(_jsonable, collect(x))
 _jsonable(x) = string(x)
 
-# Per-token histories as nested JSON: token name → ordered list of {t, species, fields…} records,
+# Per-token histories as nested JSON: token name → ordered list of {t, place, fields…} records,
 # from the §14.1 trajectory store. Round-trips structurally like the model JSON (Invariant 5).
 function _tokens_to_records(prob::ReactionNetworkProblem)
     out = Dict{String, Vector{Dict{String, Any}}}()
     for (t, name, place, fields) in prob.token_trajectory
-        rec = Dict{String, Any}("t" => t, "species" => string(place))
+        rec = Dict{String, Any}("t" => t, "place" => string(place))
         for k in keys(fields)
             rec[string(k)] = _jsonable(getfield(fields, k))
         end
@@ -130,7 +130,7 @@ function export_run(prob::ReactionNetworkProblem, dir::AbstractString; with_mode
         "seed" => prob.seed === nothing ? nothing : string(prob.seed),
         "tspan" => collect(prob.tspan),
         "dt" => prob.dt,
-        "species" => string.(prob.network[:, :placeName]),
+        "places" => string.(prob.network[:, :placeName]),
         "artifacts" => artifacts,
     )
     with_model && (manifest["model"] = JSON.parse(to_json_model(prob)))

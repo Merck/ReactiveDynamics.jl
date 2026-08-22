@@ -138,15 +138,15 @@ const PHARMA_JSON = """
              { "name":"acq_cash_trigger", "value":50.0 },
              { "name":"sentiment_threshold", "value":0.45 } ],
   "inputs":[ { "port":"sentiment", "default":{ "node":"const", "value":0.0 } } ],
-  "species":[ { "name":"cash", "init":0 },
-              { "name":"acquired", "init":0 } ],
+  "places":[ { "name":"cash", "init":0 },
+             { "name":"acquired", "init":0 } ],
   "transitions":[
     { "id":"grow", "name":"grow", "rate_mode":"deterministic",
       "rate":{ "node":"call", "op":"*",
                "args":[ { "node":"externalref", "port":"sentiment" },
                         { "node":"ref", "kind":"param", "name":"base_inflow" } ] } } ],
-  "reactants":[
-    { "transition":"grow", "side":"rhs", "species":"cash", "stoich":1 } ],
+  "arcs":[
+    { "transition":"grow", "side":"rhs", "place":"cash", "stoich":1 } ],
   "rules":[
     { "id":"acquire", "fire_mode":"once",
       "guard":{ "node":"call", "op":"&&",
@@ -154,10 +154,10 @@ const PHARMA_JSON = """
                            "args":[ { "node":"externalref", "port":"sentiment" },
                                     { "node":"ref", "kind":"param", "name":"sentiment_threshold" } ] },
                          { "node":"call", "op":">=",
-                           "args":[ { "node":"ref", "kind":"species", "name":"cash" },
+                           "args":[ { "node":"ref", "kind":"place", "name":"cash" },
                                     { "node":"ref", "kind":"param", "name":"acq_cash_trigger" } ] } ] },
       "action":{ "verb":"seq", "stmts":[
-                   { "verb":"set_species", "name":"acquired", "mode":"inc",
+                   { "verb":"set_marking", "name":"acquired", "mode":"inc",
                      "value":{ "node":"const", "value":1 } },
                    { "verb":"log", "msg":"ACQUISITION: external sentiment cleared + cash trigger met" } ] } } ] }
 """

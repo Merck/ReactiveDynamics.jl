@@ -186,8 +186,8 @@ function program_ledger_summary(prob)
     led = program_economics(prob)
     rec = ledger_reconciliation(prob)
     launched_cost = sum(led.cost_incurred[led.reached_market]; init = 0.0)
-    active_cost = sum(led.cost_incurred[led.species .!= :removed .&& .!led.reached_market]; init = 0.0)
-    retired_cost = sum(led.cost_incurred[led.species .== :removed]; init = 0.0)
+    active_cost = sum(led.cost_incurred[led.place .!= :removed .&& .!led.reached_market]; init = 0.0)
+    retired_cost = sum(led.cost_incurred[led.place .== :removed]; init = 0.0)
     return (
         n_programs = nrow(led),
         total_program_cost = rec.per_program,

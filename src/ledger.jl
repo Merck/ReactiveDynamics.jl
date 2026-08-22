@@ -238,7 +238,7 @@ function program_ledger(state::ReactionNetworkProblem)
     live_by_name = Dict(AlgebraicAgents.getname(t) => t for t in live)
     df = DataFrame(
         program = String[],
-        species = Symbol[],
+        place = Symbol[],
         creation_index = Int[],
         cost_incurred = Float64[],
         reward_realized = Float64[],

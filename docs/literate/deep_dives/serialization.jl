@@ -72,7 +72,7 @@ shared_pop() = [
 
 # ## 1. The round-trip: `to_json_model` → `from_json_model`
 #
-# `to_json_model(prob)` walks a constructed model's stored columns — the rate (Poisson-unwrapped to its bare intensity plus a `rate_mode`), the `ExprNode`-valued attributes, and each reaction line decomposed back into the flat `reactants[]` list — and emits a single JSON string. `from_json_model(json; seed, registry, population)` is its inverse: parse → `validate` → build → construct. Because a run is fully determined by `(model, population, seed)`, the reload must reproduce the original run *exactly*.
+# `to_json_model(prob)` walks a constructed model's stored columns — the rate (Poisson-unwrapped to its bare intensity plus a `rate_mode`), the `ExprNode`-valued attributes, and each reaction line decomposed back into the flat `arcs[]` list — and emits a single JSON string. `from_json_model(json; seed, registry, population)` is its inverse: parse → `validate` → build → construct. Because a run is fully determined by `(model, population, seed)`, the reload must reproduce the original run *exactly*.
 #
 # We build the model in the DSL, simulate it under a fixed seed, export it, reload the emitted JSON under the *same* seed and population, and compare the two solution trajectories.
 
@@ -106,12 +106,12 @@ const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",
   "meta":{ "tspan":6.0, "dt":1.0 },
   "params":[],
-  "species":[ {"name":"Project","structured":true} ],
+  "places":[ {"name":"Project","structured":true} ],
   "transitions":[
     {"id":"adv12","name":"adv12","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0},
     {"id":"adv23","name":"adv23","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":0.6},
     {"id":"adv3L","name":"adv3L","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":0.9} ],
-  "reactants":[
+  "arcs":[
     {"transition":"adv12","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase1"]]}},
     {"transition":"adv12","side":"rhs","advance":{"field":"phase","value":"Phase2"}},
     {"transition":"adv23","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
@@ -128,7 +128,7 @@ println("validate(clean model)  -> ", isempty(clean_diags) ? "OK (no diagnostics
 # Now break it deliberately: point a arc's foreign key at a transition that does not exist. `validate` reports it as a diagnostic — it does not throw, and it certainly does not evaluate anything.
 
 broken = JSON.parse(PIPELINE_JSON)
-broken["reactants"][1]["transition"] = "ghost"        # no transition with id "ghost"
+broken["arcs"][1]["transition"] = "ghost"  # no transition with id "ghost"
 broken_diags = validate(broken; registry = REGISTRY)
 println("validate(broken model) -> ", length(broken_diags), " diagnostic(s):")
 for d in broken_diags
@@ -144,8 +144,8 @@ end
 const MALICIOUS_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0", "meta":{"tspan":3.0,"dt":1.0},
   "params":[ {"name":"k","value":"run(`echo pwned`)"} ],
-  "species":[ {"name":"A","init":0} ],
-  "transitions":[], "reactants":[] }
+  "places":[ {"name":"A","init":0} ],
+  "transitions":[], "arcs":[] }
 """
 
 p_mal = from_json_model(MALICIOUS_JSON; seed = 1)
@@ -163,7 +163,7 @@ println("still a String (never evaluated): ", p_mal.p[:k] isa String)
 rate_tree = Call(
     :*, [
         Sample(:Poisson, [Call(:*, [Const(0.3), NodeRef(:param, :beta)])]),
-        NodeRef(:species, :Preclinical),
+        NodeRef(:place, :Preclinical),
     ]
 )
 lowered = to_expr(rate_tree)

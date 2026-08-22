@@ -157,7 +157,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         exported = RDX.to_json_model(p_dsl)                      # live model → eval-free JSON
         doc = JSON.parse(exported)
         # the genesis arc emitted a typed structured{kind, fields} row (no host Expr)
-        srow = only(r for r in doc["reactants"] if haskey(r, "structured"))
+        srow = only(r for r in doc["arcs"] if haskey(r, "structured"))
         @test srow["structured"]["kind"] == "Project"
         @test Set(f["name"] for f in srow["structured"]["fields"]) == Set(["phase", "npv", "born"])
 
@@ -182,7 +182,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
         @prob_meta net tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         doc = JSON.parse(RDX.to_json_model(p))
-        for r in doc["reactants"]
+        for r in doc["arcs"]
             haskey(r, "structured") && (r["structured"]["kind"] = "Ghost")   # dangling kind
         end
         diags = RDX.validate(doc; registry = GEN_REGISTRY)

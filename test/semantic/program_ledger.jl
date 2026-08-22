@@ -85,7 +85,7 @@ end
         @test prog.cost_incurred == 2.0
         @test prog.reward_realized == 10.0
         @test prog.net == 8.0
-        @test prog.species == :Project            # current kind (phase advanced, kind unchanged)
+        @test prog.place == :Project            # current kind (phase advanced, kind unchanged)
         @test prog.creation_index == 1            # first (only) program
 
         # the append-only audit trail records the two events in order
@@ -150,7 +150,7 @@ end
             agg_cost(p);
             atol = 1.0e-9,
         )
-        @test all(df.species .== :Project)
+        @test all(df.place .== :Project)
         @test sort(df.creation_index) == [1, 2]
     end
 
@@ -223,6 +223,6 @@ end
         df = program_ledger(p)
         @test nrow(df) == 1
         @test df[1, :valuation] == 50.0           # marked at the place's placeValuation
-        @test df[1, :species] == :Project
+        @test df[1, :place] == :Project
     end
 end
