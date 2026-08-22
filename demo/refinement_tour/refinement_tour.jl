@@ -24,11 +24,11 @@
 # The whole layer is AUTHORING-time and additive: every operation here produces a
 # plain ReactionNetwork that constructs / serializes / simulates exactly like
 # a hand-written flat model (it is FORBIDDEN on a live/stepping model — it
-# reindexes). The enabling mechanism is the ADR-0003 Phase-2 ReactantSpec FK-repoint:
+# reindexes). The enabling mechanism is the ADR-0003 Phase-2 ArcSpec FK-repoint:
 # species identification is repointing an integer FK, not string surgery.
 
 using ReactiveDynamics
-using ReactiveDynamics: nrows, row_ids, specname, find_index, reactant_specs, port_role
+using ReactiveDynamics: nrows, row_ids, placename, find_index, arcs, port_role
 using Printf
 
 const RD = ReactiveDynamics
@@ -36,7 +36,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 
 # A small helper used throughout §3: the STRUCTURAL SIGNATURE of a named transition
 # — its cycletime, prob-of-success, and its reactant rows read off the promoted
-# ReactantSpec table as (species NAME, side, stoich). Two transitions with equal
+# ArcSpec table as (species NAME, side, stoich). Two transitions with equal
 # signatures are structurally identical. Keying by transition NAME (not index) makes
 # the comparison robust to the row-reordering that refinement performs.
 function trans_signature(m, tname)
@@ -44,8 +44,8 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(specname(m, r.species)), r.side, r.stoich)
-                for r in reactant_specs(m) if r.trans == ti && r.species > 0
+            (string(placename(m, r.species)), r.side, r.stoich)
+                for r in arcs(m) if r.trans == ti && r.species > 0
         ]
     )
     return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
@@ -93,7 +93,7 @@ for i in row_ids(portfolio, :T)
 end
 # A flow transition consumes its upstream phase on the LHS (the §2.8 flow idiom).
 p2ix = find_index(:Phase2, portfolio)
-consumes_phase2 = any(r -> r.species == p2ix && r.side === :lhs, reactant_specs(portfolio))
+consumes_phase2 = any(r -> r.species == p2ix && r.side === :lhs, arcs(portfolio))
 println(
     "  flow_Phase2_Phase3 consumes :Phase2 on its LHS? ", consumes_phase2,
     "  (token-gated genesis, §2.8)"
@@ -159,8 +159,8 @@ println("  transitions preserved : ", nrows(chain, :T), " (1 + 1, none lost)")
 # The promoted incidence table is FK-EXACT: every static FK resolves, and both
 # transitions route through the single shared `Lead` index.
 leadix = find_index(:Lead, chain)
-through_lead = count(r -> r.species == leadix, reactant_specs(chain))
-all_fk_ok = all(r -> r.species == 0 || 1 <= r.species <= nrows(chain, :S), reactant_specs(chain))
+through_lead = count(r -> r.species == leadix, arcs(chain))
+all_fk_ok = all(r -> r.species == 0 || 1 <= r.species <= nrows(chain, :S), arcs(chain))
 println("  every reactant FK in range?  ", all_fk_ok)
 println("  rows routed through `Lead`:  ", through_lead, "  (produced by screening, consumed by lead_opt)")
 
@@ -412,7 +412,7 @@ println(
 
       This is the maintainer's ask — "various levels of granularity with more refined
       dynamics possibly substituted" — realized as cheap, collision-safe, authoring-time
-      structural operations over the ADR-0003 ReactantSpec FK table. All of §11 is
+      structural operations over the ADR-0003 ArcSpec FK table. All of §11 is
       FORBIDDEN on a live/stepping model (it reindexes); it operates on a static
       ReactionNetwork only.
     """

@@ -57,7 +57,7 @@ end
 #
 # Peak capital requirement (the financing ask) = the deepest draw-down of the budget reserve BELOW
 # ITS STARTING LEVEL: budget[1] - min(budget). This is injection-robust — a resource-synergy deal
-# that injects +capital (SetSpecies(:budget,+Δ)) raises max(budget), so the naive max-min would
+# that injects +capital (SetMarking(:budget,+Δ)) raises max(budget), so the naive max-min would
 # conflate the injected capital with the acquirer's own financing dip and report a spuriously larger
 # ask for exactly the scenarios that ease it. Measuring the dip below start answers the real
 # question: "how much of my own reserve did I have to burn through?" The pool troughs are reported

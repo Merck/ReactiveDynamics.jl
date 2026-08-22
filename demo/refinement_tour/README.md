@@ -14,7 +14,7 @@ First time (resolve the demo-local env — takes a few minutes):
 julia --project=demo/refinement_tour -e 'using Pkg; Pkg.instantiate()'
 ```
 
-The script is literate: every section opens with a block comment explaining the modeling idea, then runs the code, then `println`-narrates the result, so running it once tells the whole story top to bottom. It is fast (well under a minute after compilation) and writes nothing to disk — it is a structural tour, printing the transition lists and the promoted `ReactantSpec` incidence table rather than rendering artifacts.
+The script is literate: every section opens with a block comment explaining the modeling idea, then runs the code, then `println`-narrates the result, so running it once tells the whole story top to bottom. It is fast (well under a minute after compilation) and writes nothing to disk — it is a structural tour, printing the transition lists and the promoted `ArcSpec` incidence table rather than rendering artifacts.
 
 ### Why a demo-local `Project.toml`
 
@@ -38,7 +38,7 @@ The same pharma R&D pipeline the other demos use — `Discovery → Phase1 → P
 
 ## The refine payoff (§3) — the headline
 
-`refine` splices a sub-model into a named coarse transition in four authoring-time structural moves: (1) namespace the sub's `:private` species; (2) identify the sub's open `:input`/`:output` ports with the parent's boundary species (per the `ports` map) by the ADR-0003 `ReactantSpec` FK-repoint — repoint an integer FK, no string surgery; (3) append the sub's transitions + remaining species/params/observables/events; (4) drop the coarse transition. Because move (2) leaves the BOUNDARY species (here `Phase2`, `Phase3`) at their same indices, names, and attributes, the coarse and refined models are **plug-compatible**: every transition NOT in the refined set is byte-for-byte structurally unchanged. The demo checks this explicitly — it prints the boundary indices (`Phase2 : 3 → 3`, `Phase3 : 4 → 4`) and confirms all four untouched transitions have identical structural signatures before and after. That is the multifidelity payoff: zoom the bottleneck, and the rest of the portfolio does not notice.
+`refine` splices a sub-model into a named coarse transition in four authoring-time structural moves: (1) namespace the sub's `:private` species; (2) identify the sub's open `:input`/`:output` ports with the parent's boundary species (per the `ports` map) by the ADR-0003 `ArcSpec` FK-repoint — repoint an integer FK, no string surgery; (3) append the sub's transitions + remaining species/params/observables/events; (4) drop the coarse transition. Because move (2) leaves the BOUNDARY species (here `Phase2`, `Phase3`) at their same indices, names, and attributes, the coarse and refined models are **plug-compatible**: every transition NOT in the refined set is byte-for-byte structurally unchanged. The demo checks this explicitly — it prints the boundary indices (`Phase2 : 3 → 3`, `Phase3 : 4 → 4`) and confirms all four untouched transitions have identical structural signatures before and after. That is the multifidelity payoff: zoom the bottleneck, and the rest of the portfolio does not notice.
 
 ## The load-bearing points (narrated in-line)
 

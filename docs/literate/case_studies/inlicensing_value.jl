@@ -22,8 +22,8 @@
 # the per-program ledger — are specified in the normative [operational-semantics contract](https://github.com/Merck/ReactiveDynamics.jl/blob/rework/spec/CONTRACT_DRAFT.md); here we use them.
 
 using ReactiveDynamics
-using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!,
-    Rule, Seq, SetSpecies, SetParams, AddToken, get_species, inners, getagent, program_ledger
+using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!,
+    Rule, Seq, SetMarking, SetParams, AddToken, get_species, inners, getagent, program_ledger
 using Random, Distributions, DataFrames, Statistics, Printf
 using Plots
 
@@ -142,7 +142,7 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
         @deterministic(16.0), ∅ --> budget, name => financing
     end
 
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     @prob_init net scientist = 40 budget = 150
     @prob_params net synergy_pos = 0 synergy_eff = 0
     RD.set_params!(net, Dict(:synergy_pos => synergy_pos, :synergy_eff => synergy_eff))
@@ -198,8 +198,8 @@ function acquisition_rule(;
             ),
         )
     end
-    extra_scientists > 0 && push!(actions, SetSpecies(:scientist, extra_scientists, :inc))
-    extra_budget > 0 && push!(actions, SetSpecies(:budget, extra_budget, :inc))
+    extra_scientists > 0 && push!(actions, SetMarking(:scientist, extra_scientists, :inc))
+    extra_budget > 0 && push!(actions, SetMarking(:budget, extra_budget, :inc))
     (synergy_pos || synergy_eff) && push!(
         actions,
         SetParams([:synergy_pos => (synergy_pos ? 1 : 0), :synergy_eff => (synergy_eff ? 1 : 0)]),

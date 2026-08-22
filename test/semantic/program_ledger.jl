@@ -51,7 +51,7 @@ function advance_cost_model(; budget0 = 100, cost = 1.0, reward = 10.0)
             cycletime => 1.0,
             probability => 1.0
     end
-    RD.register_structured_species!(net, :Project)
+    RD.register_token_kind!(net, :Project)
     bi = findfirst(==(:budget), net[:, :placeName])
     net[bi, :placeInitVal] = Float64(budget0)
     net[bi, :placeCost] = cost
@@ -130,7 +130,7 @@ end
                 cycletime => 0.0,
                 probability => 1.0
         end
-        RD.register_structured_species!(net, :Project)
+        RD.register_token_kind!(net, :Project)
         @prob_init net budget = 100
         bi = findfirst(==(:budget), net[:, :placeName])
         net[bi, :placeCost] = 1.0

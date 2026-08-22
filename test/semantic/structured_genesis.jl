@@ -69,7 +69,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                 ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
                 name => genesis
         end
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         @test isempty(livetokens(p))                       # nothing at t=0
@@ -97,7 +97,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                     ),
                     name => genesis
             end
-            RDX.register_structured_species!(net, :Project)
+            RDX.register_token_kind!(net, :Project)
             @prob_meta net tspan = 4 dt = 1.0
             p = ReactionNetworkProblem(net; seed = seed, registry = GEN_REGISTRY)
             simulate(p)
@@ -125,7 +125,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                 @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
                 name => adv12, cycletime => 1.0, probability => 1.0
         end
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         simulate(p)
@@ -147,7 +147,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                     @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
                     name => adv12, cycletime => 1.0, probability => 1.0
             end
-            RDX.register_structured_species!(net, :Project)
+            RDX.register_token_kind!(net, :Project)
             @prob_meta net tspan = 5 dt = 1.0
             net
         end
@@ -178,7 +178,7 @@ phases_of(p) = sort(string.([t.phase for t in livetokens(p)]))
                 ∅ --> @structured(:Project, phase = :Phase1, npv = 100.0, born = @t()),
                 name => genesis
         end
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         @prob_meta net tspan = 2 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1, registry = GEN_REGISTRY)
         doc = JSON.parse(RDX.to_json_model(p))

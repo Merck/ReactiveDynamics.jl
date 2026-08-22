@@ -42,7 +42,7 @@ function init_model()
             @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
             name => adv, cycletime => 1.0, probability => 1.0
     end
-    RDX.register_structured_species!(net, :Project)
+    RDX.register_token_kind!(net, :Project)
     return net
 end
 
@@ -176,7 +176,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
                 @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
                 name => adv, cycletime => 0.0, probability => 1.0
         end
-        RDX.register_structured_species!(spec, :Project)
+        RDX.register_token_kind!(spec, :Project)
         pop = [
             RDX.PopulationEntry(
                 :Project, :Project; count = 4,
@@ -204,7 +204,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
                 @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
                 name => adv, cycletime => 5.0, probability => 1.0    # long cycle ⇒ in-flight mid-run
         end
-        RDX.register_structured_species!(spec, :Project)
+        RDX.register_token_kind!(spec, :Project)
         pop = [
             RDX.PopulationEntry(
                 :Project, :Project; count = 2,

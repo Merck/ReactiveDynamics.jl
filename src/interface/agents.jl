@@ -1,11 +1,11 @@
 export AbstractStructuredToken, BaseStructuredToken
 export @structured_token
-export register_structured_species!, add_structured_token!
+export register_token_kind!, add_structured_token!
 
 """
     AbstractStructuredToken <: AbstractAlgebraicAgent
 
-Abstract supertype of every structured (agentic) token kind (ADR 0006/0008). A structured token is a first-class entity — it carries its own attributes, a stable identity, and a history, and moves through a lifecycle (created → bound to a transition as a consumed resource → advanced/retired) rather than being an anonymous unit of a plain-species count. Each concrete kind is an `AlgebraicAgents.@aagent`, so a token is a genuine node in the AA hierarchy under the problem's `"structured"` container. Define a kind with [`@structured_token`](@ref), register it with [`register_structured_species!`](@ref), and add instances with [`add_structured_token!`](@ref) or the declarative [`PopulationEntry`](@ref) initial marking. Kinds get their behavior for free (no evolution rule by default — the orchestrator advances them); override [`log_token_fields`](@ref) to record fields into the per-token trajectory log.
+Abstract supertype of every structured (agentic) token kind (ADR 0006/0008). A structured token is a first-class entity — it carries its own attributes, a stable identity, and a history, and moves through a lifecycle (created → bound to a transition as a consumed resource → advanced/retired) rather than being an anonymous unit of a plain-species count. Each concrete kind is an `AlgebraicAgents.@aagent`, so a token is a genuine node in the AA hierarchy under the problem's `"structured"` container. Define a kind with [`@structured_token`](@ref), register it with [`register_token_kind!`](@ref), and add instances with [`add_structured_token!`](@ref) or the declarative [`PopulationEntry`](@ref) initial marking. Kinds get their behavior for free (no evolution rule by default — the orchestrator advances them); override [`log_token_fields`](@ref) to record fields into the per-token trajectory log.
 """
 abstract type AbstractStructuredToken <: AbstractAlgebraicAgent end
 
@@ -21,11 +21,11 @@ The base structured-token layout every `@structured_token` kind inherits (via `@
 end
 
 """
-    register_structured_species!(net, type)
+    register_token_kind!(net, type)
 
 Register the structured-token kind `type` (a `Symbol`) as a species of the static network `net`, adding a `:S` row named `type` if one does not already exist and flagging it `placeStructured = true`. This is what tells the engine that occupants of that place are first-class token agents (counted from the `"structured"` container), not a plain scalar count. Returns `nothing`. The `@register` sugar and [`@structured_token`](@ref) (which defines the host struct) are the usual companions; a kind must be registered before instances can be added to a `ReactionNetworkProblem`.
 """
-function register_structured_species!(reaction_network, type)
+function register_token_kind!(reaction_network, type)
     if !(type ∈ reaction_network[:, :placeName])
         add_row!(reaction_network, :S; placeName = type)
     end
@@ -39,7 +39,7 @@ end
 """
     @structured_token net Kind
 
-Define a new structured-token kind named `Kind` — a concrete subtype of [`AbstractStructuredToken`](@ref) built off [`BaseStructuredToken`](@ref)'s protocol fields (via `AlgebraicAgents.aagent`). This declares the host struct for the kind; add your own modeling attributes to the generated type, register it as a species with [`register_structured_species!`](@ref), and instantiate it with [`add_structured_token!`](@ref) or a [`PopulationEntry`](@ref).
+Define a new structured-token kind named `Kind` — a concrete subtype of [`AbstractStructuredToken`](@ref) built off [`BaseStructuredToken`](@ref)'s protocol fields (via `AlgebraicAgents.aagent`). This declares the host struct for the kind; add your own modeling attributes to the generated type, register it as a species with [`register_token_kind!`](@ref), and instantiate it with [`add_structured_token!`](@ref) or a [`PopulationEntry`](@ref).
 """
 macro structured_token(network, type)
     return quote

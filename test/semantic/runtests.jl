@@ -8,7 +8,7 @@
 #   T1-characterization — runs against the CURRENT engine; locks in behavior, or pins a known
 #                         bug via @test_broken so the suite is green-when-expected.
 #   T2-acceptance       — encodes TARGET behavior per the contract; references not-yet-built
-#                         APIs (progressive_fill!, seed=, ReactantSpec FK-repoint, …) and is
+#                         APIs (progressive_fill!, seed=, ArcSpec FK-repoint, …) and is
 #                         wrapped with @test_skip / commented blocks so the file still loads.
 #
 # As Phase 1 implements each piece, flip the corresponding @test_skip / @test_broken to @test.

@@ -10,7 +10,7 @@ The authoring surface is the `@reaction_network` DSL and the macros that populat
 ReactionNetwork
 @reaction_network
 @push
-@add_species
+@add_place
 @mode
 @aka
 @name_transition

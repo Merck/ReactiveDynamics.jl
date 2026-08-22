@@ -6,8 +6,8 @@
 # model builder and the scenario grid. This is the "one host file" half of the MVP (§6/§7).
 
 using ReactiveDynamics
-using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!,
-    add_structured_token!, Rule, Seq, SetSpecies, SetParams, AddToken, get_species
+using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!,
+    add_structured_token!, Rule, Seq, SetMarking, SetParams, AddToken, get_species
 using Random, Distributions, DataFrames
 
 # ── The ProjectToken kind (host Julia, ADR 0006 §B) ─────────────────────────────────────
@@ -140,7 +140,7 @@ function build_pipeline_model(; synergy_pos = 0, synergy_eff = 0)
         @deterministic(16.0), ∅ --> budget, name => financing
     end
 
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     # Declare the resource pools and the synergy params. (@prob_params/@prob_meta eval their RHS
     # in module scope, so synergy values are set via set_params! with the function args, and
     # tspan/dt are passed to the constructor as kwargs.)
@@ -213,8 +213,8 @@ function acquisition_rule(;
     # Resource synergy (MVP §2.1): the target brings BOTH headcount and capital. On the calibrated
     # binding model, capital is the tighter constraint, so the budget injection is what actually
     # relieves the organic pipeline — headcount alone is near-inert (see the calibration note).
-    extra_scientists > 0 && push!(actions, SetSpecies(:scientist, extra_scientists, :inc))
-    extra_budget > 0 && push!(actions, SetSpecies(:budget, extra_budget, :inc))
+    extra_scientists > 0 && push!(actions, SetMarking(:scientist, extra_scientists, :inc))
+    extra_budget > 0 && push!(actions, SetMarking(:budget, extra_budget, :inc))
     (synergy_pos || synergy_eff) && push!(
         actions,
         SetParams([:synergy_pos => (synergy_pos ? 1 : 0), :synergy_eff => (synergy_eff ? 1 : 0)]),

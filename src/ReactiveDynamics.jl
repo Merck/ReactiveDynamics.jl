@@ -12,7 +12,7 @@ using ComponentArrays
 # the old exported ACSets vocabulary `nparts`/`subpart`/`incident`/…; deprecated aliases live at the
 # bottom of this file for one release).
 # ADR 0003 Phase 2: the promoted transition↔reactant incidence table + its accessors.
-export ReactantSpec, reactant_specs, specname
+export ArcSpec, arcs, placename
 
 const SampleableValues = Union{Expr, Symbol, AbstractString, Float64, Int, Function}
 const ActionableValues = Union{Function, Symbol, Float64, Int}
@@ -107,7 +107,7 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 
 # ── ADR 0003 Phase 2: the promoted transition↔reactant incidence table ────────────────────────
 #
-# A `ReactantSpec` is one row of the bipartite transition↔species relation, promoted from the
+# An `ArcSpec` is one row of the bipartite transition↔species relation, promoted from the
 # re-parsed `:trans` Expr into a first-class typed record with INTEGER foreign keys: `trans` → a :T
 # index, `species` → a :S index. This makes the model's defining relation FK-checkable for agentic
 # authoring and — the headline win — lets `equalize!` merge species by structurally REPOINTING the
@@ -128,11 +128,11 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 # enters `propertynames(net.columns)` — the eight reflection loops in compilers/solvers/joins/
 # equalize keep iterating exactly the six original objects' columns, untouched.
 """
-    ReactantSpec
+    ArcSpec
 
-One row of the promoted transition↔species incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `species` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge species by structurally REPOINTING the `species` FK instead of doing string surgery on names. A legitimately dynamic reactant (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `species = 0` and stashes its original term in `expr`; a static reactant has `species ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_reactant_specs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`reactant_specs`](@ref).
+One row of the promoted transition↔species incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `species` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge species by structurally REPOINTING the `species` FK instead of doing string surgery on names. A legitimately dynamic reactant (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `species = 0` and stashes its original term in `expr`; a static reactant has `species ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_reactant_specs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`arcs`](@ref).
 """
-struct ReactantSpec
+struct ArcSpec
     trans::Int              # FK → :T
     species::Int            # FK → :S, or 0 for a dynamic (expr-carried) reactant
     stoich::SampleableValues
@@ -144,26 +144,26 @@ end
 """
     ReactionNetwork
 
-The static network container (ADR 0015: renamed from the ACSets-lineage `ReactionNetworkSchema` — it is a populated network INSTANCE, not the schema; the type-level object model is `const SCHEMA`). It is the inert, typed struct-of-columns store an authored model compiles to before it is handed to [`ReactionNetworkProblem`](@ref) for simulation. `counts` counts rows per object; `columns` is the NamedTuple of typed columns in `ALLATTRS` order; `reactants` is the promoted [`ReactantSpec`](@ref) incidence table (ADR 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted model — the runtime never reads it).
+The static network container (ADR 0015: renamed from the ACSets-lineage `ReactionNetworkSchema` — it is a populated network INSTANCE, not the schema; the type-level object model is `const SCHEMA`). It is the inert, typed struct-of-columns store an authored model compiles to before it is handed to [`ReactionNetworkProblem`](@ref) for simulation. `counts` counts rows per object; `columns` is the NamedTuple of typed columns in `ALLATTRS` order; `reactants` is the promoted [`ArcSpec`](@ref) incidence table (ADR 0003 Phase 2), populated lazily/on-merge (empty for a freshly-constructed or not-yet-promoted model — the runtime never reads it).
 """
 struct ReactionNetwork
     counts::Dict{Symbol, Int}
     columns::NamedTuple
-    reactants::Vector{ReactantSpec}
+    reactants::Vector{ArcSpec}
     # Explicit TYPED inner constructor. Without it Julia auto-generates an untyped
     # `ReactionNetwork(::Any,::Any,::Any)` field constructor, which collides with the legacy
     # semantic 3-arg outer constructor `ReactionNetwork(transitions, reactants, obs)` below
     # (method overwrite → precompile error). The typed inner ctor is the only field-init path.
     ReactionNetwork(
         counts::Dict{Symbol, Int}, columns::NamedTuple,
-        reactants::Vector{ReactantSpec}
+        reactants::Vector{ArcSpec}
     ) = new(counts, columns, reactants)
 end
 
 function ReactionNetwork()
     counts = Dict{Symbol, Int}(obj => 0 for obj in keys(SCHEMA))
     cols = NamedTuple{ALLATTRS}(AttrColumn{SCHEMA[ATTR2OBJ[a]][a]}() for a in ALLATTRS)
-    return ReactionNetwork(counts, cols, ReactantSpec[])
+    return ReactionNetwork(counts, cols, ArcSpec[])
 end
 
 # Deprecated compatibility alias (ADR 0015 Tier 1): the store type was renamed
@@ -171,23 +171,23 @@ end
 # depwarn) for one release; removed in a follow-up.
 Base.@deprecate_binding ReactionNetworkSchema ReactionNetwork
 
-# ── ReactantSpec accessors (ADR 0003 Phase 2 public surface) ──────────────────────────────────
+# ── ArcSpec accessors (ADR 0003 Phase 2 public surface) ──────────────────────────────────
 # The promoted incidence table. `populate_reactant_specs!` (serialize.jl) fills it from `:trans`;
 # `equalize!` keeps it FK-exact across a species merge. A caller that wants the table on a model
 # authored before promotion can call `populate_reactant_specs!(net)` first (equalize! does).
 """
-    reactant_specs(net) -> Vector{ReactantSpec}
+    arcs(net) -> Vector{ArcSpec}
 
-The promoted transition↔species incidence table of `net` (ADR 0003 Phase 2) — the FK-exact [`ReactantSpec`](@ref) rows. `populate_reactant_specs!` fills it from the `:trans` column and [`equalize!`](@ref) keeps it FK-exact across a species merge; it is empty for a freshly-constructed or not-yet-promoted model, so a caller wanting the table on such a model calls `populate_reactant_specs!(net)` first (as `equalize!` does).
+The promoted transition↔species incidence table of `net` (ADR 0003 Phase 2) — the FK-exact [`ArcSpec`](@ref) rows. `populate_reactant_specs!` fills it from the `:trans` column and [`equalize!`](@ref) keeps it FK-exact across a species merge; it is empty for a freshly-constructed or not-yet-promoted model, so a caller wanting the table on such a model calls `populate_reactant_specs!(net)` first (as `equalize!` does).
 """
-reactant_specs(net::ReactionNetwork) = net.reactants
+arcs(net::ReactionNetwork) = net.reactants
 
 """
-    specname(net, i) -> Symbol
+    placename(net, i) -> Symbol
 
-The `:S` species name at row index `i` — the inverse of `find_index`, used to resolve/check a `ReactantSpec` FK target back to a name.
+The `:S` species name at row index `i` — the inverse of `find_index`, used to resolve/check an `ArcSpec` FK target back to a name.
 """
-specname(net::ReactionNetwork, i::Integer) = net[i, :placeName]
+placename(net::ReactionNetwork, i::Integer) = net[i, :placeName]
 
 # The :S index of a species name on the STATIC schema (the ReactionNetworkProblem overload lives in
 # state.jl:263). Returns nothing if absent. Used by equalize!'s FK-repoint and the acceptance tests.
@@ -482,5 +482,37 @@ include("loadsave.jl")
 include("analysis.jl")
 include("export.jl")
 include("visualize.jl")
+
+# ── Deprecated chemical-reaction-network vocabulary (ADR 0017 Tier 1) ──────────────────────────
+# The Petri-net vocabulary rename retired `species`/`reactant` for `place`/`marking`/`arc`. Every
+# name that was PUBLIC before the rename survives ONE release here as a shim that forwards to the
+# new name after a `depwarn` — the same contract ADR 0015 gave the store lineage; removed in a
+# follow-up release. The block sits after the includes because three of the new names
+# (`SetMarking`, `register_token_kind!`, `@add_place`) are defined in included files.
+#
+# This block is deliberately the ONLY place in `src/` where the retired spellings survive (the
+# rename's grep gate asserts exactly that), so keep new shims here rather than beside their
+# definitions.
+Base.@deprecate_binding ReactantSpec ArcSpec
+Base.@deprecate_binding SetSpecies SetMarking
+@deprecate reactant_specs(net) arcs(net)
+@deprecate specname(net, i) placename(net, i)
+@deprecate register_structured_species!(net, type) register_token_kind!(net, type)
+
+# `@deprecate` cannot express a macro, so the authoring-macro shim is written by hand: warn, then
+# splice the call through to `@add_place` unchanged.
+export @add_species
+macro add_species(args...)
+    Base.depwarn(
+        "`@add_species` is deprecated (ADR 0017), use `@add_place` instead.",
+        Symbol("@add_species"),
+    )
+    return esc(
+        Expr(
+            :macrocall, GlobalRef(ReactiveDynamics, Symbol("@add_place")),
+            __source__, args...
+        )
+    )
+end
 
 end

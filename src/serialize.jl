@@ -433,7 +433,12 @@ end
 # bare symbol via to_expr, so a from_json-loaded model is unaffected — and only mislabels the JSON
 # `ref.kind` tag when re-serializing a model whose actions were hand-built from raw Exprs. JSON-
 # authored actions carry typed nodes and never round-trip through from_expr, so they are exact.
-stmt_to_dict(s::SetSpecies) = Dict{String, Any}(
+# NOTE (ADR 0017 staging, deliberate): the struct is `SetMarking` but the wire verb is still
+# `"set_species"`. Tier 1 of the rename moved the Julia-level names only; the serialized keys are
+# Tier 3, landed as its own commit so the file format can be reverted independently. Until then the
+# writer must keep emitting the OLD tag or every previously-written model stops loading — this
+# mismatch is staged, not an oversight.
+stmt_to_dict(s::SetMarking) = Dict{String, Any}(
     "verb" => "set_species", "name" => string(s.name),
     "value" => node_to_dict(from_expr(s.value)), "mode" => string(s.mode)
 )
@@ -467,7 +472,7 @@ _stmt_value(x) = to_expr(_attr_node(x))
 function stmt_from_dict(d::AbstractDict)
     verb = d["verb"]
     if verb == "set_species"
-        return SetSpecies(Symbol(d["name"]), _stmt_value(d["value"]), Symbol(get(d, "mode", "set")))
+        return SetMarking(Symbol(d["name"]), _stmt_value(d["value"]), Symbol(get(d, "mode", "set")))
     elseif verb == "set_params"
         return SetParams([Symbol(a["name"]) => _stmt_value(a["value"]) for a in d["assigns"]])
     elseif verb == "set_field"
@@ -1040,11 +1045,11 @@ modality_to_dict(s::Set{Symbol}) = Dict{String, Any}(
     "blocking" => (:nonblock in s ? "nonblock" : "block"),
 )
 
-# ── ADR 0003 Phase 2: populate the promoted ReactantSpec incidence table from `:trans` ────────
+# ── ADR 0003 Phase 2: populate the promoted ArcSpec incidence table from `:trans` ────────
 # Derive `net.reactants` from the authoritative `:trans` column, reusing the SAME eval-free static
 # decomposition the JSON exporter uses (`_split_reaction_line` + `_static_reactants`, ~line 844/857),
 # so the table is exactly the reactant set the runtime/exporter see. Each FoldedReactant becomes one
-# ReactantSpec row: a plain species term gets an integer `species` FK (`find_index` into :S) and its
+# ArcSpec row: a plain species term gets an integer `species` FK (`find_index` into :S) and its
 # static stoich/modality; a DYNAMIC term (a @select predicate, an @advance/@move/@structured/@choose
 # macrocall, or a species not found in :S) gets `species = 0` and stashes its term Expr in `expr`
 # (the ADR escape-hatch). Idempotent: clears and rebuilds. Lines the static splitter cannot handle
@@ -1064,7 +1069,7 @@ function populate_reactant_specs!(net::ReactionNetwork)
                 if r.predicate !== nothing || (r.species isa Expr)
                     # dynamic: a @select predicate or an @advance/@move/@structured macrocall term.
                     push!(
-                        net.reactants, ReactantSpec(
+                        net.reactants, ArcSpec(
                             t, 0, r.stoich, side, r.modality,
                             r.species isa Union{Expr, Symbol} ? r.species : nothing
                         )
@@ -1073,9 +1078,9 @@ function populate_reactant_specs!(net::ReactionNetwork)
                     sp = r.species isa Symbol ? r.species : Symbol(r.species)
                     j = find_index(sp, net)
                     if j === nothing
-                        push!(net.reactants, ReactantSpec(t, 0, r.stoich, side, r.modality, sp))
+                        push!(net.reactants, ArcSpec(t, 0, r.stoich, side, r.modality, sp))
                     else
-                        push!(net.reactants, ReactantSpec(t, j, r.stoich, side, r.modality, nothing))
+                        push!(net.reactants, ArcSpec(t, j, r.stoich, side, r.modality, nothing))
                     end
                 end
             end

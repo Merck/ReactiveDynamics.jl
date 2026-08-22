@@ -83,7 +83,7 @@ function portfolio_model(; fte)
             1 * @conserved(scientist) + 20 * @rate(budget) --> @advance(phase, :Launched) + launch,
             name => trial_imm, cycletime => 4.0, probability => 0.55, priority => 1.0
     end
-    RD.register_structured_species!(net, :Project)
+    RD.register_token_kind!(net, :Project)
     si = findfirst(==(:scientist), net[:, :placeName])
     net[si, :placeInitVal] = Float64(fte)          # the scarce, contended resource — the study's lever
     bi = findfirst(==(:budget), net[:, :placeName])

@@ -2,7 +2,7 @@
 #
 # Covers: the Rule record (guard/action/fire_mode/enabled) fired at _step! step 10; the stateless
 # transition guard AND-ed with the latching transActivated gate; the action family
-# {SetSpecies, SetParams, AddToken, Activate, Deactivate, Log, Seq}; once-latch + reinit reset (§4 D7);
+# {SetMarking, SetParams, AddToken, Activate, Deactivate, Log, Seq}; once-latch + reinit reset (§4 D7);
 # determinism of rule effects under (model, seed). These are the in-model acquisition-lever
 # capabilities the BD demo needs (MVP_BD_DEMO.md §7 / finding B).
 #
@@ -42,11 +42,11 @@ end
 
 @testset "Endogenous decision channel (ADR 0010/0011, §12)" begin
 
-    # ── (A) Rule: SetSpecies capital injection, fire_mode=once ──────────────────────────
+    # ── (A) Rule: SetMarking capital injection, fire_mode=once ──────────────────────────
     @testset "once-rule fires exactly once when its guard first holds (capital lever)" begin
         p = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 1,
-            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetSpecies(:cash, 500, :inc); fire_mode = :once)]
+            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetMarking(:cash, 500, :inc); fire_mode = :once)]
         )
         simulate(p)
         ci = RDX.find_index(:cash, p)
@@ -60,7 +60,7 @@ end
     @testset "reinit! resets the once-latch so a re-run from the same seed reproduces the lever" begin
         p = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 7,
-            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetSpecies(:cash, 500, :inc); fire_mode = :once)]
+            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetMarking(:cash, 500, :inc); fire_mode = :once)]
         )
         simulate(p); cash1 = copy(p.sol[!, "cash"])
         @test p.rules[1].enabled == false        # latched off after firing
@@ -74,7 +74,7 @@ end
     @testset "every_tick rule re-evaluates its guard and fires each tick the guard holds" begin
         p = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 1,
-            rules = [RDX.Rule(:drip, :(@t() >= 0.0), RDX.SetSpecies(:cash, 10, :inc); fire_mode = :every_tick)]
+            rules = [RDX.Rule(:drip, :(@t() >= 0.0), RDX.SetMarking(:cash, 10, :inc); fire_mode = :every_tick)]
         )
         simulate(p)
         # cash accrues +10 every tick the guard holds (monotone increasing)
@@ -87,7 +87,7 @@ end
     @testset "transition guard withholds genesis until the condition holds (conditional line)" begin
         p = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 1,
-            rules = [RDX.Rule(:fund, :(@t() > 2.0), RDX.SetSpecies(:cash, 100, :set); fire_mode = :once)]
+            rules = [RDX.Rule(:fund, :(@t() > 2.0), RDX.SetMarking(:cash, 100, :set); fire_mode = :once)]
         )
         RDX.set_guard!(p, :line, :(cash >= 50))    # the `line` only fires once funded
         simulate(p)
@@ -117,21 +117,21 @@ end
     @testset "rule-driven trajectory is reproducible under the same seed, differs under another" begin
         mk() = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 42,
-            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetSpecies(:cash, 500, :inc); fire_mode = :once)]
+            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetMarking(:cash, 500, :inc); fire_mode = :once)]
         )
         a = mk(); simulate(a)
         b = mk(); simulate(b)
         @test a.sol == b.sol
         c = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 6, dt = 1.0, seed = 43,
-            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetSpecies(:cash, 500, :inc); fire_mode = :once)]
+            rules = [RDX.Rule(:lever, :(@t() > 2.0), RDX.SetMarking(:cash, 500, :inc); fire_mode = :once)]
         )
         simulate(c)
         @test a.sol[!, "output"] != c.sol[!, "output"] || a.sol[!, "cash"] == c.sol[!, "cash"]  # cash lever is deterministic; output may differ by seed
     end
 
     # ── (G) Seq + SetParams: the composite acquisition lever shape ──────────────────────
-    @testset "Seq composes AddToken-free lever: SetSpecies + SetParams in one action" begin
+    @testset "Seq composes AddToken-free lever: SetMarking + SetParams in one action" begin
         net = lever_model()
         @prob_params net synergy = 0
         p = RDX.ReactionNetworkProblem(
@@ -141,7 +141,7 @@ end
                     :acq, :(@t() > 2.0),
                     RDX.Seq(
                         [
-                            RDX.SetSpecies(:cash, 300, :inc),
+                            RDX.SetMarking(:cash, 300, :inc),
                             RDX.SetParams([:synergy => 1]),
                         ]
                     ); fire_mode = :once
@@ -158,7 +158,7 @@ end
     @testset "numeric-guard rule fires Poisson(v) times per tick, deterministic under seed" begin
         mk() = RDX.ReactionNetworkProblem(
             lever_model(); tspan = 10, dt = 1.0, seed = 99,
-            rules = [RDX.Rule(:noisy, :(2.0), RDX.SetSpecies(:cash, 1, :inc); fire_mode = :every_tick)]
+            rules = [RDX.Rule(:noisy, :(2.0), RDX.SetMarking(:cash, 1, :inc); fire_mode = :every_tick)]
         )
         a = mk(); simulate(a)
         b = mk(); simulate(b)
@@ -176,7 +176,7 @@ end
             0.0, A --> B, name => inert
         end
         @prob_init net A = 0 B = 0
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         p = RDX.ReactionNetworkProblem(
             net; tspan = 3, dt = 1.0, seed = 1,
             population = [

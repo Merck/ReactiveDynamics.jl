@@ -8,7 +8,7 @@ Structured/agentic tokens are first-class entities: a token (a "project") carrie
 
 ```@docs
 @structured_token
-register_structured_species!
+register_token_kind!
 add_structured_token!
 AbstractStructuredToken
 BaseStructuredToken
@@ -18,11 +18,11 @@ log_token_fields
 
 ## Runtime token instances
 
-A `Transition` is a live in-flight instance of a transition recipe; the tokens it occupies are its bound structured agents. `ReactantSpec` is the promoted transition↔species incidence row — the typed, foreign-key-exact form of a reaction line that structured-token binding and species merges repoint against.
+A `Transition` is a live in-flight instance of a transition recipe; the tokens it occupies are its bound structured agents. `ArcSpec` is the promoted transition↔species incidence row — the typed, foreign-key-exact form of a reaction line that structured-token binding and species merges repoint against.
 
 ```@docs
 Transition
-ReactantSpec
-reactant_specs
-specname
+ArcSpec
+arcs
+placename
 ```

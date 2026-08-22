@@ -5,7 +5,7 @@
 # check the granularity ladder with advisory diagnostics (§C), and author compactly (§D @pipeline /
 # @process, §E @compose). Everything here is AUTHORING-time and additive — it produces a plain
 # ModelSpec that constructs/serializes/simulates exactly as a hand-written flat model. The enabling
-# mechanism is the ADR-0003 Phase-2 ReactantSpec FK-repoint: species identification is repointing an
+# mechanism is the ADR-0003 Phase-2 ArcSpec FK-repoint: species identification is repointing an
 # integer `species` FK, not string surgery. All of §11 is FORBIDDEN on a live/stepping model (it
 # reindexes) — these operate on a static ReactionNetwork, never a ReactionNetworkProblem.
 
@@ -58,7 +58,7 @@ end
 #
 # `compose(f1, f2, …)` is `merge_networks!`/@join PLUS automatic port matching: each fragment's `output`
 # ports are identified with same-named `input` ports of the other fragments by the §7.4/J7 FK-repoint
-# (via equalize!, which now repoints ReactantSpec FKs — ADR 0003 Phase 2), `private` species are
+# (via equalize!, which now repoints ArcSpec FKs — ADR 0003 Phase 2), `private` species are
 # namespaced (m__X), and `shared` species are identified by bare name (prepend! skips them). Because
 # it composes already-parsed ModelSpecs it CLOSES the §7/J4 (:E/:obs dropped — merge_networks! now merges
 # them) and J9 (undefined include_model — never taken) bugs en route.
@@ -135,7 +135,7 @@ end
 #   1. namespace `sub`'s `private` species (leave input/output/shared un-prefixed for matching);
 #   2. identify `sub`'s open ports with the parent's boundary species per `ports` by FK-repoint;
 #   3. append `sub`'s transitions + remaining species/params/obs/EVENTS (this also merges :E/:obs);
-#   4. remove the coarse transition `T` (and its ReactantSpec rows).
+#   4. remove the coarse transition `T` (and its ArcSpec rows).
 # Because the boundary species keep their indices/names/attributes, every transition NOT in {T}∪sub
 # is structurally unchanged (Invariant 1, plug-compatibility). Forbidden on a live model (reindexes).
 
@@ -259,11 +259,11 @@ function refinement_diagnostics(
     warns = String[]
 
     # port-balance: an `input` port should be consumed by some sub-transition LHS; an `output` port
-    # produced by some RHS. We check via the promoted ReactantSpec table on a populated copy.
+    # produced by some RHS. We check via the promoted ArcSpec table on a populated copy.
     sub = deepcopy(submodel)
     populate_reactant_specs!(sub)
-    lhs_species = Set(r.species for r in reactant_specs(sub) if r.side === :lhs && r.species > 0)
-    rhs_species = Set(r.species for r in reactant_specs(sub) if r.side === :rhs && r.species > 0)
+    lhs_species = Set(r.species for r in arcs(sub) if r.side === :lhs && r.species > 0)
+    rhs_species = Set(r.species for r in arcs(sub) if r.side === :rhs && r.species > 0)
     for i in row_ids(sub, :S)
         role = port_role(sub, i)
         nm = sub[i, :placeName]

@@ -9,7 +9,7 @@ Rules are the endogenous decision channel: a `Rule` pairs a state-contingent gua
 ```@docs
 Rule
 ActionStmt
-SetSpecies
+SetMarking
 SetParams
 SetField
 SetTokens

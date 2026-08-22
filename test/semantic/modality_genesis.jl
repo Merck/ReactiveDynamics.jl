@@ -216,10 +216,10 @@ using Statistics
         end
         @prob_init net robot = 5 task = 0
         @prob_params net
-        # Mark `robot` structured via the ACTUAL engine mechanism: register_structured_species!
+        # Mark `robot` structured via the ACTUAL engine mechanism: register_token_kind!
         # sets the `placeStructured` schema flag (the reference block's `set_structured!` was a
         # hypothetical target helper — this is the real API, per ADR 0006/0007 authoring).
-        register_structured_species!(net, :robot)
+        register_token_kind!(net, :robot)
         @test_throws ArgumentError ReactionNetworkProblem(net, Dict(); tspan = 4, dt = 1.0)
     end
 
@@ -409,7 +409,7 @@ using Statistics
     # note: {guard=trigger, action=RawExpr(action), every_tick}, and fire_rules! (src/actions.jl, _step! step
     # note: 10) evaluates the guard and RUNS the action (no longer the bare no-op fetch). A scheduled
     # note: injection `(@t() > T) && (budget += N)` now takes effect on schedule — the §2.8 acquisition-lever
-    # note: idiom is live (and the typed Rule/SetSpecies form in rules_decisions.jl is the preferred surface).
+    # note: idiom is live (and the typed Rule/SetMarking form in rules_decisions.jl is the preferred surface).
     # note: `budget` must be a real species column (it is set by the action), so it appears on an inert
     # note: transition to enter :S.
     @testset "Event action takes effect on schedule — Invariant 7 met (the in-model lever)" begin

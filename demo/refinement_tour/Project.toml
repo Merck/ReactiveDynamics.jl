@@ -4,7 +4,7 @@
 # @process / @compose / refine / abstract / refinement_diagnostics. All of it lives in the core
 # ReactiveDynamics package, so this environment is deliberately thin: a path-dev'd ReactiveDynamics
 # plus AlgebraicAgents (from which `simulate` is re-exported) and Printf for the narrated output. It
-# needs NO Plots / Arrow — the tour is structural (it reads the promoted ReactantSpec incidence table
+# needs NO Plots / Arrow — the tour is structural (it reads the promoted ArcSpec incidence table
 # and the transition lists), not a results-visualization demo.
 #
 # Run any script with:   julia --project=demo/refinement_tour demo/refinement_tour/<script>.jl

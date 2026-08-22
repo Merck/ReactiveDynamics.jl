@@ -192,14 +192,14 @@ end
     # ── E5: action + predicate + rule (de)serialization ────────────────────────────────
     @testset "E5: every ActionStmt verb round-trips through stmt_to_dict/from_dict" begin
         stmts = ReactiveDynamics.ActionStmt[
-            RDX.SetSpecies(:cash, 500, :inc),
+            RDX.SetMarking(:cash, 500, :inc),
             RDX.SetParams([:synergy => 1]),
             RDX.AddToken(:ProjectToken, [:phase => QuoteNode(:Phase2), :npv => 1400.0]),
             RDX.Activate(:line),
             RDX.Deactivate(:line),
             RDX.Invoke(:rebalance, Any[0.5]),
             RDX.Log("acquired"),
-            RDX.Seq(ReactiveDynamics.ActionStmt[RDX.SetSpecies(:cash, 300, :inc), RDX.SetParams([:s => 1])]),
+            RDX.Seq(ReactiveDynamics.ActionStmt[RDX.SetMarking(:cash, 300, :inc), RDX.SetParams([:s => 1])]),
         ]
         for s in stmts
             d = RDX.stmt_to_dict(s)
@@ -661,20 +661,20 @@ end
         @test prob2.external_input_defaults == prob.external_input_defaults  # ports round-trip
     end
 
-    # ── ADR 0003 Phase 2: the promoted ReactantSpec incidence table ─────────────────────────────
-    @testset "ReactantSpec table: population, FK exactness, escape-hatch, and JSON round-trip" begin
+    # ── ADR 0003 Phase 2: the promoted ArcSpec incidence table ─────────────────────────────
+    @testset "ArcSpec table: population, FK exactness, escape-hatch, and JSON round-trip" begin
         net = @reaction_network begin
             1.0, 2 * A + @conserved(B) --> C, name => rx
         end
         RDX.populate_reactant_specs!(net)
-        rs = RDX.reactant_specs(net)
+        rs = RDX.arcs(net)
         # every static reactant carries an in-range integer FK and no escape-hatch expr.
         static = filter(r -> r.species != 0, rs)
         @test !isempty(static)
         @test all(r -> 1 <= r.species <= RDX.nrows(net, :S), static)
         @test all(r -> r.expr === nothing, static)
         # FK targets match the species names / sides / stoich the reaction line declares.
-        byname = Dict(RDX.specname(net, r.species) => r for r in static)
+        byname = Dict(RDX.placename(net, r.species) => r for r in static)
         @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].stoich == 2.0
         @test haskey(byname, :B) && byname[:B].side == :lhs && :conserved in byname[:B].modality
         @test haskey(byname, :C) && byname[:C].side == :rhs
@@ -686,8 +686,8 @@ end
         RDX.populate_reactant_specs!(acs2)
         rt(m) = sort(
             [
-                (string(RDX.specname(m, r.species)), r.side, Float64(r.stoich))
-                    for r in RDX.reactant_specs(m) if r.species != 0
+                (string(RDX.placename(m, r.species)), r.side, Float64(r.stoich))
+                    for r in RDX.arcs(m) if r.species != 0
             ]
         )
         @test rt(acs2) == rt(net)
@@ -698,7 +698,7 @@ end
             1.0, @select(Project, phase == :Phase2) --> @advance(phase, :Phase3), name => adv
         end
         RDX.populate_reactant_specs!(acs3)
-        rs3 = RDX.reactant_specs(acs3)
+        rs3 = RDX.arcs(acs3)
         @test any(r -> r.species == 0 && r.expr !== nothing, rs3)   # a dynamic term is escape-hatched
     end
 

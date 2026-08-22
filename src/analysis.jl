@@ -483,11 +483,11 @@ export MarkingPlot, SaturationPlot, ValuationPlot, LedgerPlot,
     TokenTrajectoryPlot, EnsembleBar, TreatmentEffectPlot, ThroughputPlot
 
 """
-    MarkingPlot(prob; vars = all species)
+    MarkingPlot(prob; vars = all places)
 
-Plot spec (ADR 0014 recipe 1) for species/token COUNTS over time — the marking trajectory of the named `vars` across a finished run's `prob.sol`. Realized by a `@recipe` in `RDPlotsExt`; `plot(MarkingPlot(prob))` needs `Plots` loaded.
+Plot spec (ADR 0014 recipe 1) for per-place token COUNTS over time — the marking trajectory of the named `vars` across a finished run's `prob.sol`. Realized by a `@recipe` in `RDPlotsExt`; `plot(MarkingPlot(prob))` needs `Plots` loaded.
 """
-struct MarkingPlot              # recipe 1 — species/token counts over time (generalizes _draw)
+struct MarkingPlot              # recipe 1 — per-place token counts over time (generalizes _draw)
     prob::ReactionNetworkProblem
     vars::Vector{String}
 end

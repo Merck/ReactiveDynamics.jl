@@ -20,8 +20,8 @@
 # (§5) → the marginal value of that lever, with a standard error (§6).
 
 using ReactiveDynamics
-using ReactiveDynamics: register_structured_species!, get_species, inners, getagent,
-    Rule, Seq, SetSpecies, AddToken, Log, PopulationEntry
+using ReactiveDynamics: register_token_kind!, get_species, inners, getagent,
+    Rule, Seq, SetMarking, AddToken, Log, PopulationEntry
 using Statistics                # mean / std for the ensemble reductions
 using Distributions             # Normal, for a sampled starting portfolio
 using Plots                     # inline figures
@@ -160,7 +160,7 @@ function portfolio_model()
             name => adv3L, cycletime => 2.0, probability => 0.9, priority => 3.0
     end
     @prob_init net capital = 18
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     @prob_meta net tspan = 12 dt = 1.0
     return net
 end
@@ -212,7 +212,7 @@ function fasttrack_model()
             @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
             name => fasttrack, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     @prob_meta net tspan = 3 dt = 1.0
     return net
 end
@@ -361,7 +361,7 @@ println(
 #
 # The guard is evaluated against the live state (`@t()` is the clock; species and params are in
 # scope). `fire_mode = :once` fires the action the first tick its guard holds, then latches off
-# (`_reinit!` re-arms it). Actions compose via `Seq`: `SetSpecies` injects into a resource pool,
+# (`_reinit!` re-arms it). Actions compose via `Seq`: `SetMarking` injects into a resource pool,
 # `SetParams` flips a model parameter, `AddToken` injects a fresh token *by kind* through the
 # registry, and `Log` annotates.
 #
@@ -373,7 +373,7 @@ raise_lever() = Rule(
     :series_b, :(@t() > 3.0),
     Seq(
         [
-            SetSpecies(:capital, 40, :inc),                                   # +40 capital into the pool
+            SetMarking(:capital, 40, :inc),                                   # +40 capital into the pool
             AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 200.0]), # seed one more Phase2 program
             Log("Series-B raised: +40 capital, +1 Phase2 program"),
         ],

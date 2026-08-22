@@ -26,7 +26,7 @@ The modeling + analysis + visualization surface is BUILT and green. The full con
 |---|---|---|---|
 | Native discrete-event engine (`ReactionNetworkProblem` as an AA `@aagent`) | 0001 / §1–§3 | `src/solvers.jl`, `src/state.jl` | Accepted 2026-06-17 |
 | Priority-weighted progressive-fill allocator | 0002 / §3 | `src/solvers.jl` | Accepted 2026-06-17 |
-| Data store: drop ACSets → typed struct-of-columns + `ReactantSpec` promotion | 0003 / §6 | `src/ReactiveDynamics.jl` (`SCHEMA`, `ReactantSpec` `:130`) | Phase 1 `7932111`, Phase 2 `54e3c02` |
+| Data store: drop ACSets → typed struct-of-columns + `ArcSpec` promotion | 0003 / §6 | `src/ReactiveDynamics.jl` (`SCHEMA`, `ArcSpec` `:130`) | Phase 1 `7932111`, Phase 2 `54e3c02` |
 | Runtime mutation (append-only + soft-deactivate) | 0004 / §6.10 | `src/solvers.jl`, `src/state.jl` | Accepted 2026-06-18 |
 | Single-JSON eval-free serialization + typed `ExprNode` IR | 0005 / §8 | `src/serialize.jl`, `src/exprnode.jl` | (accepted 2026-06-18) |
 | Structured/agentic tokens + host-function registry (post-`@register`) | 0006 / §9 | `src/interface/agents.jl` | Accepted 2026-06-20 |

@@ -84,7 +84,7 @@ function portfolio_model()
             @select(Project, phase == :Phase1) + 3 * @rate(budget) --> @advance(phase, :Launched),
             name => advance, cycletime => 3.0, probability => 1.0, capacity => 2
     end
-    RD.register_structured_species!(net, :Project)
+    RD.register_token_kind!(net, :Project)
     ## Set the budget pool's initial level and unit cost by index assignment (the kwargs the macro
     ## cannot take as literals): scarce start, and every unit burned is a unit of cost.
     bi = findfirst(==(:budget), net[:, :placeName])

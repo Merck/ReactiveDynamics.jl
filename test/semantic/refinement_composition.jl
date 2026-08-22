@@ -3,7 +3,7 @@
 # The vertical granularity axis: declare a fragment's boundary as open PORTS (§A), splice a finer
 # sub-model into a coarse transition plug-compatibly (§B refine/abstract), advisory boundary checks
 # (§C), and compact authoring (§D @pipeline/@process, §E @compose). All AUTHORING-time and additive —
-# it produces a plain ReactionNetwork. Built on the ADR-0003 Phase-2 ReactantSpec FK-repoint.
+# it produces a plain ReactionNetwork. Built on the ADR-0003 Phase-2 ArcSpec FK-repoint.
 
 using ReactiveDynamics, Test
 using Random, Distributions, DataFrames
@@ -60,9 +60,9 @@ const RD = ReactiveDynamics
         @test :f2__product in names
         # both transitions survive (structural append, §7/J2)
         @test nrows(m, :T) == 2
-        # the promoted ReactantSpec table is FK-exact: every static FK resolves and the two
+        # the promoted ArcSpec table is FK-exact: every static FK resolves and the two
         # transitions route through the single shared `mid` index.
-        rs = RD.reactant_specs(m)
+        rs = RD.arcs(m)
         @test all(r -> r.species == 0 || 1 <= r.species <= nrows(m, :S), rs)
         midix = RD.find_index(:mid, m)
         @test count(r -> r.species == midix, rs) == 2   # produced by step1, consumed by step2
@@ -113,7 +113,7 @@ const RD = ReactiveDynamics
         @test :phase2 in [coarse[i, :transName] for i in row_ids(coarse, :T)]
         # the promoted table is FK-exact after the splice.
         RD.populate_reactant_specs!(r)
-        @test all(x -> x.species == 0 || 1 <= x.species <= nrows(r, :S), RD.reactant_specs(r))
+        @test all(x -> x.species == 0 || 1 <= x.species <= nrows(r, :S), RD.arcs(r))
     end
 
     # ── §B round-trip: a refined spec serializes/reloads as a flat model (Invariant 5) ───────────
@@ -154,7 +154,7 @@ const RD = ReactiveDynamics
         # a flow transition consumes its upstream phase (upfront LHS) — the §2.8 flow idiom.
         RD.populate_reactant_specs!(p)
         p1ix = RD.find_index(:Phase1, p)
-        @test any(r -> r.species == p1ix && r.side == :lhs, RD.reactant_specs(p))
+        @test any(r -> r.species == p1ix && r.side == :lhs, RD.arcs(p))
     end
 
     # ── §D: @process — reusable parameterized fragment (eval-free param substitution) ────────────

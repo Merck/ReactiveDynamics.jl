@@ -251,7 +251,7 @@ using ReactiveDynamics: nrows, row_ids
     # contract: CONTRACT_DRAFT.md Pending §Composition; equalize! operators/equalize.jl:24-66 (specmap + rem_parts! at :52 + recursively_substitute_vars! at :60)
     # note: Locks in current equalize! (equalize.jl:24-66): builds specmap, keeps the lowest index,
     # note: rem_rows!(net,:S,species_ixs[2:end]) at :52, then recursively_substitute_vars! rewrites every spec-
-    # note: referencing attr (:55-63). Pins string-surgery semantics that ADR 0003's promoted ReactantSpec will
+    # note: referencing attr (:55-63). Pins string-surgery semantics that ADR 0003's promoted ArcSpec will
     # note: replace structurally (see next test). Uses bare `name = name` eq form per @equalize docstring
     # note: (equalize.jl:73). If get_eqs_ff parsing of the bare `A = A2` form differs, the count assertion
     # note: surfaces it.
@@ -292,18 +292,18 @@ using ReactiveDynamics: nrows, row_ids
     end
 
     # [equalize-reactant-fk-repoint] tier=T2-acceptance expectedStatus=errors-until-implemented
-    # contract: ADR 0003 (promote transition<->reactant relation to typed ReactantSpec incidence table); CONTRACT_DRAFT.md Pending §Composition (structurally exact species-merge)
-    # note: Encodes ADR 0003: the transition<->reactant relation becomes a typed ReactantSpec incidence table
+    # contract: ADR 0003 (promote transition<->reactant relation to typed ArcSpec incidence table); CONTRACT_DRAFT.md Pending §Composition (structurally exact species-merge)
+    # note: Encodes ADR 0003: the transition<->reactant relation becomes a typed ArcSpec incidence table
     # note: (FK trans->T, species->S, side, stoich ExprNode, modality). equalize! then repoints the species FK
     # note: from A2 to A structurally rather than via recursively_substitute_vars! string rewriting
-    # note: (equalize.jl:60). Errors today: ReactiveDynamics.reactant_specs / .specname do not exist (reactants
+    # note: (equalize.jl:60). Errors today: ReactiveDynamics.arcs / .placename do not exist (reactants
     # note: live as Expr in the :trans column, parsed per-tick by extract_reactants, reaction_parser.jl:32). T2
     # note: against the not-yet-built IR.
-    # action: After equalize!, inspect the promoted ReactantSpec table (target IR) and assert every
+    # action: After equalize!, inspect the promoted ArcSpec table (target IR) and assert every
     # reactant row that pointed at the eliminated species now points at the survivor by FK — not by re-
     # parsed expression strings.
-    @testset "T2: promoted-ReactantSpec equalize repoints species FKs structurally (no string surgery)" begin
-        # ADR 0003 Phase 2 LANDED: reactants are a first-class ReactantSpec incidence table with an
+    @testset "T2: promoted-ArcSpec equalize repoints species FKs structurally (no string surgery)" begin
+        # ADR 0003 Phase 2 LANDED: reactants are a first-class ArcSpec incidence table with an
         # integer `species` FK into :S, and equalize! repoints those FKs structurally (rebuilds the
         # FK-exact table from the post-merge names) instead of only string-substituting :trans.
         net = @reaction_network begin
@@ -311,15 +311,15 @@ using ReactiveDynamics: nrows, row_ids
             1.0, A2 --> B, name => t2
         end
         m = equalize!(net, [[(:catchall, :A), (:catchall, :A2)]])
-        reactants = ReactiveDynamics.reactant_specs(m)   # accessor over the promoted table
+        reactants = ReactiveDynamics.arcs(m)   # accessor over the promoted table
         @test !isempty(reactants)                        # the table is populated
-        # every static ReactantSpec.species FK resolves to a live S index (no dangling FK after collapse).
+        # every static ArcSpec.species FK resolves to a live S index (no dangling FK after collapse).
         @test all(r -> r.species == 0 || 1 <= r.species <= ReactiveDynamics.nrows(m, :S), reactants)
         # some reactant now points at the survivor A (the two LHS A/A2 collapsed onto it).
         surv = ReactiveDynamics.find_index(:A, m)
         @test any(r -> r.species == surv, reactants)
         # no reactant still references the eliminated A2 (structural FK-repoint, no dangling alias).
-        @test !any(r -> r.species > 0 && ReactiveDynamics.specname(m, r.species) == :A2, reactants)
+        @test !any(r -> r.species > 0 && ReactiveDynamics.placename(m, r.species) == :A2, reactants)
         # both transitions' LHS now consume the single survivor A (FK-exact merge, no string corruption).
         lhs_species = sort([r.species for r in reactants if r.side == :lhs])
         @test lhs_species == [surv, surv]

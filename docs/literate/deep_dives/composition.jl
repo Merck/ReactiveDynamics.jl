@@ -28,7 +28,7 @@ using Plots                     # inline figures
 # They are not part of the modeling surface — they read the typed struct-of-columns store
 # (row ids, the promoted reactant-incidence table) so we can assert an operator did what it
 # claims. We import them explicitly to keep that boundary visible.
-using ReactiveDynamics: nrows, row_ids, find_index, reactant_specs, specname,
+using ReactiveDynamics: nrows, row_ids, find_index, arcs, placename,
     populate_reactant_specs!, port_role
 const RD = ReactiveDynamics
 
@@ -42,8 +42,8 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(specname(m, r.species)), r.side, r.stoich)
-                for r in reactant_specs(m) if r.trans == ti && r.species > 0
+            (string(placename(m, r.species)), r.side, r.stoich)
+                for r in arcs(m) if r.trans == ti && r.species > 0
         ]
     )
     return (ct = m[ti, :transCycleTime], pos = m[ti, :transProbOfSuccess], reactants = rows)
@@ -142,7 +142,7 @@ println(
     count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
 )
 leadix = find_index(:Lead, chain)
-through_lead = count(r -> r.species == leadix, reactant_specs(chain))
+through_lead = count(r -> r.species == leadix, arcs(chain))
 println(
     "  rows routed through `Lead` : ", through_lead,
     "  (produced by screening, consumed by lead_opt ⇒ one seam, not two)"

@@ -58,7 +58,7 @@ function pipeline_model()
             @select(Project, phase == :Phase3) --> @advance(phase, :Launched),
             name => adv3L, cycletime => 1.0, probability => 0.9
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -206,7 +206,7 @@ function genesis_model()
             @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
             name => adv12, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 

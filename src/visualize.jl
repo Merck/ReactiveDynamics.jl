@@ -93,7 +93,7 @@ via `transLHS`/`transRHS` (the parsed reactant lists + the RHS expression). Beca
 realized by `sample_transitions!` (which draws stoichiometries through the RNG), this runs on a
 `deepcopy` of `prob` so the caller's `state.rng` is NOT perturbed — `network_graph` is observationally
 pure (no simulation, Invariant 1). The extraction simplifies (typed FKs, no reactant re-parse) when
-the ADR 0003 `ReactantSpec` table lands; this is the `transLHS`/`transRHS` form noted in §15.2.
+the ADR 0003 `ArcSpec` table lands; this is the `transLHS`/`transRHS` form noted in §15.2.
 """
 function network_graph(prob::ReactionNetworkProblem)
     net = prob.network

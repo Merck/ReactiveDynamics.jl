@@ -1,6 +1,6 @@
 # reaction network DSL: UPDATE part; add species, name, add modalities, set model variables, set solver arguments
 
-export @push, @name_transition, @mode, @add_species
+export @push, @name_transition, @mode, @add_place
 export @periodic, @jump
 export @prob_init, @prob_uncertainty, @prob_params, @prob_meta
 export @aka
@@ -240,10 +240,10 @@ Add new species to a model.
 # Examples
 
 ```julia
-@add_species net S I R
+@add_place net S I R
 ```
 """
-macro add_species(netex, exs...)
+macro add_place(netex, exs...)
     call = :(
         begin end
     )

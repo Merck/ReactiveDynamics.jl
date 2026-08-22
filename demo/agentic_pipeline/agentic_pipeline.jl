@@ -27,8 +27,8 @@
 # invented API.
 
 using ReactiveDynamics
-using ReactiveDynamics: ReactionNetworkProblem, register_structured_species!, add_structured_token!,
-    Rule, Seq, SetSpecies, SetParams, SetTokens, AddToken, Activate, Deactivate, Log,
+using ReactiveDynamics: ReactionNetworkProblem, register_token_kind!, add_structured_token!,
+    Rule, Seq, SetMarking, SetParams, SetTokens, AddToken, Activate, Deactivate, Log,
     get_species, inners, getagent, find_index, TokenPredicate, Clause, PopulationEntry,
     from_json_model, to_json_model, validate, dump_state, restore, apply_action!, set_guard!
 using Random, Distributions, DataFrames
@@ -147,7 +147,7 @@ function pipeline_model()
             @select(Project, phase == :Phase3) --> @advance(phase, :Launched),
             name => adv3L, cycletime => 1.0, probability => 0.9
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -230,7 +230,7 @@ function fasttrack_model()
             @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
             name => fasttrack, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -268,7 +268,7 @@ println("wins), so this selection reproduces exactly under the same (model, seed
 # scope). `fire_mode = :once` fires the action exactly once, the first tick its guard holds, then
 # latches OFF (`p.rules[i].enabled == false`); `_reinit!` re-arms it. The ACTION family — all
 # verified — composes via `Seq`:
-#   SetSpecies(:cash, 500, :inc)            — inject into a resource pool (:inc or :set)
+#   SetMarking(:cash, 500, :inc)            — inject into a resource pool (:inc or :set)
 #   SetParams([:synergy => 1])              — flip a model parameter the transitions read
 #   AddToken(:Project, [...])               — inject a brand-new token via the registry (BY KIND;
 #                                             the registry key, here :Project — see REGISTRY in §0)
@@ -295,7 +295,7 @@ function lever_model()
     end
     @prob_init net cash = 0 report = 0
     @prob_params net synergy = 0
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -304,7 +304,7 @@ raise_lever() = Rule(
     :series_b, :(@t() > 2.0),
     Seq(
         [
-            SetSpecies(:cash, 500, :inc),                                    # +500 capital
+            SetMarking(:cash, 500, :inc),                                    # +500 capital
             SetParams([:synergy => 1]),                                      # flip the synergy flag
             AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 175.0]), # add a Phase2 program
             Log("Series-B raised: +500 cash, synergy on, +1 Phase2 program"),
@@ -410,7 +410,7 @@ function genesis_model()
             @select(Project, phase == :Phase1) --> @advance(phase, :Phase2),
             name => adv12, cycletime => 1.0, probability => 1.0
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -671,7 +671,7 @@ function instant_pipeline()
             @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
             name => adv23, cycletime => 0.0, probability => 1.0
     end
-    register_structured_species!(net, :Project)
+    register_token_kind!(net, :Project)
     return net
 end
 
@@ -727,7 +727,7 @@ println(
       §0  Structured tokens          first-class project entities (attributes + identity)   ADR 0006/0008
       §1  Phase-as-attribute + pop[]  one :Project kind, phase is a field; declarative input  ADR 0008/0007
       §2  Predicate selection         @select(npv > θ) binds a subset; deterministic ties     ADR 0008
-      §3  In-model decision rule      a once-Rule lever: SetSpecies+SetParams+AddToken in Seq  ADR 0010
+      §3  In-model decision rule      a once-Rule lever: SetMarking+SetParams+AddToken in Seq  ADR 0010
       §4  Genesis as a product        ∅ --> @structured(:Kind, …): a token BORN on the RHS      ADR 0006/0008
       §5  Population write            SetTokens(@field) revalues a selected sub-population      ADR 0011
       §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005

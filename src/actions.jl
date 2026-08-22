@@ -9,28 +9,28 @@
 # lowering (ADR 0005) is a later stage; until then the action structs ARE the IR.
 
 # ── The closed action type family (ADR 0010 §C, extended by ADR 0011) ───────────────────
-# {SetSpecies, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq}
+# {SetMarking, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq}
 
 export Rule, ActionStmt
-export SetSpecies, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq
+export SetMarking, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq
 export apply_action!, fire_rules!, activate!, deactivate!, set_guard!
 
 """
-Abstract supertype of the closed, serializable action whitelist (ADR 0010 §C / ADR 0011, CONTRACT §12). The concrete family is `{SetSpecies, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq}` (plus the internal `RawExpr` legacy bridge). An `ActionStmt` is a declarative, eval-free record of a state mutation; `apply_action!` dispatches on the concrete type to perform it, and the closed set is the trust boundary for eval-free (de)serialization. Actions are the payload of a `Rule` (the endogenous decision channel) or a transition post-action; `Seq` composes them.
+Abstract supertype of the closed, serializable action whitelist (ADR 0010 §C / ADR 0011, CONTRACT §12). The concrete family is `{SetMarking, SetParams, SetField, SetTokens, AddToken, Activate, Deactivate, Invoke, Log, Seq}` (plus the internal `RawExpr` legacy bridge). An `ActionStmt` is a declarative, eval-free record of a state mutation; `apply_action!` dispatches on the concrete type to perform it, and the closed set is the trust boundary for eval-free (de)serialization. Actions are the payload of a `Rule` (the endogenous decision channel) or a transition post-action; `Seq` composes them.
 """
 abstract type ActionStmt end
 
 """
-    SetSpecies(name, value, mode = :set)
+    SetMarking(name, value, mode = :set)
 
 Action (`ActionStmt`) that writes a plain-species pool column of `state.u`: for species `name`, evaluate `value` (an `Expr`/literal, through the seeded closure path) and either set it (`mode = :set`) or increment it (`mode = :inc`).
 """
-struct SetSpecies <: ActionStmt
+struct SetMarking <: ActionStmt
     name::Symbol
     value::Any            # Expr / literal, evaluated via context_eval
     mode::Symbol          # :set | :inc
 end
-SetSpecies(name, value) = SetSpecies(name, value, :set)
+SetMarking(name, value) = SetMarking(name, value, :set)
 
 """
     SetParams(assigns)
@@ -124,6 +124,10 @@ struct RawExpr <: ActionStmt
     expr::Any
 end
 
+# The SERIALIZED verb tags (ADR 0005 §E5 wire vocabulary), one per concrete `ActionStmt`.
+# NOTE (ADR 0017 staging, deliberate): `:set_species` is the wire tag of `SetMarking`. The Tier-1
+# rename moved Julia names only; wire keys are Tier 3 and land as their own commit, so this list
+# stays byte-identical to what previously-written models carry until that step.
 const ACTION_VERBS =
     (:set_species, :set_params, :set_field, :set_tokens, :add_token, :activate, :deactivate, :invoke, :log, :seq)
 
@@ -216,9 +220,9 @@ end
 
 Perform the action `a` against `state`, dispatching on the concrete `ActionStmt` type — the eval-free lowering table for the closed action family (ADR 0010 §C / ADR 0011 §C). `transition` is the firing transition instance for a transition post-action, or `nothing` when the action comes from a `Rule`; it carries through to the seeded-closure value eval (params/observables/time/Sample). `SetField` requires a non-`nothing` `transition` (it writes bound tokens); `AddToken`/`Invoke` resolve their name against the per-network registry and never `eval`. `Seq` applies its statements in order.
 """
-function apply_action!(state::ReactionNetworkProblem, transition, a::SetSpecies)
+function apply_action!(state::ReactionNetworkProblem, transition, a::SetMarking)
     ix = find_index(a.name, state)
-    isnothing(ix) && error("SetSpecies: unknown species $(a.name)")
+    isnothing(ix) && error("SetMarking: unknown species $(a.name)")
     v = _eval_value(state, transition, a.value)
     if a.mode === :inc
         state.u[ix] += v

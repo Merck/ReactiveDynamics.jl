@@ -39,7 +39,7 @@ function advance_model()
             @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
             name => p2_to_p3, cycletime => 1.0, probability => 1.0
     end
-    RDX.register_structured_species!(net, :Project)
+    RDX.register_token_kind!(net, :Project)
     return net
 end
 
@@ -103,7 +103,7 @@ phases(p) =
                 @select(Project, phase == :Phase2 && npv > 150.0) --> @advance(phase, :Phase3),
                 name => high_npv_advance, cycletime => 1.0, probability => 1.0
         end
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         @prob_meta net tspan = 5 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1)
         add_structured_token!(p, RDX.FiltProjectToken(:Phase2, 100.0))   # below θ, stays
@@ -140,7 +140,7 @@ phases(p) =
                     @select(Project, phase == :Phase2) --> @advance(phase, :Phase3),
                     name => adv, cycletime => 1.0, probability => 1.0
             end
-            RDX.register_structured_species!(net, :Project)
+            RDX.register_token_kind!(net, :Project)
             @prob_meta net tspan = 2 dt = 1.0
             p = ReactionNetworkProblem(net; seed = seed)
             a = RDX.FiltProjectToken(:Phase2, 111.0); add_structured_token!(p, a)  # creation_index 1
@@ -166,7 +166,7 @@ phases(p) =
                 @select(Project) --> @advance(phase, :Done),
                 name => any_advance, cycletime => 0.0, probability => 1.0
         end
-        RDX.register_structured_species!(net, :Project)
+        RDX.register_token_kind!(net, :Project)
         @prob_meta net tspan = 4 dt = 1.0
         p = ReactionNetworkProblem(net; seed = 1)
         add_structured_token!(p, RDX.FiltProjectToken(:Phase1, 10.0))

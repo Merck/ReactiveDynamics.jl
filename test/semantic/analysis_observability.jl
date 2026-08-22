@@ -50,7 +50,7 @@ function traj_model(; budget0 = 100, cost = 1.0)
             @select(Project, phase == :Phase1) + 2 * @rate(budget) --> @advance(phase, :Phase2),
             name => adv, cycletime => 1.0, probability => 1.0
     end
-    RD.register_structured_species!(net, :Project)
+    RD.register_token_kind!(net, :Project)
     bi = findfirst(==(:budget), net[:, :placeName])
     net[bi, :placeInitVal] = Float64(budget0)
     net[bi, :placeCost] = cost

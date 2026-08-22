@@ -72,7 +72,7 @@ This is the consequential part of the rework: the framework now natively express
 
   ```julia
   Rule(:series_b, :(@t() > 2.0),
-       Seq([SetSpecies(:cash, 500, :inc),          # inject capital
+       Seq([SetMarking(:cash, 500, :inc),          # inject capital
             SetParams([:synergy => 1]),            # flip a parameter the rates read
             AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 175.0])]);  # add a program
        fire_mode = :once)
@@ -112,7 +112,7 @@ This is the consequential part of the rework: the framework now natively express
 
 **Data store and serialization**
 
-- ACSets and Catlab **dropped** in favor of a dependency-free, typed struct-of-columns IR; the transition–reactant relation promoted to a first-class typed `ReactantSpec` incidence table (ADR 0003).
+- ACSets and Catlab **dropped** in favor of a dependency-free, typed struct-of-columns IR; the transition–reactant relation promoted to a first-class typed `ArcSpec` incidence table (ADR 0003).
 - A single eval-free JSON serialization with a typed `ExprNode` IR: `from_json_model` and `to_json_model` round-trip, plus `validate`. This closes the import-time RCE and retires the TOML, CSV, and JLD2 format zoo (ADR 0005).
 - Post-ACSets naming pass (ADR 0015): `@reaction_network` (was `@ReactionNetworkSchema`), `net` (was `acs`), store type `ReactionNetwork`; store verbs renamed to store vocabulary (`nrows`, `row_ids`, `column`, `cell`, `find_rows`, …) **and unexported**. Old names survive one release as `@deprecate` shims; `GeneratedExpressions` dropped.
 
