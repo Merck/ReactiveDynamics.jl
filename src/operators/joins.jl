@@ -98,7 +98,7 @@ the open ports afterwards by FK-repoint. `eqs` drives cross-fragment identificat
 [`normalize_name`](@ref). Called by [`merge_networks!`](@ref) before it copies rows across.
 """
 function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
-    specmap = Dict()
+    placemap = Dict()
     for i in row_ids(net, :S)
         # ADR 0009 §A / CONTRACT §11.1: a `shared`-role place is identified by BARE name across all
         # fragments (the first-class @catchall) — it is NOT namespaced. `private` (default) and the
@@ -108,7 +108,7 @@ function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
             continue
         end
         new_name = normalize_name(name, i, net[i, :placeName], eqs)
-        push!(specmap, net[i, :placeName] => (net[i, :placeName] = new_name))
+        push!(placemap, net[i, :placeName] => (net[i, :placeName] = new_name))
     end
 
     for attr in propertynames(net.columns)
@@ -119,14 +119,14 @@ function prepend!(net::ReactionNetwork, name = gensym("net"), eqs = [])
         attr == :obsOpts && continue
         attr_ = net[:, attr]
         for i in eachindex(attr_)
-            attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
-            attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
+            attr_[i] = escape_ref(attr_[i], collect(keys(placemap)))
+            attr_[i] = recursively_substitute_vars!(placemap, attr_[i])
             net[i, attr] = attr_[i]
         end
     end
 
     for i in row_ids(net, :obs)
-        prepend_obs!(net[i, :obsOpts], specmap)
+        prepend_obs!(net[i, :obsOpts], placemap)
     end
 
     return net
@@ -135,7 +135,7 @@ end
 """
 Namespace the place referenced inside an observable's option expressions.
 
-`prepend!` renames every place `X → parent__X` and records the map in `specmap`. An observable's
+`prepend!` renames every place `X → parent__X` and records the map in `placemap`. An observable's
 sampling triggers (`on`) and range endpoints (`range`) are stored as Exprs inside a `FoldedObservable`
 (the `:obsOpts` column), which `prepend!`'s attribute loop skips — so without this the observable would
 still reference the pre-namespaced place and silently read the wrong (or a missing) pool after a join.
@@ -143,9 +143,9 @@ This mirrors the per-attribute `escape_ref` + `recursively_substitute_vars!` rew
 to every other spec-referencing attribute. The observable's own NAME (`obsName`) is intentionally left
 un-namespaced — rate/guard exprs reference observables by bare name via `@obs(x)`.
 """
-function prepend_obs!(opts::FoldedObservable, specmap)
-    keys_ = collect(keys(specmap))
-    subst(ex) = recursively_substitute_vars!(specmap, escape_ref(ex, keys_))
+function prepend_obs!(opts::FoldedObservable, placemap)
+    keys_ = collect(keys(placemap))
+    subst(ex) = recursively_substitute_vars!(placemap, escape_ref(ex, keys_))
     opts.on = map(subst, opts.on)
     opts.range = map(
         r -> r isa Tuple ? (r[1], subst(r[2])) : subst(r),

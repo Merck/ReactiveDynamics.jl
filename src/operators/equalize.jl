@@ -33,7 +33,7 @@ end
 Identify (collapse) sets of place in the static `net`, in place. Each block in `eqs` names place to merge — by exact `:S` index, by bare name, or by a `:catchall` name match (matching a `__`-namespaced suffix) — into a single surviving row aliased to the block's `:alias` (or its first entry). Missing attribute cells on the survivor are filled from the merged rows, every reference to a removed name is rewritten, and the removed rows are dropped by swap-and-pop; the promoted [`ArcSpec`](@ref) table is then rebuilt so each arc's `place` FK is repointed structurally onto the survivor (§7.4/J7, ADR 0003 Phase 2). Authoring-time only — FORBIDDEN on a live/stepping model, since it reindexes. [`@equalize`](@ref) is the declarative macro form.
 """
 function equalize!(net::ReactionNetwork, eqs = [])
-    specmap = Dict()
+    placemap = Dict()
     for block in eqs
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
@@ -48,7 +48,7 @@ function equalize!(net::ReactionNetwork, eqs = [])
                     (e[2] == net[i, :placeName])
             ) && (
                 push!(place_ixs, i);
-                push!(specmap, net[i, :placeName] => (net[i, :placeName] = block_alias))
+                push!(placemap, net[i, :placeName] => (net[i, :placeName] = block_alias))
             )
         end
         isempty(place_ixs) && continue
@@ -67,8 +67,8 @@ function equalize!(net::ReactionNetwork, eqs = [])
         attr == :placeName && continue
         attr_ = net[:, attr]
         for i in eachindex(attr_)
-            attr_[i] = escape_ref(attr_[i], collect(keys(specmap)))
-            attr_[i] = recursively_substitute_vars!(specmap, attr_[i])
+            attr_[i] = escape_ref(attr_[i], collect(keys(placemap)))
+            attr_[i] = recursively_substitute_vars!(placemap, attr_[i])
             net[i, attr] = attr_[i]
         end
     end

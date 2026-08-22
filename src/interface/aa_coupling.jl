@@ -29,7 +29,7 @@
     observables(rd::ReactionNetworkProblem)
 
 The ordered list of names this network exports to the AlgebraicAgents hierarchy (ADR 0012 §A,
-Invariant 1): every SPECIES name (`net[:,:placeName]`) followed by every NAMED observable
+Invariant 1): every PLACE name (`net[:,:placeName]`) followed by every NAMED observable
 (`keys(state.observables)`, §9.4). This is the canonical order `getobservable(rd, i::Int)` indexes.
 
 Token aggregates are surfaced the LEAN-EXPLICIT way the ADR open question settles on: an author
@@ -48,7 +48,7 @@ end
 The current value of an exported observable (ADR 0012 §A, Invariant 1). Reads are PURE and
 RNG-free — they never advance `state.rng`, so a coupled read does not perturb the trajectory:
 
-  - a SPECIES count is `state.u[idx(name)]` (the live stock, structured or classical);
+  - a PLACE marking is `state.u[idx(name)]` (the live stock, structured or classical);
   - a NAMED observable is its last-sampled `.sampled` value (§9.4);
   - an `Int` indexes `observables(rd)` (the §A canonical order).
 
