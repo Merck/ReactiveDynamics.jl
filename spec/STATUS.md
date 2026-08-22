@@ -7,7 +7,7 @@
 The durable engineering artifacts live under top-level **`spec/`** (this directory), kept separate from **`docs/`**, which is now reserved for the Documenter.jl static-pages site (`docs/make.jl`, `docs/src/`).
 
 - **[CONTRACT_DRAFT.md](CONTRACT_DRAFT.md)** — the normative operational-semantics spec (§1–§15). This is the durable spine: it pins the time model, per-tick firing/lifecycle rules, modality semantics, determinism/seeding obligations, typed attribute domains, the object model, composition semantics, serialization schema, structured tokens & queries, and the Phase-0.5/0.6 extensions (interface & initial state §10, refinement & composition §11, rules/decisions §12, AA integration §13, analysis & observability §14, visualization §15).
-- **[adr/](adr/)** — one Architecture Decision Record per real decision (0001–0015), append-only, with a status table in [adr/README.md](adr/README.md). ADRs record context/decision/consequences/rejected-options; the CONTRACT records the resulting semantics.
+- **[adr/](adr/)** — one Architecture Decision Record per real decision (0001–0015 plus 0017; 0016 is drafted on another branch), append-only, with a status table in [adr/README.md](adr/README.md). ADRs record context/decision/consequences/rejected-options; the CONTRACT records the resulting semantics.
 - **[PR_DRAFT.md](PR_DRAFT.md)** — the draft PR narrative for the rework (the headline changes, tiered against the ADRs).
 - **[DOCS_CHARTER.md](DOCS_CHARTER.md)** — the tracking charter for the documentation/tutorials rework (the standalone PR into `rework`, branch `docs-tutorials`): the Diátaxis structure, the demo→docs migrate-in-place mapping, the tiered-tutorial + case-study scope, and the per-facet progress tracker. The docs counterpart to this file.
 - **[INVENTORY.md](INVENTORY.md)** — the current-source map (module map, public-API audit, static store, stepping trace, AA touchpoints). Verified against the `ref-agents` tree.
@@ -18,7 +18,7 @@ The Business-Development acquisition-impact demo design doc that drove §12 and 
 
 ## Overall state
 
-The modeling + analysis + visualization surface is BUILT and green. The full contract (§1–§15) and ADRs 0001–0015 are implemented and tested; the suite runs FULLY green under `test/semantic/` — **801 pass / 0 broken / 801 total**, no `@test_skip` placeholders and no `@test_broken` pins remaining (the last 3 — the CONTRACT §1.4 construction-time modality validators — landed in `53d1fac`). AlgebraicAgents is the published registry release 0.4 (the earlier `Merck/AlgebraicAgents.jl@main` `[sources]` pin was dropped, `eb2ee10`).
+The modeling + analysis + visualization surface is BUILT and green. The full contract (§1–§15) and ADRs 0001–0015 plus 0017 are implemented and tested; the suite runs FULLY green under `test/semantic/` — **801 pass / 0 broken / 801 total**, no `@test_skip` placeholders and no `@test_broken` pins remaining (the last 3 — the CONTRACT §1.4 construction-time modality validators — landed in `53d1fac`). AlgebraicAgents is the published registry release 0.4 (the earlier `Merck/AlgebraicAgents.jl@main` `[sources]` pin was dropped, `eb2ee10`).
 
 ### Implemented (with implementing commit)
 
@@ -41,6 +41,7 @@ The modeling + analysis + visualization surface is BUILT and green. The full con
 | Ensemble mode (b) reinit-reseed (`ensemble(...; mode = :reinit)`) | 0013 / §14.2 | `src/analysis.jl`, `src/solvers.jl` (`_reinit!` `:964`) | `1501c78` |
 | Visualization: result-plot recipes + three-layer network exec map | 0014 / §15 | `src/visualize.jl`, `ext/RDPlotsExt.jl` | `6174ebe` |
 | Post-ACSets naming rename + drop GeneratedExpressions | 0015 | `src/` (rename), deprecation shims `src/ReactiveDynamics.jl:427-435` | `bc6cc0a` |
+| Petri-net vocabulary rename (`species`/`reactant` → `place`/`marking`/`arc`, `token` kept) + the term dictionary as a CONTRACT **Glossary** and `docs/src/glossary.md` | 0017 | `src/`, `test/`, `spec/`, `docs/`, `demo/`; deprecation shims `src/ReactiveDynamics.jl:488-524` | Tier 2 `adaa0ed`, Tier 1 `ebf648c`, Tier 5 `fdbe572`, Tier 4 `aeb7a61`, Tier 3 (serialized keys) last on the branch |
 
 ## Recently closed
 
