@@ -14,13 +14,16 @@ The document is one JSON object. Two string keys tag the format; the rest are th
 | `version` | string | Schema version, currently `"1.0"`. |
 | `meta` | object | Solver settings + free-form keywords (see below). `meta.tspan` is **required** by `from_json_model`. |
 | `params` | array | Named scalar parameters (`:P` rows). |
-| `species` | array | Resource pools and structured-token kinds (`:S` rows). |
+| `species` | array | Places (resource pools) and structured-token kinds (`:S` rows). The key keeps its historical spelling; see the note below. |
 | `transitions` | array | The recipes (`:T` rows): rate, cycle time, success probability, capacity, actions. |
-| `reactants` | array | The promoted incidence table: one row per LHS/RHS term, FK'd to a transition. |
+| `reactants` | array | The promoted incidence table: one arc (LHS/RHS term) per row, FK'd to a transition. The key keeps its historical spelling; see the note below. |
 | `observables` | array | Folded observables (`:obs` rows). Optional. |
 | `rules` | array | The endogenous decision channel — guarded actions (ADR 0010). Optional. |
 | `inputs` | array | Declared external read ports + their pre-wire defaults (ADR 0012). Optional. |
 | `population` | array | Declarative initial structured-token instances (ADR 0007). Optional; validated. |
+
+!!! note "Wire keys keep the pre-Petri-net spelling"
+    ADR 0017 retired the chemical-reaction-network vocabulary throughout the API and the prose — a resource pool is a **place**, its quantity a **marking**, a participation an **arc** (see the [Glossary](../glossary.md)). The *wire* keys `species[]`, `reactants[]` and the `set_species` action verb are a separate, staged step, so on disk they still read as printed here. Whatever they are called, they mean places and arcs.
 
 Two notes where the code differs from older prose. First, the endogenous channel the loader consumes is `rules[]`, not `events[]`: a legacy `:E` event is lifted to a `RawExpr`-action `Rule` at construction, and because `RawExpr` is the non-typed bridge (deliberately not JSON-serializable), the exporter emits only typed rules and never an `events[]` array. Second, `meta.alloc_strategy` (and its aliases `strategy`/`schedule`) is **accepted-and-ignored**: ADR 0002 made priority-weighted progressive filling the single allocation policy, so there is no longer a strategy switch to honor — the key round-trips harmlessly.
 
@@ -45,7 +48,7 @@ Each entry carries a `name` and optional scalar attributes; all of these are **t
 
 - `init` — the initial count / marking at t = 0 (`placeInitVal`; omitted when 0).
 - `cost`, `reward`, `valuation` — the per-unit ledger coefficients (omitted when 0.0, their default).
-- `structured` — `true` marks the species a **structured-token kind** (its instances are live agents, not a counted `Float64` stock); omitted otherwise.
+- `structured` — `true` marks the place a **structured-token kind** (its instances are live agents, not a counted `Float64` stock); omitted otherwise.
 - `modality` — the resource-claim modality as a 3-axis object (see [Modality](#Modality-3-axis)); omitted when the modality set is empty.
 
 ### `transitions[]`
@@ -61,16 +64,16 @@ Each transition is the recipe for one reaction. Keys:
 
 ### `reactants[]`
 
-This is the promoted first-class incidence table — the transition↔reactant relation made explicit on disk (rather than re-parsed from the reaction line at runtime). Each row is one LHS or RHS term:
+This is the promoted first-class incidence table — the transition↔place relation (the net's **arcs**) made explicit on disk (rather than re-parsed from the reaction line at runtime). Each row is one LHS or RHS term:
 
 - `transition` — FK to a `transitions[].id` (a dangling FK is validate rule 2).
-- `side` — `"lhs"` (a consumed/held reactant) or `"rhs"` (an emitted product).
+- `side` — `"lhs"` (an input arc: a consumed or held claim) or `"rhs"` (an output arc: an emitted product).
 - Exactly one *atom* form:
-  - `species` — a plain species name (the ordinary case).
-  - `predicate` — an LHS token filter `@select(Kind, …)`: `{ "kind": <structured species>, "clauses": [[field, op, value], …] }`, ops drawn from `PRED_OP_WHITELIST` (`== != < <= > >= in`), AND-joined. See [Predicates](#Predicates).
+  - `species` — a plain place name (the ordinary case).
+  - `predicate` — an LHS token filter `@select(Kind, …)`: `{ "kind": <structured place>, "clauses": [[field, op, value], …] }`, ops drawn from `PRED_OP_WHITELIST` (`== != < <= > >= in`), AND-joined. See [Predicates](#Predicates).
   - `advance` — an RHS lifecycle field-write `@advance`: `{ "field": <string>, "value": <node|literal> }`.
-  - `structured` — an RHS **named genesis product** `@structured(:Kind, field = …)`: `{ "kind": <registered structured species>, "fields": [{ "name", "value" }, …] }` (the raw-constructor form was removed so serialization is total).
-  - `move` — a species relabel `@move`: `{ "from": <species>, "to": <species> }`.
+  - `structured` — an RHS **named genesis product** `@structured(:Kind, field = …)`: `{ "kind": <registered structured place>, "fields": [{ "name", "value" }, …] }` (the raw-constructor form was removed so serialization is total).
+  - `move` — a place relabel `@move`: `{ "from": <place>, "to": <place> }`.
 - `stoich` — the integer stoichiometric coefficient (or an ExprNode for the rare expression-valued case); omitted when 1.
 - `modality` — the 3-axis modality (LHS terms only); omitted when empty.
 
@@ -89,11 +92,11 @@ Every expression-valued attribute — a rate, cycle time, success probability, o
 | `field` | `name` | A read of the firing instance's own bound-token field (legal only in a `SetField`/`@advance` value). |
 | `externalref` | `port` | A read of a declared `inputs[]` port's latched value (ADR 0012). |
 
-The whitelists are closed and are the trust boundary: `OP_WHITELIST` is `+ - * / ^ > < >= <= == != && || ! min max exp log floor ceil abs` — arithmetic and comparison only, with no `apply`, no `eval`, and no `Expr`-head smuggling — and `DIST_WHITELIST` is `Poisson Binomial Normal Uniform Exponential Bernoulli LogNormal Gamma Beta`. On load, each node is lowered by `to_expr` to exactly the species-name/param-name `Expr` the authoring macros produce, then handed to the unchanged compile step; an out-of-whitelist `op`/`dist` or an undeclared `ref` name is a `validate` diagnostic.
+The whitelists are closed and are the trust boundary: `OP_WHITELIST` is `+ - * / ^ > < >= <= == != && || ! min max exp log floor ceil abs` — arithmetic and comparison only, with no `apply`, no `eval`, and no `Expr`-head smuggling — and `DIST_WHITELIST` is `Poisson Binomial Normal Uniform Exponential Bernoulli LogNormal Gamma Beta`. On load, each node is lowered by `to_expr` to exactly the place-name/param-name `Expr` the authoring macros produce, then handed to the unchanged compile step; an out-of-whitelist `op`/`dist` or an undeclared `ref` name is a `validate` diagnostic.
 
 ## Modality (3-axis)
 
-An LHS reactant's (or a species') resource-claim modality serializes as an orthogonal 3-axis object rather than an unvalidated symbol set:
+An input arc's (or a place's) resource-claim modality serializes as an orthogonal 3-axis object rather than an unvalidated symbol set:
 
 ```json
 { "allocation": "upfront" | "perstep",
@@ -117,7 +120,7 @@ An action statement is tagged by a `"verb"` from the closed `ACTION_VERBS` set. 
 
 | `verb` | Fields | Effect |
 |---|---|---|
-| `set_species` | `name`, `value`, `mode` | Set (`mode: "set"`) or increment (`"inc"`) a plain-species count. |
+| `set_species` | `name`, `value`, `mode` | Set (`mode: "set"`) or increment (`"inc"`) a plain place's marking. |
 | `set_params` | `assigns: [{name, value}, …]` | Reassign named parameters. |
 | `set_field` | `field`, `value` | Write a field of the firing instance's bound token (legal only in a transition post-action, not a `Rule`). |
 | `set_tokens` | `predicate`, `assigns` | Write `assigns` over every token matching a predicate (the population generalization of `set_field`). |
@@ -131,7 +134,7 @@ An unregistered `add_token.kind` or `invoke.fn`, an out-of-set verb, a `set_fiel
 
 ### Predicates
 
-A `@select` predicate — used in a `reactants[]` LHS `predicate` and in a `set_tokens` action — is `{ "kind": <structured species>, "clauses": [[field, op, value], …] }`. Each clause is a `[field, op, value]` triple with `op ∈ PRED_OP_WHITELIST` (`== != < <= > >= in`); clause `value`s must be time-measurable (a `sample`/RNG node is rejected in a predicate — the filtration must not depend on draw order).
+A `@select` predicate — used in a `reactants[]` LHS `predicate` and in a `set_tokens` action — is `{ "kind": <structured place>, "clauses": [[field, op, value], …] }`. Each clause is a `[field, op, value]` triple with `op ∈ PRED_OP_WHITELIST` (`== != < <= > >= in`); clause `value`s must be time-measurable (a `sample`/RNG node is rejected in a predicate — the filtration must not depend on draw order).
 
 ## Other arrays
 
@@ -140,7 +143,7 @@ A `@select` predicate — used in a `reactants[]` LHS `predicate` and in a `set_
 
 ## A worked example
 
-The excerpt below is trimmed from the BD acquisition demo model at `demo/bd_acquisition/model.rdj.json`. It shows: an envelope with a minimal `meta`; two plain params; a `structured` species (`Project`) alongside two plain resource pools (`scientist`, `budget`); a mix of literal and ExprNode transition attributes; and reactant rows exercising the `predicate`, `species`+`modality`, and `advance` atom forms.
+The excerpt below is trimmed from the BD acquisition demo model at `demo/bd_acquisition/model.rdj.json`. It shows: an envelope with a minimal `meta`; two plain params; a `structured` place (`Project`) alongside two plain resource pools (`scientist`, `budget`); a mix of literal and ExprNode transition attributes; and reactant rows exercising the `predicate`, `species`+`modality`, and `advance` atom forms.
 
 ```json
 {

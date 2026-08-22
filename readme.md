@@ -30,7 +30,7 @@ Requires Julia ≥ 1.12. RD sits on top of [AlgebraicAgents.jl](https://github.c
 
 ## Quick start
 
-A plain-species SIR epidemic, end to end — the metalanguage, a seeded run, and reading the solution by name:
+A plain-pool SIR epidemic, end to end — the metalanguage, a seeded run, and reading the solution by name:
 
 ```julia
 using ReactiveDynamics
@@ -52,12 +52,12 @@ The [introductory tutorial](https://merck.github.io/ReactiveDynamics.jl/dev/tuto
 
 ## The core idea
 
-The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resources** (species) over a cycle time, and completes with a terminal probability-of-success that emits its right-hand-side products. A transition takes the form `rate, a*A + b*B + … --> c*C + …, prm => val, …`, where `rate` is the expected batch size per time unit and the coefficients are generalized stoichiometry; both may be functions of the system's instantaneous stochastic state. A **reaction network** is a set of transitions acting on shared resource classes, evolved over a single discrete clock.
+The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resource pools** over a cycle time, and completes with a terminal probability-of-success that emits its right-hand-side products. A resource pool is a **place**, in Petri-net terms, and the quantity sitting in it is that place's **marking**; the API and the spec use the Petri-net words, this prose uses "resource pool". A transition takes the form `rate, a*A + b*B + … --> c*C + …, prm => val, …`, where `rate` is the expected batch size per time unit and the coefficients are generalized stoichiometry; both may be functions of the system's instantaneous stochastic state. A **reaction network** is a set of transitions acting on shared resource classes, evolved over a single discrete clock.
 
 Two ideas make it expressive enough for real decisions:
 
 - **Resource modalities.** Each consumed resource carries a modality governing how it is claimed against the pool: `@conserved` (held for the instance's lifetime, returned on completion — e.g. scientists), `@rate` (drawn per in-flight tick — e.g. a burn rate), or `@nonblock` (claimed, not held). A priority-weighted progressive-fill allocator rations scarce resources under contention, and a cost/reward/valuation **ledger** accrues into a per-step log.
-- **Structured / agentic tokens.** Beyond scalar pools, a resource can be a first-class entity with attributes, a stable identity, and lifecycle history — a "project" carrying its `phase`, `npv`, cost-to-date. Tokens can be instantiated, selected by predicate (`@select`), advanced through phases, and audited per-program. That is the basis for portfolio- and pipeline-style models.
+- **Structured / agentic tokens.** A *token* here is a discrete unit of resource sitting in a place — the Petri-net sense, unrelated to language-model tokens. Beyond scalar pools, a token can be a first-class entity with attributes, a stable identity, and lifecycle history — a "project" carrying its `phase`, `npv`, cost-to-date. Tokens can be instantiated, selected by predicate (`@select`), advanced through phases, and audited per-program. That is the basis for portfolio- and pipeline-style models.
 
 <p align="center">
   <img src="docs/src/assets/figures/token-kinds.svg" alt="Two kinds of token: a fungible pool quantity with nothing to select on, versus a structured agent token carrying phase, value, area, and history that @select can filter by state." width="820">

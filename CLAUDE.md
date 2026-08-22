@@ -4,7 +4,7 @@ Agent-facing orientation for the `ref-agents` branch. Re-verify any `file:line` 
 
 ## What this project is
 
-ReactiveDynamics.jl (RD) is a timed, stochastic, resource-constrained Petri net / discrete-event engine for system-dynamics-style modeling of business / R&D processes (budgeting, ledgers, what-if, rNPV) — NOT a chemical reaction network, despite the Catalyst-derived DSL surface. A **transition** is a stateful recipe that spawns in-flight instances at a Poisson rate, occupies shared finite resources (**species**) over a cycle time, and completes with a terminal probability-of-success that emits RHS products. Resources carry a **modality** governing allocation (`:nonblock`/`:conserved`/`:rate`), and a cost/reward/valuation **ledger** accumulates into a per-step log. Structured/agentic **tokens** are first-class entities (a "project" is an agent with attributes, custom behavior, and history) that can be instantiated, selected by predicate, advanced through lifecycle phases, and audited per-program. RD is part of the DyVE family and sits ON TOP of [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl) (AA): a `ReactionNetworkProblem` IS an AA `@aagent`, so a network is a node in a larger heterogeneous AA hierarchy.
+ReactiveDynamics.jl (RD) is a timed, stochastic, resource-constrained Petri net / discrete-event engine for system-dynamics-style modeling of business / R&D processes (budgeting, ledgers, what-if, rNPV) — NOT a chemical reaction network, despite the Catalyst-derived DSL surface. A **transition** is a stateful recipe that spawns in-flight instances at a Poisson rate, occupies shared finite resource pools (**places**) over a cycle time, and completes with a terminal probability-of-success that emits RHS products. Resources carry a **modality** governing allocation (`:nonblock`/`:conserved`/`:rate`), and a cost/reward/valuation **ledger** accumulates into a per-step log. Structured/agentic **tokens** are first-class entities (a "project" is an agent with attributes, custom behavior, and history) that can be instantiated, selected by predicate, advanced through lifecycle phases, and audited per-program. RD is part of the DyVE family and sits ON TOP of [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl) (AA): a `ReactionNetworkProblem` IS an AA `@aagent`, so a network is a node in a larger heterogeneous AA hierarchy.
 
 ## Where the durable spec lives
 
@@ -46,10 +46,10 @@ Formatting is [Runic](https://github.com/fredrikekre/Runic.jl) (opinionated, non
 ## Dev-loop gotchas
 
 - **Determinism is contractual.** All stochasticity draws from a state-owned `rng`; a run is determined by `(model, seed)` (CONTRACT §4). Thread the seed; never reach for the global RNG. `_reinit!` restores the exact stream (and takes a `seed` kwarg for ensemble mode (b) reseed).
-- **Append-only store.** Compiled attribute closures hard-code each species/param position; runtime mutation is append-only + soft-deactivate (ADR 0004). Never reorder or delete rows on a live/stepping model; reindexing macros (`equalize!`, refinement) are authoring-time only.
+- **Append-only store.** Compiled attribute closures hard-code each place/param position; runtime mutation is append-only + soft-deactivate (ADR 0004). Never reorder or delete rows on a live/stepping model; reindexing macros (`equalize!`, refinement) are authoring-time only.
 - **Eval-free everywhere.** The serializer and IR never `Meta.parse`/`eval` a model field — the closed `ExprNode`/action whitelist + `validate` is the trust boundary (ADR 0005/0006). Custom host functions go through the per-network registry, not `@eval`. Do not add runtime `eval`.
 - **Adding a new `src/` file** requires clearing the compiled cache; the `dev/` Revise test server (`dev/run.sh`) otherwise avoids recompilation across edits.
-- **`NodeRef`, not `Ref`**, in the IR; JSON alloc-strategy fields are Symbols. Structured-token iteration uses a `(species, creation_index)` total order for determinism.
+- **`NodeRef`, not `Ref`**, in the IR; JSON alloc-strategy fields are Symbols. Structured-token iteration uses a `(place, creation_index)` total order for determinism.
 - **Worktrees** go under `~/worktrees/<repo-short>/<branch>` (never repo-siblings or nested inside the tree).
 
 ## Working rules

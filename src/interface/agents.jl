@@ -61,10 +61,10 @@ Add a structured-token instance `agent` to the live `problem`: entangle it under
 """
 function add_structured_token!(problem::ReactionNetworkProblem, agent)
     entangle!(getagent(problem, "structured"), agent)
-    sp = get_place(agent)
-    if sp !== nothing
-        k = get(problem.creation_counters, sp, 0) + 1
-        problem.creation_counters[sp] = k
+    pl = get_place(agent)
+    if pl !== nothing
+        k = get(problem.creation_counters, pl, 0) + 1
+        problem.creation_counters[pl] = k
         problem.creation_index[AlgebraicAgents.getname(agent)] = k
     end
     return agent

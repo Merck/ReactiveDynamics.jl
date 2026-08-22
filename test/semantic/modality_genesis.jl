@@ -154,11 +154,11 @@ using Statistics
     # contract: §5.4 placeModality; FIXED update.jl:108 (now uses `:placeModality` not bare `placeModality`)
     # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: placeModality` because
     # note: update.jl:108 referenced a bare `placeModality` instead of the column symbol `:placeModality`. @mode now
-    # note: unions the named modality into the place' modality set. Verified live: after `@mode net X conserved`,
+    # note: unions the named modality into the place's modality set. Verified live: after `@mode net X conserved`,
     # note: `net[1,:placeModality] == Set([:conserved])`. Note `net[1,:placeModality]` indexes the SCHEMA (net),
     # note: not the problem.
     # action: invoke `@mode net X conserved`
-    @testset "@mode unions :conserved into the place' modality set (placeModality)" begin
+    @testset "@mode unions :conserved into the place's modality set (placeModality)" begin
         net = @reaction_network begin
             1.0, X --> Y, name => t1
         end

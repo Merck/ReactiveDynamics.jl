@@ -27,7 +27,7 @@ compose
 
 ## Namespacing internals
 
-The merge operators namespace each fragment's private species before copying rows, so two fragments cannot conflate their state. These helpers are internal (unexported), documented here because the composition docstrings reference them.
+The merge operators namespace each fragment's private places before copying rows, so two fragments cannot conflate their state. These helpers are internal (unexported), documented here because the composition docstrings reference them.
 
 ```@docs
 prepend!

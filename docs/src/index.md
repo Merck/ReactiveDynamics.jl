@@ -2,7 +2,7 @@
 
 A **timed, stochastic, resource-constrained Petri net / discrete-event engine** for system-dynamics-style modeling of business and R&D processes — budgeting, ledgers, what-if analysis, rNPV. Despite the reaction-network DSL surface, it is *not* a chemical reaction network: chemical kinetics is just the archetypal instance of the underlying ontology.
 
-The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resources** (species) over a cycle time, and completes with a terminal probability-of-success that emits its products. Resources carry a **modality** governing allocation, a priority-weighted allocator rations them under contention, and a cost/reward/valuation **ledger** accrues into a per-step log. Structured/agentic **tokens** are first-class entities (a "project" carrying its `phase`, `npv`, cost-to-date) that can be instantiated, selected by predicate, advanced through lifecycle phases, and audited per-program. A model is a pure, **eval-free typed data artifact** that round-trips through a single JSON serialization. ReactiveDynamics sits on top of [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl): a `ReactionNetworkProblem` **is** an AA agent, so a network is a node in a larger heterogeneous hierarchy.
+The central concept is a **transition**: a stateful recipe that spawns in-flight instances at a Poisson (or deterministic) rate, occupies shared finite **resource pools** over a cycle time, and completes with a terminal probability-of-success that emits its products. A resource pool is a **place**, in Petri-net terms, and the quantity in it is that place's **marking** — this site says "resource pool" in tutorial and case-study prose and *place* in the API reference and the spec (see the [Glossary](glossary.md)). Pools carry a **modality** governing allocation, a priority-weighted allocator rations them under contention, and a cost/reward/valuation **ledger** accrues into a per-step log. Structured/agentic **tokens** — a token being a discrete unit of resource sitting in a place, the Petri-net sense, unrelated to language-model tokens — are first-class entities (a "project" carrying its `phase`, `npv`, cost-to-date) that can be instantiated, selected by predicate, advanced through lifecycle phases, and audited per-program. A model is a pure, **eval-free typed data artifact** that round-trips through a single JSON serialization. ReactiveDynamics sits on top of [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl): a `ReactionNetworkProblem` **is** an AA agent, so a network is a node in a larger heterogeneous hierarchy.
 
 ```@raw html
 <figure class="rd-figure">
@@ -39,7 +39,7 @@ Two more pictures carry most of the remaining intuition — where the randomness
 
 ## A first taste
 
-A plain-species SIR epidemic, end to end — the metalanguage, a seeded run, and reading the solution by name:
+A plain-pool SIR epidemic, end to end — the metalanguage, a seeded run, and reading the solution by name:
 
 ```julia
 using ReactiveDynamics

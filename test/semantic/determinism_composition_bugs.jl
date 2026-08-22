@@ -250,7 +250,7 @@ using ReactiveDynamics: nrows, row_ids
     # [equalize-collapse-and-rewrite] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md Pending §Composition; equalize! operators/equalize.jl:24-66 (specmap + rem_parts! at :52 + recursively_substitute_vars! at :60)
     # note: Locks in current equalize! (equalize.jl:24-66): builds specmap, keeps the lowest index,
-    # note: rem_rows!(net,:S,species_ixs[2:end]) at :52, then recursively_substitute_vars! rewrites every spec-
+    # note: rem_rows!(net,:S,place_ixs[2:end]) at :52, then recursively_substitute_vars! rewrites every spec-
     # note: referencing attr (:55-63). Pins string-surgery semantics that ADR 0003's promoted ArcSpec will
     # note: replace structurally (see next test). Uses bare `name = name` eq form per @equalize docstring
     # note: (equalize.jl:73). If get_eqs_ff parsing of the bare `A = A2` form differs, the count assertion

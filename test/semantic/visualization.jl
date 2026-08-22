@@ -159,8 +159,8 @@ end
         garcs = Set((a.from, a.to) for a in g.arcs)
         hi = Tuple{Symbol, Symbol}[]
         for tok in RD.select_tokens(p, pred)
-            for (sp, _t, tr) in tok.past_bonds
-                push!(hi, (sp, RD._transition_node_name(p.network, tr.i)))
+            for (pl, _t, tr) in tok.past_bonds
+                push!(hi, (pl, RD._transition_node_name(p.network, tr.i)))
             end
         end
         if !isempty(hi)

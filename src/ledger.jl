@@ -155,7 +155,7 @@ function attribute_reward!(
     return reward
 end
 
-# Recompute each program's mark-to-market valuation as its place' `placeValuation` unit value
+# Recompute each program's mark-to-market valuation as its place's `placeValuation` unit value
 # (so the per-program valuations of live tokens sum to the structured part of the aggregate
 # `:valuation` row). Overwrites `valuation` (it is a STOCK, not a flow — unlike cost/reward which
 # accumulate), so it is NOT appended to `entries`. Iterated in deterministic token order. Tokens
@@ -165,9 +165,9 @@ end
 function attribute_valuation!(state::ReactionNetworkProblem)
     container = getagent(state, "structured")
     for tok in collect(values(inners(container)))
-        sp = get_place(tok)
-        sp === nothing && continue
-        i = find_index(sp, state)
+        pl = get_place(tok)
+        pl === nothing && continue
+        i = find_index(pl, state)
         i === nothing && continue
         led = _program_ledger!(state, tok)
         led.valuation = isblocked(tok) ? led.valuation : state[i, :placeValuation]
@@ -210,7 +210,7 @@ replacement for the BD demo's post-hoc reconstruction (MVP finding D). Columns:
   `creation_index`  the per-place monotonic creation index (ADR 0006 §E) — the order key
   `cost_incurred`   total capital burned on behalf of this program (sum of its bind-cost shares)
   `reward_realized` total reward credited when a transition it was bound to finished successfully
-  `valuation`       current mark-to-market = the place' `placeValuation` (0 when none — see header)
+  `valuation`       current mark-to-market = the place's `placeValuation` (0 when none — see header)
   `net`             reward_realized − cost_incurred (the realized economics to date)
 
 The per-program `cost_incurred` summed over ALL programs PLUS `state.unattributed_cost` equals the
@@ -249,12 +249,12 @@ function program_ledger(state::ReactionNetworkProblem)
         led = get(state.program_ledgers, name, nothing)
         led === nothing && continue
         # current place: prefer the live token (it may have advanced/retired since first bind)
-        sp = haskey(live_by_name, name) ? get_place(live_by_name[name]) : led.place
+        pl = haskey(live_by_name, name) ? get_place(live_by_name[name]) : led.place
         push!(
             df,
             (
                 name,
-                sp,
+                pl,
                 led.creation_index,
                 led.cost_incurred,
                 led.reward_realized,

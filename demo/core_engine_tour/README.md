@@ -12,7 +12,7 @@ The script is literate: every section is a block comment explaining the modeling
 
 ## The mental model in one paragraph
 
-A model is a set of TRANSITIONS. Each transition has a RATE (how often it tries to fire), a left-hand side of REACTANTS it consumes, and a right-hand side of PRODUCTS it emits. Firing can be instantaneous (`cycletime` 0) or take time (`cycletime > 0`, an in-flight instance that may also fail a Binomial success draw). Arcs can be consumed outright, held-and-returned, metered per step, or freed each step — the engine's signature feature is this RESOURCE MODALITY algebra. When several transitions want the same scarce pool in one tick, a priority-weighted ALLOCATOR rations it. All randomness flows through a per-run seeded RNG, so a run is reproducible from `(model, seed)`.
+A model is a set of TRANSITIONS. Each transition has a RATE (how often it tries to fire), a left-hand side of INPUTS it consumes from its resource pools ("places", in Petri-net terms), and a right-hand side of PRODUCTS it emits. Firing can be instantaneous (`cycletime` 0) or take time (`cycletime > 0`, an in-flight instance that may also fail a Binomial success draw). Arcs can be consumed outright, held-and-returned, metered per step, or freed each step — the engine's signature feature is this RESOURCE MODALITY algebra. When several transitions want the same scarce pool in one tick, a priority-weighted ALLOCATOR rations it. All randomness flows through a per-run seeded RNG, so a run is reproducible from `(model, seed)`.
 
 ## What each section exercises
 
@@ -24,7 +24,7 @@ A model is a set of TRANSITIONS. Each transition has a RATE (how often it tries 
 | 4 | Priority allocator under contention | `progressive_fill!` (priority-weighted progressive filling) called directly in both the contended and the slack (no-scaling) regime, then genuine in-model contention for a scarce shared pool where the higher-`priority` transition wins more (ADR 0002) |
 | 5 | Genesis modes | Poisson SOURCE (`∅` LHS, dt-invariant in expectation), token-gated FLOW / routing (high nominal rate clamped to available upstream tokens), and SCHEDULED batch intake via `@deterministic(N * @periodic(p))` |
 | 6 | Registered rates & the ledger | `@register`ed custom rate functions on a toy-pharma pipeline, plus the `@cost` / `@reward` / `@valuation` ledger (`prob.log`) read by tag and reduced to a discounted rNPV (discounting is pure post-processing) |
-| 7 | Composition | `@join` (union of place / transitions / params with shared-place identification via `@alias`) and `@equalize` (collapse two place into one and rewrite references); part counts via `nparts` |
+| 7 | Composition | `@join` (union of places / transitions / params with shared-place identification via `@alias`) and `@equalize` (collapse two places into one and rewrite references); part counts via `nparts` |
 | 8 | Determinism & ensembles | `seed=` reproducibility (same seed ⇒ identical trajectory; different seed ⇒ diverges; unseeded ⇒ fresh entropy seed), and a deterministically-seeded ensemble (`hash((root, k))`) with mean ± spread, member-`k` reproducible independent of N and order |
 | 9 | Recap | A closing summary of everything shown |
 

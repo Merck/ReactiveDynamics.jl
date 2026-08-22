@@ -451,7 +451,7 @@ end
         # params + place survive the round-trip through the acset
         back = RDX.model_to_dict(net)
         @test any(pr -> pr["name"] == "k" && pr["value"] == 0.5, back["params"])
-        @test Set(sp["name"] for sp in back["species"]) == Set(["A", "B"])
+        @test Set(pl["name"] for pl in back["species"]) == Set(["A", "B"])
     end
 
     # ── E10: the EXPORT path — to_json_model is the inverse of from_json_model ───────────

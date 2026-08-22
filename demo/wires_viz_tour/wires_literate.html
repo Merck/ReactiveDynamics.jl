@@ -312,7 +312,7 @@ end</code></pre>
 </li>
 <li><p><strong>Inbound coupling</strong> is a declarative, eval-free port: the RD JSON&#39;s <code>inputs&#91;&#93;</code> list plus a closed <code>ExternalRef</code> leaf that a rate or a guard reads by name. Here <code>sentiment</code> drives both the <code>grow</code> rate and the <code>acquire</code> guard.</p>
 </li>
-<li><p><strong>Outbound coupling</strong> is <code>getobservable</code>: any sibling can read an RD species or named observable off a wire, as <code>finance</code> reads <code>cash</code>.</p>
+<li><p><strong>Outbound coupling</strong> is <code>getobservable</code>: any sibling can read an RD place or named observable off a wire, as <code>finance</code> reads <code>cash</code>.</p>
 </li>
 <li><p><strong>The wiring lives host-side</strong> in <code>add_wire&#33;</code> — never in the portable RD document &#40;Invariant 4&#41;.</p>
 </li>

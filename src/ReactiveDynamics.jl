@@ -52,7 +52,7 @@ const SCHEMA = (
         placeReward = SampleableValues,
         placeValuation = SampleableValues,
         placeStructured = Bool,
-        # ADR 0009 §A / CONTRACT §11.1 — open-port role: a thin closed tag on the Species record
+        # ADR 0009 §A / CONTRACT §11.1 — open-port role: a thin closed tag on the Place record
         # (NOT a new table). role ∈ {:private (default, auto-namespaced m__X on compose), :input,
         # :output (open ports; directionality advisory), :shared (bare-name identified, the
         # first-class @catchall)}. Drives @compose port-matching and refine boundary identification.
@@ -130,11 +130,11 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 """
     ArcSpec
 
-One row of the promoted transition↔place incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `place` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge place by structurally REPOINTING the `place` FK instead of doing string surgery on names. A legitimately dynamic arc (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `place = 0` and stashes its original term in `expr`; a static arc has `place ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_arcs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`arcs`](@ref).
+One row of the promoted transition↔place incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `place` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge places by structurally REPOINTING the `place` FK instead of doing string surgery on names. A legitimately dynamic arc (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `place = 0` and stashes its original term in `expr`; a static arc has `place ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_arcs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`arcs`](@ref).
 """
 struct ArcSpec
     trans::Int              # FK → :T
-    place::Int            # FK → :S, or 0 for a dynamic (expr-carried) arc
+    place::Int              # FK → :S, or 0 for a dynamic (expr-carried) arc
     stoich::SampleableValues
     side::Symbol            # :lhs or :rhs
     modality::Set{Symbol}
@@ -196,7 +196,7 @@ function find_index(place::Symbol, net::ReactionNetwork)
     return isempty(inc) ? nothing : first(inc)
 end
 
-# ── ADR 0009 §A / CONTRACT §11.1 — open-port roles (a closed tag on the Species record) ────────
+# ── ADR 0009 §A / CONTRACT §11.1 — open-port roles (a closed tag on the Place record) ────────
 const PORT_ROLES = (:private, :input, :output, :shared)
 
 """

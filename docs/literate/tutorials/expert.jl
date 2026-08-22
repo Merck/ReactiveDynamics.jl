@@ -122,7 +122,7 @@ println("its pre-wire `sentiment` buffer value  : ", rd0.external_inputs[:sentim
 # `@pipeline` writes a whole phase chain compactly; a `@process` fragment is a reusable,
 # parameterized sub-model; `@compose` joins fragments by *declared open ports* (an `:output` port
 # of one identified with a same-named `:input` port of another); and `refine` substitutes a finer
-# sub-model for a single coarse transition, *plug-compatibly* — the boundary place keep their
+# sub-model for a single coarse transition, *plug-compatibly* — the boundary places keep their
 # indices, so every other transition is structurally untouched. All of it is authoring-time and
 # additive: the result is an ordinary network that constructs, serializes, and simulates like a
 # hand-written flat one, and (like reindexing) it is forbidden on a live, stepping model.

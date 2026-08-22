@@ -20,7 +20,8 @@
 #
 # The mental model in one paragraph: a model is a set of TRANSITIONS. Each
 # transition has a RATE (how often it tries to fire), a left-hand side of
-# REACTANTS it consumes, and a right-hand side of PRODUCTS it emits. Firing can
+# INPUTS it consumes from its resource pools ("places", in Petri-net terms),
+# and a right-hand side of PRODUCTS it emits. Firing can
 # be instantaneous (cycletime 0) or take time (cycletime > 0, an "in-flight
 # instance"). Arcs can be consumed outright, held-and-returned, metered
 # per-step, and so on — the engine's signature feature is this RESOURCE MODALITY
@@ -45,7 +46,7 @@ banner("§1. A first model: SIR — the metalanguage, simulate, and an invariant
 #
 #   * @reaction_network begin ... end  — the model DSL. Each line is
 #       `rate, LHS --> RHS, name => ...`. Here both rates are mass-action
-#       expressions in the place and parameters (α·S·I, β·I): a bare numeric
+#       expressions in the places and parameters (α·S·I, β·I): a bare numeric
 #       expression is a STOCHASTIC (Poisson) rate.
 #   * @prob_init  — initial counts (the marking at t=0).
 #   * @prob_params — the named parameters the rate expressions reference.
@@ -494,9 +495,9 @@ println(
 banner("§7. Composition: @join two submodels and @equalize place")
 # =============================================================================
 #
-# Models compose. `@join` takes the UNION of two schemas' place, transitions,
-# and parameters, optionally IDENTIFYING shared place across the two via
-# equations. `@equalize` collapses two place WITHIN one schema into a single
+# Models compose. `@join` takes the UNION of two schemas' places, transitions,
+# and parameters, optionally IDENTIFYING shared places across the two via
+# equations. `@equalize` collapses two places WITHIN one schema into a single
 # pool and rewrites every reference. Both operate at AUTHORING time (on a
 # schema), before construction.
 #

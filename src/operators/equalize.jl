@@ -37,7 +37,7 @@ function equalize!(net::ReactionNetwork, eqs = [])
     for block in eqs
         block_alias = findfirst(e -> e[1] == :alias, block)
         block_alias = !isnothing(block_alias) ? block[block_alias][2] : first(block)[2]
-        species_ixs = Int64[]
+        place_ixs = Int64[]
         for e in block, i in row_ids(net, :S)
             (
                 (i == e[2]) ||
@@ -47,20 +47,20 @@ function equalize!(net::ReactionNetwork, eqs = [])
                 ) ||
                     (e[2] == net[i, :placeName])
             ) && (
-                push!(species_ixs, i);
+                push!(place_ixs, i);
                 push!(specmap, net[i, :placeName] => (net[i, :placeName] = block_alias))
             )
         end
-        isempty(species_ixs) && continue
-        species_ixs = sort(unique!(species_ixs))
-        lix = first(species_ixs)
+        isempty(place_ixs) && continue
+        place_ixs = sort(unique!(place_ixs))
+        lix = first(place_ixs)
         for attr in propertynames(net.columns)
             !occursin("place", string(attr)) && continue
-            for i in species_ixs
+            for i in place_ixs
                 ismissing(net[lix, attr]) && (net[lix, attr] = net[i, attr])
             end
         end
-        rem_rows!(net, :S, species_ixs[2:end])
+        rem_rows!(net, :S, place_ixs[2:end])
     end
 
     for attr in propertynames(net.columns)

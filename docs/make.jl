@@ -117,6 +117,7 @@ makedocs(;
     warnonly = true,   # scaffold stage: don't fail on cross-references to pages not yet authored
     pages = [
         "Home" => "index.md",
+        "Glossary" => "glossary.md",   # ADR 0017 term dictionary + the two-register rule
         "Tutorials" => [
             "Introductory: your first model" => "tutorials/introductory.md",        # charter A1
             "Advanced: structured-token portfolios" => "tutorials/advanced.md",      # charter A2

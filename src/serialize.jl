@@ -99,15 +99,15 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()
     end
 
     # species[] → :S (placeInitVal/placeCost/… are scalar Const ExprNodes → literals)
-    for sp in get(d, "species", [])
-        i = add_row!(net, :S; placeName = Symbol(sp["name"]))
-        haskey(sp, "init") && (net[i, :placeInitVal] = to_expr(_attr_node(sp["init"])))
-        haskey(sp, "cost") && (net[i, :placeCost] = to_expr(_attr_node(sp["cost"])))
-        haskey(sp, "reward") && (net[i, :placeReward] = to_expr(_attr_node(sp["reward"])))
-        haskey(sp, "valuation") && (net[i, :placeValuation] = to_expr(_attr_node(sp["valuation"])))
-        get(sp, "structured", false) === true && (net[i, :placeStructured] = true)
+    for pl in get(d, "species", [])
+        i = add_row!(net, :S; placeName = Symbol(pl["name"]))
+        haskey(pl, "init") && (net[i, :placeInitVal] = to_expr(_attr_node(pl["init"])))
+        haskey(pl, "cost") && (net[i, :placeCost] = to_expr(_attr_node(pl["cost"])))
+        haskey(pl, "reward") && (net[i, :placeReward] = to_expr(_attr_node(pl["reward"])))
+        haskey(pl, "valuation") && (net[i, :placeValuation] = to_expr(_attr_node(pl["valuation"])))
+        get(pl, "structured", false) === true && (net[i, :placeStructured] = true)
         # modality 3-axis → Set{Symbol} (E6); default empty set = row 1
-        haskey(sp, "modality") && (net[i, :placeModality] = modality_from_dict(sp["modality"]))
+        haskey(pl, "modality") && (net[i, :placeModality] = modality_from_dict(pl["modality"]))
     end
 
     # transitions[] → :T. reactants[] for this transition assemble into the :trans reaction line.
@@ -843,17 +843,17 @@ end
 # clean and re-import reconstructs the same value via assign_defaults!. A literal Const lowered by
 # the loader is a bare Number here, so we emit the bare number (the loader's _attr_node wraps it).
 function _place_to_dict(net, i)
-    sp = Dict{String, Any}("name" => string(net[i, :placeName]))
+    pl = Dict{String, Any}("name" => string(net[i, :placeName]))
     iv = net[i, :placeInitVal]
-    iv isa Number && iv != 0 && (sp["init"] = iv)
+    iv isa Number && iv != 0 && (pl["init"] = iv)
     # cost/reward/valuation default to 0.0 (defargs[:S]); emit only when set (TVE=no literals).
     for (col, key) in (:placeCost => "cost", :placeReward => "reward", :placeValuation => "valuation")
         v = net[i, col]
-        v isa Number && v != 0 && (sp[key] = v)
+        v isa Number && v != 0 && (pl[key] = v)
     end
-    net[i, :placeStructured] && (sp["structured"] = true)
-    isempty(net[i, :placeModality]) || (sp["modality"] = modality_to_dict(net[i, :placeModality]))
-    return sp
+    net[i, :placeStructured] && (pl["structured"] = true)
+    isempty(net[i, :placeModality]) || (pl["modality"] = modality_to_dict(net[i, :placeModality]))
+    return pl
 end
 
 # Emit a transition's `id`/`name`, its `rate`(+`rate_mode`), and every non-default attr column
@@ -1075,10 +1075,10 @@ function populate_arcs!(net::ReactionNetwork)
                         )
                     )
                 else
-                    sp = r.place isa Symbol ? r.place : Symbol(r.place)
-                    j = find_index(sp, net)
+                    pl = r.place isa Symbol ? r.place : Symbol(r.place)
+                    j = find_index(pl, net)
                     if j === nothing
-                        push!(net.arcs, ArcSpec(t, 0, r.stoich, side, r.modality, sp))
+                        push!(net.arcs, ArcSpec(t, 0, r.stoich, side, r.modality, pl))
                     else
                         push!(net.arcs, ArcSpec(t, j, r.stoich, side, r.modality, nothing))
                     end

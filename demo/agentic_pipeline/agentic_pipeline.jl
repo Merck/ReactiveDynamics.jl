@@ -17,7 +17,7 @@
 # JSON document, validated, checkpointed, and replayed.
 #
 # Why ONE script for the whole tour? Because the strongest claim ReactiveDynamics makes is that
-# a model — its place, its pipeline transitions, its management levers, AND its initial
+# a model — its places, its pipeline transitions, its management levers, AND its initial
 # portfolio — is reproducible DATA, fully determined by `(model, population, seed)`. A single
 # command that builds, runs, serializes, validates, checkpoints, and replays the very same
 # model is that claim, executable.
@@ -111,7 +111,7 @@ println("advances — so we can select projects by attribute and follow each one
 # §1. The phase-as-attribute pipeline + the declarative initial portfolio
 # ════════════════════════════════════════════════════════════════════════════════════════
 #
-# A naive model would make a SPECIES per phase (Phase1, Phase2, …) and "advance" by destroying
+# A naive model would make a PLACE per phase (Phase1, Phase2, …) and "advance" by destroying
 # a Phase1 token and creating a Phase2 token. That breaks identity (the new token is a different
 # object) and multiplies the place count. The canonical ReactiveDynamics design (ADR 0008 §D)
 # is PHASE-AS-ATTRIBUTE: there is ONE :Project kind, and `phase` is a field. A pipeline step is
@@ -264,7 +264,7 @@ println("wins), so this selection reproduces exactly under the same (model, seed
 #
 #     Rule(id, guard::Expr, action; fire_mode = :once | :every_tick)
 #
-# The guard is evaluated against the live state (`@t()` is the clock; place/params are in
+# The guard is evaluated against the live state (`@t()` is the clock; places/params are in
 # scope). `fire_mode = :once` fires the action exactly once, the first tick its guard holds, then
 # latches OFF (`p.rules[i].enabled == false`); `_reinit!` re-arms it. The ACTION family — all
 # verified — composes via `Seq`:
@@ -527,7 +527,7 @@ println("was not selected and is untouched. @field read each token's OWN npv bef
 # model back to a full JSON document with `to_json_model`/`@export_model` and reload it loss-free
 # (a model is DATA in BOTH directions: author-as-JSON → load, and build/load → export → reload).
 
-# The pipeline as a JSON model. Structured place carry "structured": true; a pipeline step's
+# The pipeline as a JSON model. Structured places carry "structured": true; a pipeline step's
 # arcs are an LHS predicate + an RHS advance. (Bare string "Phase2" in clause arrays.)
 const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",

@@ -10,7 +10,7 @@ The motivation: years of unresolved technical debt were limiting the framework's
 
 Everything is specified contract-first: a normative operational-semantics contract (`spec/CONTRACT_DRAFT.md` §1–§15) and 15 Architecture Decision Records (`spec/adr/`), with the engine built to satisfy them. Implementation state is tracked in `spec/STATUS.md`.
 
-The classical modeling surface stays familiar. A plain-species SIR, end to end:
+The classical modeling surface stays familiar. A plain-place SIR, end to end:
 
 ```julia
 using ReactiveDynamics
@@ -61,7 +61,7 @@ This is the consequential part of the rework: the framework now natively express
           name => adv_phase2, cycletime => 2.0, probability => 0.4, priority => 2.0
   end
   ```
-- Genesis as a first-class transition product: `@structured(:Kind, field = …)` mints a fresh token on the RHS (the agentic `∅ --> species`), registry-resolved so it too serializes eval-free (ADR 0006, ADR 0005). Field expressions read live state (`@t()`) and the seeded RNG:
+- Genesis as a first-class transition product: `@structured(:Kind, field = …)` mints a fresh token on the RHS (the agentic `∅ --> place`), registry-resolved so it too serializes eval-free (ADR 0006, ADR 0005). Field expressions read live state (`@t()`) and the seeded RNG:
 
   ```julia
   @deterministic(1.0),
@@ -77,7 +77,7 @@ This is the consequential part of the rework: the framework now natively express
             AddToken(:Project, [:phase => QuoteNode(:Phase2), :npv => 175.0])]);  # add a program
        fire_mode = :once)
   ```
-- Hierarchical refinement and open-port composition: `@pipeline`, `@process`, and `@compose` author coarsely; `refine` substitutes a finer sub-process for one step via FK splice, non-mutating and leaving boundary species in place (ADR 0009):
+- Hierarchical refinement and open-port composition: `@pipeline`, `@process`, and `@compose` author coarsely; `refine` substitutes a finer sub-process for one step via FK splice, non-mutating and leaving boundary places in place (ADR 0009):
 
   ```julia
   portfolio = @pipeline Project begin
@@ -106,13 +106,13 @@ This is the consequential part of the rework: the framework now natively express
 
 - Native discrete-event engine (`ReactionNetworkProblem` stepped via AA's `_step!`); the SciML stack (`DifferentialEquations`, `OrdinaryDiffEq`, `DiffEqBase`) and the old `DiscreteProblem` transform were removed entirely — no dependencies, no code (ADR 0001). A SciML interop adapter is left as a possible future package extension, but none ships here.
 - Priority-weighted progressive-fill (water-filling) resource allocator — work-conserving, deterministic, dependency-free (ADR 0002).
-- Append-only mutation with soft deactivation, so transitions, species, and parameters can be added — and transitions retired — mid-simulation without breaking position-indexed compiled closures (ADR 0004).
+- Append-only mutation with soft deactivation, so transitions, places, and parameters can be added — and transitions retired — mid-simulation without breaking position-indexed compiled closures (ADR 0004).
 - `AbstractRNG` and `seed=` threaded through every draw; a run is fully determined by `(model, seed)` (CONTRACT §4).
-- Construction-time modality validation (`validate_modalities`, CONTRACT §1.4): rejects the three illegal modality configurations (`{:nonblock,:conserved}`; `:rate` with concrete `cycletime==0`; `:rate` on a structured species) with a clear `ArgumentError` before any tick, replacing late or silent failures.
+- Construction-time modality validation (`validate_modalities`, CONTRACT §1.4): rejects the three illegal modality configurations (`{:nonblock,:conserved}`; `:rate` with concrete `cycletime==0`; `:rate` on a structured place) with a clear `ArgumentError` before any tick, replacing late or silent failures.
 
 **Data store and serialization**
 
-- ACSets and Catlab **dropped** in favor of a dependency-free, typed struct-of-columns IR; the transition–reactant relation promoted to a first-class typed `ArcSpec` incidence table (ADR 0003).
+- ACSets and Catlab **dropped** in favor of a dependency-free, typed struct-of-columns IR; the transition–place relation (the net's arcs) promoted to a first-class typed `ArcSpec` incidence table (ADR 0003).
 - A single eval-free JSON serialization with a typed `ExprNode` IR: `from_json_model` and `to_json_model` round-trip, plus `validate`. This closes the import-time RCE and retires the TOML, CSV, and JLD2 format zoo (ADR 0005).
 - Post-ACSets naming pass (ADR 0015): `@reaction_network` (was `@ReactionNetworkSchema`), `net` (was `acs`), store type `ReactionNetwork`; store verbs renamed to store vocabulary (`nrows`, `row_ids`, `column`, `cell`, `find_rows`, …) **and unexported**. Old names survive one release as `@deprecate` shims; `GeneratedExpressions` dropped.
 

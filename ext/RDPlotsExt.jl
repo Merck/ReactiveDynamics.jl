@@ -162,7 +162,7 @@ end
 end
 
 # ── The live generic `_draw` reduction, relocated from src/interface/plots.jl ────────────
-# Species trajectories from `prob.sol` (generalized by recipe 1, kept as the AA `draw(prob)` entry).
+# Place (marking) trajectories from `prob.sol` (generalized by recipe 1, kept as the AA `draw(prob)` entry).
 function ReactiveDynamics.AlgebraicAgents._draw(
         prob::ReactionNetworkProblem,
         vars = string.(prob.acs[:, :placeName]);

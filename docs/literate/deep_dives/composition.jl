@@ -52,8 +52,8 @@ end
 # ## 1. Manual composition: `@join` and `@equalize`
 #
 # The lowest rung. `@join` takes the **union** of two networks' place, transitions, and
-# parameters (and their events and observables), optionally *identifying* shared place
-# across the two via equations. `@equalize` collapses two place *within* one network into a
+# parameters (and their events and observables), optionally *identifying* shared places
+# across the two via equations. `@equalize` collapses two places *within* one network into a
 # single pool and rewrites every reference. Both are the **manual, no-declared-ports** path:
 # you name the place to identify by hand. Both operate on a static network, before
 # construction.
@@ -129,14 +129,14 @@ println(
 
 # `@compose` is `@join` **plus automatic port matching**: an `:output` port of one fragment
 # is identified with a same-named `:input` port of another by repointing an integer foreign
-# key (not string surgery), `:private` place are namespaced per fragment, and `:shared`
-# place stay bare.
+# key (not string surgery), `:private` places are namespaced per fragment, and `:shared`
+# places stay bare.
 
 chain = @compose screening lead_opt
 populate_arcs!(chain)   # promote the incidence table so we can read it
 names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
-println("  merged place : ", names_chain)
+println("  merged places : ", names_chain)
 println(
     "  shared port `Lead` collapsed to ONE place? ",
     count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
@@ -204,8 +204,8 @@ phase2_ix_before = find_index(:Phase2, portfolio)
 phase3_ix_before = find_index(:Phase3, portfolio)
 
 # `refine(spec, transition, submodel; ports)` splices the sub-model into the named coarse
-# transition: it namespaces the sub's private place, identifies the sub's ports with the
-# parent boundary place by FK-repoint, appends the sub's transitions, and drops the coarse
+# transition: it namespaces the sub's private places, identifies the sub's ports with the
+# parent boundary places by FK-repoint, appends the sub's transitions, and drops the coarse
 # transition. It is **non-mutating** (`refine` = `refine!` on a `deepcopy`); `portfolio` is
 # left intact.
 
@@ -220,7 +220,7 @@ println("transitions BEFORE refine : ", tnames_before)
 println("transitions AFTER  refine : ", tnames_after)
 println("  coarse `flow_Phase2_Phase3` removed? ", !(:flow_Phase2_Phase3 in tnames_after))
 
-# **Plug-compatibility (the point of the whole rung).** Because the boundary place keep
+# **Plug-compatibility (the point of the whole rung).** Because the boundary places keep
 # their indices *and* their names, every transition *other* than the one we refined is
 # structurally byte-for-byte identical before and after. The rest of the portfolio does not
 # notice that Phase-2 became four sub-steps.
@@ -228,7 +228,7 @@ println("  coarse `flow_Phase2_Phase3` removed? ", !(:flow_Phase2_Phase3 in tnam
 println()
 println("PLUG-COMPATIBILITY:")
 println(
-    "  boundary place keep their indices — Phase2: ", phase2_ix_before, " → ",
+    "  boundary places keep their indices — Phase2: ", phase2_ix_before, " → ",
     find_index(:Phase2, refined), "   Phase3: ", phase3_ix_before, " → ", find_index(:Phase3, refined)
 )
 untouched = [:flow_Discovery_Phase1, :flow_Phase1_Phase2, :flow_Phase3_Filed, :flow_Filed_Market]
@@ -398,7 +398,7 @@ plot(p_ct, p_pos; layout = (1, 2), size = (760, 320), plot_title = "Granularity 
 #    matched automatically by FK-repoint;
 # 3. `@pipeline` — a whole phase chain authored in one block as `flow` routing transitions;
 # 4. `refine` — substitute a finer sub-model for one coarse transition, **plug-compatibly**
-#    (boundary place keep their indices/names; every other transition is untouched);
+#    (boundary places keep their indices/names; every other transition is untouched);
 # 5. `abstract` — the inverse, collapsing sub-steps back into one coarse transition;
 # 6. `refinement_diagnostics` — the advisory Σ-ct / Π-PoS boundary check that makes the ladder
 #    auditable, the granularity-substitution guarantee in computable form.

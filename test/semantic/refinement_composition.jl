@@ -28,7 +28,7 @@ const RD = ReactiveDynamics
         @test RD.port_role(f, :B) == :output
         @test RD.is_open_port(:input) && RD.is_open_port(:output)
         @test !RD.is_open_port(:private) && !RD.is_open_port(:shared)
-        # @port sugar tags groups; unlisted place keep :private
+        # @port sugar tags groups; unlisted places keep :private
         g = @reaction_network begin
             1.0, X --> Y, name => t
             1.0, Y --> Z, name => u
@@ -55,7 +55,7 @@ const RD = ReactiveDynamics
         names = m[:, :placeName]
         # the shared output→input port `mid` collapses to ONE place (FK-repoint)
         @test count(==(:mid), names) == 1
-        # private/other place are namespaced per fragment
+        # private/other places are namespaced per fragment
         @test :f1__raw in names
         @test :f2__product in names
         # both transitions survive (structural append, §7/J2)
@@ -102,7 +102,7 @@ const RD = ReactiveDynamics
         @test any(n -> occursin("filing", string(n)), tnames)
         # …and every OTHER transition is structurally unchanged (plug-compatibility, Invariant 1).
         @test :phase3 in tnames
-        # boundary place keep their names/indices (P1, P2 unchanged; P3 untouched).
+        # boundary places keep their names/indices (P1, P2 unchanged; P3 untouched).
         @test :P1 in r[:, :placeName]
         @test :P2 in r[:, :placeName]
         @test :P3 in r[:, :placeName]

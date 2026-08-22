@@ -429,7 +429,7 @@ banner("§7. The exec map — network_graph → draw_network → exec_map")
 # Layer A — the pure structure. Confirm it did not perturb the RNG.
 g = network_graph(prob)
 println("Layer A network_graph(prob):")
-println("  place (places)   : ", [s.name for s in g.places])
+println("  places           : ", [s.name for s in g.places])
 println("  transitions        : ", [t.name for t in g.transitions])
 println("  arcs               : ", length(g.arcs), " (:in LHS→T and :out T→RHS)")
 

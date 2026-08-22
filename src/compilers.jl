@@ -132,7 +132,7 @@ function wrap_expr(fex, place_names, prm_names, varmap)
     !isa(fex, Union{Expr, Symbol}) && return fex
     # escape refs in place names: A[1] -> Symbol("A[1]")
     fex = escape_ref(fex, place_names)
-    # escape dots in place' names: A.B -> Symbol("A.B")
+    # escape dots in place names: A.B -> Symbol("A.B")
     fex = deepcopy(fex)
     fex = recursively_expand_dots_in_ex!(fex, place_names)
 

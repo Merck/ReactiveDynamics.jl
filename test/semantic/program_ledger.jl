@@ -207,7 +207,7 @@ end
     end
 
     # ── valuation: a place with placeValuation marks its live programs to market ─────────
-    @testset "live programs are marked to market by their place' placeValuation" begin
+    @testset "live programs are marked to market by their place's placeValuation" begin
         # Give the Project place a placeValuation; a live (unblocked) program then carries that
         # mark in the ledger's `valuation` column (a stock, recomputed each tick — not a flow).
         net = advance_cost_model(; reward = 0.0)
@@ -222,7 +222,7 @@ end
         simulate(p)
         df = program_ledger(p)
         @test nrow(df) == 1
-        @test df[1, :valuation] == 50.0           # marked at the place' placeValuation
+        @test df[1, :valuation] == 50.0           # marked at the place's placeValuation
         @test df[1, :species] == :Project
     end
 end

@@ -100,7 +100,7 @@ println("export idempotent (re-export == export): ", idempotent)
 #
 # `validate(dict; registry)` is a PURE walk over the parsed document — no `node_from_dict`, no `to_expr`, no `eval`. It returns a `Vector{Diagnostic}`; an empty vector means clean, and `from_json_model` gates construction on exactly that. This is the pass an agent (or a colleague) runs to self-check a model *before* loading it.
 #
-# We reuse the pipeline as a hand-authored JSON document — structured place carry `"structured": true`, and a pipeline step's arcs are an LHS `predicate` plus an RHS `advance`.
+# We reuse the pipeline as a hand-authored JSON document — structured places carry `"structured": true`, and a pipeline step's arcs are an LHS `predicate` plus an RHS `advance`.
 
 const PIPELINE_JSON = """
 { "rd_format":"reactive-dynamics-model", "version":"1.0",

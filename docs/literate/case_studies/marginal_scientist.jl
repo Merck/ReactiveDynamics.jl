@@ -167,7 +167,7 @@ vline!([mean(d4), mean(d5)]; label = "means", lw = 2, color = :black, ls = :dash
 #
 # The number tells us a resource binds; the **execution map** shows *which* one and *how* the contention resolves. It is built in three layers, each usable alone:
 #
-# - `network_graph(prob)` — the pure Petri-net structure: place (places), transitions, and the arcs between them, with stoichiometry and modality. It runs on a copy and never perturbs the run.
+# - `network_graph(prob)` — the pure Petri-net structure: places, transitions, and the arcs between them, with stoichiometry and modality. It runs on a copy and never perturbs the run.
 # - `draw_network(prob)` — renders that structure to an image via Graphviz (authoring-time documentation; no run needed).
 # - `exec_map(prob; highlight)` — *decorates* the structure with run statistics: places that ran to a trough are painted as **starved** (the binding resource, in gold), and a `@select` cohort's path through the net is drawn as thick arcs — here, the launched cohort's route through the trials.
 #
@@ -177,7 +177,7 @@ launched_cohort = RD.TokenPredicate(:Project, [RD.Clause(:phase, :(==), QuoteNod
 
 g = network_graph(prob4)
 println("Execution-map structure:")
-println("  places (place) : ", [s.name for s in g.places])
+println("  places : ", [s.name for s in g.places])
 println("  transitions      : ", [t.name for t in g.transitions])
 starved = [s for (s, v) in RD._pool_troughs(prob4) if v <= 0.0]
 println("  starved place(s) : ", isempty(starved) ? "none" : starved, "  (painted gold — the binding resource)")

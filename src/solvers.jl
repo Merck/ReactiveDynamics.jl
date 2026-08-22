@@ -598,23 +598,23 @@ function structured_rhs(expr::Expr, state, transition)
         end
     elseif isexpr(expr, :macrocall) && macroname(expr) == :move
         expr = quote
-            species_from = $(expr.args[end - 1])
-            species_to = $(expr.args[end])
+            place_from = $(expr.args[end - 1])
+            place_to = $(expr.args[end])
 
-            return species_from, species_to
+            return place_from, place_to
         end
 
-        species_from, species_to =
+        place_from, place_to =
             Symbol.(context_eval(state, transition, state.wrap_fun(expr)))
 
         tokens =
-            filter(x -> get_place(x) == species_from, transition.bound_structured_agents)
+            filter(x -> get_place(x) == place_from, transition.bound_structured_agents)
 
         if !isempty(tokens)
             token = first(tokens)
             entangle!(getagent(state, "structured"), token)
 
-            set_place!(token, species_to)
+            set_place!(token, place_to)
             ix = findfirst(
                 i -> transition.bound_structured_agents[i] == token,
                 eachindex(transition.bound_structured_agents),
@@ -622,9 +622,9 @@ function structured_rhs(expr::Expr, state, transition)
             deleteat!(transition.bound_structured_agents, ix)
             set_bound_transition!(token, nothing)
 
-            return token, species_to
+            return token, place_to
         else
-            # No bound token of species_from to move — a graceful no-op (finish! skips a nothing
+            # No bound token of place_from to move — a graceful no-op (finish! skips a nothing
             # place), consistent with @advance; do NOT fall through to an implicit nothing that
             # would crash the (token, place) unpack at the call site.
             @error "Not enough tokens to allocate for a move."
@@ -850,7 +850,7 @@ end
 # Arcs are read via the eval-free static decomposition (`_split_reaction_line` +
 # `_static_arcs`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
 # modality Set matches what the engine forms per tick. The effective per-token modality unions the
-# arc's wrapper tags with the place' `:placeModality` (the `@mode` channel), exactly as the
+# arc's wrapper tags with the place's `:placeModality` (the `@mode` channel), exactly as the
 # runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
 # are the escape hatch and are left un-validated (they are un-validatable statically).
 function validate_modalities(net::ReactionNetwork)
@@ -912,7 +912,7 @@ end
 """
     ReactionNetworkProblem(net::ReactionNetwork, u0 = Dict(), p = Dict(); name = "reaction_network", seed = nothing, tspan, dt = 1, kwargs...)
 
-Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-place initial markings by name (defaulting to each place' `placeInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
+Construct a live simulation state (`ReactionNetworkProblem`) from a static authoring/IR store `net` — the central entry point that turns an authored `@reaction_network` into a runnable, steppable AA node. `u0` overrides plain-place initial markings by name (defaulting to each place's `placeInitVal`); `p` supplies/overrides parameters (merged over the store's declared params); `name` is the agent name. Meta keywords declared in the store (e.g. `tspan`, `dt`, `tunit`) are read as defaults and may be overridden by the matching kwargs. The constructor validates modalities up front (CONTRACT §1.4), compiles the attribute/transition closures against the frozen store positions (ADR 0004), builds the `rules`/`registry` endogenous-decision channel, and instantiates the declarative initial token population before arming the live phase guard.
 
 The `seed` kwarg owns the per-run RNG (CONTRACT §4): it fixes the state-owned stream so a run is fully determined by `(model, seed)`; absent, a fresh seed is drawn from system entropy and the REALIZED value stored on `.seed`, so any run stays replayable. `initial_rng` snapshots the stream at t=0 for `_reinit!`.
 """
@@ -1204,7 +1204,7 @@ function AlgebraicAgents._step!(state::ReactionNetworkProblem)
         ),
     )
 
-    # MVP finding D — mark each live program to market (its place' placeValuation) and push the
+    # MVP finding D — mark each live program to market (its place's placeValuation) and push the
     # per-tick per-program ledger row, in deterministic token order, right after the aggregate
     # :valuation row so the per-program and aggregate views are consistent (src/ledger.jl).
     attribute_valuation!(state)

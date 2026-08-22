@@ -495,7 +495,7 @@ MarkingPlot(prob::ReactionNetworkProblem; vars = string.(prob.network[:, :placeN
     MarkingPlot(prob, collect(String.(vars)))
 
 """
-    SaturationPlot(prob; vars = all place)
+    SaturationPlot(prob; vars = all places)
 
 Plot spec (ADR 0014 recipe 2) for RESOURCE UTILIZATION over time — the troughs of the named resource pools `vars` across a finished run, showing when a `@conserved`/`@rate` resource is drawn down (saturated). Realized by a `@recipe` in `RDPlotsExt`; needs `Plots` loaded.
 """

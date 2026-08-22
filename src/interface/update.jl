@@ -9,7 +9,7 @@ export @register
 # NOTE (WS-4 housekeeping): three dangling exports were DELETED from here — `@prob_role`,
 # `@list_by_role`, `@list_roles` (a legacy roles/actors ontology that was never implemented: no
 # macro definitions, no `placeRole` schema attribute), and `@prob_check_verbose` (see below). The
-# role concept was dropped; ADR 0009's `PortRole` is an unrelated per-Species `role` field authored
+# role concept was dropped; ADR 0009's `PortRole` is an unrelated per-Place `role` field authored
 # inside `@reaction_network`, not a `@prob_role`-style config macro, so nothing is repurposed.
 
 using DataFrames

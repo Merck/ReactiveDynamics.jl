@@ -119,11 +119,11 @@ function network_graph(prob::ReactionNetworkProblem)
         # the bound program (identity preserved, ADR 0008 §D), so an @advance RHS resolves back to it.
         struct_lhs = nothing
         for r in lhs[i]
-            sp = _place_sym(r.place)
-            (sp in known_places && net[find_index(sp, work), :placeStructured] === true) && (struct_lhs = sp)
+            pl = _place_sym(r.place)
+            (pl in known_places && net[find_index(pl, work), :placeStructured] === true) && (struct_lhs = pl)
             push!(
                 arcs, Arc(
-                    sp, tnode_name, :in,
+                    pl, tnode_name, :in,
                     r.stoich isa Real ? Float64(r.stoich) : 1.0, r.modality
                 )
             )
@@ -137,13 +137,13 @@ function network_graph(prob::ReactionNetworkProblem)
         for r in rprods
             modality = r.modality isa Set ? r.modality : Set{Symbol}()
             stoich = hasproperty(r, :stoich) && r.stoich isa Real ? Float64(r.stoich) : 1.0
-            sp = _place_sym(r.place)
+            pl = _place_sym(r.place)
             # An @advance/@move RHS is a macro Expr, not a plain place; its destination place is the
             # transition's structured LHS place (phase is an attribute, the kind is unchanged). Map
             # such a non-place RHS node back to that place so the arc connects to a real place rather
             # than a synthetic node named after the raw macro text.
-            sp in known_places || (struct_lhs === nothing || (sp = struct_lhs))
-            push!(arcs, Arc(tnode_name, sp, :out, stoich, modality))
+            pl in known_places || (struct_lhs === nothing || (pl = struct_lhs))
+            push!(arcs, Arc(tnode_name, pl, :out, stoich, modality))
         end
     end
     return NetworkGraph(places, transitions, arcs)

@@ -359,7 +359,7 @@ println(
 #
 #     Rule(id, guard::Expr, action; fire_mode = :once | :every_tick)
 #
-# The guard is evaluated against the live state (`@t()` is the clock; place and params are in
+# The guard is evaluated against the live state (`@t()` is the clock; places and params are in
 # scope). `fire_mode = :once` fires the action the first tick its guard holds, then latches off
 # (`_reinit!` re-arms it). Actions compose via `Seq`: `SetMarking` injects into a resource pool,
 # `SetParams` flips a model parameter, `AddToken` injects a fresh token *by kind* through the

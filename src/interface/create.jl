@@ -295,7 +295,7 @@ function normalize_pcs!(pcs, expr)
 end
 
 """
-Normalize a reaction `line` and collect its place into `arcs`: rewrite `-->` to the canonical
+Normalize a reaction `line` and collect its places into `arcs`: rewrite `-->` to the canonical
 `→`, split a bidirectional `⟷` line into its forward/backward pair, and descend into the LHS/RHS to
 register arc names ([`recursively_find_arcs!`](@ref)). Also threads the `pcs` computed-value
 accumulator through. Returns the normalized line(s). Called by [`get_transitions!`](@ref).

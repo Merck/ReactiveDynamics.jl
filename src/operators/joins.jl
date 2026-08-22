@@ -7,8 +7,8 @@ using MacroTools: prewalk
 """
     merge_networks!(net1, net2, name = gensym("net"), eqs = []) -> ReactionNetwork
 
-Merge `net2` into `net1` IN PLACE and return `net1`. `net2` is deep-copied and its place namespaced
-under `name` (via [`prepend!`](@ref)) before merging, so the two fragments' private place stay
+Merge `net2` into `net1` IN PLACE and return `net1`. `net2` is deep-copied and its places namespaced
+under `name` (via [`prepend!`](@ref)) before merging, so the two fragments' private places stay
 distinct; a place already present in `net1` is identified by name and its attribute cells overwritten
 from `net2` (later fragment wins), with modality sets unioned. Transitions, params, metadata, events
 (`:E`) and observables (`:obs`) are all carried across — `:E`/`:obs` STRUCTURALLY (appended, never
@@ -91,7 +91,7 @@ end
 """
 Namespace `net`'s place in place: rename each `X → name__X` and rewrite every reference to it across
 all attribute columns (and, structurally, inside observable option Exprs via [`prepend_obs!`](@ref)), so
-merging two fragments cannot conflate their private place. A `:shared`-role place (the first-class
+merging two fragments cannot conflate their private places. A `:shared`-role place (the first-class
 `@catchall`, ADR 0009 §A / CONTRACT §11.1) is identified by BARE name and left un-namespaced; `:private`
 (default) and the open `:input`/`:output` ports namespace here, with [`@compose`](@ref) re-identifying
 the open ports afterwards by FK-repoint. `eqs` drives cross-fragment identification via

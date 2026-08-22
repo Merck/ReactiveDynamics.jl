@@ -18,7 +18,7 @@
 # (test/semantic/refinement_composition.jl) and the operators/refine.jl docstrings
 # — this file invents no API. The setting is the same pharma R&D pipeline the other
 # demos use (Discovery → Phase1 → Phase2 → Phase3 → Filed → Market), but taught
-# through the refinement lens, on PLAIN counted place (no structured-token
+# through the refinement lens, on PLAIN counted places (no structured-token
 # machinery) so the refinement mechanics are the star and the demo runs fast.
 #
 # The whole layer is AUTHORING-time and additive: every operation here produces a
@@ -116,7 +116,7 @@ banner("§2. Reusable fragments + open ports: @process / @port / @compose (§A,�
 # or the default :private (auto-namespaced). `@port net A => input  B => output`
 # tags them (note the `=>` pairs). `@compose f1 f2 …` is `@join` PLUS automatic port
 # matching: an :output port of one fragment is identified with a same-named :input
-# port of another by the FK-repoint (not string surgery), :private place are
+# port of another by the FK-repoint (not string surgery), :private places are
 # namespaced per fragment, :shared stay bare.
 
 @process phase_gate(inp, outp; ct, pos) = begin
@@ -146,13 +146,13 @@ chain = @compose screening lead_opt
 RD.populate_arcs!(chain)
 names_chain = chain[:, :placeName]
 println("@compose screening lead_opt:")
-println("  merged place : ", names_chain)
+println("  merged places : ", names_chain)
 println(
     "  shared port `Lead` collapsed to ONE place? ",
     count(==(:Lead), names_chain) == 1, "  (FK-repoint, not two pools)"
 )
 println(
-    "  private place namespaced per fragment (f1__Screen, f2__Candidate)? ",
+    "  private places namespaced per fragment (f1__Screen, f2__Candidate)? ",
     (:f1__Screen in names_chain) && (:f2__Candidate in names_chain)
 )
 println("  transitions preserved : ", nrows(chain, :T), " (1 + 1, none lost)")
@@ -177,10 +177,10 @@ banner("§3. REFINE one transition — the multifidelity payoff (§B)  ★ headl
 #
 # `refine(spec, transition, submodel; ports)` splices the sub-model into the named
 # coarse transition in four authoring-time structural moves: (1) namespace the sub's
-# :private place; (2) identify the sub's open ports with the parent boundary
+# :private places; (2) identify the sub's open ports with the parent boundary
 # place via `ports` by FK-repoint; (3) append the sub's transitions + remaining
-# place/params/obs/EVENTS; (4) drop the coarse transition. It is NON-mutating
-# (refine = refine! on a deepcopy). Because move (2) leaves the BOUNDARY place
+# places/params/obs/EVENTS; (4) drop the coarse transition. It is NON-mutating
+# (refine = refine! on a deepcopy). Because move (2) leaves the BOUNDARY places
 # (Phase2, Phase3) at their same indices/names, coarse and refined are PLUG-
 # COMPATIBLE (Invariant 1): every OTHER transition is structurally untouched.
 
@@ -221,7 +221,7 @@ println(
 #    transition is byte-for-byte structurally identical before and after. ──
 println()
 println("PLUG-COMPATIBILITY (Invariant 1):")
-println("  boundary place keep their indices:")
+println("  boundary places keep their indices:")
 println(
     "    Phase2 : ", phase2_ix_before, " → ", find_index(:Phase2, refined),
     "   Phase3 : ", phase3_ix_before, " → ", find_index(:Phase3, refined)
@@ -242,9 +242,9 @@ println(
     "  — the rest of the portfolio does not notice the zoom."
 )
 
-# The sub's PRIVATE place are namespaced (not leaked as bare names).
+# The sub's PRIVATE places are namespaced (not leaked as bare names).
 println(
-    "  sub-private place namespaced (bare `screen` NOT present): ",
+    "  sub-private places namespaced (bare `screen` NOT present): ",
     !(:screen in refined[:, :placeName]),
     " ; namespaced form present: ",
     any(n -> occursin("__sub__screen", string(n)), refined[:, :placeName])
@@ -398,7 +398,7 @@ println(
           repoint, private namespaced, shared bare) — compositionality without
           remembering which names to @equalize.
       §3  ★ refine — substitute a finer sub-model for one coarse transition, PLUG-
-          COMPATIBLY: the boundary place keep their indices/names, so every OTHER
+          COMPATIBLY: the boundary places keep their indices/names, so every OTHER
           transition is structurally untouched. The portfolio doesn't notice Phase-2
           became four sub-steps. (Non-mutating; refine! is the in-place form.)
       §4  refinement_diagnostics — ADVISORY §C checks (dangling ports; Σct / ΠPoS drift

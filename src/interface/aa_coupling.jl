@@ -90,7 +90,7 @@ AlgebraicAgents._getparameters(rd::ReactionNetworkProblem) = rd.p
     _setparameters!(rd::ReactionNetworkProblem, parameters)
 
 Patch the network's parameters from a `Symbol=>value` dict (ADR 0012 §A, Invariant 5). Writes are
-PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (place/transitions/the network
+PARAM-ONLY: they `merge!` into `state.p` and NEVER touch structure (places/transitions/the network
 index), so they are ADR-0004 index-safe — structural change stays on the append-only mutation API.
 
 Caveat (ADR 0012 open question / §5 A3): a param feeding an attribute FROZEN at spawn (a token's

@@ -45,10 +45,10 @@ macro port(netex, pairs...)
     for p in pairs
         (Meta.isexpr(p, :call) && p.args[1] === :(=>)) ||
             error("@port: each entry must be `place => role`, got $(p)")
-        sp = p.args[2]
+        pl = p.args[2]
         role = p.args[3]
         role in valid || error("@port: role must be one of $(valid), got $(role)")
-        push!(call.args, :(set_port_role!($(esc(netex)), $(QuoteNode(sp)) => $(QuoteNode(role)))))
+        push!(call.args, :(set_port_role!($(esc(netex)), $(QuoteNode(pl)) => $(QuoteNode(role)))))
     end
     push!(call.args, :($(esc(netex))))
     return call
@@ -58,8 +58,8 @@ end
 #
 # `compose(f1, f2, …)` is `merge_networks!`/@join PLUS automatic port matching: each fragment's `output`
 # ports are identified with same-named `input` ports of the other fragments by the §7.4/J7 FK-repoint
-# (via equalize!, which now repoints ArcSpec FKs — ADR 0003 Phase 2), `private` place are
-# namespaced (m__X), and `shared` place are identified by bare name (prepend! skips them). Because
+# (via equalize!, which now repoints ArcSpec FKs — ADR 0003 Phase 2), `private` places are
+# namespaced (m__X), and `shared` places are identified by bare name (prepend! skips them). Because
 # it composes already-parsed ModelSpecs it CLOSES the §7/J4 (:E/:obs dropped — merge_networks! now merges
 # them) and J9 (undefined include_model — never taken) bugs en route.
 
@@ -67,7 +67,7 @@ end
     compose(fragments…; namespace=true)
 
 Compose model fragments by matching open ports. `output` ports are identified with same-named
-`input` ports across fragments (FK-repoint), `shared` place by bare name, `private` place are
+`input` ports across fragments (FK-repoint), `shared` places by bare name, `private` places are
 namespaced per fragment. Returns a new `ReactionNetwork`. `@compose f1 f2 …` is the macro form.
 """
 function compose(fragments::ReactionNetwork...)
@@ -133,17 +133,17 @@ end
 # `refine!(spec, T, sub; ports)` replaces the coarse transition named `T` with the sub-model `sub`,
 # plug-compatibly at its boundary, in four authoring-time structural moves (CONTRACT §11.2):
 #   1. namespace `sub`'s `private` place (leave input/output/shared un-prefixed for matching);
-#   2. identify `sub`'s open ports with the parent's boundary place per `ports` by FK-repoint;
-#   3. append `sub`'s transitions + remaining place/params/obs/EVENTS (this also merges :E/:obs);
+#   2. identify `sub`'s open ports with the parent's boundary places per `ports` by FK-repoint;
+#   3. append `sub`'s transitions + remaining places/params/obs/EVENTS (this also merges :E/:obs);
 #   4. remove the coarse transition `T` (and its ArcSpec rows).
-# Because the boundary place keep their indices/names/attributes, every transition NOT in {T}∪sub
+# Because the boundary places keep their indices/names/attributes, every transition NOT in {T}∪sub
 # is structurally unchanged (Invariant 1, plug-compatibility). Forbidden on a live model (reindexes).
 
 """
     refine!(spec, transition, submodel; ports = Dict(boundary_places => sub_port, …))
 
 Splice `submodel` into the coarse `transition` (named `Symbol`) of `spec`, identifying each of the
-submodel's open ports (`sub_port`) with the parent boundary place (`boundary_places`) given in
+submodel's open ports (`sub_port`) with the parent boundary places (`boundary_places`) given in
 `ports`. Mutates and returns `spec`. Authoring-time only.
 """
 function refine!(
@@ -169,7 +169,7 @@ function refine!(
     # `prepend!`/`normalize_name` rename the port to the boundary name (bare) while every PRIVATE
     # place is namespaced `<name>__X`. merge_networks! then merges the boundary-named port onto the
     # existing parent row (incident by placeName) — the structural FK-repoint — and appends the rest.
-    # `shared`-role sub place are left bare by prepend! (§A) and merge onto any same-named parent row.
+    # `shared`-role sub places are left bare by prepend! (§A) and merge onto any same-named parent row.
     eqs = Any[]
     for (boundary, subport) in ports
         push!(eqs, Any[(:alias, boundary), (:catchall, subport)])
@@ -215,7 +215,7 @@ function abstract_transitions(
         i === nothing && error("abstract_transitions: no transition named $(repr(tn))")
         push!(tis, i)
     end
-    # build the coarse reaction line LHS --> RHS from the boundary place
+    # build the coarse reaction line LHS --> RHS from the boundary places
     lhs_ex = isempty(lhs) ? :∅ : foldl((a, b) -> :($a + $b), lhs)
     rhs_ex = isempty(rhs) ? :∅ : foldl((a, b) -> :($a + $b), rhs)
     line = :($lhs_ex --> $rhs_ex)

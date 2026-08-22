@@ -67,7 +67,7 @@ using Random, Distributions, DataFrames
         @test alloc ≈ ws.req .* f'  # conjunctive consistency by construction
         @test f ≈ [10 / 3, 10 / 3] atol = 1.0e-3
         # ADR-0002 oracle f=[10/3,10/3]: place 2 (demand D=3) is the BINDING resource and
-        # saturates first (2·10/3 + 1·10/3 = 10), freezing BOTH transitions. Species 1 (demand
+        # saturates first (2·10/3 + 1·10/3 = 10), freezing BOTH transitions. Place 1 (demand
         # D=2) is then at 10/3+10/3 = 20/3 with 10/3 left idle — work-conserving, because no
         # unfrozen transition can use it. (The ADR table's "both resources fully used" gloss is
         # only true for the SYMMETRIC 'Differing binding res' row req=[[2,1],[1,2]]; for THIS

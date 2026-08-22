@@ -4,7 +4,7 @@
 # token_filtration.jl's @select (bind) and @advance (mutate) legs: a transition whose PRODUCT is a
 # freshly-constructed host token, entangled live into the structured pool by `structured_rhs`
 # (src/solvers.jl). It is genesis-as-first-class-transition-product — structurally parallel to
-# `∅ --> plain_species` — distinct from the imperative `AddToken`-in-a-Rule decision-channel path
+# `∅ --> plain_place` — distinct from the imperative `AddToken`-in-a-Rule decision-channel path
 # (ADR 0010, rules_decisions.jl).
 #
 # There is ONE authoring form (ADR 0005 §39 — the structured escape hatch promoted to a typed node):
