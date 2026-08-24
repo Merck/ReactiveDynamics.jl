@@ -8,6 +8,8 @@ ReactiveDynamics is a **Petri net** engine, and since v0.3 its API uses standard
 
 The reference pages and the [normative contract](https://github.com/Merck/ReactiveDynamics.jl/blob/main/spec/CONTRACT_DRAFT.md) say **place**, **marking** and **arc**, because those are the names in the code and in the literature. The tutorials and case studies say **resource pool** for the same thing — it is the word a portfolio or capacity discussion actually uses — glossed once at first use as "a place, in Petri-net terms". Both registers describe one object; nothing in the engine distinguishes them.
 
+If your readers want a third register, you do not have to argue with ours: [`@aka`](@ref) renames the objects per model, and its own example is `@aka net place = resource transition = reaction`. Drift where your domain wants it, in the model file, and leave the API canonical.
+
 ## Core vocabulary
 
 | Term | What it is in RD |
@@ -20,7 +22,9 @@ The reference pages and the [normative contract](https://github.com/Merck/Reacti
 | **transition** | A stateful *recipe* that spawns in-flight instances, occupies its input places for a `cycletime`, then completes with probability `probability` and emits its output places. Already the canonical Petri-net word; unchanged. |
 | **preset / postset** | The input places of a transition (`•t`) and its output places (`t•`) — the left- and right-hand sides of a reaction line. |
 | **firing** | One in-flight instance of a transition running to completion. |
+| **binding** | Which specific tokens a firing holds — `bound_tokens` (the blocking binds), `nonblock_tokens` (the read-only ones) and `binding` (the `kind => token` assignment) on a live firing. A transition plus a binding is a *binding element*. Distinct from an **arc**, which is static topology and has no runtime instance. |
 | **colour set** | The attribute schema of a structured place's tokens. Declared with `@structured_token` and registered by [`register_token_kind!`](@ref). |
+| **reaction network** | A Petri net presented in *reaction notation* — the arrow-form lines you author (`3*@conserved(scientist) + @rate(budget) --> compound`). Under the standard correspondence a reaction network and a Petri net are the same object: species↔places, reactions↔transitions. RD keeps the chemistry register for the **notation** (`@reaction_network`, "reaction line") and Petri vocabulary for the **object model** — you author in reaction lines and get a net of places, transitions and arcs. It is not a *chemical* reaction network: kinetics is just the archetypal instance of the ontology. |
 
 ## Which literature answers a question
 
@@ -58,6 +62,7 @@ Each retired name still resolves for one release and warns; see [ADR 0017](https
 | `specname` | [`placename`](@ref) |
 | `register_structured_species!` | [`register_token_kind!`](@ref) |
 | the `specName`/`specInitVal`/`specModality`/… store columns | `placeName`/`placeInitVal`/`placeDefaultModality`/… |
+| `stoich`, on an arc | `multiplicity` |
 
 The serialized [JSON document](reference/json_schema.md) renamed with them. The exporter emits only the new keys, so re-exporting a document written before v0.3 migrates it; the loader reads the retired keys for one release and warns.
 
@@ -71,3 +76,4 @@ The serialized [JSON document](reference/json_schema.md) renamed with them. The 
 | a `ref` node's `"kind": "species"` | `"kind": "place"` |
 | the result-frame / export column `:species` | `:place` |
 | the `@select`/`@advance` field `:species` | `:place` (accepted silently — a warning would fire once per tick) |
+| an arc's `"stoich"` | `"multiplicity"` |

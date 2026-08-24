@@ -60,6 +60,65 @@ One-time work: about a day of renaming plus half a day re-reading the docs, one 
 
 Technical detail, evidence, the full term dictionary, and the ordered migration: see Appendix.
 
+## Amendments — 2026-08-24 (post-implementation review)
+
+A read-through of the landed rename raised one question that turned out to matter more than the spellings: is *arc* even legible for what `reactant` denoted? Answering it produced a rule the original ADR lacked, and five corrections. All are recorded here rather than in a new ADR because none reverses a decision — they finish one.
+
+### A1 — The retired word was doing two jobs; only one of them is an arc
+
+`reactant` covered two concepts at different layers, which is why "reactant → arc" reads wrong to anyone holding the second one in mind:
+
+| the concept | where it lives | the right word |
+|---|---|---|
+| a static LHS/RHS entry — `(transition, place, side, multiplicity, modality)` | `ArcSpec`, `arcs(net)`, and per-tick `ResolvedArc` | **arc**, exactly. A weighted place↔transition connection; RD's extra decorations (modality, predicate) are a superset of the classical notion, not a contradiction |
+| the specific token a firing holds | `Transition.bound_tokens` / `.nonblock_tokens` / `.binding` | **binding** (Jensen). A transition plus a binding is a *binding element* — already the last row of the term dictionary |
+
+An arc is static and topological: it has no runtime instance, so "arc" must never reach the second layer. The original dictionary row (`reactant / product entry → input arc`) invited exactly that slip by naming only the first concept. `structured_to_agents` was already a vector of `kind => token` pairs — a binding in all but name — and is now spelled `binding`.
+
+### A2 — The rule for when to adopt a standard word and when to drift
+
+The discriminating question is not *is it standard* but **does the standard word carry a commitment RD violates**:
+
+- RD's concept is a **superset** of the standard one → adopt. An arc with a modality is still an arc; a firing with a duration is Ramchandani's timed firing, not a violation.
+- RD's concept **contradicts** the word → drift deliberately, and say so. `capacity` on a transition is k-server, whereas classical *place capacity* is a bound on a place; RD's `transCapacity` keeps its name but the glossary marks the collision.
+- The word names a **different layer** than RD's concept → never reuse it. This is the arc/binding trap in A1, and the one failure mode a glossary cannot paper over.
+- The word is **not in the literature at all** but earns its keep for an audience → allowed as a second register only, glossed once. This is the already-accepted `pool` decision.
+
+### A3 — `reaction` is retained deliberately: it names the notation, not the object model
+
+The review's first instinct was that `reaction` is the largest surviving chemistry word (166 `ReactionNetworkProblem`, 95 `ReactionNetwork`, 31 `reaction_network`, 18 `reaction_line`) and therefore unfinished business. That is wrong, and the distinction is worth stating because it also bounds any future ADR:
+
+**`species` was a category error. `reaction network` is a register choice.** This ADR's own Appendix makes the first argument — a chemical species has intrinsic properties (mass, charge) that a place does not, so calling a place a species mis-types it. No such argument exists for the whole net: under the textbook CRN↔Petri correspondence (species↔places, reactions↔transitions) a reaction network *is* a Petri net, the same object in a different register. So this ADR's reasoning does not extend to it, and it does not justify churning 261 sites plus a second rename of the flagship authoring macro two releases after ADR 0015 already moved it.
+
+The evidence agrees: nearly every surviving bare `reaction` in `src/` is **notation** — the arrow-form multiset-rewrite *reaction line*, `interface/reaction_parser.jl`, "reaction network DSL" — and the arrow notation genuinely is reaction notation, adapted from Catalyst (`interface/parsing_utils.jl:1`). Hence the rule:
+
+> **`reaction` names the notation; Petri vocabulary names the object model.** You author in reaction lines; what you get is a net of places, transitions and arcs.
+
+This retains `@reaction_network`, `ReactionNetwork`, `ReactionNetworkProblem`, `reaction_parser.jl`, `reaction_line` and the package name — deliberately, not vestigially. Four prose sites that used `reaction` to mean *a transition* (`ledger.jl`, `solvers.jl`, `state.jl`) were the genuine defect and now say "transition": a true synonym is still two words for one concept.
+
+One correction to the Problem statement above: it cites the front page as "denying that it is a chemical reaction network" as evidence against the name. The front page in fact already draws precisely the line A3 states — "Despite the reaction-network DSL *surface*, it is *not* a chemical reaction network: chemical kinetics is just the archetypal instance of the underlying ontology." It was never in tension with the type name, and needs no change.
+
+### A4 — `@aka` is the sanctioned channel for register drift
+
+RD already ships a per-model synonym mechanism, and its documented example is literally `@aka net place = resource transition = reaction` (`src/interface/update.jl`). So "drift where the domain wants it" is an *authoring* affordance, not a global vocabulary decision: canonical Petri names in the API, reaction notation in the syntax, and `@aka` for whatever register a given model's readers use. The glossary now points at it, which completes the retention story A3 opens.
+
+### A5 — Four spellings the tiers left behind
+
+| landed | instead of | why the obvious choice was rejected |
+|---|---|---|
+| `multiplicity` (195 sites + the wire key) | `stoich` | The dictionary says *arc weight*, but `weight` is already two other things here — `@choose` alternative weights and the allocator's fill-rate weights, both also JSON keys. A third meaning would rebuild the ambiguity. `multiplicity` is the co-standard term and collides with nothing. Adjacent to `transMultiplier` (a per-tick spawn-count multiplier), disambiguated by the `trans` prefix. The reader takes `"stoich"` for one release via `_legacy_key` |
+| `placeDefaultModality` | `placeModality` | The Appendix says this attribute "is an arc discipline, not a property of a substance at all" — then Tier 2 prefixed `place` onto it, preserving the category error. It is a default declared at the place and unioned into every arc touching it. A bare `defaultModality` was rejected: the `place` prefix is load-bearing, since `@join`/`equalize!` select the `:S` columns by that substring (`joins.jl:33`, `equalize.jl:58`) and would silently drop the column |
+| `bound_tokens`, `nonblock_tokens`, `binding` | `*_structured_agents`, `structured_to_agents` | "Structured agent" predates ADR 0008's choice of *token* and overloads AA's own noun. The union helper `_bound_tokens` became `_all_bound_tokens` so it no longer reads as the field's twin |
+| `ResolvedArc` | `UnfoldedArc` | "Unfolding" is doubly claimed — coloured→P/T expansion, and McMillan's branching-process unfolding for model checking — and RD means neither. The record is an arc whose attribute expressions have been evaluated against the current marking |
+
+### A6 — The migration's grep gate is now executable, and its claim was wrong
+
+Migration step 6 specified a grep gate; it was run by hand and never committed, and the shim block's comment claimed to be "the ONLY place in `src/` where the retired spellings survive". That was false: four other files carry legacy handling a forwarding binding cannot express — the `@aka` legacy object name (`interface/update.jl`), the `:species` selector field (`predicates.jl`, `solvers.jl`) and the serializer's wire-key aliases (`serialize.jl`). The gate now lives in `test/semantic/exports_resolve.jl`, pinning that exact five-file allowlist in both directions: a retired spelling appearing anywhere else fails, and a stale allowlist entry fails too, so dropping a shim forces the list to shrink with it.
+
+### A7 — Deferred to ADR 0018
+
+One category error remains and is out of scope here because it is not a chemistry word: the `@aagent` typed `Transition` is an in-flight **firing**, while the static transitions live in `transition_recipes` — canonical usage exactly reversed. `Transition`→`Firing`, `ongoing_transitions`→`ongoing_firings`, `transition_recipes`→`transitions` puts the canonical word back on the canonical concept. Blast radius is smaller than it looks: the AA-visible agent name is the string `"<transName>_@<t>"` (`solvers.jl`), so agent paths and saved documents are unaffected.
+
 ## Appendix
 
 ### Evidence for Problem
@@ -114,6 +173,8 @@ The mapping from RD's concepts to published Petri-net vocabulary, with the exten
 | structured token selected by predicate | ~ **binding element** (a transition plus a variable binding) | Coloured PN |
 
 *Token* is canonical and stays. The disambiguation belongs in prose at first use: "a token is a discrete unit of resource sitting in a place — the Petri-net sense, unrelated to language-model tokens".
+
+Two rows above were refined after implementation, see **Amendments**: the *reactant / product entry* row names only the static half of what `reactant` meant, and the runtime half is a **binding**, not an arc (A1); and the arc's coefficient ships as `multiplicity` rather than `weight`, which is already taken twice in this codebase (A5).
 
 ### Option C detail — tiers
 
