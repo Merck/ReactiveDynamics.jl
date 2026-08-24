@@ -222,26 +222,33 @@ println(
 )
 
 # --- 3d. Illegal modalities are REJECTED at construction (CONTRACT §1.4) -----
-# @rate's per-step draw is GATED on cycletime > 0: with the default cycletime 0
-# an instance never survives a tick boundary, so the reservation would never be
-# metered and the arc would silently become a free input. Rather than let that
-# model build and run wrong, `validate_modalities` (src/solvers.jl) enforces
-# CONTRACT §1.4 in the ReactionNetworkProblem constructor, BEFORE any tick. It
-# rejects three cross-products: :rate with cycletime == 0; :rate on a STRUCTURED
-# place (no dt-scaled slice of an indivisible agent); and {:nonblock,
+# @rate's per-step draw is explicitly gated on `transCycleTime > 0` inside
+# build_requirements! (src/solvers.jl), so at the default cycletime 0 the
+# reservation is never metered and the arc silently becomes a free input. Rather
+# than let that model build and run wrong, `validate_modalities` (src/solvers.jl)
+# enforces CONTRACT §1.4 in the ReactionNetworkProblem constructor, BEFORE any
+# tick. It rejects three cross-products: :rate with cycletime == 0; :rate on a
+# STRUCTURED place (no dt-scaled slice of an indivisible agent); and {:nonblock,
 # :conserved} on one arc (a resource cannot be both held-until-finish and
-# released-every-step). The mistake is unrepresentable, not merely documented.
-footgun = @reaction_network begin
+# released-every-step). With a LITERAL cycletime the mistake is unrepresentable
+# rather than merely documented — but the check is static, so a param- or
+# expression-valued cycletime is left to the runtime and can still reserve
+# nothing; likewise @choose / bidirectional lines are skipped un-validated.
+illegal = @reaction_network begin
     @deterministic(1.0), @rate(fuel) --> out, name => r0
 end
-@prob_init footgun fuel = 100 out = 0
-@prob_params footgun
+@prob_init illegal fuel = 100 out = 0
+@prob_params illegal
 try
-    ReactionNetworkProblem(footgun, Dict(); tspan = 4, dt = 1.0)
+    ReactionNetworkProblem(illegal, Dict(); tspan = 4, dt = 1.0)
     println("3d. @rate with cycletime 0          : CONSTRUCTED (unexpected!)")
 catch err
+    # Assert on the SPECIFIC guard: a future refactor that removed the validator
+    # must not leave this block still advertising it.
+    msg = sprint(showerror, err)
+    (err isa ArgumentError && occursin("cycletime == 0 is illegal", msg)) || rethrow()
     println("3d. @rate with cycletime 0          : rejected at construction ⇒")
-    println("    ", sprint(showerror, err))
+    println("    ", msg)
 end
 
 # The repair depends on which behavior you meant. To METER the pool over a cycle,
