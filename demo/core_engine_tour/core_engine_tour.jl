@@ -163,7 +163,7 @@ banner("§3. Resource modalities — the engine's signature feature (a truth-tab
 #                     that is merely occupied during the instance's cycle).
 #   @rate(X)       — METERED per ongoing tick: draws q·multiplicity·Δt each step the
 #                     instance is alive (a flow that is consumed continuously).
-#                     REQUIRES cycletime > 0, or it silently reserves NOTHING.
+#                     REQUIRES cycletime > 0; ct = 0 is rejected at construction.
 #   @nonblock(X)   — held but FREED every step (a soft hold). Also needs ct > 0.
 #   @rate(@conserved(X)) — stacked: BOTH tags. A "rented hold" — drawn per tick
 #                     but fully credited back at finish (net occupancy is small).
@@ -171,6 +171,7 @@ banner("§3. Resource modalities — the engine's signature feature (a truth-tab
 # We exercise each in its own tiny model and read the pool's trajectory. The
 # tell is the SHAPE of the pool over time: raw drains monotonically; conserved
 # plateaus above zero; rate keeps draining (gated on ct); rented plateaus high.
+# §3d then shows the construction-time validator refusing an ILLEGAL modality.
 
 # --- 3a. RAW CONSUMED: 2 material per firing, never returned -----------------
 raw = @reaction_network begin
@@ -220,23 +221,44 @@ println(
     "...  (metered q·s·Δt each ongoing tick, ramps then saturates at 3 concurrent)"
 )
 
-# --- 3d. The @rate cycletime=0 FOOT-GUN --------------------------------------
-# @rate's per-step draw is GATED on cycletime > 0. With the default cycletime 0,
-# an instance never persists across a tick boundary, so the @rate resource is
-# NEVER touched — the token becomes a silent free input. A real trap worth
-# seeing explicitly: `out` still grows while `fuel` never moves.
+# --- 3d. Illegal modalities are REJECTED at construction (CONTRACT §1.4) -----
+# @rate's per-step draw is GATED on cycletime > 0: with the default cycletime 0
+# an instance never survives a tick boundary, so the reservation would never be
+# metered and the arc would silently become a free input. Rather than let that
+# model build and run wrong, `validate_modalities` (src/solvers.jl) enforces
+# CONTRACT §1.4 in the ReactionNetworkProblem constructor, BEFORE any tick. It
+# rejects three cross-products: :rate with cycletime == 0; :rate on a STRUCTURED
+# place (no dt-scaled slice of an indivisible agent); and {:nonblock,
+# :conserved} on one arc (a resource cannot be both held-until-finish and
+# released-every-step). The mistake is unrepresentable, not merely documented.
 footgun = @reaction_network begin
     @deterministic(1.0), @rate(fuel) --> out, name => r0
 end
 @prob_init footgun fuel = 100 out = 0
 @prob_params footgun
-fg_prob = ReactionNetworkProblem(footgun, Dict(); tspan = 4, dt = 1.0)
-simulate(fg_prob)
+try
+    ReactionNetworkProblem(footgun, Dict(); tspan = 4, dt = 1.0)
+    println("3d. @rate with cycletime 0          : CONSTRUCTED (unexpected!)")
+catch err
+    println("3d. @rate with cycletime 0          : rejected at construction ⇒")
+    println("    ", sprint(showerror, err))
+end
+
+# The repair depends on which behavior you meant. To METER the pool over a cycle,
+# give the transition a cycletime — that is exactly §3c. To debit it ONCE at
+# spawn, drop the modality and let the arc be raw-consumed; then `fuel` moves.
+fixed = @reaction_network begin
+    @deterministic(1.0), fuel --> out, name => r0
+end
+@prob_init fixed fuel = 100 out = 0
+@prob_params fixed
+fixed_prob = ReactionNetworkProblem(fixed, Dict(); tspan = 4, dt = 1.0)
+simulate(fixed_prob)
 println(
-    "3d. @rate FOOT-GUN (ct defaults 0)  : fuel ",
-    fg_prob.sol[!, "fuel"][1], " → ", fg_prob.sol[!, "fuel"][end],
-    " (UNTOUCHED!) while out → ", Int(fg_prob.sol[!, "out"][end]),
-    "  ⇒ @rate needs cycletime > 0"
+    "    repaired as a bare (raw) arc    : fuel ",
+    fixed_prob.sol[!, "fuel"][1], " → ", fixed_prob.sol[!, "fuel"][end],
+    ", out → ", Int(fixed_prob.sol[!, "out"][end]),
+    "  (a one-shot debit is what ct = 0 can express)"
 )
 
 # --- 3e. @nonblock: held but freed every step --------------------------------
@@ -605,7 +627,8 @@ println(
       §2  Stateful lifecycle: cycletime (in-flight delay), Binomial `probability`,
           `capacity` bound on concurrency, and `maxlifetime` timeout.
       §3  Resource modalities: raw-consumed vs @conserved vs @rate vs @nonblock vs
-          the stacked rented hold — plus the @rate-with-cycletime=0 foot-gun.
+          the stacked rented hold — plus the CONTRACT §1.4 construction-time
+          validator refusing @rate with cycletime 0.
       §4  The priority-weighted allocator: progressive_fill! directly (contended and
           slack), then genuine in-model contention where higher priority wins.
       §5  Genesis: Poisson source (∅, dt-invariant), token-gated flow/routing, and
