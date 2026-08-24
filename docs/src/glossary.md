@@ -15,8 +15,8 @@ The reference pages and the [normative contract](https://github.com/Merck/Reacti
 | **place** | A resource pool: the `:S` rows of a network, one per named resource. Authored with `@add_place` or by naming it in a transition line. |
 | **marking** | The quantity of tokens in each place — the net's state. `state.u` is the current marking; `placeInitVal` (`@prob_init`) declares the initial marking `M₀`. |
 | **token** | One discrete unit of resource in a place. *Fungible* tokens are pure quantity (cash, headcount); *structured* tokens are agents with attributes, identity and history. |
-| **arc** | One participation of a place in a transition — an [`ArcSpec`](@ref) row carrying `(transition, place, side, stoichiometry, modality)`. Input arcs form the left-hand side, output arcs the right-hand side. |
-| **arc weight** | The stoichiometric coefficient on an arc (`2I` is an arc of weight 2). May be a time-varying expression. |
+| **arc** | One participation of a place in a transition — an [`ArcSpec`](@ref) row carrying `(transition, place, side, multiplicity, modality)`. Input arcs form the left-hand side, output arcs the right-hand side. |
+| **arc multiplicity** | How many tokens an arc moves per firing (`2I` is an arc of multiplicity 2). May be a time-varying expression. The literature also says *arc weight*; the field and JSON key are `multiplicity`, because `weight` already names `@choose` alternative weights and the allocator's fill-rate weights. |
 | **transition** | A stateful *recipe* that spawns in-flight instances, occupies its input places for a `cycletime`, then completes with probability `probability` and emits its output places. Already the canonical Petri-net word; unchanged. |
 | **preset / postset** | The input places of a transition (`•t`) and its output places (`t•`) — the left- and right-hand sides of a reaction line. |
 | **firing** | One in-flight instance of a transition running to completion. |
@@ -30,7 +30,7 @@ The mapping from RD's features onto the published Petri-net extensions, so you k
 |:--- |:--- |:--- |
 | fungible resource pool | **place**; its count is that place's **marking** | classical place/transition net; `M₀` is the initial marking |
 | structured-token pool | place with a **colour set**; its tokens are distinguishable | Coloured Petri nets (Jensen) — token attributes are *colours* |
-| left-/right-hand-side entry | input **arc** / output arc; stoichiometry is the **arc weight** (inscription) | classical |
+| left-/right-hand-side entry | input **arc** / output arc; multiplicity is the **arc weight** (inscription) | classical |
 | LHS / RHS multiset | **preset** `•t` / **postset** `t•` | classical |
 | transition | **transition** | already canonical |
 | `rate` expression | **firing rate**, marking-dependent. RD's Poisson intensity with unbounded concurrency is **infinite-server** semantics | Stochastic PN / GSPN |
@@ -57,7 +57,7 @@ Each retired name still resolves for one release and warns; see [ADR 0017](https
 | `reactant_specs` | [`arcs`](@ref) |
 | `specname` | [`placename`](@ref) |
 | `register_structured_species!` | [`register_token_kind!`](@ref) |
-| the `specName`/`specInitVal`/`specModality`/… store columns | `placeName`/`placeInitVal`/`placeModality`/… |
+| the `specName`/`specInitVal`/`specModality`/… store columns | `placeName`/`placeInitVal`/`placeDefaultModality`/… |
 
 The serialized [JSON document](reference/json_schema.md) renamed with them. The exporter emits only the new keys, so re-exporting a document written before v0.3 migrates it; the loader reads the retired keys for one release and warns.
 

@@ -34,13 +34,13 @@ struct TransitionNode
     label::String
 end
 
-# An arc: LHS place → transition (`:in`) or transition → RHS place (`:out`), with stoichiometry
+# An arc: LHS place → transition (`:in`) or transition → RHS place (`:out`), with multiplicity
 # and the modality set (the §1 truth-table tags consumed/conserved/nonblock/rate) that styles it.
 struct Arc
     from::Symbol
     to::Symbol
     dir::Symbol                 # :in (place→transition) or :out (transition→place)
-    stoich::Float64
+    multiplicity::Float64
     modality::Set{Symbol}
 end
 
@@ -48,7 +48,7 @@ end
     NetworkGraph
 
 A plain, inspectable Petri-net view of a model (ADR 0014 Layer A / §15.2 Invariant 1): place
-(place) nodes, transition nodes, and the arcs between them with stoichiometry + modality. Built by
+(place) nodes, transition nodes, and the arcs between them with multiplicity + modality. Built by
 `network_graph` with NO plotting/Graphviz dependency and NO simulation — a pure function of the
 model — so the diagram is authoring-time documentation as well as a run artifact.
 """
@@ -90,7 +90,7 @@ end
 Extract the Petri-net structure of a constructed model (Layer A). Walks the place table for the
 place nodes (flagging structured/agentic place) and the transition incidence for the arcs — today
 via `transLHS`/`transRHS` (the parsed arc lists + the RHS expression). Because that incidence is
-realized by `sample_transitions!` (which draws stoichiometries through the RNG), this runs on a
+realized by `sample_transitions!` (which draws multiplicities through the RNG), this runs on a
 `deepcopy` of `prob` so the caller's `state.rng` is NOT perturbed — `network_graph` is observationally
 pure (no simulation, Invariant 1). The extraction simplifies (typed FKs, no arc re-parse) when
 the ADR 0003 `ArcSpec` table lands; this is the `transLHS`/`transRHS` form noted in §15.2.
@@ -124,7 +124,7 @@ function network_graph(prob::ReactionNetworkProblem)
             push!(
                 arcs, Arc(
                     pl, tnode_name, :in,
-                    r.stoich isa Real ? Float64(r.stoich) : 1.0, r.modality
+                    r.multiplicity isa Real ? Float64(r.multiplicity) : 1.0, r.modality
                 )
             )
         end
@@ -136,14 +136,14 @@ function network_graph(prob::ReactionNetworkProblem)
         end
         for r in rprods
             modality = r.modality isa Set ? r.modality : Set{Symbol}()
-            stoich = hasproperty(r, :stoich) && r.stoich isa Real ? Float64(r.stoich) : 1.0
+            multiplicity = hasproperty(r, :multiplicity) && r.multiplicity isa Real ? Float64(r.multiplicity) : 1.0
             pl = _place_sym(r.place)
             # An @advance/@move RHS is a macro Expr, not a plain place; its destination place is the
             # transition's structured LHS place (phase is an attribute, the kind is unchanged). Map
             # such a non-place RHS node back to that place so the arc connects to a real place rather
             # than a synthetic node named after the raw macro text.
             pl in known_places || (struct_lhs === nothing || (pl = struct_lhs))
-            push!(arcs, Arc(tnode_name, pl, :out, stoich, modality))
+            push!(arcs, Arc(tnode_name, pl, :out, multiplicity, modality))
         end
     end
     return NetworkGraph(places, transitions, arcs)
@@ -169,7 +169,7 @@ _dotstr(s) = "\"" * replace(string(s), "\"" => "\\\"") * "\""
     to_graphviz(g::NetworkGraph; highlight_places = Symbol[], highlight_arcs = Tuple{Symbol,Symbol}[]) -> String
 
 Emit Graphviz DOT for the Petri net (Layer B): place as circles, transitions as boxes, arcs with
-stoichiometry labels and color by §1 modality. `highlight_places`/`highlight_arcs` paint a subset
+multiplicity labels and color by §1 modality. `highlight_places`/`highlight_arcs` paint a subset
 (used by Layer C's overlay). Returns a DOT digraph STRING — rendering is deferred to `draw_network`
 (via AA's `run_graphviz`), so emitting the structure needs no Graphviz backend (Invariant 2). Valid
 DOT for any model; the smoke tests check `dot` accepts it for SIR/toy-pharma.
@@ -200,7 +200,7 @@ function to_graphviz(
         color = _arc_color(a.modality)
         key = (a.from, a.to)
         pen = key in ha ? ", penwidth=3.0" : ""
-        lbl = a.stoich == 1.0 ? "" : ", label=$(_dotstr(string(a.stoich)))"
+        lbl = a.multiplicity == 1.0 ? "" : ", label=$(_dotstr(string(a.multiplicity)))"
         println(io, "  $(_dotstr(a.from)) -> $(_dotstr(a.to)) [color=$color$lbl$pen];")
     end
     println(io, "}")

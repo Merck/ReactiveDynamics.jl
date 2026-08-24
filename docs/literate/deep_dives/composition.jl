@@ -34,7 +34,7 @@ const RD = ReactiveDynamics
 
 # The **structural signature** of a named transition — its cycletime, probability-of-success,
 # and the arc rows read off the promoted incidence table as `(place name, side,
-# stoich)`. Two transitions with equal signatures are structurally identical; keying by
+# multiplicity)`. Two transitions with equal signatures are structurally identical; keying by
 # transition *name* (not row index) makes the comparison robust to the row-reordering that
 # composition and refinement perform. We use it to *prove* plug-compatibility in §4.
 function trans_signature(m, tname)
@@ -42,7 +42,7 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(placename(m, r.place)), r.side, r.stoich)
+            (string(placename(m, r.place)), r.side, r.multiplicity)
                 for r in arcs(m) if r.trans == ti && r.place > 0
         ]
     )

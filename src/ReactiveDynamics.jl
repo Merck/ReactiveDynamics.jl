@@ -45,7 +45,7 @@ end
 const SCHEMA = (
     S = (
         placeName = Symbol,
-        placeModality = Set{Symbol},
+        placeDefaultModality = Set{Symbol},
         placeInitVal = SampleableValues,
         placeInitUncertainty = SampleableValues,
         placeCost = SampleableValues,
@@ -115,9 +115,9 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 # name colliding inside a subexpression.
 #
 # The `expr` field is the ADR-mandated ESCAPE-HATCH for the legitimately dynamic arcs that are
-# NOT a static (place, stoich) pair — `@choose` (random place per call), `@move`/`@structured`/
+# NOT a static (place, multiplicity) pair — `@choose` (random place per call), `@move`/`@structured`/
 # `@advance` (RHS macrocalls), `@select(Kind, …)` (a token PREDICATE whose "place" is a structured
-# kind, not a :S row), and expression-valued stoichiometry. Such a row carries `place = 0` (the
+# kind, not a :S row), and expression-valued multiplicity. Such a row carries `place = 0` (the
 # "no static FK" sentinel — the store reads an undefined Int cell as `nothing`, but here the table is
 # a plain Vector so we use 0 explicitly) and stashes the original term Expr in `expr`; a static row
 # has `place ≥ 1` and `expr === nothing`.
@@ -130,12 +130,12 @@ AttrColumn{T}() where {T} = AttrColumn{T}(T[], Bool[])
 """
     ArcSpec
 
-One row of the promoted transition↔place incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `place` (FK → an `:S` row) with `stoich` stoichiometry on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge places by structurally REPOINTING the `place` FK instead of doing string surgery on names. A legitimately dynamic arc (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued stoichiometry) carries the sentinel `place = 0` and stashes its original term in `expr`; a static arc has `place ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_arcs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`arcs`](@ref).
+One row of the promoted transition↔place incidence relation (ADR 0003 Phase 2): a transition `trans` (FK → a `:T` row) consumes/produces `place` (FK → an `:S` row) with `multiplicity` multiplicity on `side` (`:lhs` or `:rhs`), under a `modality` set. Promoting the relation from the re-parsed `:trans` Expr into a typed record with INTEGER foreign keys makes the model's defining relation FK-checkable and — the headline win — lets [`equalize!`](@ref) merge places by structurally REPOINTING the `place` FK instead of doing string surgery on names. A legitimately dynamic arc (a `@choose`/`@move`/`@structured`/`@advance`/`@select` term, or expression-valued multiplicity) carries the sentinel `place = 0` and stashes its original term in `expr`; a static arc has `place ≥ 1` and `expr === nothing`. The table is DERIVED from the authoritative `:trans` column (see `populate_arcs!`) and is additive/behavior-preserving — the runtime still parses `:trans` per tick. Read it via [`arcs`](@ref).
 """
 struct ArcSpec
     trans::Int              # FK → :T
     place::Int              # FK → :S, or 0 for a dynamic (expr-carried) arc
-    stoich::SampleableValues
+    multiplicity::SampleableValues
     side::Symbol            # :lhs or :rhs
     modality::Set{Symbol}
     expr::Union{Nothing, Expr, Symbol}   # escape-hatch term for a dynamic arc, else nothing
@@ -371,7 +371,7 @@ function assign_defaults!(net::ReactionNetwork)
     end
 
     foreach(
-        i -> !isnothing(net[i, :placeModality]) || (net[i, :placeModality] = Set{Symbol}()),
+        i -> !isnothing(net[i, :placeDefaultModality]) || (net[i, :placeDefaultModality] = Set{Symbol}()),
         row_ids(net, :S),
     )
     k = [:placeCost, :placeReward, :placeValuation]
@@ -490,9 +490,13 @@ include("visualize.jl")
 # lineage; removed in a follow-up release. The block sits after the includes because three of the
 # new names (`SetMarking`, `register_token_kind!`, `@add_place`) are defined in included files.
 #
-# This block is deliberately the ONLY place in `src/` where the retired spellings survive (the
-# rename's grep gate asserts exactly that), so keep new shims here rather than beside their
-# definitions.
+# This block is where a retired NAME shim belongs — keep new ones here rather than beside their
+# definitions. It is NOT the only place a retired spelling survives, because a forwarding binding
+# cannot express all of them: the `@aka` legacy object name (`interface/update.jl`), the `:species`
+# selector field (`predicates.jl`, `solvers.jl`) and the serializer's wire-key read aliases
+# (`serialize.jl`) each carry their own one-release shim. The ADR-0017 gate in
+# `test/semantic/exports_resolve.jl` pins that exact list, so a retired spelling reappearing
+# anywhere else in `src/` fails the suite.
 #
 # Tier 1 — names that were exported, so the shim re-exports them too.
 Base.@deprecate_binding ReactantSpec ArcSpec

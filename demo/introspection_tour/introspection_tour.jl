@@ -411,7 +411,7 @@ println("  TokenTrajectoryPlot(:value) rendered → ", relpath(traj_png, HERE))
 # usable alone:
 #
 #   Layer A — network_graph(prob) → NetworkGraph. A pure, dependency-free Petri-net
-#       view: place (place) nodes, transition nodes, arcs with stoichiometry +
+#       view: place (place) nodes, transition nodes, arcs with multiplicity +
 #       modality. Runs on a deepcopy, so it does NOT perturb the caller's RNG — pure.
 #   Layer B — to_graphviz(g) emits DOT; draw_network(prob) renders it through AA's
 #       run_graphviz (Graphviz_jll or a system `dot`). No run needed — this is the

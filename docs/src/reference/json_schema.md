@@ -74,7 +74,7 @@ This is the promoted first-class incidence table — the transition↔place rela
   - `advance` — an RHS lifecycle field-write `@advance`: `{ "field": <string>, "value": <node|literal> }`.
   - `structured` — an RHS **named genesis product** `@structured(:Kind, field = …)`: `{ "kind": <registered structured place>, "fields": [{ "name", "value" }, …] }` (the raw-constructor form was removed so serialization is total).
   - `move` — a place relabel `@move`: `{ "from": <place>, "to": <place> }`.
-- `stoich` — the integer stoichiometric coefficient (or an ExprNode for the rare expression-valued case); omitted when 1.
+- `multiplicity` — the arc multiplicity — how many tokens the arc moves per firing (or an ExprNode for the rare expression-valued case); omitted when 1.
 - `modality` — the 3-axis modality (LHS terms only); omitted when empty.
 
 ## The ExprNode IR
@@ -175,14 +175,14 @@ The excerpt below is trimmed from the BD acquisition demo model at `demo/bd_acqu
   "arcs": [
     { "transition": "adv_discovery", "side": "lhs",
       "predicate": { "kind": "Project", "clauses": [ ["phase", "==", "Discovery"] ] } },
-    { "transition": "adv_discovery", "side": "lhs", "place": "scientist", "stoich": 2,
+    { "transition": "adv_discovery", "side": "lhs", "place": "scientist", "multiplicity": 2,
       "modality": { "allocation": "upfront", "return": "conserved", "blocking": "block" } },
-    { "transition": "adv_discovery", "side": "lhs", "place": "budget", "stoich": 2,
+    { "transition": "adv_discovery", "side": "lhs", "place": "budget", "multiplicity": 2,
       "modality": { "allocation": "perstep", "return": "consumed", "blocking": "block" } },
     { "transition": "adv_discovery", "side": "rhs",
       "advance": { "field": "phase", "value": "Phase1" } },
 
-    { "transition": "financing", "side": "rhs", "place": "budget", "stoich": 1 }
+    { "transition": "financing", "side": "rhs", "place": "budget", "multiplicity": 1 }
   ]
 }
 ```

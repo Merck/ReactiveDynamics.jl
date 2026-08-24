@@ -115,7 +115,7 @@ end
 
 """
 Union the modality tags in `dict` (`place-or-regex => modalities`) into each matching place'
-`placeModality` set, in place. A plain key matches one place by name ([`find_rows`](@ref)); a `Regex`
+`placeDefaultModality` set, in place. A plain key matches one place by name ([`find_rows`](@ref)); a `Regex`
 key matches every place whose name matches ([`incident_pattern`](@ref)). The runtime behind
 [`@mode`](@ref).
 """
@@ -128,8 +128,8 @@ function mode!(net, dict)
         end
 
         for ix in i
-            isnothing(net[ix, :placeModality]) && (net[ix, :placeModality] = Set{Symbol}())
-            union!(net[ix, :placeModality], mods)
+            isnothing(net[ix, :placeDefaultModality]) && (net[ix, :placeDefaultModality] = Set{Symbol}())
+            union!(net[ix, :placeDefaultModality], mods)
         end
     end
     return

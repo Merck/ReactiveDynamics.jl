@@ -127,12 +127,12 @@ end
 
 """
 The structured tokens bound to `place` by a firing `transition` — filters the transition's
-`bound_structured_agents` to those whose `place` is `place`. Returns `nothing` when there is no
+`bound_tokens` to those whose `place` is `place`. Returns `nothing` when there is no
 transition or nothing is bound. Used by action/predicate evaluation to resolve `@field`-style token reads.
 """
 function get_bound_agent(transition, place)
-    return if !isnothing(transition) && !isempty(transition.bound_structured_agents)
-        bound_agents = filter(x -> x.place == place, transition.bound_structured_agents)
+    return if !isnothing(transition) && !isempty(transition.bound_tokens)
+        bound_agents = filter(x -> x.place == place, transition.bound_tokens)
 
         bound_agents
     end

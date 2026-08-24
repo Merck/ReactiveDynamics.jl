@@ -1,4 +1,4 @@
-# Typed, eval-free expression IR (ADR 0005). Every time-varying attribute (rate, stoich,
+# Typed, eval-free expression IR (ADR 0005). Every time-varying attribute (rate, multiplicity,
 # cycletime, prob_of_success, priority, …) and action value is authored — by a human or an LLM —
 # as a closed tagged-union `ExprNode` tree, NEVER a Julia source string. `to_expr` lowers a tree
 # to EXACTLY the `Expr` the existing DSL produces (which `wrap_fun`/`compile_attrs` then compile
@@ -9,7 +9,7 @@
 """
     ExprNode
 
-Abstract supertype of the closed, eval-free expression IR (ADR 0005). Every time-varying attribute (rate, stoich, cycletime, prob_of_success, priority, …) and action value is authored — by a human or an LLM — as a tagged-union tree of `ExprNode`s, NEVER as a Julia source string. The union is CLOSED (the concrete leaves/nodes below) and its operator/distribution/reference vocabulary is fixed by the [`OP_WHITELIST`](@ref)/[`DIST_WHITELIST`](@ref)/[`REF_KINDS`](@ref) whitelists, so a model can be (de)serialized and validated without ever `Meta.parse`/`eval`-ing a field — those whitelists are the only Julia ever produced from an inert model document (the trust boundary). [`to_expr`](@ref) lowers a tree to EXACTLY the `Expr` the DSL produces (compiled to a closure ONCE at construction); [`from_expr`](@ref) is the structural inverse. The runtime hot path is untouched — this is purely the authoring/serialization boundary.
+Abstract supertype of the closed, eval-free expression IR (ADR 0005). Every time-varying attribute (rate, multiplicity, cycletime, prob_of_success, priority, …) and action value is authored — by a human or an LLM — as a tagged-union tree of `ExprNode`s, NEVER as a Julia source string. The union is CLOSED (the concrete leaves/nodes below) and its operator/distribution/reference vocabulary is fixed by the [`OP_WHITELIST`](@ref)/[`DIST_WHITELIST`](@ref)/[`REF_KINDS`](@ref) whitelists, so a model can be (de)serialized and validated without ever `Meta.parse`/`eval`-ing a field — those whitelists are the only Julia ever produced from an inert model document (the trust boundary). [`to_expr`](@ref) lowers a tree to EXACTLY the `Expr` the DSL produces (compiled to a closure ONCE at construction); [`from_expr`](@ref) is the structural inverse. The runtime hot path is untouched — this is purely the authoring/serialization boundary.
 """
 abstract type ExprNode end
 

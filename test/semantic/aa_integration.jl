@@ -51,7 +51,7 @@ const _COUPLED_JSON = """
   "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
   "places":[{"name":"A","init":0}],
   "transitions":[{"id":"t1","name":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-  "arcs":[{"transition":"t1","side":"rhs","place":"A","stoich":1}] }
+  "arcs":[{"transition":"t1","side":"rhs","place":"A","multiplicity":1}] }
 """
 
 @testset "AlgebraicAgents integration & external coupling (ADR 0012)" begin
@@ -64,8 +64,8 @@ const _COUPLED_JSON = """
           "places":[{"name":"A","init":100},{"name":"B","init":7}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic",
                           "cycletime":0.0,"prob_of_success":1.0}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         p = RD.from_json_model(json; seed = 1)
 
@@ -96,7 +96,7 @@ const _COUPLED_JSON = """
           "params":[],
           "places":[{"name":"A","init":50}],
           "transitions":[{"id":"t1","name":"t1","rate":0.0,"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}],
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1}],
           "observables":[{"name":"a_level","every":1.0,
                           "range":[{"weight":1.0,"value":{"node":"ref","kind":"place","name":"A"}}]}] }
         """
@@ -113,7 +113,7 @@ const _COUPLED_JSON = """
           "params":[{"name":"beta","value":0.4},{"name":"gamma","value":2.0}],
           "places":[{"name":"A","init":1}],
           "transitions":[{"id":"t1","name":"t1","rate":0.0,"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1}] }
         """
         p = RD.from_json_model(json; seed = 1)
         ps = AlgebraicAgents._getparameters(p)
@@ -164,7 +164,7 @@ const _COUPLED_JSON = """
               "inputs":[{"port":"ext_rate","default":{"node":"const","value":0.0}}],
               "places":[{"name":"A","init":0}],
               "transitions":[{"id":"t1","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-              "arcs":[{"transition":"t1","place":"A","side":"rhs","stoich":1}] }
+              "arcs":[{"transition":"t1","place":"A","side":"rhs","multiplicity":1}] }
             """
         )
         # the declared port validates clean.
@@ -252,8 +252,8 @@ const _COUPLED_JSON = """
           "transitions":[
             {"id":"ta","name":"ta","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"},
             {"id":"tb","name":"tb","rate":{"node":"externalref","port":"ext_rate"},"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"ta","side":"rhs","place":"A","stoich":1},
-                 {"transition":"tb","side":"rhs","place":"B","stoich":1}] }
+          "arcs":[{"transition":"ta","side":"rhs","place":"A","multiplicity":1},
+                 {"transition":"tb","side":"rhs","place":"B","multiplicity":1}] }
         """
         rd = RD.from_json_model(json; seed = 1)
         src = AATestSource("src", 4.0, 1.0)

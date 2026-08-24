@@ -71,7 +71,7 @@ const PORTFOLIO_JSON = """
                "args":[ { "node":"externalref", "port":"sentiment" },
                         { "node":"ref", "kind":"param", "name":"base_inflow" } ] } } ],
   "arcs":[
-    { "transition":"grow", "side":"rhs", "place":"cash", "stoich":1 } ],
+    { "transition":"grow", "side":"rhs", "place":"cash", "multiplicity":1 } ],
   "rules":[
     { "id":"acquire", "fire_mode":"once",
       "guard":{ "node":"call", "op":"&&",

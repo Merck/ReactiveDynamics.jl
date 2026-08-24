@@ -25,23 +25,23 @@ end
 ProgramLedger(place::Symbol, creation_index::Int) =
     ProgramLedger(place, creation_index, 0.0, 0.0, 0.0, Tuple{Float64, Symbol, Float64, String}[])
 
-struct UnfoldedArc
+struct ResolvedArc
     index::Int
     place::Symbol
-    stoich::ActionableValues
+    multiplicity::ActionableValues
     modality::Set{Symbol}
     predicate::Any   # nothing (kind-only bind, the default) or a TokenPredicate (ADR 0008 §B)
 end
 # Backward-compatible constructor: no predicate ⇒ today's kind-only binding.
-UnfoldedArc(index, place, stoich, modality) =
-    UnfoldedArc(index, place, stoich, modality, nothing)
+ResolvedArc(index, place, multiplicity, modality) =
+    ResolvedArc(index, place, multiplicity, modality, nothing)
 
 """
 One in-flight transition instance — an AlgebraicAgents `@aagent`, so a live transition is itself a node
 in the AA hierarchy. Spawned when a transition fires and held in the state's `ongoing_transitions` until
 its cycle time elapses, whereupon it completes (with its terminal probability-of-success) and emits its
 RHS products. `i` is the originating `:T` row; `trans` is the per-instance attribute dict (cycle time,
-priority, …); `bound_structured_agents`/`nonblock_structured_agents`/`structured_to_agents` hold the
+priority, …); `bound_tokens`/`nonblock_tokens`/`binding` hold the
 tokens this instance occupies; `t` is its spawn time, `q` its allocated quantity, and `state` its
 progress through the cycle.
 """
@@ -50,9 +50,9 @@ progress through the cycle.
 
     trans::Dict{Symbol, Any}
 
-    bound_structured_agents::Vector{AbstractAlgebraicAgent}
-    nonblock_structured_agents::Vector{AbstractAlgebraicAgent}
-    structured_to_agents::Vector
+    bound_tokens::Vector{AbstractAlgebraicAgent}
+    nonblock_tokens::Vector{AbstractAlgebraicAgent}
+    binding::Vector
 
     t::Float64
     q::Float64
@@ -142,7 +142,7 @@ The live simulation state — an AlgebraicAgents `@aagent`, so a running network
     # maps a token's stable network identity (`AlgebraicAgents.getname`, the same key as
     # `creation_index`) to its running cost/reward/valuation accumulator + append-only audit trail.
     # `unattributed_cost`/`unattributed_reward` collect spend/reward from transitions with NO bound
-    # structured token (plain reactions), so the per-program rows + these buckets SUM EXACTLY to the
+    # structured token (plain, unbound transitions), so the per-program rows + these buckets SUM EXACTLY to the
     # aggregate `:valuation_cost`/`:valuation_reward` rows (the invariant in program_ledger.jl).
     # All three are reset by _reinit! (§4 D7), mirroring `creation_counters`.
     program_ledgers::Dict{String, ProgramLedger}
@@ -326,11 +326,11 @@ function sample_transitions!(state::ReactionNetworkProblem)
             j = find_index(r.place, state)
             push!(
                 arcs,
-                UnfoldedArc(
+                ResolvedArc(
                     j,
                     r.place,
-                    context_eval(state, nothing, state.wrap_fun(r.stoich)),
-                    r.modality ∪ state[j, :placeModality],
+                    context_eval(state, nothing, state.wrap_fun(r.multiplicity)),
+                    r.modality ∪ state[j, :placeDefaultModality],
                     r.predicate,
                 ),
             )

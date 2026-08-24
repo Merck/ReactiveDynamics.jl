@@ -27,7 +27,7 @@ function merge_networks!(net1, net2, name = gensym("net"), eqs = [])
             assign_defaults!(net1)
         end
 
-        union!(net1[first(inc), :placeModality], net2[i, :placeModality])
+        union!(net1[first(inc), :placeDefaultModality], net2[i, :placeDefaultModality])
 
         for attr in propertynames(net1.columns)
             !occursin("place", string(attr)) && continue

@@ -42,7 +42,7 @@ The whole tour runs on ONE small self-contained model — a two-phase "project a
 
 The exec map is the maintainer's headline ask: a system diagram you can read for inefficiencies, decorated with the run's results. It is built in three layers, each usable alone:
 
-- **Layer A — `network_graph(prob)`** returns a plain `NetworkGraph` (place/place nodes, transition nodes, arcs with stoichiometry + modality). It is a pure function of the model — no plotting dependency, no simulation, and it runs on a `deepcopy` so it does NOT perturb the caller's RNG.
+- **Layer A — `network_graph(prob)`** returns a plain `NetworkGraph` (place/place nodes, transition nodes, arcs with multiplicity + modality). It is a pure function of the model — no plotting dependency, no simulation, and it runs on a `deepcopy` so it does NOT perturb the caller's RNG.
 - **Layer B — `to_graphviz(g)` / `draw_network(prob)`** emits Graphviz DOT (place as circles, transitions as boxes, arcs colored by resource modality) and renders it through AlgebraicAgents' `run_graphviz`. The DOT string is always obtainable even with no Graphviz backend; rendering is the only step that needs one.
 - **Layer C — `exec_map(prob; highlight)`** decorates Layer A with finished-run statistics: place nodes filled gold where their pool ran to a trough (starvation), and — given a `highlight::TokenPredicate` — the matching cohort's `past_bonds` path through the net drawn as thickened arcs. It is read-only: it never mutates state or re-runs dynamics.
 

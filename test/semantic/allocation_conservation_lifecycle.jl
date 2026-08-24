@@ -191,7 +191,7 @@ using Random, Distributions, DataFrames
     # contract: CONTRACT §3.4 INV2 (conserved tokens returned exactly); §1.3 truth-table row 2 (upfront/conserved/block); §3.2 stage 8
     # note: Verified live end-to-end: scientist stays 10.0 across all rows while budget falls 10->7 and product
     # note: rises 0->3. Locks in the conservation return path (solvers.jl:437-458, the in(:conserved) branch
-    # note: crediting q*stoich back) AND the non-return of plain consumed tokens. cycletime=0 means instant
+    # note: crediting q*multiplicity back) AND the non-return of plain consumed tokens. cycletime=0 means instant
     # note: completion so no rate scaling. Survives the rework since INV2 is a hard contract obligation.
     @testset "A :conserved token is held then returned in full; plain consumed token is not returned" begin
         # seed=1: the rate-1.0 Poisson spawn is entropy-driven, and ~3% of unseeded runs draw zero

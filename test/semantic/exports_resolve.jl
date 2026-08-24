@@ -71,3 +71,43 @@ _resolves(sym) = isdefined(RD, sym)
     @test _resolves(Symbol("@agentize"))
     @test getproperty(RD, Symbol("@agentize")) isa Function
 end
+
+# ── ADR 0017 vocabulary gate: the retired chemistry spellings live only where documented ────────
+#
+# The rename retired `species`, `reactant`, the `spec<Attr>` store columns and `stoich`. Each still
+# resolves for ONE release, but only from a small, documented set of files: the Tier-1/Tier-5
+# deprecation shims, the `@aka` legacy object name, the `:species` selector field, and the
+# serializer's wire-key read aliases. This testset is the ADR's step-6 grep made executable — a
+# retired spelling reappearing anywhere else in `src/` fails here, rather than quietly rebuilding
+# the two-vocabulary problem the rename exists to remove.
+@testset "ADR 0017: retired vocabulary confined to the documented legacy sites" begin
+    retired = r"\bspecies\b|reactant|spec[A-Z]|\bstoich"
+    # Each entry carries a one-release shim that a forwarding binding cannot express.
+    legacy_files = Set(
+        [
+            "src/ReactiveDynamics.jl",   # Tier 1/5 @deprecate shims + the @add_species macro shim
+            "src/interface/update.jl",   # @aka net species = resource
+            "src/predicates.jl",         # @select field :species → :place
+            "src/solvers.jl",            # @advance field :species → :place
+            "src/serialize.jl",          # wire-key aliases: places/arcs/place/multiplicity
+        ]
+    )
+    root = pkgdir(RD)
+    srcfiles = String[]
+    for (dir, _, files) in walkdir(joinpath(root, "src")), fn in files
+        endswith(fn, ".jl") && push!(srcfiles, relpath(joinpath(dir, fn), root))
+    end
+    @test !isempty(srcfiles)                      # sanity: we actually walked the source tree
+
+    offenders =
+        filter(f -> f ∉ legacy_files && occursin(retired, read(joinpath(root, f), String)), srcfiles)
+    @test isempty(offenders)
+    isempty(offenders) ||
+        @error "retired ADR-0017 vocabulary outside the documented legacy sites" offenders
+
+    # And the allowlist is not stale: every file named above really does still carry legacy handling,
+    # so removing a shim forces this list to shrink with it.
+    for f in legacy_files
+        @test occursin(retired, read(joinpath(root, f), String))
+    end
+end

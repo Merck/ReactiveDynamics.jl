@@ -22,7 +22,7 @@ reserved_sampling_macros = [:register, :sample, :take]
 
 struct ArcTerm
     place::Symbol
-    stoich::SampleableValues
+    multiplicity::SampleableValues
     modality::Set{Symbol}
 end
 

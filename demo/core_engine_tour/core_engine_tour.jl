@@ -161,7 +161,7 @@ banner("§3. Resource modalities — the engine's signature feature (a truth-tab
 #   bare  X        — RAW CONSUMED: debited at spawn, never returned (mass burned).
 #   @conserved(X)  — HELD then RETURNED in full at finish (a reusable resource
 #                     that is merely occupied during the instance's cycle).
-#   @rate(X)       — METERED per ongoing tick: draws q·stoich·Δt each step the
+#   @rate(X)       — METERED per ongoing tick: draws q·multiplicity·Δt each step the
 #                     instance is alive (a flow that is consumed continuously).
 #                     REQUIRES cycletime > 0, or it silently reserves NOTHING.
 #   @nonblock(X)   — held but FREED every step (a soft hold). Also needs ct > 0.

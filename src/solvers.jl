@@ -14,7 +14,7 @@ end
 # list, or `nothing` (kind-only bind) when that arc carries none.
 function lhs_predicate(lhs, type::Symbol)
     for r in lhs
-        r isa UnfoldedArc && r.place == type && return r.predicate
+        r isa ResolvedArc && r.place == type && return r.predicate
     end
     return nothing
 end
@@ -115,9 +115,9 @@ function build_requirements!(
                         "Modality `:rate` is not supported for structured place in transition $(state.ongoing_transitions[i][:transName]).",
                     )
                     (state.ongoing_transitions[i][:transCycleTime] > 0) &&
-                        (reqs[tok.index, i] += qs[i] * tok.stoich * dt_scale)
+                        (reqs[tok.index, i] += qs[i] * tok.multiplicity * dt_scale)
                 end
-                in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.stoich)
+                in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.multiplicity)
             end
         end
     else
@@ -126,7 +126,7 @@ function build_requirements!(
                 # Spawn counts only "upfront" tokens: everything that is neither `:rate`
                 # (consumed continuously while in-flight) nor `:nonblock` (claimed but not held).
                 !any(m -> m in tok.modality, [:rate, :nonblock]) &&
-                    (reqs[tok.index, i] += qs[i] * tok.stoich)
+                    (reqs[tok.index, i] += qs[i] * tok.multiplicity)
             end
         end
     end
@@ -381,14 +381,14 @@ function evolve!(state)
             )
             push!(state.ongoing_transitions, transition)
 
-            bound = transition.bound_structured_agents
-            structured_to_agents = transition.structured_to_agents
+            bound = transition.bound_tokens
+            binding = transition.binding
 
             for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
-                            "For structured place, stoichiometry coefficient must be integer in transition $i.",
+                            "For structured place, multiplicity coefficient must be integer in transition $i.",
                         )
                     end
 
@@ -419,7 +419,7 @@ function evolve!(state)
                         set_bound_transition!(available_places[ix], transition)
 
                         push!(bound, available_places[ix])
-                        push!(structured_to_agents, type => available_places[ix])
+                        push!(binding, type => available_places[ix])
                         add_to_log!(available_places[ix], type, state.t, transition)
 
                         allocs[j, i] -= 1
@@ -430,7 +430,7 @@ function evolve!(state)
 
             # MVP finding D — attribute this spawned transition's upfront resource cost
             # (spawn_allocs[:, i]) to the program(s) it just bound (src/ledger.jl). Done here,
-            # AFTER the bind loop, so `transition.bound_structured_agents` is populated.
+            # AFTER the bind loop, so `transition.bound_tokens` is populated.
             attribute_cost!(state, transition, @view spawn_allocs[:, i])
 
             context_eval(
@@ -443,7 +443,7 @@ function evolve!(state)
 
     ## evolve ongoing transitions
     # Ongoing allocation (ADR 0002). `req` is the full per-tick demand of each in-flight instance
-    # group (instance count × stoich; `:rate` scaled by dt when transCycleTime>0, `:nonblock`
+    # group (instance count × multiplicity; `:rate` scaled by dt when transCycleTime>0, `:nonblock`
     # unscaled). Each group fills at most fraction 1.0 of its requested progress this tick
     # (`fmax = 1`), so the fill fraction `f[i]` ∈ [0,1] IS the saturation `qs[i]` and progress
     # advances by `qs[i]*dt`. Priority is re-read FRESH per tick from the recipe row `t.i`
@@ -480,14 +480,14 @@ function evolve!(state)
         if qs[i] != 0
             transition.state += qs[i] * state.dt
 
-            bound = transition.nonblock_structured_agents
-            structured_to_agents = transition.structured_to_agents
+            bound = transition.nonblock_tokens
+            binding = transition.binding
 
             for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
                     if !isinteger(allocs[j, i])
                         error(
-                            "For structured place, stoichiometry coefficient must be integer in transition $i.",
+                            "For structured place, multiplicity coefficient must be integer in transition $i.",
                         )
                     end
 
@@ -520,7 +520,7 @@ function evolve!(state)
                         set_bound_transition!(available_places[ix], transition)
 
                         push!(bound, available_places[ix])
-                        push!(structured_to_agents, type => available_places[ix])
+                        push!(binding, type => available_places[ix])
                         add_to_log!(available_places[ix], type, state.t, transition)
 
                         allocs[j, i] -= 1
@@ -530,7 +530,7 @@ function evolve!(state)
             end
 
             # MVP finding D — attribute this in-flight transition's per-tick (rate/nonblock)
-            # resource cost to its bound program(s). `bound_structured_agents` (the @select'd token,
+            # resource cost to its bound program(s). `bound_tokens` (the @select'd token,
             # bound at spawn) plus any nonblock tokens just bound are charged; an instance with no
             # bound program books its burn against the unattributed bucket (src/ledger.jl).
             attribute_cost!(state, transition, @view ongoing_allocs[:, i])
@@ -554,8 +554,8 @@ end
 # Rules at construction.
 
 function allocate_for_move(t::Transition, s::Symbol)
-    return t.bound_structured_agents ∩
-        map(x -> x[2], filter(x -> x[1] == s, t.structured_to_agents))
+    return t.bound_tokens ∩
+        map(x -> x[2], filter(x -> x[1] == s, t.binding))
 end
 
 function structured_rhs(expr::Expr, state, transition)
@@ -608,7 +608,7 @@ function structured_rhs(expr::Expr, state, transition)
             Symbol.(context_eval(state, transition, state.wrap_fun(expr)))
 
         tokens =
-            filter(x -> get_place(x) == place_from, transition.bound_structured_agents)
+            filter(x -> get_place(x) == place_from, transition.bound_tokens)
 
         if !isempty(tokens)
             token = first(tokens)
@@ -616,10 +616,10 @@ function structured_rhs(expr::Expr, state, transition)
 
             set_place!(token, place_to)
             ix = findfirst(
-                i -> transition.bound_structured_agents[i] == token,
-                eachindex(transition.bound_structured_agents),
+                i -> transition.bound_tokens[i] == token,
+                eachindex(transition.bound_tokens),
             )
-            deleteat!(transition.bound_structured_agents, ix)
+            deleteat!(transition.bound_tokens, ix)
             set_bound_transition!(token, nothing)
 
             return token, place_to
@@ -643,8 +643,8 @@ function structured_rhs(expr::Expr, state, transition)
         valex = expr.args[4]
         # No bound token to advance (the @select predicate matched nothing this firing) — a
         # silent no-op: the instance produced no advance. finish! skips the nothing return.
-        isempty(transition.bound_structured_agents) && return nothing, nothing
-        token = first(transition.bound_structured_agents)
+        isempty(transition.bound_tokens) && return nothing, nothing
+        token = first(transition.bound_tokens)
         # Evaluate the value with the bound token in scope so @field(name) reads its attributes.
         val = eval_with_token(state, transition, token, valex)
         # `:species` is the retired ADR-0017 spelling of `:place`, accepted (silently — this is
@@ -654,7 +654,7 @@ function structured_rhs(expr::Expr, state, transition)
         else
             setproperty!(token, field, val)
         end
-        deleteat!(transition.bound_structured_agents, 1)
+        deleteat!(transition.bound_tokens, 1)
         set_bound_transition!(token, nothing)
         return token, get_place(token)
 
@@ -686,17 +686,17 @@ function finish!(state)
         end
 
         # MVP finding D — per-program ledger: snapshot the program(s) bound to this finishing
-        # transition (an @advance/@move RHS op moves the bound token OUT of bound_structured_agents
+        # transition (an @advance/@move RHS op moves the bound token OUT of bound_tokens
         # during the loop below, so we must capture them first) and the running reward BEFORE its
         # RHS emission, to attribute this transition's realized reward to its program(s) afterward.
         reward_before = val_reward
-        finishing_tokens = _bound_tokens(trans_)
+        finishing_tokens = _all_bound_tokens(trans_)
 
         for r in extract_arcs(trans_[:transRHS], state)
             if r.place isa Expr
-                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+                multiplicity = context_eval(state, trans_, state.wrap_fun(r.multiplicity))
 
-                for _ in 1:(q * stoich)
+                for _ in 1:(q * multiplicity)
                     token, place = structured_rhs(r.place, state, trans_)
                     # A structured-RHS op may legitimately produce nothing (e.g. @advance with no
                     # bound token to advance) — skip the count/reward in that case.
@@ -707,40 +707,40 @@ function finish!(state)
                 end
             else
                 i = find_index(r.place, state)
-                stoich = context_eval(state, trans_, state.wrap_fun(r.stoich))
+                multiplicity = context_eval(state, trans_, state.wrap_fun(r.multiplicity))
 
-                state.u[i] += q * stoich
-                val_reward += state[i, :placeReward] * q * stoich
+                state.u[i] += q * multiplicity
+                val_reward += state[i, :placeReward] * q * multiplicity
             end
         end
 
         # MVP finding D — attribute this transition's realized reward (the delta it just emitted) to
-        # the program(s) it was bound to, split evenly; an unbound (plain) reaction's reward goes to
+        # the program(s) it was bound to, split evenly; an unbound (plain) transition's reward goes to
         # the unattributed bucket (src/ledger.jl). Use the pre-RHS snapshot so an advanced/moved
-        # program (already removed from bound_structured_agents) still receives its reward.
+        # program (already removed from bound_tokens) still receives its reward.
         attribute_reward!(state, trans_, finishing_tokens, val_reward - reward_before)
 
         for tok in trans_[:transLHS]
             if in(:conserved, tok.modality)
                 state.u[tok.index] +=
                     trans_.q *
-                    tok.stoich *
+                    tok.multiplicity *
                     (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
                 if tok.place ∈ state.structured_token
-                    for _ in 1:(trans_.q * tok.stoich)
+                    for _ in 1:(trans_.q * tok.multiplicity)
                         agent_ix = findfirst(
                             a -> get_place(a) == tok.place,
-                            trans_.bound_structured_agents,
+                            trans_.bound_tokens,
                         )
                         # No more bound tokens of this place to release (a multi-place
-                        # transition may exhaust one place before the q*stoich count) — stop.
+                        # transition may exhaust one place before the q*multiplicity count) — stop.
                         isnothing(agent_ix) && break
 
                         set_bound_transition!(
-                            trans_.bound_structured_agents[agent_ix],
+                            trans_.bound_tokens[agent_ix],
                             nothing,
                         )
-                        deleteat!(trans_.bound_structured_agents, agent_ix)
+                        deleteat!(trans_.bound_tokens, agent_ix)
                     end
                 end
             end
@@ -752,20 +752,20 @@ function finish!(state)
                     )
                 end
 
-                state.u[tok.index] += trans_.q * tok.stoich
+                state.u[tok.index] += trans_.q * tok.multiplicity
                 if tok.place ∈ state.structured_token
-                    for _ in 1:(trans_.q * tok.stoich)
+                    for _ in 1:(trans_.q * tok.multiplicity)
                         agent_ix = findfirst(
                             a -> get_place(a) == tok.place,
-                            trans_.nonblock_structured_agents,
+                            trans_.nonblock_tokens,
                         )
                         isnothing(agent_ix) && break   # no more nonblock tokens of this place
 
                         set_bound_transition!(
-                            trans_.nonblock_structured_agents[agent_ix],
+                            trans_.nonblock_tokens[agent_ix],
                             nothing,
                         )
-                        deleteat!(trans_.nonblock_structured_agents, agent_ix)
+                        deleteat!(trans_.nonblock_tokens, agent_ix)
                     end
                 end
             end
@@ -777,7 +777,7 @@ function finish!(state)
             state.wrap_fun(state.network[trans_.i, :transPostAction]),
         )
 
-        for agent in trans_.bound_structured_agents
+        for agent in trans_.bound_tokens
             set_place!(agent, :removed)
             set_bound_transition!(agent, nothing)
         end
@@ -810,15 +810,15 @@ end
 
 function free_blocked_places!(state)
     for trans in state.ongoing_transitions, tok in trans[:transLHS]
-        in(:nonblock, tok.modality) && (state.u[tok.index] += trans.q * tok.stoich)
+        in(:nonblock, tok.modality) && (state.u[tok.index] += trans.q * tok.multiplicity)
     end
 
     for trans in state.ongoing_transitions
-        for a in trans.nonblock_structured_agents
+        for a in trans.nonblock_tokens
             a.bound_transition = nothing
         end
 
-        empty!(trans.nonblock_structured_agents)
+        empty!(trans.nonblock_tokens)
     end
     return
 end
@@ -852,7 +852,7 @@ end
 # Arcs are read via the eval-free static decomposition (`_split_reaction_line` +
 # `_static_arcs`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
 # modality Set matches what the engine forms per tick. The effective per-token modality unions the
-# arc's wrapper tags with the place's `:placeModality` (the `@mode` channel), exactly as the
+# arc's wrapper tags with the place's `:placeDefaultModality` (the `@mode` channel), exactly as the
 # runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
 # are the escape hatch and are left un-validated (they are un-validatable statically).
 function validate_modalities(net::ReactionNetwork)
@@ -868,7 +868,7 @@ function validate_modalities(net::ReactionNetwork)
         for r in _static_arcs(lhs)
             sname = string(r.place)
             i = r.place isa Symbol ? find_index(r.place, net) : nothing
-            mod = i === nothing ? r.modality : (r.modality ∪ net[i, :placeModality])
+            mod = i === nothing ? r.modality : (r.modality ∪ net[i, :placeDefaultModality])
 
             # Rule 1 — blocking = nonblock requires return = consumed.
             if in(:nonblock, mod) && in(:conserved, mod)
@@ -928,7 +928,7 @@ function ReactionNetworkProblem(
     assign_defaults!(net)
     # CONTRACT §1.4: reject the three illegal modality configurations up front, before any closure
     # compiles or any tick runs (the T2 acceptance tests require the throw from the constructor
-    # itself, not deep in the stepper). Runs after assign_defaults! so :placeModality is materialized.
+    # itself, not deep in the stepper). Runs after assign_defaults! so :placeDefaultModality is materialized.
     validate_modalities(net)
     keywords = Dict{Symbol, Any}(
         [

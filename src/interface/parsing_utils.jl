@@ -8,7 +8,7 @@ recursively_expand_dots(ex) = underscorize(ex)
 
 """
 The number of elements in a tuple expression, or `1` for a non-tuple `ex` (a bare Symbol/number is
-treated as a length-1 "tuple"). Paired with [`get_tup_arg`](@ref) to read stoichiometry/multiplicity
+treated as a length-1 "tuple"). Paired with [`get_tup_arg`](@ref) to read multiplicity/multiplicity
 terms uniformly whether or not they are written as a tuple.
 """
 function tup_leng(ex::SampleableValues)
@@ -26,7 +26,7 @@ function get_tup_arg(ex::SampleableValues, i::Int)
 end
 
 """
-Combine a base multiplicity `mult` with additional factors `mults...` into a single stoichiometry term,
+Combine a base multiplicity `mult` with additional factors `mults...` into a single multiplicity term,
 folding all numeric factors into one constant and preserving symbolic ones as a `*` product. A purely
 numeric set multiplies to a number; otherwise returns the simplified product Expr (dropping a redundant
 `1` coefficient). Flattens nested `*` products via [`recursively_find_mults!`](@ref).

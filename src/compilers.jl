@@ -114,7 +114,7 @@ end
 
 """
 Compile one attribute expression `fex` into a `(state, transition) -> value` closure — the terminal
-expr→callable step every rate/stoich/cost/action/guard passes through. A non-expression `fex` (a bare
+expr→callable step every rate/multiplicity/cost/action/guard passes through. A non-expression `fex` (a bare
 literal) is returned unchanged.
 
 The rewrite pipeline, in order: fold indexed/dotted place names to atomic symbols

@@ -16,7 +16,7 @@ using Statistics
     # note: Verified live: material 100→98→96→94, widget→3, valuation_cost rows all 10.0. Locks in raw-
     # note: consumption semantics + the (:valuation_cost,t,scalar) ledger shape (solvers.jl:308-311).
     # note: placeInitVal/sol column order is spec order: material is col 1.
-    @testset "Row 1 (upfront/consumed/block): empty modality is raw stoichiometric consumption, never returned" begin
+    @testset "Row 1 (upfront/consumed/block): empty modality is raw consumption at the arc multiplicity, never returned" begin
         net = @reaction_network begin
             @deterministic(1.0), 2 * material --> widget, name => build
         end
@@ -36,7 +36,7 @@ using Statistics
     end
 
     # [mod-row2-upfront-conserved-block-return] tier=T1-characterization expectedStatus=pass-now
-    # contract: §1.3 row 2 ({:conserved} ⇒ upfront,conserved,block); §3.2 stage 8 (':conserved tokens return q·stoich·(cycleTime if :rate else 1)'); finish! solvers.jl:438-442
+    # contract: §1.3 row 2 ({:conserved} ⇒ upfront,conserved,block); §3.2 stage 8 (':conserved tokens return q·multiplicity·(cycleTime if :rate else 1)'); finish! solvers.jl:438-442
     # note: Verified live (steady cash=94.0). Distinguishes conserved (returns; pool plateaus above 0) from raw-
     # note: consume (row 1, monotone drain). The exact floor 94 reflects the in-flight backlog at ct=3,rate=1;
     # note: assertion is on the plateau invariant + value.
@@ -107,7 +107,7 @@ using Statistics
     # contract: §1.3 row 5 ({:nonblock} ⇒ perstep,consumed,nonblock; token freed every step); §3.4 Invariant 1; FIXED solvers.jl:512
     # note: STAGE-A FIX (was a KNOWN BUG): free_blocked_places! previously referenced an undefined bare `q` and
     # note: raised `UndefVarError: q` on the 2nd tick once a :nonblock instance was in-flight. The free path now
-    # note: credits `trans.q * tok.stoich` back every step, so the run completes. CRUCIAL: cycletime MUST be >0 to
+    # note: credits `trans.q * tok.multiplicity` back every step, so the run completes. CRUCIAL: cycletime MUST be >0 to
     # note: keep an instance in-flight across a tick boundary and exercise free_blocked_places! at all.
     # note: Verified live: sensor=[10,9,8,8,8,8,8] (non-negative, finite) — the per-step free credit makes the
     # note: :nonblock pool plateau (held token returned each tick) rather than crash. Assertions are robust
@@ -151,19 +151,19 @@ using Statistics
     end
 
     # [mod-mode-macro-unions-modality] tier=T1-characterization expectedStatus=pass-now
-    # contract: §5.4 placeModality; FIXED update.jl:108 (now uses `:placeModality` not bare `placeModality`)
-    # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: placeModality` because
-    # note: update.jl:108 referenced a bare `placeModality` instead of the column symbol `:placeModality`. @mode now
+    # contract: §5.4 placeDefaultModality; FIXED update.jl:108 (now uses `:placeDefaultModality` not bare `placeDefaultModality`)
+    # note: STAGE-A FIX (was a KNOWN BUG): mode!/@mode previously raised `UndefVarError: placeDefaultModality` because
+    # note: update.jl:108 referenced a bare `placeDefaultModality` instead of the column symbol `:placeDefaultModality`. @mode now
     # note: unions the named modality into the place's modality set. Verified live: after `@mode net X conserved`,
-    # note: `net[1,:placeModality] == Set([:conserved])`. Note `net[1,:placeModality]` indexes the SCHEMA (net),
+    # note: `net[1,:placeDefaultModality] == Set([:conserved])`. Note `net[1,:placeDefaultModality]` indexes the SCHEMA (net),
     # note: not the problem.
     # action: invoke `@mode net X conserved`
-    @testset "@mode unions :conserved into the place's modality set (placeModality)" begin
+    @testset "@mode unions :conserved into the place's modality set (placeDefaultModality)" begin
         net = @reaction_network begin
             1.0, X --> Y, name => t1
         end
         @mode net X conserved
-        @test :conserved in net[1, :placeModality]
+        @test :conserved in net[1, :placeDefaultModality]
     end
 
     # [mod-construct-rejects-nonblock-conserved] tier=T2-acceptance expectedStatus=errors-until-implemented
@@ -298,7 +298,7 @@ using Statistics
     # [gen-flow-triggered-zero-then-positive] tier=T1-characterization expectedStatus=pass-now
     # contract: §2.8 flow mode (Routing; EXISTING upfront-LHS gate solvers.jl:110-128); 'flow-triggered genesis works today with zero new mechanism'
     # note: Verified live: product 0,0,0,2,4,6,8,10 while feed plateaus at 2. The upfront-LHS gate (reqs>0 ⇒
-    # note: floor(alloc/stoich), solvers.jl:121-124) clamps the rate-100 proposal to available feed tokens — the
+    # note: floor(alloc/multiplicity), solvers.jl:121-124) clamps the rate-100 proposal to available feed tokens — the
     # note: §2.8 'flow' idiom (high nominal rate + upstream place as consumed LHS). Demonstrates token-bounded
     # note: firing min(proposal, tokens) = tokens.
     @testset "Genesis `flow`: non-empty upfront LHS spawns ZERO when input empty, fires once upstream deposits tokens" begin

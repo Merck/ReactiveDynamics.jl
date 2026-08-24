@@ -207,7 +207,7 @@ function equalize!(state::ReactionNetworkProblem, args...)
 end
 
 # ── Evaluate an action value in (state, transition) context via the seeded closure path ──
-# Mirrors how rate/stoich/action exprs are evaluated elsewhere (context_eval + wrap_fun). A bare
+# Mirrors how rate/multiplicity/action exprs are evaluated elsewhere (context_eval + wrap_fun). A bare
 # QuoteNode (a literal symbol like `:Phase2` in an action field) is the symbol it wraps —
 # wrap_fun/context_eval pass QuoteNodes through unevaluated, so normalize here.
 function _eval_value(state::ReactionNetworkProblem, transition, v)
@@ -244,7 +244,7 @@ end
 function apply_action!(state::ReactionNetworkProblem, transition, a::SetField)
     transition === nothing &&
         error("SetField is a transition post-action only — no bound token in a Rule (ADR 0010 §C)")
-    for tok in transition.bound_structured_agents
+    for tok in transition.bound_tokens
         setproperty!(tok, a.field, _eval_value(state, transition, a.value))
     end
     return nothing

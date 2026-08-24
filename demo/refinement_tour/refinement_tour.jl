@@ -36,7 +36,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 
 # A small helper used throughout §3: the STRUCTURAL SIGNATURE of a named transition
 # — its cycletime, prob-of-success, and its arc rows read off the promoted
-# ArcSpec table as (place NAME, side, stoich). Two transitions with equal
+# ArcSpec table as (place NAME, side, multiplicity). Two transitions with equal
 # signatures are structurally identical. Keying by transition NAME (not index) makes
 # the comparison robust to the row-reordering that refinement performs.
 function trans_signature(m, tname)
@@ -44,7 +44,7 @@ function trans_signature(m, tname)
     ti === nothing && return nothing
     rows = sort(
         [
-            (string(placename(m, r.place)), r.side, r.stoich)
+            (string(placename(m, r.place)), r.side, r.multiplicity)
                 for r in arcs(m) if r.trans == ti && r.place > 0
         ]
     )

@@ -283,7 +283,7 @@ using ReactiveDynamics: nrows, row_ids
     @testset "store: rem_parts! swap-and-pop is exact and safe with undefined non-bits cells" begin
         net = ReactiveDynamics.ReactionNetwork()
         for s in (:A, :B, :C, :D, :E, :F)
-            ReactiveDynamics.add_row!(net, :S; placeName = s)   # NO modality ⇒ placeModality cell #undef
+            ReactiveDynamics.add_row!(net, :S; placeName = s)   # NO modality ⇒ placeDefaultModality cell #undef
         end
         # swap-and-pop order (victims [2,4] reversed): remove 4 → F fills slot4; remove 2 → E fills slot2.
         ReactiveDynamics.rem_rows!(net, :S, [2, 4])            # must NOT throw on the #undef Set column
@@ -294,7 +294,7 @@ using ReactiveDynamics: nrows, row_ids
     # [equalize-arc-fk-repoint] tier=T2-acceptance expectedStatus=errors-until-implemented
     # contract: ADR 0003 (promote transition<->arc relation to typed ArcSpec incidence table); CONTRACT_DRAFT.md Pending §Composition (structurally exact place-merge)
     # note: Encodes ADR 0003: the transition<->arc relation becomes a typed ArcSpec incidence table
-    # note: (FK trans->T, place->S, side, stoich ExprNode, modality). equalize! then repoints the place FK
+    # note: (FK trans->T, place->S, side, multiplicity ExprNode, modality). equalize! then repoints the place FK
     # note: from A2 to A structurally rather than via recursively_substitute_vars! string rewriting
     # note: (equalize.jl:60). Errors today: ReactiveDynamics.arcs / .placename do not exist (arcs
     # note: live as Expr in the :trans column, parsed per-tick by extract_arcs, reaction_parser.jl:32). T2

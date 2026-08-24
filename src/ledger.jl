@@ -29,11 +29,11 @@
 #     consumed cost. This is the simplest correct rule and makes the BD per-program rNPV directly
 #     reconstructable: a program's `cost_incurred` is the sum of the burn of every advance it sat in.
 #   • A transition with SEVERAL bound tokens splits its cost evenly among them. (Alternative rules —
-#     split by per-token stoichiometric weight, or by a token "size" field — are equally defensible;
+#     split by per-token arc multiplicity, or by a token "size" field — are equally defensible;
 #     even split is chosen for being the simplest order-independent rule and because the demo's
 #     transitions each bind one token, where every split rule coincides.)
 #   • A PLAIN-place-only transition (no bound structured token — e.g. the `financing` inflow, or a
-#     classic non-agentic reaction) has NO program to attribute to. Its cost is recorded against the
+#     classic non-agentic transition) has NO program to attribute to. Its cost is recorded against the
 #     network-level UNATTRIBUTED bucket (`state.unattributed_cost`), NOT silently dropped — so the
 #     per-program rows + the unattributed bucket SUM EXACTLY to the aggregate `:valuation_cost` row
 #     (the invariant asserted in test/semantic/program_ledger.jl). This is the honest scope of
@@ -41,11 +41,11 @@
 #     transition; pool-level spend with no bound program stays pool-level.
 #
 # REWARD is attributed at `finish!`: when a transition completes, its realized reward
-# (`Σ placeReward · q · stoich` over RHS products, the per-transition contribution to the aggregate
+# (`Σ placeReward · q · multiplicity` over RHS products, the per-transition contribution to the aggregate
 # `:valuation_reward` row) is split EVENLY across the tokens that were bound to that finishing
 # transition (same rule as cost). For an @advance/@move pipeline the produced token IS the bound
 # program (identity preserved, ADR 0008 §D), so reward lands on the program that advanced. Reward
-# from a finishing transition with no bound program (a plain reaction) goes to the unattributed
+# from a finishing transition with no bound program (a plain, unbound transition) goes to the unattributed
 # bucket, preserving the same sum invariant against `:valuation_reward`.
 #
 # ── Determinism (§4 D4) ─────────────────────────────────────────────────────────────────
@@ -87,10 +87,10 @@ function _transition_cost(state::ReactionNetworkProblem, consumed::AbstractVecto
 end
 
 # The structured tokens bound to a transition this tick — both the upfront/blocking binds
-# (`bound_structured_agents`) and the nonblock binds (`nonblock_structured_agents`). The cost a
+# (`bound_tokens`) and the nonblock binds (`nonblock_tokens`). The cost a
 # transition consumed is split EVENLY across these (see the attribution rule at the top).
-function _bound_tokens(transition::Transition)
-    return vcat(transition.bound_structured_agents, transition.nonblock_structured_agents)
+function _all_bound_tokens(transition::Transition)
+    return vcat(transition.bound_tokens, transition.nonblock_tokens)
 end
 
 """
@@ -105,7 +105,7 @@ per-transition sum equals the tick aggregate).
 function attribute_cost!(state::ReactionNetworkProblem, transition::Transition, consumed::AbstractVector)
     cost = _transition_cost(state, consumed)
     cost == 0.0 && return 0.0
-    toks = _bound_tokens(transition)
+    toks = _all_bound_tokens(transition)
     if isempty(toks)
         state.unattributed_cost += cost
         return cost
@@ -123,7 +123,7 @@ end
 """
     attribute_reward!(state, transition, tokens, reward)
 
-Attribute the REWARD a finishing `transition` realized this tick (`Σ placeReward·q·stoich` over its
+Attribute the REWARD a finishing `transition` realized this tick (`Σ placeReward·q·multiplicity` over its
 RHS products) to `tokens` — the programs that were bound to it — split evenly (same rule as cost).
 For an @advance/@move pipeline the produced token IS the bound program (identity preserved, ADR
 0008 §D), so the reward lands on the advancing program. A finishing transition with no bound program
@@ -131,7 +131,7 @@ For an @advance/@move pipeline the produced token IS the bound program (identity
 against `:valuation_reward`.
 
 `tokens` MUST be the bound list snapshotted at `finish!` BEFORE the RHS emission: an @advance/@move
-RHS op moves its token out of `transition.bound_structured_agents` mid-loop, so reading the bind
+RHS op moves its token out of `transition.bound_tokens` mid-loop, so reading the bind
 list afterward would lose exactly the program that earned the reward.
 """
 function attribute_reward!(

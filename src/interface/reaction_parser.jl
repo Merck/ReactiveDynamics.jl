@@ -5,18 +5,18 @@ using MacroTools: postwalk
 
 """
 One parsed arc term of a reaction line, before it is unfolded against the live state: a `place`
-(a name, or an RHS macrocall Expr like `@structured`/`@move`), its `stoich` multiplicity, its `modality`
+(a name, or an RHS macrocall Expr like `@structured`/`@move`), its `multiplicity` multiplicity, its `modality`
 set (`:nonblock`/`:conserved`/`:rate` plus any custom tags), and an optional `predicate` — a
 [`TokenPredicate`](@ref) when the term was written as `@select(Kind, clauses)`, else `nothing` (a plain
 name/kind bind). Produced by [`recursive_find_arcs!`](@ref).
 """
 struct FoldedArc
     place::Union{Expr, Symbol}
-    stoich::SampleableValues
+    multiplicity::SampleableValues
     modality::Set{Symbol}
     predicate::Any   # nothing, or a TokenPredicate built from a @select(kind, clauses) LHS
 end
-FoldedArc(place, stoich, modality) = FoldedArc(place, stoich, modality, nothing)
+FoldedArc(place, multiplicity, modality) = FoldedArc(place, multiplicity, modality, nothing)
 
 """
 Resolve every `@choose(alts…)` in a reaction line to a concrete draw, walking `r_line` bottom-up and

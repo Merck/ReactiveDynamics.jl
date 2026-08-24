@@ -82,8 +82,8 @@ end
             { "id": "t1", "name": "t1", "rate": 1.0, "rate_mode": "deterministic",
               "cycletime": 0.0, "prob_of_success": 1.0 } ],
           "arcs": [
-            { "transition": "t1", "place": "A", "side": "lhs", "stoich": 1 },
-            { "transition": "t1", "place": "B", "side": "rhs", "stoich": 1 } ]
+            { "transition": "t1", "place": "A", "side": "lhs", "multiplicity": 1 },
+            { "transition": "t1", "place": "B", "side": "rhs", "multiplicity": 1 } ]
         }
         """
         p = RDX.from_json_model(json; seed = 1)
@@ -126,20 +126,20 @@ end
           "places":[{"name":"A","init":1000},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":3.0,"rate_mode":"deterministic",
                           "cycletime":0.0,"prob_of_success":1.0}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         p1 = RDX.from_json_model(json; seed = 42); simulate(p1)
         p2 = RDX.from_json_model(json; seed = 42); simulate(p2)
         @test p1.sol == p2.sol           # same (model, seed) ⇒ identical
     end
 
-    # ── E4: arcs[] → reaction-line :trans Expr (stoich, modality, @select, @advance) ──
-    @testset "E4: multi-LHS + integer stoich assembles to the runtime-parsed reaction line" begin
+    # ── E4: arcs[] → reaction-line :trans Expr (multiplicity, modality, @select, @advance) ──
+    @testset "E4: multi-LHS + integer multiplicity assembles to the runtime-parsed reaction line" begin
         rs = [
-            Dict("transition" => "t", "place" => "X", "side" => "lhs", "stoich" => 1),
-            Dict("transition" => "t", "place" => "Y", "side" => "lhs", "stoich" => 2),
-            Dict("transition" => "t", "place" => "Z", "side" => "rhs", "stoich" => 1),
+            Dict("transition" => "t", "place" => "X", "side" => "lhs", "multiplicity" => 1),
+            Dict("transition" => "t", "place" => "Y", "side" => "lhs", "multiplicity" => 2),
+            Dict("transition" => "t", "place" => "Z", "side" => "rhs", "multiplicity" => 1),
         ]
         line = RDX.assemble_reaction_line(rs)
         @test line == :((X + 2Y) → Z)
@@ -148,14 +148,14 @@ end
     @testset "E4: LHS modality macros (@conserved/@rate) are emitted per the 3-axis modality" begin
         rs = [
             Dict(
-                "transition" => "t", "place" => "scientist", "side" => "lhs", "stoich" => 3,
+                "transition" => "t", "place" => "scientist", "side" => "lhs", "multiplicity" => 3,
                 "modality" => Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
             ),
             Dict(
-                "transition" => "t", "place" => "budget", "side" => "lhs", "stoich" => 1,
+                "transition" => "t", "place" => "budget", "side" => "lhs", "multiplicity" => 1,
                 "modality" => Dict("allocation" => "perstep", "return" => "consumed", "blocking" => "block")
             ),
-            Dict("transition" => "t", "place" => "out", "side" => "rhs", "stoich" => 1),
+            Dict("transition" => "t", "place" => "out", "side" => "rhs", "multiplicity" => 1),
         ]
         line = RDX.assemble_reaction_line(rs)
         # the LHS terms wrap their place in @conserved / @rate; the runtime parser unions these
@@ -224,8 +224,8 @@ end
           "params":[],
           "places":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
           "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"inert","place":"A","side":"lhs","stoich":1},
-                 {"transition":"inert","place":"B","side":"rhs","stoich":1}],
+          "arcs":[{"transition":"inert","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"inert","place":"B","side":"rhs","multiplicity":1}],
           "rules":[ { "id":"lever", "fire_mode":"once",
                       "guard": {"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
                       "action": {"verb":"set_marking","name":"cash","mode":"inc","value":{"node":"const","value":500}} } ] }
@@ -268,8 +268,8 @@ end
               "places":[{"name":"A","init":100},{"name":"B"}],
               "transitions":[{"id":"t1","rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
                               "prob_of_success":0.5,"cycletime":2.0}],
-              "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                     {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+              "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                     {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
             """
         )
         @test isempty(RDX.validate(valid))
@@ -323,7 +323,7 @@ end
             """
             { "meta":{"tspan":5.0,"dt":1.0},"params":[],"places":[{"name":"A","init":0}],
               "transitions":[{"id":"t1","rate":1.0,"rate_mode":"deterministic"}],
-              "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1}],
+              "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1}],
               "rules":[{"id":"r","fire_mode":"once",
                         "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
                         "action":{"verb":"add_token","kind":"Unregistered","fields":[]}}] }
@@ -425,8 +425,8 @@ end
           "params":[{"name":"k","value":0.5}],
           "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         tmp = tempname() * ".rdj.json"
         write(tmp, json)
@@ -442,8 +442,8 @@ end
           "params":[{"name":"k","value":0.5}],
           "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         import JSON
         d = JSON.parse(json)
@@ -471,8 +471,8 @@ end
           "transitions":[{"id":"t1","name":"t1",
               "rate":{"node":"call","op":"*","args":[{"node":"const","value":0.3},{"node":"ref","kind":"param","name":"beta"}]},
               "rate_mode":"poisson","prob_of_success":0.8,"cycletime":2.0,"priority":3.0}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":2},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":2},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         p = RDX.from_json_model(json; seed = 1)
         back = JSON.parse(RDX.to_json_model(p; meta = Dict("tspan" => 6.0, "dt" => 1.0)))
@@ -490,8 +490,8 @@ end
         cash = first(filter(s -> s["name"] == "cash", back["places"]))
         @test cash["cost"] == 2.0 && cash["valuation"] == -1.0 && !haskey(cash, "reward")
         @test first(filter(s -> s["name"] == "B", back["places"]))["reward"] == 50.0
-        # the arcs[] decompose back to the same (place, side, stoich) the loader consumes
-        ra = Set((r["place"], r["side"], get(r, "stoich", 1)) for r in back["arcs"])
+        # the arcs[] decompose back to the same (place, side, multiplicity) the loader consumes
+        ra = Set((r["place"], r["side"], get(r, "multiplicity", 1)) for r in back["arcs"])
         @test ra == Set([("A", "lhs", 2), ("B", "rhs", 1)])
 
         # full equivalence: re-import and simulate — identical trajectory under the same seed
@@ -502,7 +502,7 @@ end
 
     @testset "E10: modality / @select / @advance arcs are the inverse of assemble_reaction_line" begin
         import MacroTools, JSON
-        # a phase-advance transition with a @select LHS, @conserved/@rate resources, integer stoich,
+        # a phase-advance transition with a @select LHS, @conserved/@rate resources, integer multiplicity,
         # and an @advance RHS — exercising every arc shape _arcs_to_dict must invert.
         json = """
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":5.0,"dt":1.0},
@@ -511,9 +511,9 @@ end
           "transitions":[{"id":"adv","name":"adv","rate":1.0,"rate_mode":"deterministic","cycletime":1.0,"prob_of_success":1.0}],
           "arcs":[
             {"transition":"adv","side":"lhs","predicate":{"kind":"Project","clauses":[["phase","==","Phase2"]]}},
-            {"transition":"adv","side":"lhs","place":"sci","stoich":3,
+            {"transition":"adv","side":"lhs","place":"sci","multiplicity":3,
              "modality":{"allocation":"upfront","return":"conserved","blocking":"block"}},
-            {"transition":"adv","side":"lhs","place":"bud","stoich":5,
+            {"transition":"adv","side":"lhs","place":"bud","multiplicity":5,
              "modality":{"allocation":"perstep","return":"consumed","blocking":"block"}},
             {"transition":"adv","side":"rhs","advance":{"field":"phase","value":"Phase3"}} ] }
         """
@@ -533,9 +533,9 @@ end
         # the 3-axis modality is recovered per place
         sci = first(filter(r -> get(r, "place", "") == "sci", back["arcs"]))
         @test sci["modality"] == Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
-        @test sci["stoich"] == 3
+        @test sci["multiplicity"] == 3
         bud = first(filter(r -> get(r, "place", "") == "bud", back["arcs"]))
-        @test bud["modality"]["allocation"] == "perstep" && bud["stoich"] == 5
+        @test bud["modality"]["allocation"] == "perstep" && bud["multiplicity"] == 5
 
         # re-imported :trans is the SAME reaction-line Expr (striplines: macrocalls carry line meta)
         p2 = RDX.from_json_model(JSON.json(back); seed = 1, registry = REG, population = toks())
@@ -552,8 +552,8 @@ end
         { "rd_format":"reactive-dynamics-model","version":"1.0","meta":{"tspan":6.0,"dt":1.0},
           "params":[],"places":[{"name":"cash","init":0},{"name":"A","init":0},{"name":"B"}],
           "transitions":[{"id":"inert","name":"inert","rate":0.0,"rate_mode":"deterministic"}],
-          "arcs":[{"transition":"inert","place":"A","side":"lhs","stoich":1},
-                 {"transition":"inert","place":"B","side":"rhs","stoich":1}],
+          "arcs":[{"transition":"inert","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"inert","place":"B","side":"rhs","multiplicity":1}],
           "rules":[{"id":"lever","fire_mode":"once",
                     "guard":{"node":"call","op":">","args":[{"node":"timeref"},{"node":"const","value":2}]},
                     "action":{"verb":"set_marking","name":"cash","mode":"inc","value":{"node":"const","value":500}}}] }
@@ -632,8 +632,8 @@ end
           "params":[{"name":"k","value":0.5}],
           "places":[{"name":"A","init":10},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic","prob_of_success":1.0}],
-          "arcs":[{"transition":"t1","place":"A","side":"lhs","stoich":1},
-                 {"transition":"t1","place":"B","side":"rhs","stoich":1}] }
+          "arcs":[{"transition":"t1","place":"A","side":"lhs","multiplicity":1},
+                 {"transition":"t1","place":"B","side":"rhs","multiplicity":1}] }
         """
         prob = RDX.from_json_model(json; seed = 7)
         tmp = tempname() * ".rdj.json"
@@ -684,20 +684,20 @@ end
         @test !isempty(static)
         @test all(r -> 1 <= r.place <= RDX.nrows(net, :S), static)
         @test all(r -> r.expr === nothing, static)
-        # FK targets match the place names / sides / stoich the reaction line declares.
+        # FK targets match the place names / sides / multiplicity the reaction line declares.
         byname = Dict(RDX.placename(net, r.place) => r for r in static)
-        @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].stoich == 2.0
+        @test haskey(byname, :A) && byname[:A].side == :lhs && byname[:A].multiplicity == 2.0
         @test haskey(byname, :B) && byname[:B].side == :lhs && :conserved in byname[:B].modality
         @test haskey(byname, :C) && byname[:C].side == :rhs
         # JSON round-trip: the table is DERIVED from :trans, which round-trips, so re-populating the
-        # reloaded model reproduces the same FK rows (place-name → side → stoich).
+        # reloaded model reproduces the same FK rows (place-name → side → multiplicity).
         @prob_params net
         json = RDX.to_json_model(net; meta = Dict{String, Any}("tspan" => 5.0))
         acs2 = RDX.build_network_from_dict(RDX.JSON.parse(json))
         RDX.populate_arcs!(acs2)
         rt(m) = sort(
             [
-                (string(RDX.placename(m, r.place)), r.side, Float64(r.stoich))
+                (string(RDX.placename(m, r.place)), r.side, Float64(r.multiplicity))
                     for r in RDX.arcs(m) if r.place != 0
             ]
         )
@@ -730,8 +730,8 @@ end
           "species":[{"name":"cash","init":0},{"name":"A","init":100},{"name":"B"}],
           "transitions":[{"id":"t1","name":"t1","rate":1.0,"rate_mode":"deterministic",
                           "cycletime":0.0,"prob_of_success":1.0}],
-          "reactants":[{"transition":"t1","species":"A","side":"lhs","stoich":1},
-                       {"transition":"t1","species":"B","side":"rhs","stoich":1}],
+          "reactants":[{"transition":"t1","species":"A","side":"lhs","multiplicity":1},
+                       {"transition":"t1","species":"B","side":"rhs","multiplicity":1}],
           "rules":[{"id":"lever","fire_mode":"once",
                     "guard":{"node":"call","op":">","args":[{"node":"ref","kind":"species","name":"A"},
                                                             {"node":"const","value":0}]},

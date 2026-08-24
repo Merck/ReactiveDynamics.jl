@@ -145,7 +145,7 @@ function build_network_from_dict(d::AbstractDict; registry = Dict{Symbol, Any}()
         haskey(pl, "valuation") && (net[i, :placeValuation] = to_expr(_attr_node(pl["valuation"])))
         get(pl, "structured", false) === true && (net[i, :placeStructured] = true)
         # modality 3-axis → Set{Symbol} (E6); default empty set = row 1
-        haskey(pl, "modality") && (net[i, :placeModality] = modality_from_dict(pl["modality"]))
+        haskey(pl, "modality") && (net[i, :placeDefaultModality] = modality_from_dict(pl["modality"]))
     end
 
     # transitions[] → :T. arcs[] for this transition assemble into the :trans reaction line.
@@ -379,7 +379,7 @@ end
 # ── Reaction-line assembly (E4) ─────────────────────────────────────────────────────────
 # Assemble a transition's arcs[] (grouped lhs/rhs) into the single :trans reaction-line Expr
 # `LHS --> RHS` that merge_network!/the runtime parser consume. An arc row may carry: `place`
-# (or a `predicate` for @select on the LHS), `stoich`, `modality` (3-axis, LHS), or `advance`
+# (or a `predicate` for @select on the LHS), `multiplicity`, `modality` (3-axis, LHS), or `advance`
 # (field+value, an RHS @advance) — assembled into exactly the macrocall Expr shapes the parser
 # (reaction_parser.jl / create.jl) expects.
 const _LN = LineNumberNode(0, :none)
@@ -440,11 +440,11 @@ function _apply_modality(atom, m)
     return out
 end
 
-# A full arc term: optional integer stoich coefficient × the (modality-wrapped) atom.
+# A full arc term: optional integer multiplicity coefficient × the (modality-wrapped) atom.
 function _arc_term(r::AbstractDict; lhs::Bool)
     atom = _arc_atom(r)
     lhs && haskey(r, "modality") && (atom = _apply_modality(atom, r["modality"]))
-    stv = to_expr(_attr_node(get(r, "stoich", 1)))
+    stv = to_expr(_attr_node(_legacy_key(r, "multiplicity", "stoich", 1)))
     return (stv == 1 || stv === 1.0) ? atom : Expr(:call, :*, stv, atom)
 end
 
@@ -897,7 +897,7 @@ function _place_to_dict(net, i)
         v isa Number && v != 0 && (pl[key] = v)
     end
     net[i, :placeStructured] && (pl["structured"] = true)
-    isempty(net[i, :placeModality]) || (pl["modality"] = modality_to_dict(net[i, :placeModality]))
+    isempty(net[i, :placeDefaultModality]) || (pl["modality"] = modality_to_dict(net[i, :placeDefaultModality]))
     return pl
 end
 
@@ -962,9 +962,9 @@ _is_default_attr(v, default) = v isa Number && default isa Number && (v == defau
 # eval-free — we only need the LHS/RHS arms, not the @choose resolution), then walk each arm with
 # the runtime `recursive_find_arcs!` (reaction_parser.jl:74). That walker is PURE on a raw
 # Expr (no state) and yields the same FoldedArc structs the runtime extracts — place/kind,
-# integer-or-Expr stoich, the 3-axis modality Set (from @conserved/@rate/@nonblock wrappers), and
+# integer-or-Expr multiplicity, the 3-axis modality Set (from @conserved/@rate/@nonblock wrappers), and
 # the @select TokenPredicate. From each FoldedArc we emit the inverse of _arc_atom /
-# _apply_modality / the stoich coefficient.
+# _apply_modality / the multiplicity coefficient.
 function _arcs_to_dict(net)
     places, params = _name_sets(net)
     out = Dict{String, Any}[]
@@ -1009,7 +1009,7 @@ _static_arcs(arm) =
 #   • a @select LHS  → {side, predicate:{kind, clauses}}  (FoldedArc.predicate ≠ nothing)
 #   • an @advance/@structured/@move RHS → {side, advance:{field, value}} / {side, structured/move:…}
 #     (FoldedArc.place is a macrocall Expr)
-#   • a plain place → {side, place, stoich, modality}
+#   • a plain place → {side, place, multiplicity, modality}
 function _arc_to_dict(r::FoldedArc, id, side; places, params)
     d = Dict{String, Any}("transition" => id, "side" => side)
     if r.predicate !== nothing
@@ -1019,9 +1019,9 @@ function _arc_to_dict(r::FoldedArc, id, side; places, params)
     elseif r.place isa Expr && isexpr(r.place, :macrocall)
         _emit_macro_arc!(d, r.place; places, params)
     else
-        # a plain place term: name, integer-or-Expr stoich (omit the default 1), 3-axis modality.
+        # a plain place term: name, integer-or-Expr multiplicity (omit the default 1), 3-axis modality.
         d["place"] = string(r.place)
-        _emit_stoich!(d, r.stoich)
+        _emit_multiplicity!(d, r.multiplicity)
         isempty(r.modality) || (d["modality"] = modality_to_dict(r.modality))
     end
     return d
@@ -1069,17 +1069,17 @@ end
 
 _macro_sym(x) = x isa QuoteNode ? x.value : x
 
-# Emit a stoich coefficient, omitting the default 1. The runtime parser carries stoich as a Float
+# Emit a multiplicity coefficient, omitting the default 1. The runtime parser carries multiplicity as a Float
 # multiplier (multiplex), so an integer authored as `2` comes back as `2.0`; coerce an integral
 # Float back to Int so the re-imported reaction line is the SAME Expr (`2 * X`, not `2.0 * X`).
-function _emit_stoich!(d, stoich)
-    if stoich isa Number
-        (stoich == 1) && return d                      # default coefficient — omit
-        s = (stoich isa AbstractFloat && isinteger(stoich)) ? Int(stoich) : stoich
-        d["stoich"] = s
+function _emit_multiplicity!(d, multiplicity)
+    if multiplicity isa Number
+        (multiplicity == 1) && return d                      # default coefficient — omit
+        s = (multiplicity isa AbstractFloat && isinteger(multiplicity)) ? Int(multiplicity) : multiplicity
+        d["multiplicity"] = s
     else
-        # an expression-valued stoich (rare) — emit as a node; the loader lowers it via to_expr.
-        d["stoich"] = node_to_dict(from_expr(stoich))
+        # an expression-valued multiplicity (rare) — emit as a node; the loader lowers it via to_expr.
+        d["multiplicity"] = node_to_dict(from_expr(multiplicity))
     end
     return d
 end
@@ -1095,7 +1095,7 @@ modality_to_dict(s::Set{Symbol}) = Dict{String, Any}(
 # decomposition the JSON exporter uses (`_split_reaction_line` + `_static_arcs`, ~line 844/857),
 # so the table is exactly the arc set the runtime/exporter see. Each FoldedArc becomes one
 # ArcSpec row: a plain place term gets an integer `place` FK (`find_index` into :S) and its
-# static stoich/modality; a DYNAMIC term (a @select predicate, an @advance/@move/@structured/@choose
+# static multiplicity/modality; a DYNAMIC term (a @select predicate, an @advance/@move/@structured/@choose
 # macrocall, or a place not found in :S) gets `place = 0` and stashes its term Expr in `expr`
 # (the ADR escape-hatch). Idempotent: clears and rebuilds. Lines the static splitter cannot handle
 # (a raw @choose or bidirectional arrow at top level) are left un-promoted for that transition —
@@ -1115,7 +1115,7 @@ function populate_arcs!(net::ReactionNetwork)
                     # dynamic: a @select predicate or an @advance/@move/@structured macrocall term.
                     push!(
                         net.arcs, ArcSpec(
-                            t, 0, r.stoich, side, r.modality,
+                            t, 0, r.multiplicity, side, r.modality,
                             r.place isa Union{Expr, Symbol} ? r.place : nothing
                         )
                     )
@@ -1123,9 +1123,9 @@ function populate_arcs!(net::ReactionNetwork)
                     pl = r.place isa Symbol ? r.place : Symbol(r.place)
                     j = find_index(pl, net)
                     if j === nothing
-                        push!(net.arcs, ArcSpec(t, 0, r.stoich, side, r.modality, pl))
+                        push!(net.arcs, ArcSpec(t, 0, r.multiplicity, side, r.modality, pl))
                     else
-                        push!(net.arcs, ArcSpec(t, j, r.stoich, side, r.modality, nothing))
+                        push!(net.arcs, ArcSpec(t, j, r.multiplicity, side, r.modality, nothing))
                     end
                 end
             end
