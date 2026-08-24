@@ -12,12 +12,12 @@ abstract type AbstractStructuredToken <: AbstractAlgebraicAgent end
 """
     BaseStructuredToken <: AbstractStructuredToken
 
-The base structured-token layout every `@structured_token` kind inherits (via `@aagent FreeAgent`). It supplies the protocol fields the engine relies on: `place` (the `:S` row the token currently occupies, or `:removed` once soft-retired), `bound_transition` (the [`Transition`](@ref) instance the token is currently committed to as a consumed resource, or `nothing` when free), and `past_bonds` (the token's audit history — the `(place, t, transition)` triples of every transition it has been used in). A concrete kind adds its own modeling attributes (e.g. `phase`, `npv`) on top of these; the base layout is what makes a token bindable, selectable, and auditable without per-kind boilerplate.
+The base structured-token layout every `@structured_token` kind inherits (via `@aagent FreeAgent`). It supplies the protocol fields the engine relies on: `place` (the `:S` row the token currently occupies, or `:removed` once soft-retired), `bound_firing` (the [`Firing`](@ref) instance the token is currently committed to as a consumed resource, or `nothing` when free), and `past_bonds` (the token's audit history — the `(place, t, firing)` triples of every firing it has been used in). A concrete kind adds its own modeling attributes (e.g. `phase`, `npv`) on top of these; the base layout is what makes a token bindable, selectable, and auditable without per-kind boilerplate.
 """
 @aagent FreeAgent struct BaseStructuredToken
     place::Union{Nothing, Symbol}
-    bound_transition::Union{Nothing, ReactiveDynamics.Transition}
-    past_bonds::Vector{Tuple{Symbol, Float64, Transition}}
+    bound_firing::Union{Nothing, ReactiveDynamics.Firing}
+    past_bonds::Vector{Tuple{Symbol, Float64, Firing}}
 end
 
 """
@@ -126,7 +126,7 @@ end
 # the protocol `place` field (a soft-retired token has place==:removed and must be restored).
 const _SNAPSHOT_SKIP = (
     :uuid, :name, :parent, :inners, :relpathrefs, :opera,
-    :bound_transition, :past_bonds,
+    :bound_firing, :past_bonds,
 )
 function snapshot_population!(problem::ReactionNetworkProblem)
     empty!(problem.init_snapshot)
@@ -155,17 +155,17 @@ AlgebraicAgents._projected_to(::AbstractStructuredToken) = nothing
 AlgebraicAgents._step!(::AbstractStructuredToken) = nothing
 
 # Tell if an agent is assigned to a transition, as a resource.
-isblocked(a::AbstractStructuredToken) = !isnothing(get_bound_transition(a))
+isblocked(a::AbstractStructuredToken) = !isnothing(get_bound_firing(a))
 
 # Add a record that an agent was used as a "place" in a "transition".
-function add_to_log!(a::AbstractStructuredToken, place::Symbol, t, transition::Transition)
-    return push!(a.past_bonds, (place, Float64(t), transition))
+function add_to_log!(a::AbstractStructuredToken, place::Symbol, t, firing::Firing)
+    return push!(a.past_bonds, (place, Float64(t), firing))
 end
 
 # Set the transition a token is bound to.
-get_bound_transition(a::AbstractStructuredToken) = a.bound_transition
-function set_bound_transition!(a::AbstractStructuredToken, t::Union{Nothing, Transition})
-    return a.bound_transition = t
+get_bound_firing(a::AbstractStructuredToken) = a.bound_firing
+function set_bound_firing!(a::AbstractStructuredToken, firing::Union{Nothing, Firing})
+    return a.bound_firing = firing
 end
 
 # Priority with which an unbound agent will be assigned to a transition.

@@ -69,7 +69,7 @@ _place_sym(s) = Symbol(string(s))
 # token's path). A named transition uses its `transName`; an unnamed one uses `transition_<i>`. NB
 # this is NOT the per-instance name `past_bonds` carries (`"<transName>_@<t>"`, solvers.jl) — the
 # instance suffix must be dropped, which is why highlighting maps through the transition INDEX
-# (`Transition.i`) rather than the bond's instance name.
+# (`Firing.i`) rather than the bond's instance name.
 function _transition_node_name(net, i)
     tname = net[i, :transName]
     return (tname === nothing || tname === missing) ? Symbol("transition_$i") : Symbol(tname)
@@ -107,8 +107,8 @@ function network_graph(prob::ReactionNetworkProblem)
 
     transitions = TransitionNode[]
     arcs = Arc[]
-    lhs = work.transitions[:transLHS]
-    rhs = work.transitions[:transRHS]
+    lhs = work.sampled_transitions[:transLHS]
+    rhs = work.sampled_transitions[:transRHS]
     known_places = Set(net[i, :placeName] for i in row_ids(net, :S))
     for i in eachindex(lhs)
         tnode_name = _transition_node_name(net, i)
@@ -271,14 +271,14 @@ function exec_map(
 
     # Token-path highlighting from past_bonds, scoped by the @select predicate. A bond is a
     # `(place, t, transition)` triple; the transition node id must be the SAME `_transition_node_name`
-    # the graph uses — derived from the transition's INDEX (`Transition.i`), NOT the bond's per-instance
+    # the graph uses — derived from the transition's INDEX (`Firing.i`), NOT the bond's per-instance
     # name `"<transName>_@<t>"` (which would never match a graph node). Each bond highlights the
     # place→transition arc the token traversed.
     hi_arcs = Tuple{Symbol, Symbol}[]
     if highlight isa TokenPredicate
         for tok in select_tokens(prob, highlight)
-            for (place, _t, transition) in tok.past_bonds
-                push!(hi_arcs, (place, _transition_node_name(prob.network, transition.i)))
+            for (place, _t, firing) in tok.past_bonds
+                push!(hi_arcs, (place, _transition_node_name(prob.network, firing.i)))
             end
         end
     end

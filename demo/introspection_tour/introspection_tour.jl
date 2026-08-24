@@ -70,7 +70,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
 
 # The token kind is defined INTO the ReactiveDynamics module via @register (so it
 # is referenced as RD.TrajProjectToken). A BaseStructuredToken carries the
-# protocol fields (name, place, bound_transition, past_bonds); this kind adds
+# protocol fields (name, place, bound_firing, past_bonds); this kind adds
 # `phase` and `value`.
 @register begin
     @aagent BaseStructuredToken AbstractStructuredToken struct TrajProjectToken
@@ -82,7 +82,7 @@ banner(title) = (println(); println("="^74); println(title); println("="^74))
             "TP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],
             phase,
             value,
         )

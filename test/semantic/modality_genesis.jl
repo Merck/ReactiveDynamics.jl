@@ -345,7 +345,7 @@ using Statistics
         prob = ReactionNetworkProblem(net, Dict(); tspan = 8, dt = 1.0)
         @test simulate(prob) !== nothing   # FIXED: add_to_spawn! deferral no longer hits MethodError / Symbol +=
         # Invariant 3: live concurrent instances never exceed capacity; overflow is carried forward, not dropped.
-        @test count(t -> t[:transHash] == prob[1, :transHash], prob.ongoing_transitions) <=
+        @test count(t -> t[:transHash] == prob[1, :transHash], prob.ongoing_firings) <=
             5
     end
 
@@ -367,10 +367,10 @@ using Statistics
         @prob_init net fuel = 1000 job = 0
         @prob_params net
         prob = ReactionNetworkProblem(net, Dict(); tspan = 8, dt = 1.0)
-        # inspect prob.ongoing_transitions and the :new_transitions log
+        # inspect prob.ongoing_firings and the :new_transitions log
         @test simulate(prob) !== nothing                       # does NOT hit the deferral bug
         h = prob[1, :transHash]
-        @test count(t -> t[:transHash] == h, prob.ongoing_transitions) <= 3   # capacity bound holds
+        @test count(t -> t[:transHash] == h, prob.ongoing_firings) <= 3   # capacity bound holds
         # each tick proposes exactly 1 (deterministic), within capacity, so no overflow is ever deferred
         spawncounts = [
             v for r in prob.log if r[1] == :new_transitions for

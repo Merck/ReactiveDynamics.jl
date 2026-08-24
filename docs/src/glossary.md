@@ -21,7 +21,7 @@ If your readers want a third register, you do not have to argue with ours: [`@ak
 | **arc multiplicity** | How many tokens an arc moves per firing (`2I` is an arc of multiplicity 2). May be a time-varying expression. The literature also says *arc weight*; the field and JSON key are `multiplicity`, because `weight` already names `@choose` alternative weights and the allocator's fill-rate weights. |
 | **transition** | A stateful *recipe* that spawns in-flight instances, occupies its input places for a `cycletime`, then completes with probability `probability` and emits its output places. Already the canonical Petri-net word; unchanged. |
 | **preset / postset** | The input places of a transition (`•t`) and its output places (`t•`) — the left- and right-hand sides of a reaction line. |
-| **firing** | One in-flight instance of a transition running to completion. |
+| **firing** | One in-flight instance of a transition running to completion — the engine type [`Firing`](@ref), heaped in `state.ongoing_firings` while the static recipes stay in `state.transitions`. |
 | **binding** | Which specific tokens a firing holds — `bound_tokens` (the blocking binds), `nonblock_tokens` (the read-only ones) and `binding` (the `kind => token` assignment) on a live firing. A transition plus a binding is a *binding element*. Distinct from an **arc**, which is static topology and has no runtime instance. |
 | **colour set** | The attribute schema of a structured place's tokens. Declared with `@structured_token` and registered by [`register_token_kind!`](@ref). |
 | **reaction network** | A Petri net presented in *reaction notation* — the arrow-form lines you author (`3*@conserved(scientist) + @rate(budget) --> compound`). Under the standard correspondence a reaction network and a Petri net are the same object: species↔places, reactions↔transitions. RD keeps the chemistry register for the **notation** (`@reaction_network`, "reaction line") and Petri vocabulary for the **object model** — you author in reaction lines and get a net of places, transitions and arcs. It is not a *chemical* reaction network: kinetics is just the archetypal instance of the ontology. |
@@ -77,3 +77,14 @@ The serialized [JSON document](reference/json_schema.md) renamed with them. The 
 | the result-frame / export column `:species` | `:place` |
 | the `@select`/`@advance` field `:species` | `:place` (accepted silently — a warning would fire once per tick) |
 | an arc's `"stoich"` | `"multiplicity"` |
+
+[ADR 0018](https://github.com/Merck/ReactiveDynamics.jl/blob/main/spec/adr/0018-firing-vs-transition.md) landed in the same release and fixed one further inversion: the type for an in-flight instance was called `Transition`, while the static transitions sat in a field called `transition_recipes`. The type keeps a forwarding alias for one release; the renamed *fields* cannot (a struct field carries no forwarding binding), so a model that reads them updates at once. No serialized key moved — the saved document already said `"transitions"`.
+
+| Retired | Use instead |
+|:--- |:--- |
+| the type `ReactiveDynamics.Transition` | [`Firing`](@ref) — one in-flight execution |
+| `state.transition_recipes` | `state.transitions` — the static transition table, compiled once |
+| `state.transitions` (the per-tick evaluated snapshot) | `state.sampled_transitions` — the same table realized for the current tick, which is what `state[i, :trans…]` reads |
+| `state.ongoing_transitions` | `state.ongoing_firings` |
+| a token's `bound_transition` | `bound_firing` |
+| the in-model marker `@transition` in an attribute expression | `@firing` (the old spelling still compiles) |

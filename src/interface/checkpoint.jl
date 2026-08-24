@@ -7,7 +7,7 @@
 # registry on restore, never Julia source (§8.4 S4 / ADR 0006 §B).
 #
 # SCOPE (Milestone-1): the common tick-boundary case — t, rng, counters, u, the token population,
-# and `once`-rule latches. Mid-run in-flight `ongoing` Transition snapshots (the §C open question —
+# and `once`-rule latches. Mid-run in-flight `ongoing` Firing snapshots (the §C open question —
 # frozen sampled-attr dicts + bound-token relink by uuid) are NOT serialized; `dump_state` requires
 # an empty `ongoing` set (a clean tick boundary) and says so if not. This covers halt/resume and the
 # zero-tick "dump == initial marking" identity; the heavier mid-cycle resume is deferred.
@@ -36,7 +36,7 @@ end
 # attributes (phase, npv, …) we snapshot as current literal values.
 const _PROTOCOL_FIELDS = (
     :uuid, :name, :parent, :inners, :relpathrefs, :opera,
-    :place, :bound_transition, :past_bonds,
+    :place, :bound_firing, :past_bonds,
 )
 _token_attr_fields(tok) = filter(f -> !(f in _PROTOCOL_FIELDS), fieldnames(typeof(tok)))
 
@@ -45,11 +45,11 @@ _token_attr_fields(tok) = filter(f -> !(f in _PROTOCOL_FIELDS), fieldnames(typeo
 
 Serialize a live `problem` into an eval-free [`StateDump`](@ref) for halt/resume or the zero-tick "dump == initial marking" identity (ADR 0007 §C / CONTRACT §10.5). Captures the clock, RNG state, creation counters, plain-place `u`, the token population with each token's CURRENT field values, and the `once`-rule latches; pair with [`restore`](@ref) to reconstruct the run.
 
-DELIBERATE DEFERRAL (Milestone-1): `dump_state` requires a CLEAN TICK BOUNDARY — an empty `ongoing` transition set — and `error`s otherwise. Mid-cycle in-flight `Transition` instances (their frozen sampled-attr dicts and bound-token relink-by-uuid — the §C open question) are NOT serialized; the heavier mid-cycle resume is deferred. Step to a boundary where no instance is mid-cycle (or `reinit!`) before dumping.
+DELIBERATE DEFERRAL (Milestone-1): `dump_state` requires a CLEAN TICK BOUNDARY — an empty `ongoing` firing set — and `error`s otherwise. Mid-cycle in-flight `Firing` instances (their frozen sampled-attr dicts and bound-token relink-by-uuid — the §C open question) are NOT serialized; the heavier mid-cycle resume is deferred. Step to a boundary where no instance is mid-cycle (or `reinit!`) before dumping.
 """
 function dump_state(problem::ReactionNetworkProblem)
-    isempty(problem.ongoing_transitions) || error(
-        "dump_state: $(length(problem.ongoing_transitions)) in-flight transition(s) — dump is " *
+    isempty(problem.ongoing_firings) || error(
+        "dump_state: $(length(problem.ongoing_firings)) in-flight firing(s) — dump is " *
             "only supported at a clean tick boundary (empty `ongoing`) in Milestone-1 (ADR 0007 §C " *
             "open question). Step to a boundary where no instance is mid-cycle, or use reinit! to reset.",
     )

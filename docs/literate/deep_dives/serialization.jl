@@ -16,7 +16,7 @@ const RD = ReactiveDynamics
 
 # ## The structured-token kind and its registry
 #
-# A model that carries projects needs a structured-token *kind*. We define it in the engine's own scope with the `@register`/`@aagent` idiom (the selection/advancement machinery must see the type), giving each `:Project` a lifecycle `phase` and a net-present value `npv`. The four leading constructor arguments are the `@aagent` protocol fields — name, kind tag, `bound_transition`, `past_bonds` — followed by our modeling attributes.
+# A model that carries projects needs a structured-token *kind*. We define it in the engine's own scope with the `@register`/`@aagent` idiom (the selection/advancement machinery must see the type), giving each `:Project` a lifecycle `phase` and a net-present value `npv`. The four leading constructor arguments are the `@aagent` protocol fields — name, kind tag, `bound_firing`, `past_bonds` — followed by our modeling attributes.
 
 @register begin
     @aagent BaseStructuredToken AbstractStructuredToken struct ProjectToken
@@ -27,8 +27,8 @@ const RD = ReactiveDynamics
         return ProjectToken(
             "Proj" * string(rand(1:(10^9))),                       # name
             :Project,                                              # kind tag
-            nothing,                                               # bound_transition
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds
+            nothing,                                               # bound_firing
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], # past_bonds
             phase,
             npv,
         )

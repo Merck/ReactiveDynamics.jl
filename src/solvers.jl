@@ -4,10 +4,10 @@ using Random
 export ReactionNetworkProblem
 
 function get_sampled_transition(state, i)
-    transition = Dict{Symbol, Any}()
-    foreach(k -> push!(transition, k => state[i, k]), keys(state.transitions))
+    sampled = Dict{Symbol, Any}()
+    foreach(k -> push!(sampled, k => state[i, k]), keys(state.sampled_transitions))
 
-    return transition
+    return sampled
 end
 
 # The token-selection predicate (ADR 0008) for structured place `type` in an LHS arc
@@ -92,7 +92,7 @@ tokens. One parametrized builder for both phases (replaces `get_reqs_init!`/`get
     `dt_scale = 1`. `qs[t]` is the desired spawn count of recipe row `t`.
   - **Ongoing** (`ongoing=true`): include `:rate` tokens scaled by `dt_scale = state.dt` (only when
     the in-flight transition's `transCycleTime > 0`) and `:nonblock` tokens unscaled. `qs[i]` is the
-    in-flight instance count of `state.ongoing_transitions[i]`.
+    in-flight instance count of `state.ongoing_firings[i]`.
 
 The modality rules match the deleted builders exactly; the conjunctive `req[s,t]` here is the
 demand per unit fill, so `alloc[s,t] = f[t]·req[s,t]`.
@@ -108,13 +108,13 @@ function build_requirements!(
     reqs = ws.req
     reqs .= 0.0
     if ongoing
-        for i in eachindex(state.ongoing_transitions)
-            for tok in state.ongoing_transitions[i][:transLHS]
+        for i in eachindex(state.ongoing_firings)
+            for tok in state.ongoing_firings[i][:transLHS]
                 if in(:rate, tok.modality)
                     in(tok.place, state.structured_token) && error(
-                        "Modality `:rate` is not supported for structured place in transition $(state.ongoing_transitions[i][:transName]).",
+                        "Modality `:rate` is not supported for structured place in transition $(state.ongoing_firings[i][:transName]).",
                     )
-                    (state.ongoing_transitions[i][:transCycleTime] > 0) &&
+                    (state.ongoing_firings[i][:transCycleTime] > 0) &&
                         (reqs[tok.index, i] += qs[i] * tok.multiplicity * dt_scale)
                 end
                 in(:nonblock, tok.modality) && (reqs[tok.index, i] += qs[i] * tok.multiplicity)
@@ -324,13 +324,15 @@ function evolve!(state)
     qs .= floor.(Ref(Int), qs)
     # A transition gated off this tick (deactivated or guard false, ADR 0010 §B) proposes no
     # new instances — zero its genesis quantity so it never competes for resources.
-    foreach(i -> state.transitions[:transFiring][i] || (qs[i] = 0), row_ids(state, :T))
+    foreach(
+        i -> state.sampled_transitions[:transFiring][i] || (qs[i] = 0), row_ids(state, :T)
+    )
 
     for i in row_ids(state, :T)
         new_instances = qs[i] + state[i, :transToSpawn]
         capacity =
             state[i, :transCapacity] -
-            count(t -> t[:transHash] == state[i, :transHash], state.ongoing_transitions)
+            count(t -> t[:transHash] == state[i, :transHash], state.ongoing_firings)
         (capacity < new_instances) &&
             add_to_spawn!(state, state[i, :transHash], new_instances - capacity)
         qs[i] = min(capacity, new_instances)
@@ -368,7 +370,7 @@ function evolve!(state)
     # add spawned transitions to the heap
     for i in row_ids(state, :T)
         if qs[i] != 0
-            transition = Transition(
+            firing = Firing(
                 string(state[i, :transName]) * "_@$(state.t)",
                 i,
                 get_sampled_transition(state, i),
@@ -379,10 +381,10 @@ function evolve!(state)
                 qs[i],
                 0.0,
             )
-            push!(state.ongoing_transitions, transition)
+            push!(state.ongoing_firings, firing)
 
-            bound = transition.bound_tokens
-            binding = transition.binding
+            bound = firing.bound_tokens
+            binding = firing.binding
 
             for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
@@ -394,12 +396,12 @@ function evolve!(state)
 
                     # ADR 0008 §B: narrow the candidate set by the LHS arc's predicate
                     # (kind-only when none), then the unchanged priority sort + integer take.
-                    pred = lhs_predicate(state.transitions[:transLHS][i], type)
+                    pred = lhs_predicate(state.sampled_transitions[:transLHS][i], type)
                     available_places = filter(
                         a ->
                         get_place(a) == type &&
                             !isblocked(a) &&
-                            matches(pred, a, state, transition),
+                            matches(pred, a, state, firing),
                         structured_token,
                     )
 
@@ -416,11 +418,11 @@ function evolve!(state)
 
                     ix = 1
                     while allocs[j, i] > 0 && ix <= length(available_places)
-                        set_bound_transition!(available_places[ix], transition)
+                        set_bound_firing!(available_places[ix], firing)
 
                         push!(bound, available_places[ix])
                         push!(binding, type => available_places[ix])
-                        add_to_log!(available_places[ix], type, state.t, transition)
+                        add_to_log!(available_places[ix], type, state.t, firing)
 
                         allocs[j, i] -= 1
                         ix += 1
@@ -430,12 +432,12 @@ function evolve!(state)
 
             # MVP finding D — attribute this spawned transition's upfront resource cost
             # (spawn_allocs[:, i]) to the program(s) it just bound (src/ledger.jl). Done here,
-            # AFTER the bind loop, so `transition.bound_tokens` is populated.
-            attribute_cost!(state, transition, @view spawn_allocs[:, i])
+            # AFTER the bind loop, so `firing.bound_tokens` is populated.
+            attribute_cost!(state, firing, @view spawn_allocs[:, i])
 
             context_eval(
                 state,
-                transition,
+                firing,
                 state.wrap_fun(state.network[i, :transPreAction]),
             )
         end
@@ -449,11 +451,11 @@ function evolve!(state)
     # advances by `qs[i]*dt`. Priority is re-read FRESH per tick from the recipe row `t.i`
     # (`state[t.i, :transPriority]` → per-tick context_eval), NOT the spawn-time snapshot — so a
     # time-varying transPriority applies to in-flight instances too (ADR 0002 "fresh per tick").
-    nong = length(state.ongoing_transitions)
+    nong = length(state.ongoing_firings)
     ws = AllocWorkspace(nrows(state, :S), nong)
-    qs = map(t -> t.q, state.ongoing_transitions)
+    qs = map(t -> t.q, state.ongoing_firings)
     build_requirements!(ws, state, qs; ongoing = true, dt_scale = state.dt)
-    w = [state[t.i, :transPriority] for t in state.ongoing_transitions]
+    w = [state[t.i, :transPriority] for t in state.ongoing_firings]
     progressive_fill!(ws, state.u, w; fmax = fill(1.0, nong))
     qs = copy(ws.f)
     allocs = ws.req .* reshape(qs, 1, :)
@@ -463,8 +465,8 @@ function evolve!(state)
             :saturation,
             state.t,
             [
-                (state.ongoing_transitions[i][:transHash], qs[i]) for
-                    i in eachindex(state.ongoing_transitions)
+                (state.ongoing_firings[i][:transHash], qs[i]) for
+                    i in eachindex(state.ongoing_firings)
             ]...,
         ),
     )
@@ -475,13 +477,13 @@ function evolve!(state)
     # e.g. the BD demo's per-tick `budget` spend) BEFORE the nonblock-bind loop mutates allocs.
     ongoing_allocs = copy(allocs)
 
-    for i in eachindex(state.ongoing_transitions)
-        transition = state.ongoing_transitions[i]
+    for i in eachindex(state.ongoing_firings)
+        firing = state.ongoing_firings[i]
         if qs[i] != 0
-            transition.state += qs[i] * state.dt
+            firing.state += qs[i] * state.dt
 
-            bound = transition.nonblock_tokens
-            binding = transition.binding
+            bound = firing.nonblock_tokens
+            binding = firing.binding
 
             for (j, type) in enumerate(state.network[:, :placeName])
                 if type ∈ state.structured_token
@@ -492,36 +494,36 @@ function evolve!(state)
                     end
 
                     # ADR 0008 §B: narrow by the in-flight transition's LHS predicate.
-                    pred = lhs_predicate(transition[:transLHS], type)
+                    pred = lhs_predicate(firing[:transLHS], type)
                     available_places = filter(
                         a ->
                         get_place(a) == type &&
                             !isblocked(a) &&
-                            matches(pred, a, state, transition),
+                            matches(pred, a, state, firing),
                         structured_token,
                     )
 
                     # Total order (ADR 0008 inv 3): highest priority first, ties broken by the
-                    # deterministic (place, creation_index) key. NB use `transition.i` (the recipe
+                    # deterministic (place, creation_index) key. NB use `firing.i` (the recipe
                     # index stored at spawn), NOT the loop var `i` — here `i` indexes the
-                    # ongoing_transitions array, not the :T schema row, so `state.network[i, …]` would
+                    # ongoing_firings array, not the :T schema row, so `state.network[i, …]` would
                     # read the wrong transition's priority (latent: harmless only while priority is
                     # the default 0.0 for all tokens; a per-transition priority override would hit it).
                     sort!(
                         available_places;
                         by = a -> (
-                            -priority(a, state.network[transition.i, :transName]),
+                            -priority(a, state.network[firing.i, :transName]),
                             token_sortkey(state, a),
                         ),
                     )
 
                     ix = 1
                     while allocs[j, i] > 0 && ix <= length(available_places)
-                        set_bound_transition!(available_places[ix], transition)
+                        set_bound_firing!(available_places[ix], firing)
 
                         push!(bound, available_places[ix])
                         push!(binding, type => available_places[ix])
-                        add_to_log!(available_places[ix], type, state.t, transition)
+                        add_to_log!(available_places[ix], type, state.t, firing)
 
                         allocs[j, i] -= 1
                         ix += 1
@@ -533,7 +535,7 @@ function evolve!(state)
             # resource cost to its bound program(s). `bound_tokens` (the @select'd token,
             # bound at spawn) plus any nonblock tokens just bound are charged; an instance with no
             # bound program books its burn against the unattributed bucket (src/ledger.jl).
-            attribute_cost!(state, transition, @view ongoing_allocs[:, i])
+            attribute_cost!(state, firing, @view ongoing_allocs[:, i])
         end
     end
 
@@ -553,12 +555,12 @@ end
 # which evaluates each Rule's guard and runs its action at _step! step 10. :E rows are lifted to
 # Rules at construction.
 
-function allocate_for_move(t::Transition, s::Symbol)
-    return t.bound_tokens ∩
-        map(x -> x[2], filter(x -> x[1] == s, t.binding))
+function allocate_for_move(firing::Firing, s::Symbol)
+    return firing.bound_tokens ∩
+        map(x -> x[2], filter(x -> x[1] == s, firing.binding))
 end
 
-function structured_rhs(expr::Expr, state, transition)
+function structured_rhs(expr::Expr, state, firing)
     if isexpr(expr, :macrocall) && macroname(expr) == :structured
         if length(expr.args) >= 3 && expr.args[3] isa QuoteNode
             # NAMED form: `@structured(:Kind, field = node, …)` — the eval-free-serializable genesis
@@ -580,7 +582,7 @@ function structured_rhs(expr::Expr, state, transition)
                 (isexpr(kw, :(=)) && kw.args[1] isa Symbol) || error(
                     "@structured($kind, …): each field must be `name = value`, got `$(kw)`",
                 )
-                fieldvals[kw.args[1]] = _eval_value(state, transition, kw.args[2])
+                fieldvals[kw.args[1]] = _eval_value(state, firing, kw.args[2])
             end
             token = ctor(state, fieldvals)
             entangle!(getagent(state, "structured"), token)
@@ -605,10 +607,10 @@ function structured_rhs(expr::Expr, state, transition)
         end
 
         place_from, place_to =
-            Symbol.(context_eval(state, transition, state.wrap_fun(expr)))
+            Symbol.(context_eval(state, firing, state.wrap_fun(expr)))
 
         tokens =
-            filter(x -> get_place(x) == place_from, transition.bound_tokens)
+            filter(x -> get_place(x) == place_from, firing.bound_tokens)
 
         if !isempty(tokens)
             token = first(tokens)
@@ -616,11 +618,11 @@ function structured_rhs(expr::Expr, state, transition)
 
             set_place!(token, place_to)
             ix = findfirst(
-                i -> transition.bound_tokens[i] == token,
-                eachindex(transition.bound_tokens),
+                i -> firing.bound_tokens[i] == token,
+                eachindex(firing.bound_tokens),
             )
-            deleteat!(transition.bound_tokens, ix)
-            set_bound_transition!(token, nothing)
+            deleteat!(firing.bound_tokens, ix)
+            set_bound_firing!(token, nothing)
 
             return token, place_to
         else
@@ -636,17 +638,17 @@ function structured_rhs(expr::Expr, state, transition)
         # its identity/kind/uuid/creation_index/past_bonds (ADR 0008 §D). The phase-as-attribute
         # generalization of @move (which writes the `place` field). `value` may read the token's
         # own current fields via @field(name), and MAY draw (§F). The advanced token is then
-        # released. It is consumed from the first bound token of this transition.
+        # released. It is consumed from the first bound token of this firing.
         field = expr.args[3]
         field isa Symbol ||
             error("@advance: first argument must be a field name, got $field")
         valex = expr.args[4]
         # No bound token to advance (the @select predicate matched nothing this firing) — a
         # silent no-op: the instance produced no advance. finish! skips the nothing return.
-        isempty(transition.bound_tokens) && return nothing, nothing
-        token = first(transition.bound_tokens)
+        isempty(firing.bound_tokens) && return nothing, nothing
+        token = first(firing.bound_tokens)
         # Evaluate the value with the bound token in scope so @field(name) reads its attributes.
-        val = eval_with_token(state, transition, token, valex)
+        val = eval_with_token(state, firing, token, valex)
         # `:species` is the retired ADR-0017 spelling of `:place`, accepted (silently — this is
         # inside the step loop) for one release.
         if field === :place || field === :species
@@ -654,12 +656,12 @@ function structured_rhs(expr::Expr, state, transition)
         else
             setproperty!(token, field, val)
         end
-        deleteat!(transition.bound_tokens, 1)
-        set_bound_transition!(token, nothing)
+        deleteat!(firing.bound_tokens, 1)
+        set_bound_firing!(token, nothing)
         return token, get_place(token)
 
     else
-        token = context_eval(state, transition, state.wrap_fun(expr))
+        token = context_eval(state, firing, state.wrap_fun(expr))
         entangle!(getagent(state, "structured"), token)
 
         return token, get_place(token)
@@ -673,14 +675,14 @@ function finish!(state)
     terminated_success = Dict{Symbol, Float64}()
 
     ix = 1
-    while ix <= length(state.ongoing_transitions)
-        trans_ = state.ongoing_transitions[ix]
-        ((state.t - trans_.t) < trans_.trans[:transMaxLifeTime]) &&
-            (trans_.state < trans_[:transCycleTime]) &&
+    while ix <= length(state.ongoing_firings)
+        firing = state.ongoing_firings[ix]
+        ((state.t - firing.t) < firing.trans[:transMaxLifeTime]) &&
+            (firing.state < firing[:transCycleTime]) &&
             (ix += 1; continue)
 
-        q = if trans_.state >= trans_[:transCycleTime]
-            rand(state.rng, Distributions.Binomial(Int(trans_.q), trans_[:transProbOfSuccess]))
+        q = if firing.state >= firing[:transCycleTime]
+            rand(state.rng, Distributions.Binomial(Int(firing.q), firing[:transProbOfSuccess]))
         else
             0
         end
@@ -690,14 +692,14 @@ function finish!(state)
         # during the loop below, so we must capture them first) and the running reward BEFORE its
         # RHS emission, to attribute this transition's realized reward to its program(s) afterward.
         reward_before = val_reward
-        finishing_tokens = _all_bound_tokens(trans_)
+        finishing_tokens = _all_bound_tokens(firing)
 
-        for r in extract_arcs(trans_[:transRHS], state)
+        for r in extract_arcs(firing[:transRHS], state)
             if r.place isa Expr
-                multiplicity = context_eval(state, trans_, state.wrap_fun(r.multiplicity))
+                multiplicity = context_eval(state, firing, state.wrap_fun(r.multiplicity))
 
                 for _ in 1:(q * multiplicity)
-                    token, place = structured_rhs(r.place, state, trans_)
+                    token, place = structured_rhs(r.place, state, firing)
                     # A structured-RHS op may legitimately produce nothing (e.g. @advance with no
                     # bound token to advance) — skip the count/reward in that case.
                     place === nothing && continue
@@ -707,7 +709,7 @@ function finish!(state)
                 end
             else
                 i = find_index(r.place, state)
-                multiplicity = context_eval(state, trans_, state.wrap_fun(r.multiplicity))
+                multiplicity = context_eval(state, firing, state.wrap_fun(r.multiplicity))
 
                 state.u[i] += q * multiplicity
                 val_reward += state[i, :placeReward] * q * multiplicity
@@ -718,29 +720,29 @@ function finish!(state)
         # the program(s) it was bound to, split evenly; an unbound (plain) transition's reward goes to
         # the unattributed bucket (src/ledger.jl). Use the pre-RHS snapshot so an advanced/moved
         # program (already removed from bound_tokens) still receives its reward.
-        attribute_reward!(state, trans_, finishing_tokens, val_reward - reward_before)
+        attribute_reward!(state, firing, finishing_tokens, val_reward - reward_before)
 
-        for tok in trans_[:transLHS]
+        for tok in firing[:transLHS]
             if in(:conserved, tok.modality)
                 state.u[tok.index] +=
-                    trans_.q *
+                    firing.q *
                     tok.multiplicity *
-                    (in(:rate, tok.modality) ? trans_[:transCycleTime] : 1)
+                    (in(:rate, tok.modality) ? firing[:transCycleTime] : 1)
                 if tok.place ∈ state.structured_token
-                    for _ in 1:(trans_.q * tok.multiplicity)
+                    for _ in 1:(firing.q * tok.multiplicity)
                         agent_ix = findfirst(
                             a -> get_place(a) == tok.place,
-                            trans_.bound_tokens,
+                            firing.bound_tokens,
                         )
                         # No more bound tokens of this place to release (a multi-place
                         # transition may exhaust one place before the q*multiplicity count) — stop.
                         isnothing(agent_ix) && break
 
-                        set_bound_transition!(
-                            trans_.bound_tokens[agent_ix],
+                        set_bound_firing!(
+                            firing.bound_tokens[agent_ix],
                             nothing,
                         )
-                        deleteat!(trans_.bound_tokens, agent_ix)
+                        deleteat!(firing.bound_tokens, agent_ix)
                     end
                 end
             end
@@ -752,20 +754,20 @@ function finish!(state)
                     )
                 end
 
-                state.u[tok.index] += trans_.q * tok.multiplicity
+                state.u[tok.index] += firing.q * tok.multiplicity
                 if tok.place ∈ state.structured_token
-                    for _ in 1:(trans_.q * tok.multiplicity)
+                    for _ in 1:(firing.q * tok.multiplicity)
                         agent_ix = findfirst(
                             a -> get_place(a) == tok.place,
-                            trans_.nonblock_tokens,
+                            firing.nonblock_tokens,
                         )
                         isnothing(agent_ix) && break   # no more nonblock tokens of this place
 
-                        set_bound_transition!(
-                            trans_.nonblock_tokens[agent_ix],
+                        set_bound_firing!(
+                            firing.nonblock_tokens[agent_ix],
                             nothing,
                         )
-                        deleteat!(trans_.nonblock_tokens, agent_ix)
+                        deleteat!(firing.nonblock_tokens, agent_ix)
                     end
                 end
             end
@@ -773,20 +775,20 @@ function finish!(state)
 
         context_eval(
             state,
-            trans_,
-            state.wrap_fun(state.network[trans_.i, :transPostAction]),
+            firing,
+            state.wrap_fun(state.network[firing.i, :transPostAction]),
         )
 
-        for agent in trans_.bound_tokens
+        for agent in firing.bound_tokens
             set_place!(agent, :removed)
-            set_bound_transition!(agent, nothing)
+            set_bound_firing!(agent, nothing)
         end
 
-        terminated_all[Symbol(trans_[:transHash])] =
-            get(terminated_all, Symbol(trans_[:transHash]), 0) + trans_.q
+        terminated_all[Symbol(firing[:transHash])] =
+            get(terminated_all, Symbol(firing[:transHash]), 0) + firing.q
 
-        terminated_success[Symbol(trans_[:transHash])] =
-            get(terminated_success, Symbol(trans_[:transHash]), 0) + q
+        terminated_success[Symbol(firing[:transHash])] =
+            get(terminated_success, Symbol(firing[:transHash]), 0) + q
 
         ix += 1
     end
@@ -798,7 +800,7 @@ function finish!(state)
     # subsequent tick (violating conservation + termination-completeness, §3.4 INV2/INV6).
     filter!(
         s -> ((state.t - s.t) < s[:transMaxLifeTime]) && (s.state < s[:transCycleTime]),
-        state.ongoing_transitions,
+        state.ongoing_firings,
     )
 
     push!(state.log, (:terminated_all, state.t, terminated_all...))
@@ -809,16 +811,16 @@ function finish!(state)
 end
 
 function free_blocked_places!(state)
-    for trans in state.ongoing_transitions, tok in trans[:transLHS]
-        in(:nonblock, tok.modality) && (state.u[tok.index] += trans.q * tok.multiplicity)
+    for firing in state.ongoing_firings, tok in firing[:transLHS]
+        in(:nonblock, tok.modality) && (state.u[tok.index] += firing.q * tok.multiplicity)
     end
 
-    for trans in state.ongoing_transitions
-        for a in trans.nonblock_tokens
-            a.bound_transition = nothing
+    for firing in state.ongoing_firings
+        for a in firing.nonblock_tokens
+            a.bound_firing = nothing
         end
 
-        empty!(trans.nonblock_tokens)
+        empty!(firing.nonblock_tokens)
     end
     return
 end
@@ -975,7 +977,6 @@ function ReactionNetworkProblem(
         net[filter(i -> net[i, :placeStructured], 1:nrows(net, :S)), :placeName]
 
     attrs, transitions, wrap_fun = compile_attrs(net, structured_token_names)
-    transition_recipes = transitions
     u0_init = zeros(nrows(net, :S))
 
     for i in row_ids(net, :S)
@@ -995,15 +996,15 @@ function ReactionNetworkProblem(
 
     merge!(p, prms)
 
-    ongoing_transitions = Transition[]
+    ongoing_firings = Firing[]
     log = NamedTuple[]
     observables = compile_observables(net)
-    transitions_attrs =
+    sampled_attrs =
         setdiff(
         filter(a -> contains(string(a), "trans"), propertynames(net.columns)),
         (:trans,),
     ) ∪ [:transLHS, :transRHS, :transToSpawn, :transHash, :transFiring]
-    transitions = Dict{Symbol, Vector}(a => [] for a in transitions_attrs)
+    sampled_transitions = Dict{Symbol, Vector}(a => [] for a in sampled_attrs)
 
     sol = DataFrame(
         "t" => Float64[],
@@ -1035,15 +1036,15 @@ function ReactionNetworkProblem(
         name,
         net,
         attrs,
-        transition_recipes,
+        transitions,
         u0_init,
         p,
         keywords[:tspan][1],
         structured_token_names,
         keywords[:tspan],
         get(keywords, :dt, 1),
-        transitions,
-        ongoing_transitions,
+        sampled_transitions,
+        ongoing_firings,
         log,
         observables,
         wrap_fun,
@@ -1089,7 +1090,7 @@ end
 function AlgebraicAgents._reinit!(state::ReactionNetworkProblem; seed = nothing)
     state.u .= isempty(state.sol) ? state.u : Vector(state.sol[1, 2:end])
     state.t = state.tspan[1]
-    empty!(state.ongoing_transitions)
+    empty!(state.ongoing_firings)
     empty!(state.log)
     state.observables = compile_observables(state.network)
     empty!(state.sol)
@@ -1132,7 +1133,7 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem; seed = nothing)
     empty!(state.token_trajectory)
     for entry in state.population
         if !(entry isa PopulationEntry)
-            set_bound_transition!(entry, nothing)
+            set_bound_firing!(entry, nothing)
             empty!(entry.past_bonds)
             # restore the SAME object's attributes (place/phase/…) to their captured t=0 values
             restore_token_snapshot!(state, entry)

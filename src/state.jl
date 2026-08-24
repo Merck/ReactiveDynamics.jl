@@ -37,15 +37,16 @@ ResolvedArc(index, place, multiplicity, modality) =
     ResolvedArc(index, place, multiplicity, modality, nothing)
 
 """
-One in-flight transition instance — an AlgebraicAgents `@aagent`, so a live transition is itself a node
-in the AA hierarchy. Spawned when a transition fires and held in the state's `ongoing_transitions` until
-its cycle time elapses, whereupon it completes (with its terminal probability-of-success) and emits its
-RHS products. `i` is the originating `:T` row; `trans` is the per-instance attribute dict (cycle time,
-priority, …); `bound_tokens`/`nonblock_tokens`/`binding` hold the
-tokens this instance occupies; `t` is its spawn time, `q` its allocated quantity, and `state` its
-progress through the cycle.
+One **firing** — a single in-flight instance of a transition, and an AlgebraicAgents `@aagent`, so a live
+firing is itself a node in the AA hierarchy (ADR 0018 named this type: a `Firing` is one execution of a
+transition, not the transition itself). Spawned when a transition fires and held in the state's
+`ongoing_firings` until its cycle time elapses, whereupon it completes (with its terminal
+probability-of-success) and emits its RHS products. `i` is the originating `:T` row; `trans` is the
+per-instance attribute dict (cycle time, priority, …); `bound_tokens`/`nonblock_tokens`/`binding` hold the
+tokens this firing occupies — its **binding**; `t` is its spawn time, `q` its allocated quantity, and
+`state` its progress through the cycle.
 """
-@aagent struct Transition
+@aagent struct Firing
     i::Int
 
     trans::Dict{Symbol, Any}
@@ -59,8 +60,8 @@ progress through the cycle.
     state::Float64
 end
 
-Base.getindex(state::Transition, key) = state.trans[key]
-Base.setindex!(state::Transition, val, key) = state.trans[key] = val
+Base.getindex(state::Firing, key) = state.trans[key]
+Base.setindex!(state::Firing, val, key) = state.trans[key] = val
 
 """
 The live, runtime form of a named observable (CONTRACT §9.4) — an AlgebraicAgents `@aagent`. Compiled by
@@ -80,13 +81,13 @@ value.
 end
 
 """
-The live simulation state — an AlgebraicAgents `@aagent`, so a running network is itself a node in a larger heterogeneous AA hierarchy (an `AbstractAlgebraicAgent`). It is constructed from a static authoring store by the `ReactionNetworkProblem(net; …)` outer constructor and advanced by the `_step!` loop. Key fields: `.network` (the static `ReactionNetwork` IR store the run was compiled from), `.u` (the current plain-place marking vector), `.p` (parameters), `.t`/`.tspan`/`.dt` (time control), `.sol` (the per-step marking log as a `DataFrame`), `.log` (the event/message log), `.observables`, `.ongoing_transitions` (in-flight transition instances), `.program_ledgers` (per-program economics, §12), and `.token_trajectory` (per-token trajectory log, §14.1). Determinism is contractual (§4): `.rng` is the state-owned RNG that is the SOLE source of randomness in the step loop, `.seed` records the realized construction seed, and `.initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly. The endogenous decision channel lives in `.rules`/`.registry`; the runtime store is append-only (ADR 0004), so compiled attribute closures may position-index it safely.
+The live simulation state — an AlgebraicAgents `@aagent`, so a running network is itself a node in a larger heterogeneous AA hierarchy (an `AbstractAlgebraicAgent`). It is constructed from a static authoring store by the `ReactionNetworkProblem(net; …)` outer constructor and advanced by the `_step!` loop. Key fields: `.network` (the static `ReactionNetwork` IR store the run was compiled from), `.u` (the current plain-place marking vector), `.p` (parameters), `.t`/`.tspan`/`.dt` (time control), `.sol` (the per-step marking log as a `DataFrame`), `.log` (the event/message log), `.observables`, `.transitions` (the compiled STATIC transition table, one entry per `:T` row), `.sampled_transitions` (the same columns realized for the CURRENT tick, refilled by `sample_transitions!`), `.ongoing_firings` (the live [`Firing`](@ref) instances), `.program_ledgers` (per-program economics, §12), and `.token_trajectory` (per-token trajectory log, §14.1). Determinism is contractual (§4): `.rng` is the state-owned RNG that is the SOLE source of randomness in the step loop, `.seed` records the realized construction seed, and `.initial_rng` snapshots the stream at t=0 so `_reinit!` restores it exactly. The endogenous decision channel lives in `.rules`/`.registry`; the runtime store is append-only (ADR 0004), so compiled attribute closures may position-index it safely.
 """
 @aagent struct ReactionNetworkProblem
     network::ReactionNetwork
 
     attrs::Dict{Symbol, Vector}
-    transition_recipes::Dict{Symbol, Vector}
+    transitions::Dict{Symbol, Vector}
 
     u::Vector{Float64}
     p::Any
@@ -97,8 +98,8 @@ The live simulation state — an AlgebraicAgents `@aagent`, so a running network
     tspan::Tuple{Float64, Float64}
     dt::Float64
 
-    transitions::Dict{Symbol, Vector}
-    ongoing_transitions::Vector{Transition}
+    sampled_transitions::Dict{Symbol, Vector}
+    ongoing_firings::Vector{Firing}
     log::Vector{Tuple}
 
     observables::Dict{Symbol, Observable}
@@ -175,8 +176,8 @@ end
 
 # get value of a numeric expression
 # evaluate compiled numeric expression in context of (u, p, t)
-function context_eval(state::ReactionNetworkProblem, transition, o)
-    o = o isa Function ? Base.invokelatest(o, state, transition) : o
+function context_eval(state::ReactionNetworkProblem, firing, o)
+    o = o isa Function ? Base.invokelatest(o, state, firing) : o
 
     return o isa Sampleable ? rand(state.rng, o) : o
 end
@@ -188,7 +189,10 @@ function Base.getindex(state::ReactionNetworkProblem, keys...)
         return context_eval(
             state,
             nothing,
-            (contains(string(keys[2]), "trans") ? state.transitions : state.attrs)[keys[2]][keys[1]],
+            (
+                contains(string(keys[2]), "trans") ? state.sampled_transitions :
+                    state.attrs
+            )[keys[2]][keys[1]],
         )
     end
 end
@@ -289,22 +293,22 @@ function find_index(place::Symbol, state::ReactionNetworkProblem)
 end
 
 function sample_transitions!(state::ReactionNetworkProblem)
-    for (_, v) in state.transitions
+    for (_, v) in state.sampled_transitions
         empty!(v)
     end
-    for i in 1:length(state.transition_recipes[:trans])
+    for i in 1:length(state.transitions[:trans])
         # A transition fires this tick iff it is activated (latching gate, ADR 0004) AND its
         # stateless guard holds this tick (ADR 0010 §B). We ALWAYS realize and push every
-        # transition's attributes so `state.transitions[attr]` stays parallel to the `:T`
+        # transition's attributes so `state.sampled_transitions[attr]` stays parallel to the `:T`
         # part-index that `evolve!`/`get_allocs!` index by — a non-firing transition is
         # recorded with `transFiring = false` and `evolve!` zeroes its genesis quantity, so
         # it makes no proposal and never competes for resources (clean ADR-0002 interaction).
         fires =
-            state.transition_recipes[:transActivated][i] &&
-            (context_eval(state, nothing, state.transition_recipes[:transGuard][i]) != false)
-        l_line, r_line = prune_r_line(state.transition_recipes[:trans][i])
+            state.transitions[:transActivated][i] &&
+            (context_eval(state, nothing, state.transitions[:transGuard][i]) != false)
+        l_line, r_line = prune_r_line(state.transitions[:trans][i])
 
-        for attr in keys(state.transition_recipes)
+        for attr in keys(state.transitions)
             (
                 attr ∈ [
                     :trans,
@@ -316,8 +320,8 @@ function sample_transitions!(state::ReactionNetworkProblem)
                 ]
             ) && continue
             push!(
-                state.transitions[attr],
-                context_eval(state, nothing, state.transition_recipes[attr][i]),
+                state.sampled_transitions[attr],
+                context_eval(state, nothing, state.transitions[attr][i]),
             )
         end
 
@@ -336,16 +340,16 @@ function sample_transitions!(state::ReactionNetworkProblem)
             )
         end
 
-        push!(state.transitions[:transLHS], arcs)
-        push!(state.transitions[:transRHS], r_line)
-        push!(state.transitions[:transFiring], fires)
+        push!(state.sampled_transitions[:transLHS], arcs)
+        push!(state.sampled_transitions[:transRHS], r_line)
+        push!(state.sampled_transitions[:transFiring], fires)
 
         foreach(
-            k -> push!(state.transitions[k], state.transition_recipes[k][i]),
+            k -> push!(state.sampled_transitions[k], state.transitions[k][i]),
             [:transPreAction, :transPostAction, :transToSpawn, :transHash],
         )
 
-        state.transition_recipes[:transToSpawn] .= 0
+        state.transitions[:transToSpawn] .= 0
     end
     return
 end
@@ -386,8 +390,8 @@ end
 
 function add_to_spawn!(state::ReactionNetworkProblem, hash, n)
     ix = findfirst(
-        ix -> state.transition_recipes[:transHash][ix] == hash,
-        1:length(state.transition_recipes[:transHash]),
+        ix -> state.transitions[:transHash][ix] == hash,
+        1:length(state.transitions[:transHash]),
     )
-    return !isnothing(ix) && (state.transition_recipes[:transToSpawn][ix] += n)
+    return !isnothing(ix) && (state.transitions[:transToSpawn][ix] += n)
 end

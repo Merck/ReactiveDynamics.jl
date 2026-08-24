@@ -398,7 +398,7 @@ using Statistics
     # note: Stage A FIXED the prune predicate: an instance past its terminal test is now removed, so conservation
     # note: HOLDS — the previously-observed inflation (cash 10 -> 30, ongoing stuck at 1) is gone. Verified under
     # note: seed=1: cash stays bounded by its initial 10 (series settles at 10.0) and the timed-out instance is
-    # note: pruned, leaving ongoing_transitions empty by the end. Both assertions flipped from @test_broken to
+    # note: pruned, leaving ongoing_firings empty by the end. Both assertions flipped from @test_broken to
     # note: live @test. This is the canonical 'conservation holds' acceptance test (INV2/INV6).
     @testset "Lifetime-timeout instance is pruned and conserved tokens stay bounded (INV2/INV6)" begin
         # Instance times out (maxlifetime=2) before completing (cycletime=100); the prune fix removes it, so its
@@ -412,6 +412,6 @@ using Statistics
         simulate(prob)
         cash = prob.sol[!, "cash"]
         @test maximum(cash) <= 10 + 1.0e-9   # conserved pool never exceeds its initial holding (INV2)
-        @test length(prob.ongoing_transitions) == 0   # timed-out instance is pruned (INV6; verified count==0)
+        @test length(prob.ongoing_firings) == 0   # timed-out instance is pruned (INV6; verified count==0)
     end
 end

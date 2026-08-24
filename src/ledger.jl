@@ -89,29 +89,29 @@ end
 # The structured tokens bound to a transition this tick — both the upfront/blocking binds
 # (`bound_tokens`) and the nonblock binds (`nonblock_tokens`). The cost a
 # transition consumed is split EVENLY across these (see the attribution rule at the top).
-function _all_bound_tokens(transition::Transition)
-    return vcat(transition.bound_tokens, transition.nonblock_tokens)
+function _all_bound_tokens(firing::Firing)
+    return vcat(firing.bound_tokens, firing.nonblock_tokens)
 end
 
 """
-    attribute_cost!(state, transition, consumed)
+    attribute_cost!(state, firing, consumed)
 
-Attribute the COST a `transition` consumed this tick (`Σ consumed[s]·placeCost[s]`) to the
+Attribute the COST a `firing` consumed this tick (`Σ consumed[s]·placeCost[s]`) to the
 structured token(s) bound to it, split evenly (MVP finding D attribution rule, see this file's
 header). A transition with no bound program books its cost against the network UNATTRIBUTED
 bucket. Append-only; draws no RNG. Returns the cost it accounted for (so the caller can assert the
 per-transition sum equals the tick aggregate).
 """
-function attribute_cost!(state::ReactionNetworkProblem, transition::Transition, consumed::AbstractVector)
+function attribute_cost!(state::ReactionNetworkProblem, firing::Firing, consumed::AbstractVector)
     cost = _transition_cost(state, consumed)
     cost == 0.0 && return 0.0
-    toks = _all_bound_tokens(transition)
+    toks = _all_bound_tokens(firing)
     if isempty(toks)
         state.unattributed_cost += cost
         return cost
     end
     share = cost / length(toks)
-    tname = AlgebraicAgents.getname(transition)
+    tname = AlgebraicAgents.getname(firing)
     for tok in toks
         led = _program_ledger!(state, tok)
         led.cost_incurred += share
@@ -121,9 +121,9 @@ function attribute_cost!(state::ReactionNetworkProblem, transition::Transition, 
 end
 
 """
-    attribute_reward!(state, transition, tokens, reward)
+    attribute_reward!(state, firing, tokens, reward)
 
-Attribute the REWARD a finishing `transition` realized this tick (`Σ placeReward·q·multiplicity` over its
+Attribute the REWARD a finishing `firing` realized this tick (`Σ placeReward·q·multiplicity` over its
 RHS products) to `tokens` — the programs that were bound to it — split evenly (same rule as cost).
 For an @advance/@move pipeline the produced token IS the bound program (identity preserved, ADR
 0008 §D), so the reward lands on the advancing program. A finishing transition with no bound program
@@ -131,12 +131,12 @@ For an @advance/@move pipeline the produced token IS the bound program (identity
 against `:valuation_reward`.
 
 `tokens` MUST be the bound list snapshotted at `finish!` BEFORE the RHS emission: an @advance/@move
-RHS op moves its token out of `transition.bound_tokens` mid-loop, so reading the bind
+RHS op moves its token out of `firing.bound_tokens` mid-loop, so reading the bind
 list afterward would lose exactly the program that earned the reward.
 """
 function attribute_reward!(
         state::ReactionNetworkProblem,
-        transition::Transition,
+        firing::Firing,
         tokens::AbstractVector,
         reward::Real,
     )
@@ -146,7 +146,7 @@ function attribute_reward!(
         return reward
     end
     share = reward / length(tokens)
-    tname = AlgebraicAgents.getname(transition)
+    tname = AlgebraicAgents.getname(firing)
     for tok in tokens
         led = _program_ledger!(state, tok)
         led.reward_realized += share

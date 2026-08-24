@@ -297,7 +297,7 @@ end
 spec = checkpoint_model()
 check = ReactionNetworkProblem(spec; seed = 11)
 simulate(check, 4)                                   # step to a clean boundary at t = 4
-println("stepped to t = ", check.t, "; in-flight transitions empty? ", isempty(check.ongoing_transitions))
+println("stepped to t = ", check.t, "; in-flight transitions empty? ", isempty(check.ongoing_firings))
 
 dumped = dump_state(check)
 println("dump_state: captured t=", dumped.t, ", u=", round.(dumped.u; digits = 1), " (eval-free, JSON-able)")

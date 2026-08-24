@@ -139,7 +139,7 @@ prod = pipe_prob.sol[!, "product"]
 first_completion = t[findfirst(>(0.0), prod)]
 # Live concurrency = instances currently in-flight; the capacity gate bounds it.
 h = pipe_prob[1, :transHash]
-inflight = count(tr -> tr[:transHash] == h, pipe_prob.ongoing_transitions)
+inflight = count(tr -> tr[:transHash] == h, pipe_prob.ongoing_firings)
 
 println("cycletime = 3.0, dt = 1.0  ⇒ no product can appear before t = 3")
 println("First product appears at t : ", first_completion, "  (cycletime delay, as expected)")

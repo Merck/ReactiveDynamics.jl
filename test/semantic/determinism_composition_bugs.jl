@@ -105,7 +105,7 @@ using ReactiveDynamics: nrows, row_ids
 
     # [determinism-d7-reinit-restores-stream] tier=T1-characterization expectedStatus=pass-now
     # contract: CONTRACT_DRAFT.md §4.3 D7 (re-init restores the stream); _reinit! (AlgebraicAgents dispatch)
-    # note: Stage A completed _reinit!: it resets u/t/ongoing_transitions/log/observables/sol AND copies the
+    # note: Stage A completed _reinit!: it resets u/t/ongoing_firings/log/observables/sol AND copies the
     # note: initial RNG snapshot back, restoring the (M, seed) starting stream. Verified: a second simulate after
     # note: _reinit! reproduces the first sol AND log exactly. Reclassified T2->T1. NOTE: the public binding is
     # note: AlgebraicAgents._reinit! (also reexported as reinit!); there is NO ReactiveDynamics._reinit!.
@@ -440,8 +440,8 @@ using ReactiveDynamics: nrows, row_ids
         ReactiveDynamics.sample_transitions!(prob)
         ReactiveDynamics.evolve!(prob)
         # Invariant 3: overflow (desired 5 - capacity 2 = 3) is carried forward in transToSpawn.
-        @test prob.transition_recipes[:transToSpawn][1] >= 3
-        @test prob.transition_recipes[:transToSpawn][1] == 3
+        @test prob.transitions[:transToSpawn][1] >= 3
+        @test prob.transitions[:transToSpawn][1] == 3
     end
 
     # [resample-rangeless-returns-missing] tier=T1-characterization expectedStatus=pass-now

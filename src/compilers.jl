@@ -5,7 +5,7 @@ using MacroTools: prewalk
 # The Phase-1 rework added the closed, serializable `ExprNode` IR (exprnode.jl); this file is the
 # UNCHANGED final stage that consumes what the IR lowers to. `ExprNode.to_expr` emits EXACTLY the
 # `Expr` the `@reaction_network` DSL always produced, and [`compile_attrs`](@ref) / [`wrap_expr`](@ref)
-# here compile that `Expr` into a `(state, transition)` closure via `eval`. That `eval` is NOT a
+# here compile that `Expr` into a `(state, firing)` closure via `eval`. That `eval` is NOT a
 # breach of the eval-free rule (ADR 0005/0006): the trust boundary — `validate` + the closed
 # `ExprNode`/action whitelist — sits UPSTREAM. By the time an expr reaches this file it is proven
 # closed-vocabulary; compiling a proven-closed expr to a callable is the intended terminal step. No
@@ -113,14 +113,15 @@ function escape_ref(ex, places)
 end
 
 """
-Compile one attribute expression `fex` into a `(state, transition) -> value` closure — the terminal
+Compile one attribute expression `fex` into a `(state, firing) -> value` closure — the terminal
 expr→callable step every rate/multiplicity/cost/action/guard passes through. A non-expression `fex` (a bare
 literal) is returned unchanged.
 
 The rewrite pipeline, in order: fold indexed/dotted place names to atomic symbols
 ([`escape_ref`](@ref), [`recursively_expand_dots_in_ex!`](@ref)); lower the query metalanguage —
-`@t()`/`@obs(x)`/… (see [`reserved_names`](@ref)) become `state`-threaded calls, `@transition`/`@state`
-become the closure's own arguments; then substitute names for state-space slots via `varmap`
+`@t()`/`@obs(x)`/… (see [`reserved_names`](@ref)) become `state`-threaded calls, `@firing`/`@state`
+become the closure's own arguments (`@transition` is accepted as a legacy spelling of `@firing`, from
+before ADR 0018 named the in-flight instance); then substitute names for state-space slots via `varmap`
 (place → `state.u[i]`, param → `state.p[:name]`, read-only). Params actually read by `fex` are bound
 in a `let` prologue.
 
@@ -147,8 +148,8 @@ function wrap_expr(fex, place_names, prm_names, varmap)
         # here we convert the query metalanguage: @t() -> time(state) etc.
         if isexpr(x, :macrocall) && (macroname(x) ∈ reserved_names)
             Expr(:call, macroname(x), :state, x.args[3:end]...)
-        elseif isexpr(x, :macrocall) && (macroname(x) == :transition)
-            :transition
+        elseif isexpr(x, :macrocall) && (macroname(x) ∈ (:firing, :transition))
+            :firing
         elseif isexpr(x, :macrocall) && (macroname(x) == :state)
             :state
         else
@@ -171,7 +172,7 @@ function wrap_expr(fex, place_names, prm_names, varmap)
 
     return eval(
         quote
-            function (state, transition)
+            function (state, firing)
                 return $letex
             end
         end
@@ -194,7 +195,9 @@ end
 Compile a static [`ReactionNetwork`](@ref) into the runtime's closure tables — the bridge from the inert
 IR store to the executable model consumed by [`ReactionNetworkProblem`](@ref). Every attribute column is
 mapped through [`wrap_expr`](@ref) (except the [`skip_compile`](@ref) columns, carried verbatim),
-splitting into `attrs` (place/obs/param/meta columns) and `transitions` (the `trans*` columns), plus
+splitting into `attrs` (place/obs/param/meta columns) and `transitions` (the `trans*` columns — the
+static transition table, stored as `state.transitions`; the per-tick realized values live separately in
+`state.sampled_transitions`), plus
 the shared `wrap_fun = ex -> wrap_expr(ex, …)` closure the step loop reuses for per-tick exprs (stashed
 as `state.wrap_fun`). Also seeds the runtime-only transition columns: `transActivated` (the latching
 per-transition gate, all `true`), `transToSpawn` (pending-spawn counts, zero), `transHash` (per-row

@@ -45,8 +45,8 @@ const RD = ReactiveDynamics
         return KillProjectToken(
             "Proj" * string(rand(1:(10^9))),                        # name
             :Project,                                             # kind
-            nothing,                                              # bound_transition
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],  # past_bonds
+            nothing,                                              # bound_firing
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],  # past_bonds
             phase,
             pos,
         )

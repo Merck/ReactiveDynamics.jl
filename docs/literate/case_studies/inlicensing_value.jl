@@ -63,7 +63,7 @@ const RD = ReactiveDynamics
             "Proj" * randstring(8),
             :Project,
             nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],
             phase,
             npv_peak,
             pos_remaining,

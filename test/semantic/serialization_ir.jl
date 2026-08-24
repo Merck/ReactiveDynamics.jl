@@ -18,7 +18,7 @@ const RDX = ReactiveDynamics
     function SerProjectToken(phase, npv)
         return SerProjectToken(
             "SP" * string(rand(1:(10^9))), :Project, nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], phase, npv
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], phase, npv
         )
     end
 end

@@ -42,7 +42,7 @@ const RD = ReactiveDynamics
 # in ReactiveDynamics' own scope with the `@register` / `@aagent` idiom, because the engine's
 # selection and advancement machinery lives there and must see the type. The four leading
 # constructor arguments are the `@aagent` protocol fields, in order — a unique `name`, the `place`
-# kind tag (here `:Project`; every program shares one kind), a `bound_transition` (`nothing` until a
+# kind tag (here `:Project`; every program shares one kind), a `bound_firing` (`nothing` until a
 # transition binds the token), and an empty `past_bonds` history — followed by our two modeling
 # attributes, `phase` and `npv`.
 
@@ -55,8 +55,8 @@ const RD = ReactiveDynamics
         return ProjectToken(
             "Proj" * string(rand(1:(10^9))),                       # name
             :Project,                                              # kind (one kind for all phases)
-            nothing,                                               # bound_transition
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds
+            nothing,                                               # bound_firing
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], # past_bonds
             phase,
             npv,
         )

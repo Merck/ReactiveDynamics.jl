@@ -26,7 +26,7 @@ RD = ReactiveDynamics
             "LP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],
             phase,
         )
     end

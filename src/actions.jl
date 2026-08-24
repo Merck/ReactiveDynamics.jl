@@ -4,7 +4,7 @@
 # also carries a stateless `guard` AND-ed with its latching `transActivated` gate.
 #
 # Action VALUES are held as raw `Expr`/literals and evaluated through the existing
-# RNG-threaded `context_eval(state, transition, state.wrap_fun(expr))` closure path (§4 D5) —
+# RNG-threaded `context_eval(state, firing, state.wrap_fun(expr))` closure path (§4 D5) —
 # the same verified hot path the rest of the engine uses. The typed-ExprNode IR + JSON
 # lowering (ADR 0005) is a later stage; until then the action structs ARE the IR.
 
@@ -44,7 +44,7 @@ end
 """
     SetField(field, value)
 
-Action (`ActionStmt`) that writes `field` on the FIRING transition instance's bound token(s) (ADR 0008 §D), evaluating `value` in the firing context. This is a transition post-action ONLY — a standalone `Rule` has no bound token, so `apply_action!` errors on it; use `SetTokens` for a Rule (validated at build).
+Action (`ActionStmt`) that writes `field` on the firing's bound token(s) (ADR 0008 §D), evaluating `value` in that firing's context. This is a transition post-action ONLY — a standalone `Rule` has no bound token, so `apply_action!` errors on it; use `SetTokens` for a Rule (validated at build).
 """
 struct SetField <: ActionStmt
     field::Symbol
@@ -91,7 +91,7 @@ end
 """
     Invoke(fn, args = Any[])
 
-Action (`ActionStmt`) — the general-code escape hatch (ADR 0011 §B). Lowers to `registry[fn](state, transition, args…)`: the serialized action carries only the NAME `fn`, resolved against the per-network host-function registry (never `eval`'d); the body is trusted host Julia bound by obligations O1–O4. `args` value-exprs are evaluated before the call; the result is discarded.
+Action (`ActionStmt`) — the general-code escape hatch (ADR 0011 §B). Lowers to `registry[fn](state, firing, args…)`: the serialized action carries only the NAME `fn`, resolved against the per-network host-function registry (never `eval`'d); the body is trusted host Julia bound by obligations O1–O4. `args` value-exprs are evaluated before the call; the result is discarded.
 """
 struct Invoke <: ActionStmt
     fn::Symbol
@@ -152,7 +152,7 @@ Rule(id, guard, action; fire_mode = :every_tick, enabled = true) =
 # ── Transition line toggles (ADR 0004 soft gate; create the missing activate!/deactivate!) ─
 # Find a live transition's recipe index by its transName/transHash key.
 function _transition_index(state::ReactionNetworkProblem, t::Symbol)
-    hashes = state.transition_recipes[:transHash]
+    hashes = state.transitions[:transHash]
     ix = findfirst(==(t), hashes)
     isnothing(ix) || return ix
     # fall back to matching the transName column on the schema
@@ -167,7 +167,7 @@ Soft-activate the transition line named `t` (matched by `transName`/`transHash`)
 function activate!(state::ReactionNetworkProblem, t::Symbol)
     ix = _transition_index(state, t)
     isnothing(ix) && error("activate!: no transition named $t")
-    return state.transition_recipes[:transActivated][ix] = true
+    return state.transitions[:transActivated][ix] = true
 end
 
 """
@@ -178,7 +178,7 @@ Soft-deactivate the transition line named `t` (matched by `transName`/`transHash
 function deactivate!(state::ReactionNetworkProblem, t::Symbol)
     ix = _transition_index(state, t)
     isnothing(ix) && error("deactivate!: no transition named $t")
-    return state.transition_recipes[:transActivated][ix] = false
+    return state.transitions[:transActivated][ix] = false
 end
 
 # Attach a stateless per-tick guard to a transition (ADR 0010 §B).
@@ -190,7 +190,7 @@ Attach a stateless per-tick `guard` to the transition named `t` (ADR 0010 §B). 
 function set_guard!(state::ReactionNetworkProblem, t::Symbol, guard)
     ix = _transition_index(state, t)
     isnothing(ix) && error("set_guard!: no transition named $t")
-    return state.transition_recipes[:transGuard][ix] = state.wrap_fun(guard)
+    return state.transitions[:transGuard][ix] = state.wrap_fun(guard)
 end
 
 # Live-phase guard (ADR 0007 §A): place identification (equalize!) reindexes the :S table via
@@ -206,26 +206,26 @@ function equalize!(state::ReactionNetworkProblem, args...)
     )
 end
 
-# ── Evaluate an action value in (state, transition) context via the seeded closure path ──
+# ── Evaluate an action value in (state, firing) context via the seeded closure path ──
 # Mirrors how rate/multiplicity/action exprs are evaluated elsewhere (context_eval + wrap_fun). A bare
 # QuoteNode (a literal symbol like `:Phase2` in an action field) is the symbol it wraps —
 # wrap_fun/context_eval pass QuoteNodes through unevaluated, so normalize here.
-function _eval_value(state::ReactionNetworkProblem, transition, v)
+function _eval_value(state::ReactionNetworkProblem, firing, v)
     v isa QuoteNode && return v.value
-    r = context_eval(state, transition, state.wrap_fun(v))
+    r = context_eval(state, firing, state.wrap_fun(v))
     return r isa QuoteNode ? r.value : r
 end
 
 # ── apply_action! — the lowering table (ADR 0010 §C / ADR 0011 §C), all eval-free ───────
 """
-    apply_action!(state, transition, a::ActionStmt)
+    apply_action!(state, firing, a::ActionStmt)
 
-Perform the action `a` against `state`, dispatching on the concrete `ActionStmt` type — the eval-free lowering table for the closed action family (ADR 0010 §C / ADR 0011 §C). `transition` is the firing transition instance for a transition post-action, or `nothing` when the action comes from a `Rule`; it carries through to the seeded-closure value eval (params/observables/time/Sample). `SetField` requires a non-`nothing` `transition` (it writes bound tokens); `AddToken`/`Invoke` resolve their name against the per-network registry and never `eval`. `Seq` applies its statements in order.
+Perform the action `a` against `state`, dispatching on the concrete `ActionStmt` type — the eval-free lowering table for the closed action family (ADR 0010 §C / ADR 0011 §C). `firing` is the [`Firing`](@ref) instance for a transition post-action, or `nothing` when the action comes from a `Rule`; it carries through to the seeded-closure value eval (params/observables/time/Sample). `SetField` requires a non-`nothing` `firing` (it writes bound tokens); `AddToken`/`Invoke` resolve their name against the per-network registry and never `eval`. `Seq` applies its statements in order.
 """
-function apply_action!(state::ReactionNetworkProblem, transition, a::SetMarking)
+function apply_action!(state::ReactionNetworkProblem, firing, a::SetMarking)
     ix = find_index(a.name, state)
     isnothing(ix) && error("SetMarking: unknown place $(a.name)")
-    v = _eval_value(state, transition, a.value)
+    v = _eval_value(state, firing, a.value)
     if a.mode === :inc
         state.u[ix] += v
     else
@@ -234,81 +234,81 @@ function apply_action!(state::ReactionNetworkProblem, transition, a::SetMarking)
     return state.u[ix]
 end
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::SetParams)
+function apply_action!(state::ReactionNetworkProblem, firing, a::SetParams)
     for (p, vex) in a.assigns
-        state.p[p] = _eval_value(state, transition, vex)
+        state.p[p] = _eval_value(state, firing, vex)
     end
     return state.p
 end
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::SetField)
-    transition === nothing &&
+function apply_action!(state::ReactionNetworkProblem, firing, a::SetField)
+    firing === nothing &&
         error("SetField is a transition post-action only — no bound token in a Rule (ADR 0010 §C)")
-    for tok in transition.bound_tokens
-        setproperty!(tok, a.field, _eval_value(state, transition, a.value))
+    for tok in firing.bound_tokens
+        setproperty!(tok, a.field, _eval_value(state, firing, a.value))
     end
     return nothing
 end
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::SetTokens)
+function apply_action!(state::ReactionNetworkProblem, firing, a::SetTokens)
     # Iterate matched tokens in the (place, creation_index) total order (§9.2) and write each
     # field. SetTokens is the population generalization of SetField (ADR 0011 §A), so a value is
     # evaluated IN THE SELECTED TOKEN's context via `eval_with_token` (NOT `_eval_value`): that
     # rewrites every `@field(name)` to a literal read of the token's own current attribute before
     # the seeded-closure eval — so `pos_remaining => @field(pos_remaining) * 0.9` writes each token
     # down by 10%. (`@field` is a syntactic marker, not a real macro; sending it through wrap_fun
-    # directly would error at macro-expansion.) `transition` is nothing in a Rule, the firing
+    # directly would error at macro-expansion.) `firing` is nothing in a Rule, the `Firing`
     # instance in a post-action — it carries through to context_eval for params/obs/time/Sample.
     for tok in select_tokens(state, a.predicate)
         for (f, vex) in a.assigns
-            setproperty!(tok, f, eval_with_token(state, transition, tok, vex))
+            setproperty!(tok, f, eval_with_token(state, firing, tok, vex))
         end
     end
     return nothing
 end
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::AddToken)
+function apply_action!(state::ReactionNetworkProblem, firing, a::AddToken)
     haskey(state.registry, a.kind) ||
         error("AddToken: kind $(a.kind) not in the network registry (ADR 0006 §C)")
     ctor = state.registry[a.kind]
-    fieldvals = Dict(f => _eval_value(state, transition, vex) for (f, vex) in a.fields)
+    fieldvals = Dict(f => _eval_value(state, firing, vex) for (f, vex) in a.fields)
     token = ctor(state, fieldvals)
     add_structured_token!(state, token)
     return token
 end
 
-apply_action!(state::ReactionNetworkProblem, transition, a::Activate) =
+apply_action!(state::ReactionNetworkProblem, firing, a::Activate) =
     activate!(state, a.transition)
-apply_action!(state::ReactionNetworkProblem, transition, a::Deactivate) =
+apply_action!(state::ReactionNetworkProblem, firing, a::Deactivate) =
     deactivate!(state, a.transition)
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::Invoke)
+function apply_action!(state::ReactionNetworkProblem, firing, a::Invoke)
     haskey(state.registry, a.fn) ||
         error("Invoke: fn $(a.fn) not in the network registry (ADR 0006 §C)")
-    args = map(arg -> _eval_value(state, transition, arg), a.args)
-    state.registry[a.fn](state, transition, args...)   # return discarded (statement position)
+    args = map(arg -> _eval_value(state, firing, arg), a.args)
+    state.registry[a.fn](state, firing, args...)   # return discarded (statement position)
     return nothing
 end
 
-apply_action!(state::ReactionNetworkProblem, transition, a::Log) =
-    log(state, a.msg isa Union{Expr, Symbol} ? _eval_value(state, transition, a.msg) : a.msg)
+apply_action!(state::ReactionNetworkProblem, firing, a::Log) =
+    log(state, a.msg isa Union{Expr, Symbol} ? _eval_value(state, firing, a.msg) : a.msg)
 
-function apply_action!(state::ReactionNetworkProblem, transition, a::Seq)
+function apply_action!(state::ReactionNetworkProblem, firing, a::Seq)
     for s in a.stmts
-        apply_action!(state, transition, s)
+        apply_action!(state, firing, s)
     end
     return nothing
 end
 
 # Evaluate the raw action expression for its side effects (the legacy `:E` event-action path).
-apply_action!(state::ReactionNetworkProblem, transition, a::RawExpr) =
-    (_eval_value(state, transition, a.expr); nothing)
+apply_action!(state::ReactionNetworkProblem, firing, a::RawExpr) =
+    (_eval_value(state, firing, a.expr); nothing)
 
 # ── Fire all rules once (ADR 0010 §A/§D) — invoked at _step! step 10 ────────────────────
 """
     fire_rules!(state)
 
-Evaluate every enabled `Rule` in `state.rules` once, in order — the endogenous decision channel, invoked at `_step!` step 10 (ADR 0010 §A/§D). For each rule, the guard is evaluated (`nothing` transition context): a `Bool` fires the action 0/1 times, a numeric `v` fires it `rand(state.rng, Poisson(v))` times (RNG-threaded for determinism). A `:once` rule that fired latches its `enabled` flag off (reset by `_reinit!`, §4 D7). Returns `state`.
+Evaluate every enabled `Rule` in `state.rules` once, in order — the endogenous decision channel, invoked at `_step!` step 10 (ADR 0010 §A/§D). For each rule, the guard is evaluated (`nothing` firing context): a `Bool` fires the action 0/1 times, a numeric `v` fires it `rand(state.rng, Poisson(v))` times (RNG-threaded for determinism). A `:once` rule that fired latches its `enabled` flag off (reset by `_reinit!`, §4 D7). Returns `state`.
 """
 function fire_rules!(state::ReactionNetworkProblem)
     for r in state.rules

@@ -44,8 +44,8 @@ Base.show(io::IO, ::MIME"image/svg+xml", x::RawSVG) = print(io, x.s)
         return SciProjectToken(
             "PP" * string(rand(1:(10^9))),                        # unique token name
             :Project,                                             # kind tag (one kind for both programs)
-            nothing,                                              # bound_transition (engine-set)
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds history
+            nothing,                                              # bound_firing (engine-set)
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], # past_bonds history
             program, phase, value,
         )
     end

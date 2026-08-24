@@ -58,8 +58,8 @@ banner(title) = (println(); println("="^78); println(title); println("="^78))
 # The four leading constructor arguments are the @aagent protocol fields, in order:
 #   name::String            — a unique token name
 #   place::Symbol         — the KIND tag (here :Project; every project shares one kind)
-#   bound_transition        — nothing (the engine sets this when a transition binds the token)
-#   past_bonds              — an empty Tuple{Symbol,Float64,Transition}[] history vector
+#   bound_firing        — nothing (the engine sets this when a transition binds the token)
+#   past_bonds              — an empty Tuple{Symbol,Float64,Firing}[] history vector
 # …followed by our modeling attributes: `phase` and `npv`.
 
 @register begin
@@ -71,8 +71,8 @@ banner(title) = (println(); println("="^78); println(title); println("="^78))
         return ProjectToken(
             "Proj" * string(rand(1:(10^9))),                       # name
             :Project,                                            # kind (one kind for all phases)
-            nothing,                                             # bound_transition
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], # past_bonds
+            nothing,                                             # bound_firing
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], # past_bonds
             phase,
             npv,
         )
@@ -379,7 +379,7 @@ println("reproducible (model, rules, seed) triple rather than an imperative scri
             "Gen" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],
             phase,
             npv,
             born,
@@ -657,7 +657,7 @@ println(
 #
 # A Milestone-1 requirement: the dump only supports a CLEAN tick boundary (no in-flight
 # instance mid-cycle). We design this section's model with `cycletime => 0.0`, so every advance
-# completes within its tick and `ongoing_transitions` is empty at the boundary.
+# completes within its tick and `ongoing_firings` is empty at the boundary.
 #
 # Finally we show full reproducibility: `_reinit!` resets the state, rebuilds the t=0 population,
 # and re-arms once-rules, so re-running from the same seed reproduces the first trajectory.
@@ -689,7 +689,7 @@ pc = ReactionNetworkProblem(
 )
 simulate(pc, 2)                          # step to a clean boundary (ct=0 ⇒ no in-flight)
 println(
-    "Simulated 2 ticks. ongoing_transitions empty? ", isempty(pc.ongoing_transitions),
+    "Simulated 2 ticks. ongoing_firings empty? ", isempty(pc.ongoing_firings),
     "   t = ", pc.t
 )
 d = dump_state(pc)

@@ -243,7 +243,7 @@ using Random, Distributions, DataFrames
         end; @prob_init net scientist = 10 product = 0; @prob_params net; @prob_meta net tspan = 6 dt = 1.0; prob = ReactionNetworkProblem(net)
         simulate(prob)  # each tick spawns 1 instance; cycletime=10 never reached before maxlifetime=2 forces timeout
         @test prob.u[1] <= 10.0 + 1.0e-9  # INV2: conserved mass NEVER exceeds closed-system total now that timed-out instances are pruned (verified u[1] == 6.0, max == 10.0)
-        @test all(tr -> tr.state < tr[:transCycleTime], prob.ongoing_transitions)  # INV6: no completed-but-retained zombie; every surviving instance is genuinely in-flight (verified)
+        @test all(tr -> tr.state < tr[:transCycleTime], prob.ongoing_firings)  # INV6: no completed-but-retained zombie; every surviving instance is genuinely in-flight (verified)
     end
 
     # [lifecycle-cycletime-completion-current] tier=T1-characterization expectedStatus=pass-now

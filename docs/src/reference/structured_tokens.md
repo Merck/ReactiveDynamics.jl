@@ -18,10 +18,10 @@ log_token_fields
 
 ## Runtime token instances
 
-A `Transition` is a live in-flight instance of a transition recipe; the tokens it occupies are its bound structured agents. `ArcSpec` is the promoted transition↔place incidence row (an *arc*) — the typed, foreign-key-exact form of a reaction line that structured-token binding and place merges repoint against.
+A `Firing` is one in-flight execution of a transition; the tokens it occupies are its *binding* (`bound_tokens`), and a structured token points back at the firing that holds it through `bound_firing`. The type was called `Transition` before ADR 0018 put the canonical Petri word back on the static object; the old spelling still resolves for one release and warns. `ArcSpec` is the promoted transition↔place incidence row (an *arc*) — the typed, foreign-key-exact form of a reaction line that structured-token binding and place merges repoint against.
 
 ```@docs
-Transition
+Firing
 ArcSpec
 arcs
 placename

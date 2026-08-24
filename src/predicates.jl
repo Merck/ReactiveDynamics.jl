@@ -48,20 +48,20 @@ end
 # Evaluate a clause/SetField RHS value through the seeded closure path. A bare QuoteNode
 # (a literal `:Phase2` written in a clause) is the symbol it wraps — `wrap_fun`/`context_eval`
 # pass QuoteNodes through unevaluated, so normalize here to compare against a Symbol field.
-function _eval_pred_value(state, transition, v)
+function _eval_pred_value(state, firing, v)
     v isa QuoteNode && return v.value
-    r = context_eval(state, transition, state.wrap_fun(v))
+    r = context_eval(state, firing, state.wrap_fun(v))
     return r isa QuoteNode ? r.value : r
 end
 
 # Does `token` satisfy the predicate, evaluated at the allocation-point snapshot (ADR 0008 §C)?
 # An empty/nothing predicate matches any token of the right kind (degenerate = today's behavior).
-matches(::Nothing, token, state, transition) = true
-function matches(pred::TokenPredicate, token, state, transition)
+matches(::Nothing, token, state, firing) = true
+function matches(pred::TokenPredicate, token, state, firing)
     get_place(token) == pred.kind || return false
     for c in pred.clauses
         lhs = _token_field(token, c.field)
-        rhs = _eval_pred_value(state, transition, c.value)
+        rhs = _eval_pred_value(state, firing, c.value)
         _apply_op(c.op, lhs, rhs) || return false
     end
     return true
@@ -80,10 +80,10 @@ end
 # the token's own current fields via `@field(name)` (ADR 0008 §D Field leaf). `@field(name)`
 # rewrites to a literal read of `getproperty(token, name)` before the usual seeded-closure eval;
 # everything else (params, obs, time, arithmetic, Sample draws) goes through context_eval as normal.
-function eval_with_token(state::ReactionNetworkProblem, transition, token, valex)
+function eval_with_token(state::ReactionNetworkProblem, firing, token, valex)
     valex isa QuoteNode && return valex.value
     rewritten = _substitute_fields(valex, token)
-    r = context_eval(state, transition, state.wrap_fun(rewritten))
+    r = context_eval(state, firing, state.wrap_fun(rewritten))
     return r isa QuoteNode ? r.value : r
 end
 

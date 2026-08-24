@@ -466,7 +466,7 @@ include("solvers.jl")
 include("predicates.jl")
 include("actions.jl")
 # Per-program (per-structured-token) ledger (MVP finding D) — placed after actions.jl so it sees
-# the ReactionNetworkProblem/Transition types and the token accessors; the hooks in solvers.jl
+# the ReactionNetworkProblem/Firing types and the token accessors; the hooks in solvers.jl
 # call into it. Kept in its own file to minimize merge surface with the allocator rewrite.
 include("ledger.jl")
 include("serialize.jl")
@@ -494,9 +494,9 @@ include("visualize.jl")
 # definitions. It is NOT the only place a retired spelling survives, because a forwarding binding
 # cannot express all of them: the `@aka` legacy object name (`interface/update.jl`), the `:species`
 # selector field (`predicates.jl`, `solvers.jl`) and the serializer's wire-key read aliases
-# (`serialize.jl`) each carry their own one-release shim. The ADR-0017 gate in
-# `test/semantic/exports_resolve.jl` pins that exact list, so a retired spelling reappearing
-# anywhere else in `src/` fails the suite.
+# (`serialize.jl`) each carry their own one-release shim. The retired-vocabulary gate in
+# `test/semantic/exports_resolve.jl` pins that exact list — and ADR 0018's retired firing names
+# alongside it — so a retired spelling reappearing anywhere else in `src/` fails the suite.
 #
 # Tier 1 — names that were exported, so the shim re-exports them too.
 Base.@deprecate_binding ReactantSpec ArcSpec
@@ -527,5 +527,18 @@ macro add_species(args...)
         )
     )
 end
+
+# ── Deprecated pre-ADR-0018 firing vocabulary ──────────────────────────────────────────────────
+# ADR 0018 unswapped the two names the Petri rename left inverted: the in-flight instance type is
+# now `Firing`, and the static transitions live in `state.transitions` (was `transition_recipes`).
+# `Transition` was never exported, but it is written by hand in every structured-token example —
+# `past_bonds`'s element type is `Tuple{Symbol, Float64, ReactiveDynamics.Firing}` — so it takes the
+# same one-release courtesy as the ADR-0017 names above.
+#
+# The renamed FIELDS (`ongoing_transitions` → `ongoing_firings`, `transition_recipes` →
+# `transitions`, `bound_transition` → `bound_firing`) get no shim: a struct field cannot carry a
+# forwarding binding, and ADR 0018 chose a glossary row over a `getproperty` overload that would add
+# a branch to a hot field access in the step loop.
+Base.@deprecate_binding Transition Firing false
 
 end

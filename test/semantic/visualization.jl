@@ -38,7 +38,7 @@ end
     function VizProjectToken(phase)
         return VizProjectToken(
             "VP" * string(rand(1:(10^9))), :Project, nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[], phase
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[], phase
         )
     end
 end

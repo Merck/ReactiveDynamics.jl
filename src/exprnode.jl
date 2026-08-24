@@ -2,7 +2,7 @@
 # cycletime, prob_of_success, priority, …) and action value is authored — by a human or an LLM —
 # as a closed tagged-union `ExprNode` tree, NEVER a Julia source string. `to_expr` lowers a tree
 # to EXACTLY the `Expr` the existing DSL produces (which `wrap_fun`/`compile_attrs` then compile
-# to a (state, transition) closure ONCE at construction); `from_expr` is the structural inverse.
+# to a (state, firing) closure ONCE at construction); `from_expr` is the structural inverse.
 # The runtime hot path is untouched — this is purely the authoring/serialization boundary, so the
 # closed whitelists below are the only Julia ever produced from an inert model document.
 
@@ -171,7 +171,7 @@ to_expr(n::Field) = Expr(:macrocall, Symbol("@field"), LineNumberNode(0, :none),
 # literal index `state.external_inputs[:port]`. wrap_fun/compile_attrs leave this `state.<field>`
 # access untouched (it is not a place/param name, so neither the varmap substitution nor the
 # ref/dot-escaping passes rewrite it — verified against compilers.jl), so the compiled (state,
-# transition) closure reads the buffer `_prestep!` filled this tick. The `state.dt`/`state.rng`
+# firing) closure reads the buffer `_prestep!` filled this tick. The `state.dt`/`state.rng`
 # accesses the engine already lowers elsewhere are the precedent for a bare `state.<field>` leaf.
 to_expr(n::ExternalRef) = :(state.external_inputs[$(QuoteNode(n.port))])
 

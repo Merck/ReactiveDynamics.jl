@@ -23,7 +23,7 @@ const RDX = ReactiveDynamics
             "IP" * string(rand(1:(10^9))),
             :Project,
             nothing,
-            Tuple{Symbol, Float64, ReactiveDynamics.Transition}[],
+            Tuple{Symbol, Float64, ReactiveDynamics.Firing}[],
             phase,
             npv,
         )
@@ -188,7 +188,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
             registry = INIT_REGISTRY, population = pop
         )
         simulate(p, 2)                          # ct=0 ⇒ no in-flight at the boundary
-        @test isempty(p.ongoing_transitions)
+        @test isempty(p.ongoing_firings)
         d = RDX.dump_state(p)
         @test d.t == 2.0 && length(d.tokens) == 4
         p2 = RDX.restore(spec, d; registry = INIT_REGISTRY)
@@ -216,7 +216,7 @@ ntok(p) = length(collect(values(RDX.inners(RDX.getagent(p, "structured")))))
             registry = INIT_REGISTRY, population = pop
         )
         simulate(p, 1)                          # an instance is now mid-cycle
-        @test !isempty(p.ongoing_transitions)
+        @test !isempty(p.ongoing_firings)
         @test_throws Exception RDX.dump_state(p)
     end
 end

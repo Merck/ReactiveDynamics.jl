@@ -111,3 +111,36 @@ end
         @test occursin(retired, read(joinpath(root, f), String))
     end
 end
+
+# ── ADR 0018 gate: the swapped firing/transition names do not come back ──────────────────────────
+#
+# ADR 0018 unswapped the inversion ADR 0017 left standing — the in-flight instance type is `Firing`,
+# the static rows are `state.transitions`, the per-tick snapshot is `state.sampled_transitions`, and a
+# token's back-pointer is `bound_firing`. The retired spellings have no shim except the type alias, so
+# the only thing that keeps them from creeping back into new code is this grep.
+@testset "ADR 0018: the pre-rename firing vocabulary is gone from src/" begin
+    retired = r"\btransition_recipes\b|\bongoing_transitions\b|\bbound_transition\b"
+    root = pkgdir(RD)
+    # `src/ReactiveDynamics.jl` names all three in the comment above the type alias, documenting what
+    # was renamed and why the fields get no shim — the one place the old spellings may appear.
+    legacy_files = Set(["src/ReactiveDynamics.jl"])
+    srcfiles = String[]
+    for (dir, _, files) in walkdir(joinpath(root, "src")), fn in files
+        endswith(fn, ".jl") && push!(srcfiles, relpath(joinpath(dir, fn), root))
+    end
+    offenders =
+        filter(f -> f ∉ legacy_files && occursin(retired, read(joinpath(root, f), String)), srcfiles)
+    @test isempty(offenders)
+    isempty(offenders) || @error "pre-ADR-0018 firing vocabulary is back in src/" offenders
+
+    # The two live tables are distinct fields, not one aliased dict (the collision that made the
+    # first sweep attempt fail to load), and both carry the `trans*` column family.
+    @test :transitions ∈ fieldnames(RD.ReactionNetworkProblem)
+    @test :sampled_transitions ∈ fieldnames(RD.ReactionNetworkProblem)
+    @test :ongoing_firings ∈ fieldnames(RD.ReactionNetworkProblem)
+    @test :bound_firing ∈ fieldnames(RD.BaseStructuredToken)
+
+    # The type rename keeps a one-release forwarding alias, since every structured-token example
+    # writes `ReactiveDynamics.Transition` by hand in a `past_bonds` element type.
+    @test RD.Transition === RD.Firing
+end
