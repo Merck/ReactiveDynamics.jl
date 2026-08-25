@@ -81,7 +81,9 @@ end
 # retired spelling reappearing anywhere else in `src/` fails here, rather than quietly rebuilding
 # the two-vocabulary problem the rename exists to remove.
 @testset "ADR 0017: retired vocabulary confined to the documented legacy sites" begin
-    retired = r"\bspecies\b|reactant|spec[A-Z]|\bstoich"
+    # No LEADING `\b` on the bare words: a boundary before `species` misses `set_species` (`_` is a
+    # word character), which is exactly how `actions.jl`'s legacy verb tuple escaped this gate once.
+    retired = r"species\b|reactant|spec[A-Z]|stoich"
     # Each entry carries a one-release shim that a forwarding binding cannot express.
     legacy_files = Set(
         [
@@ -90,12 +92,14 @@ end
             "src/predicates.jl",         # @select field :species → :place
             "src/solvers.jl",            # @advance field :species → :place
             "src/serialize.jl",          # wire-key aliases: places/arcs/place/multiplicity
+            "src/actions.jl",            # Tier 3 `_LEGACY_ACTION_VERBS`: old serialized verbs still load
         ]
     )
     root = pkgdir(RD)
     srcfiles = String[]
+    # Normalize to `/`: `relpath` separates with `\` on Windows, which no `legacy_files` entry matches.
     for (dir, _, files) in walkdir(joinpath(root, "src")), fn in files
-        endswith(fn, ".jl") && push!(srcfiles, relpath(joinpath(dir, fn), root))
+        endswith(fn, ".jl") && push!(srcfiles, replace(relpath(joinpath(dir, fn), root), '\\' => '/'))
     end
     @test !isempty(srcfiles)                      # sanity: we actually walked the source tree
 
@@ -125,8 +129,9 @@ end
     # was renamed and why the fields get no shim — the one place the old spellings may appear.
     legacy_files = Set(["src/ReactiveDynamics.jl"])
     srcfiles = String[]
+    # `/`-normalized as above, or every allowlisted file reads as an offender on Windows.
     for (dir, _, files) in walkdir(joinpath(root, "src")), fn in files
-        endswith(fn, ".jl") && push!(srcfiles, relpath(joinpath(dir, fn), root))
+        endswith(fn, ".jl") && push!(srcfiles, replace(relpath(joinpath(dir, fn), root), '\\' => '/'))
     end
     offenders =
         filter(f -> f ∉ legacy_files && occursin(retired, read(joinpath(root, f), String)), srcfiles)
