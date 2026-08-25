@@ -793,27 +793,27 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
         if haskey(r, "predicate")   # rule 7: predicate over a structured kind; clause values 𝓕ₜ-measurable
             pd = r["predicate"]
             Symbol(get(pd, "kind", "")) in structured ||
-                push!(diags, Diagnostic(:error, ".predicate.kind", "kind `$(get(pd, "kind", ""))` is not a structured place"))
+                push!(diags, Diagnostic(:error, "$arc_path[$i].predicate.kind", "kind `$(get(pd, "kind", ""))` is not a structured place"))
             for (j, c) in enumerate(get(pd, "clauses", []))
                 Symbol(c[2]) in PRED_OP_WHITELIST ||
-                    push!(diags, Diagnostic(:error, ".predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
+                    push!(diags, Diagnostic(:error, "$arc_path[$i].predicate.clauses[$j]", "op `$(c[2])` ∉ PRED_OP_WHITELIST"))
                 # the clause VALUE must be 𝓕ₜ-measurable (no Sample)
                 c[3] isa AbstractDict &&
-                    _validate_node!(diags, c[3], ".predicate.clauses[$j].value"; places, params, obs, ports, allow_sample = false, allow_field = false)
+                    _validate_node!(diags, c[3], "$arc_path[$i].predicate.clauses[$j].value"; places, params, obs, ports, allow_sample = false, allow_field = false)
             end
         end
         if haskey(r, "structured")   # named @structured(:Kind, field = value, …) genesis product
             st = r["structured"]
             k = Symbol(get(st, "kind", ""))
             k in regnames ||
-                push!(diags, Diagnostic(:error, ".structured.kind", "kind `$k` not in registry"))
+                push!(diags, Diagnostic(:error, "$arc_path[$i].structured.kind", "kind `$k` not in registry"))
             k in structured ||
-                push!(diags, Diagnostic(:error, ".structured.kind", "kind `$k` is not a structured place"))
+                push!(diags, Diagnostic(:error, "$arc_path[$i].structured.kind", "kind `$k` is not a structured place"))
             # field VALUES are genesis attributes: a Sample draw is legal (like an AddToken field),
             # but a bound-token @field read is not (there is no bound token at a genesis product).
             for (j, f) in enumerate(get(st, "fields", []))
                 haskey(f, "value") && f["value"] isa AbstractDict &&
-                    _validate_node!(diags, f["value"], ".structured.fields[$j].value"; places, params, obs, ports, allow_field = false)
+                    _validate_node!(diags, f["value"], "$arc_path[$i].structured.fields[$j].value"; places, params, obs, ports, allow_field = false)
             end
         end
     end
