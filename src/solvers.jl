@@ -313,7 +313,7 @@ function evolve!(state)
         row_ids(state, :T),
     )
     # Integerize the spawn-count proposal by FLOORING, not `ceil` (CONTRACT §2.3, §2.8). On the
-    # Poisson genesis path `transRate` is already a whole `rand(Poisson(dt·rate))` draw (create.jl:153),
+    # Poisson genesis path `transRate` is already a whole `rand(Poisson(dt·rate))` draw (create.jl:210),
     # so `floor` is a no-op there and spawning stays dt-invariant in expectation. The ONLY source of a
     # fractional `qs` is the `@deterministic` bare-count path: a fractional count (e.g. 0.3) previously
     # got `ceil`'d up to 1 EVERY tick, so halving `dt` (doubling the tick count) roughly doubled the
@@ -844,8 +844,8 @@ end
 # naming the transition, the offending LHS token, and the §1.4 rule. The corresponding deep-path
 # errors are thereby UNREACHABLE for these cases (the construction check fires first) but are left in
 # place as defensive belt-and-suspenders:
-#   1. {:nonblock, :conserved}    — else errors in finish! (solvers.jl ~735) / crashes on `q` in
-#                                    free_blocked_places! on the 2nd tick.
+#   1. {:nonblock, :conserved}    — else errors in finish! on the 2nd tick, at the `:nonblock`
+#                                    release branch (solvers.jl ~751).
 #   2. :rate (perstep) with C==0  — else constructs and runs SILENTLY (build_requirements! gates the
 #                                    per-step draw on C>0, ~117, so the token never meters).
 #   3. :rate (perstep) on a       — else errors deep in build_requirements! (~114).
@@ -855,7 +855,7 @@ end
 # `_static_arcs`, serialize.jl) — the SAME parse the runtime/exporter use — so the checked
 # modality Set matches what the engine forms per tick. The effective per-token modality unions the
 # arc's wrapper tags with the place's `:placeDefaultModality` (the `@mode` channel), exactly as the
-# runtime does at state.jl:309. Lines the static splitter cannot handle (`@choose`/bidirectional)
+# runtime does at state.jl:337. Lines the static splitter cannot handle (`@choose`/bidirectional)
 # are the escape hatch and are left un-validated (they are un-validatable statically).
 function validate_modalities(net::ReactionNetwork)
     for t in row_ids(net, :T)
@@ -1097,7 +1097,7 @@ function AlgebraicAgents._reinit!(state::ReactionNetworkProblem; seed = nothing)
     # RNG restore (§4 D7) — OR reseed (ensemble mode b, ADR 0013 §14.2). With NO `seed` (the default
     # AA `reinit!(a)` path, byte-identical to before) restore the construction stream so the second
     # run reproduces the first. With a `seed`, INSTALL that seed's stream as the NEW construction
-    # stream — mirroring the constructor (`:845-848`): `Xoshiro(seed)`, snapshot `initial_rng`, store
+    # stream — mirroring the constructor (`:969-972`): `Xoshiro(seed)`, snapshot `initial_rng`, store
     # the realized seed. This makes the reseeded state equivalent to a fresh `build(seed)`. CRITICAL
     # ORDERING: it MUST precede `instantiate_population!` below — the t=0 marking's `count`+attribute
     # draws are sampled through `state.rng`, so a reseeded member's initial attributes match what a
