@@ -733,7 +733,7 @@ println(
       §6  Model-as-data (JSON)        eval-free load + export round-trip; JSON ≡ DSL ≡ reload    ADR 0005
       §7  Checkpoint & replay         dump_state/restore at a clean boundary; reinit determinism ADR 0007
 
-    The through-line: a model — place, pipeline, levers, and starting portfolio — is reproducible
+    The through-line: a model — places, pipeline, levers, and starting portfolio — is reproducible
     DATA, fully determined by (model, population, rules, seed). A token can enter the run three ways —
     declaratively at t=0 (population[], §1), imperatively via a rule action (AddToken, §3), or as a
     first-class transition product (@structured, §4) — the decision logic lives IN the model as typed

@@ -411,7 +411,7 @@ println("  TokenTrajectoryPlot(:value) rendered → ", relpath(traj_png, HERE))
 # usable alone:
 #
 #   Layer A — network_graph(prob) → NetworkGraph. A pure, dependency-free Petri-net
-#       view: place (place) nodes, transition nodes, arcs with multiplicity +
+#       view: place nodes, transition nodes, arcs with multiplicity +
 #       modality. Runs on a deepcopy, so it does NOT perturb the caller's RNG — pure.
 #   Layer B — to_graphviz(g) emits DOT; draw_network(prob) renders it through AA's
 #       run_graphviz (Graphviz_jll or a system `dot`). No run needed — this is the
@@ -470,7 +470,7 @@ end
 # highlighted arcs. Then render if a backend exists.
 starved = [s for (s, v) in RD._pool_troughs(prob) if v <= 0.0]
 println("Layer C exec_map — decoration inputs:")
-println("  starved place (pool trough ≤ 0) : ", isempty(starved) ? "none" : starved)
+println("  starved places (pool trough ≤ 0) : ", isempty(starved) ? "none" : starved)
 
 # Build the highlight arc set the way exec_map does: each matching token's
 # past_bonds map a (place, transition-index) to the SAME node id the graph uses.

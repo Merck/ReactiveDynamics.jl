@@ -51,7 +51,7 @@ end
 
 # ## 1. Manual composition: `@join` and `@equalize`
 #
-# The lowest rung. `@join` takes the **union** of two networks' place, transitions, and
+# The lowest rung. `@join` takes the **union** of two networks' places, transitions, and
 # parameters (and their events and observables), optionally *identifying* shared places
 # across the two via equations. `@equalize` collapses two places *within* one network into a
 # single pool and rewrites every reference. Both are the **manual, no-declared-ports** path:
@@ -70,12 +70,12 @@ end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
 println("@join acs1 acs2 (identifying the shared place A)")
 println(
-    "  place in join : ", nrows(joined, :S),
+    "  places in join  : ", nrows(joined, :S),
     "  (union {A,B,C} ⇒ 3; the two A's merged into one)"
 )
 println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
-# `@equalize` collapses two conceptually-identical place `A` and `A2` into one pool.
+# `@equalize` collapses two conceptually-identical places `A` and `A2` into one pool.
 
 eqacs = @reaction_network begin
     1.0, A  --> B, name => t1
@@ -85,7 +85,7 @@ before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
 println(
-    "  place before  : ", before_S, "  → after : ", nrows(equalized, :S),
+    "  places before   : ", before_S, "  → after : ", nrows(equalized, :S),
     "  (dropped by exactly 1; references rewritten)"
 )
 println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
@@ -109,7 +109,7 @@ end
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  place   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
+println("  places    : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # A **port** is a boundary place tagged with a role: `:input` (consumed-from boundary),
@@ -169,9 +169,9 @@ end
 portfolio = build_portfolio()
 populate_arcs!(portfolio)
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  place (phases) : ", portfolio[:, :placeName])
+println("  places (phases)  : ", portfolio[:, :placeName])
 println(
-    "  parts            : ", nrows(portfolio, :S), " place, ",
+    "  parts            : ", nrows(portfolio, :S), " places, ",
     nrows(portfolio, :T), " transitions"
 )
 println("  per-edge (ct, pos):")
@@ -302,7 +302,7 @@ end
 # sub-transitions back into one coarse transition whose boundary reaction line is `lhs -->
 # rhs`, carrying summarized attributes. It is a structural convenience for moving *up* the
 # granularity ladder (it drops the sub rows and adds the coarse one; it does not garbage-collect
-# the now-inert internal place).
+# the now-inert internal places).
 
 collapsed = abstract_transitions(
     refined, sub_transitions, :flow_Phase2_Phase3;

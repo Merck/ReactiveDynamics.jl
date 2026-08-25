@@ -1,5 +1,5 @@
 # =============================================================================
-# ReactiveDynamics.jl — CORE ENGINE TOUR (classical / plain-Float64 place)
+# ReactiveDynamics.jl — CORE ENGINE TOUR (classical / plain-Float64 places)
 # =============================================================================
 #
 # This is a single, runnable, literate walkthrough of the ReactiveDynamics
@@ -73,7 +73,7 @@ sir_prob = ReactionNetworkProblem(sir; seed = 1)
 simulate(sir_prob)
 
 # IMPORTANT: read solution columns BY NAME. Column order is CONSTRUCTION order,
-# not the order you wrote the place, so positional indexing is a foot-gun.
+# not the order you wrote the places, so positional indexing is a foot-gun.
 S = sir_prob.sol[!, "S"]
 I = sir_prob.sol[!, "I"]
 R = sir_prob.sol[!, "R"]
@@ -154,8 +154,8 @@ println("In-flight instances at end  : ", inflight, "  (bounded by capacity => 4
 banner("§3. Resource modalities — the engine's signature feature (a truth-table tour)")
 # =============================================================================
 #
-# A arc is not just "consumed". The engine has a small ALGEBRA of resource
-# behaviors, set by wrapping the place in a modality macro on the LHS. The
+# An input arc is not just "consumed". The engine has a small ALGEBRA of resource
+# behaviors, set by wrapping a place in a modality macro on the LHS. The
 # behavior depends on WHEN the resource is drawn and WHETHER it comes back:
 #
 #   bare  X        — RAW CONSUMED: debited at spawn, never returned (mass burned).
@@ -462,7 +462,7 @@ banner("§6. Custom registered rate functions + the cost / reward / valuation le
 # a marketed drug at a registered rate β(...).
 #
 # This section also tours the VALUATION LEDGER. Attach @cost / @reward /
-# @valuation to place and the engine records financial events to `prob.log`,
+# @valuation to places and the engine records financial events to `prob.log`,
 # a vector of NamedTuple-like rows. Read it by tag:
 #   costs  = [r[3] for r in prob.log if r[1] == :valuation_cost]
 #   rewards = [r[3] for r in prob.log if r[1] == :valuation_reward]
@@ -521,7 +521,7 @@ println(
 
 
 # =============================================================================
-banner("§7. Composition: @join two submodels and @equalize place")
+banner("§7. Composition: @join two submodels and @equalize places")
 # =============================================================================
 #
 # Models compose. `@join` takes the UNION of two schemas' places, transitions,
@@ -530,7 +530,7 @@ banner("§7. Composition: @join two submodels and @equalize place")
 # pool and rewrites every reference. Both operate at AUTHORING time (on a
 # schema), before construction.
 #
-# `@join` merges place / transitions / params AND (since WS-3) events (:E) and
+# `@join` merges places / transitions / params AND (since WS-3) events (:E) and
 # observables (:obs) too — `merge_networks!` walks all six objects and appends :E/:obs
 # structurally, so nothing is silently dropped on a join. `@join` / `@equalize` are
 # the MANUAL, no-declared-ports path (you name the place to identify); the
@@ -549,12 +549,12 @@ end
 joined = @join acs1 acs2 acs1.A = acs2.A = @alias(A)
 println("@join acs1 acs2 (identifying the shared place A)")
 println(
-    "  place in join : ", nrows(joined, :S),
+    "  places in join  : ", nrows(joined, :S),
     "  (union {A,B,C} ⇒ 3; the two A's merged into one)"
 )
 println("  transitions     : ", nrows(joined, :T), "  (1 + 1, none lost)")
 
-# @equalize: two conceptually-identical place A and A2 collapse to one.
+# @equalize: two conceptually-identical places A and A2 collapse to one.
 eqacs = @reaction_network begin
     1.0, A  --> B, name => t1
     1.0, A2 --> B, name => t2
@@ -563,7 +563,7 @@ before_S = nrows(eqacs, :S)
 equalized = @equalize eqacs A = A2
 println("@equalize eqacs A = A2 (collapse A and A2 into one pool)")
 println(
-    "  place before  : ", before_S, "  → after : ", nrows(equalized, :S),
+    "  places before   : ", before_S, "  → after : ", nrows(equalized, :S),
     "  (dropped by exactly 1; references rewritten)"
 )
 println("  transitions     : ", nrows(equalized, :T), "  (preserved; only :S was touched)")
@@ -647,7 +647,7 @@ println(
       §8  Determinism: seed= reproducibility, divergence on different seeds, and a
           deterministically-seeded ensemble with mean ± spread.
 
-      Everything above used CLASSICAL (plain Float64) place only. Structured /
+      Everything above used CLASSICAL (plain Float64) places only. Structured /
       agent tokens with attributes and lifecycle identity are a separate demo:
       see demo/bd_acquisition.
     """

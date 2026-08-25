@@ -125,7 +125,7 @@ const PIPELINE_JSON = """
 clean_diags = validate(JSON.parse(PIPELINE_JSON); registry = REGISTRY)
 println("validate(clean model)  -> ", isempty(clean_diags) ? "OK (no diagnostics)" : clean_diags)
 
-# Now break it deliberately: point a arc's foreign key at a transition that does not exist. `validate` reports it as a diagnostic — it does not throw, and it certainly does not evaluate anything.
+# Now break it deliberately: point an arc's foreign key at a transition that does not exist. `validate` reports it as a diagnostic — it does not throw, and it certainly does not evaluate anything.
 
 broken = JSON.parse(PIPELINE_JSON)
 broken["arcs"][1]["transition"] = "ghost"  # no transition with id "ghost"

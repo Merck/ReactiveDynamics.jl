@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = ReactiveDynamics
+```
+
 # Glossary
 
 ReactiveDynamics is a **Petri net** engine, and since v0.3 its API uses standard Petri-net vocabulary — *place*, *marking*, *arc* — in place of the chemical-reaction-network words it inherited from its Catalyst-derived DSL surface (see [ADR 0017](https://github.com/Merck/ReactiveDynamics.jl/blob/main/spec/adr/0017-petri-net-vocabulary.md)). This page is the term dictionary: what each concept is called here, and which published family of Petri nets to read if you want the theory behind it.

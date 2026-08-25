@@ -70,7 +70,7 @@ sir_prob = ReactionNetworkProblem(sir; seed = 1)
 simulate(sir_prob)
 
 # **Read solution columns by name.** Column order is *construction* order, not the order
-# you wrote the place, so positional indexing is a foot-gun — always index by name.
+# you wrote the places, so positional indexing is a foot-gun — always index by name.
 
 S = sir_prob.sol[!, "S"]
 I = sir_prob.sol[!, "I"]

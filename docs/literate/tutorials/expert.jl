@@ -336,15 +336,15 @@ println("buffer equals the declared defaults snapshot? ", spent.rd.external_inpu
 # ### The exec map (hero visual)
 #
 # The analysis layer renders a network as a three-layer diagram. `network_graph(prob)` is a pure,
-# dependency-free Petri-net view (place places, transition nodes, arcs). `to_graphviz(g)` emits
+# dependency-free Petri-net view (place nodes, transition nodes, arcs). `to_graphviz(g)` emits
 # DOT; `draw_network(prob)` renders it through Graphviz. `exec_map(prob)` decorates that structure
-# with run statistics — place painted where their pool ran to a trough, and (for structured
+# with run statistics — places painted where their pool ran to a trough, and (for structured
 # models) a selected cohort's path drawn as thick arcs. It is strictly read-only: it never mutates
 # the run. Rendering is best-effort: if no Graphviz backend is present we still emit the DOT source,
 # so a backend hiccup cannot fail the build.
 
 g = network_graph(sys.rd)
-println("network_graph — place : ", [s.name for s in g.places])
+println("network_graph — places    : ", [s.name for s in g.places])
 println("               transitions: ", [t.name for t in g.transitions])
 println("               arcs       : ", length(g.arcs))
 

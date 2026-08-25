@@ -77,10 +77,10 @@ portfolio = build_portfolio()
 RD.populate_arcs!(portfolio)   # promote the incidence table so we can read it
 
 println("@pipeline expanded the phase chain into a flat ReactionNetwork:")
-println("  place (phases)   : ", portfolio[:, :placeName])
+println("  places (phases)    : ", portfolio[:, :placeName])
 println("  transitions        : ", [portfolio[i, :transName] for i in row_ids(portfolio, :T)])
 println(
-    "  parts              : ", nrows(portfolio, :S), " place, ",
+    "  parts              : ", nrows(portfolio, :S), " places, ",
     nrows(portfolio, :T), " transitions"
 )
 println("  per-edge (ct, pos) :")
@@ -127,7 +127,7 @@ end
 screening = phase_gate(:Screen, :Lead; ct = 0.5, pos = 0.85)
 lead_opt = phase_gate(:Lead, :Candidate; ct = 0.7, pos = 0.8)
 println("phase_gate(:Screen, :Lead; …) — one instance of the reusable fragment:")
-println("  place   : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
+println("  places    : ", screening[:, :placeName], "   transitions: ", nrows(screening, :T))
 println("  (ct, pos) : ", (screening[1, :transCycleTime], screening[1, :transProbOfSuccess]))
 
 # Tag the boundary: `Lead` is the output of screening and the input of lead_opt — the
@@ -178,7 +178,7 @@ banner("§3. REFINE one transition — the multifidelity payoff (§B)  ★ headl
 # `refine(spec, transition, submodel; ports)` splices the sub-model into the named
 # coarse transition in four authoring-time structural moves: (1) namespace the sub's
 # :private places; (2) identify the sub's open ports with the parent boundary
-# place via `ports` by FK-repoint; (3) append the sub's transitions + remaining
+# places via `ports` by FK-repoint; (3) append the sub's transitions + remaining
 # places/params/obs/EVENTS; (4) drop the coarse transition. It is NON-mutating
 # (refine = refine! on a deepcopy). Because move (2) leaves the BOUNDARY places
 # (Phase2, Phase3) at their same indices/names, coarse and refined are PLUG-
@@ -311,7 +311,7 @@ banner("§5. Round-tripping the ladder: abstract (§B) and JSON (Invariant 5)")
 # transition whose boundary reaction line is `lhs --> rhs`, carrying summarized
 # attrs. It is a structural convenience for climbing back UP the granularity ladder.
 # (Honest scope: it drops the sub-transition rows and adds the coarse one; it does
-# NOT garbage-collect the now-orphaned internal place — those rows remain, inert.)
+# NOT garbage-collect the now-orphaned internal places — those rows remain, inert.)
 
 sub_transitions = [n for n in tnames_after if occursin("__sub__", string(n))]
 collapsed = RD.abstract_transitions(
@@ -338,7 +338,7 @@ json = RD.to_json_model(refined; meta = Dict{String, Any}("tspan" => 5.0))
 reloaded = RD.build_network_from_dict(RD.JSON.parse(json))
 println("JSON round-trip of the refined model (Invariant 5 — no runtime trace):")
 println(
-    "  place : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
+    "  places : ", nrows(refined, :S), " → reload ", nrows(reloaded, :S),
     "   transitions : ", nrows(refined, :T), " → reload ", nrows(reloaded, :T)
 )
 println(

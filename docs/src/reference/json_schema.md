@@ -134,7 +134,7 @@ An unregistered `add_token.kind` or `invoke.fn`, an out-of-set verb, a `set_fiel
 
 ### Predicates
 
-A `@select` predicate — used in a `arcs[]` LHS `predicate` and in a `set_tokens` action — is `{ "kind": <structured place>, "clauses": [[field, op, value], …] }`. Each clause is a `[field, op, value]` triple with `op ∈ PRED_OP_WHITELIST` (`== != < <= > >= in`); clause `value`s must be time-measurable (a `sample`/RNG node is rejected in a predicate — the filtration must not depend on draw order).
+A `@select` predicate — used in an `arcs[]` LHS `predicate` and in a `set_tokens` action — is `{ "kind": <structured place>, "clauses": [[field, op, value], …] }`. Each clause is a `[field, op, value]` triple with `op ∈ PRED_OP_WHITELIST` (`== != < <= > >= in`); clause `value`s must be time-measurable (a `sample`/RNG node is rejected in a predicate — the filtration must not depend on draw order).
 
 ## Other arrays
 

@@ -238,7 +238,7 @@ println("After : Phase1=", nphase(p_sel, :Phase1), " Phase2=", nphase(p_sel, :Ph
 
 # ## 4. Resource modalities and the allocator under contention
 #
-# A arc is not simply "consumed." The engine has a small **algebra** of resource behaviors, set
+# An input arc is not simply "consumed." The engine has a small **algebra** of resource behaviors, set
 # by wrapping a place in a modality macro on the left-hand side. The behavior depends on *when* the
 # resource is drawn and *whether* it comes back — this is the engine's signature feature, and the
 # truth table lands here:
@@ -484,7 +484,7 @@ vline!([te.baseline, te.deal]; label = "means", lw = 2, color = :black, ls = :da
 #    ending on +Δ expected launches ± SE.
 #
 # Two deep-dives go further on the machinery touched here: the [serialization deep-dive](../deep_dives/serialization.md)
-# shows how this whole model — place, pipeline, lever, and portfolio — becomes an eval-free JSON
+# shows how this whole model — places, pipeline, lever, and portfolio — becomes an eval-free JSON
 # document that round-trips loss-free, and the [composition deep-dive](../deep_dives/composition.md)
 # covers `@join` / `@compose` / `refine` for building a portfolio out of fragments and moving between
 # granularities. The [expert tutorial](expert.md) then places the portfolio as a node in a larger
