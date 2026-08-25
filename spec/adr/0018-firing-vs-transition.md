@@ -54,7 +54,7 @@ In `src/state.jl` the instance type becomes `Firing`, the live vector `ongoing_f
 
 Three things deliberately do not move: the store's transition columns, because renaming them breaks the substring filter at `src/operators/joins.jl:40` — the reflection trap ADR 0017 hit at `place`; the saved-document format, whose key is already `"transitions"`; and agent paths, built from a name string rather than the type.
 
-Two things change for a model author. Anyone reading the in-flight vector renames that field access — four demo sites and one tutorial do so today. Anyone naming the type when declaring a token's bond history writes `RD.Firing`, and the old spelling warns for one release through an alias in the block at `src/ReactiveDynamics.jl:488-524`.
+Two things change for a model author. Anyone reading the in-flight vector renames that field access — four demo sites and one tutorial do so today. Anyone naming the type when declaring a token's bond history writes `RD.Firing`, and the old spelling warns for one release through an alias in its own block at `src/ReactiveDynamics.jl:531-542`, directly below ADR 0017's shim block (`:486-529`).
 
 One-time work: roughly half a day, one commit, one row in the glossary's renamed table. Verify with `julia --project=. -e 'using Pkg; Pkg.test()'` (≈4 minutes).
 
@@ -125,7 +125,7 @@ Reachability of the type — it is **not** exported (every `export` line in `src
 - It is **written by hand in every structured-token example**, qualified, because `BaseStructuredToken`'s `past_bonds` field is typed by it — `Tuple{Symbol, Float64, ReactiveDynamics.Transition}[]` at `demo/agentic_pipeline/agentic_pipeline.jl:75,382`, `demo/bd_acquisition/host.jl:42`, `demo/introspection_tour/introspection_tour.jl:85`, `docs/literate/case_studies/{inlicensing_value.jl:66, kill_a_program.jl:49, marginal_scientist.jl:48}`, `docs/literate/deep_dives/serialization.jl:31`, `docs/literate/tutorials/advanced.jl:59`. Ten sites, all in authoring position.
 - It reaches users two more ways: as the element type of `state.ongoing_transitions`, and by AlgebraicAgents traversal (`getagent`, `entangle!`) of a live hierarchy, where the type name shows in printed output.
 
-So "unexported" is not an argument for skipping a shim here. A renamed type takes `@deprecate_binding Transition Firing` — one line in the block ADR 0017 already established at `src/ReactiveDynamics.jl:488-524`, which is why Option C's cost over Option D is a field rename and not a type rename.
+So "unexported" is not an argument for skipping a shim here. A renamed type takes `@deprecate_binding Transition Firing` — one line in the kind of block ADR 0017 already established at `src/ReactiveDynamics.jl:486-529`, which is why Option C's cost over Option D is a field rename and not a type rename.
 
 De-facto public field reads, which a rename must update or grandfather:
 
@@ -142,7 +142,7 @@ Exact mechanical mapping:
 
 | Now | Proposed | Sites |
 |:--- |:--- |:--- |
-| `struct Transition` | `struct Firing` | `src/state.jl:48` + 91 references |
+| `struct Transition` | `struct Firing` | `src/state.jl:49` + 91 references |
 | `ongoing_transitions` | `ongoing_firings` | 52 |
 | `transition_recipes` | `transitions` | 27 |
 | `transitions` (the per-tick evaluated snapshot) | `sampled_transitions` | 21 in `src/`, 0 elsewhere |
@@ -150,15 +150,16 @@ Exact mechanical mapping:
 | `Transition[]` (constructor call) | `Firing[]` | `src/solvers.jl:998` |
 | `bound_transition` (token field) | `bound_firing` | `src/interface/agents.jl:19` + 46 references |
 | `get_bound_transition` / `set_bound_transition!` | `get_bound_firing` / `set_bound_firing!` | `src/interface/agents.jl:166,167`; both unexported |
-| — | `@deprecate_binding Transition Firing false` | new line in `src/ReactiveDynamics.jl:488-524` |
+| — | `@deprecate_binding Transition Firing false` | new block in `src/ReactiveDynamics.jl:531-542`, below ADR 0017's shim block (`:486-529`) |
 | `TransitionNode` (viz) | unchanged | `src/visualize.jl:31` — it draws the *static* node, correctly named |
 | the compiled closure's second parameter | `transition` → `firing`, and the in-model marker `@transition` gains the canonical spelling `@firing` (the old one still lowers to the same identifier) | `src/compilers.jl`, `src/actions.jl`, `src/exprnode.jl` |
+| `trans_` (the `Firing`-valued step-loop local, trailing-underscored to dodge the `trans` column family) | `firing` | 30 occurrences in `src/solvers.jl` and nowhere else, now 0 |
 
 Held back on purpose, with the reason each one is load-bearing:
 
-1. **`SCHEMA` `:T` and the `trans*` columns** (`src/ReactiveDynamics.jl:63-72`, `transPriority`, `transRate`, `transCycleTime`, `transProbOfSuccess`, `transCapacity`, `transMaxLifeTime`, `transPreAction`, `transPostAction`, `transMultiplier`, `transName`, …). These name the static transition and are already right. Renaming them would also break `src/operators/joins.jl:40`, `!occursin("trans", string(attr)) && continue`, which selects the transition column family by substring — the mirror of the `"place"` filter at `joins.jl:33` and `equalize.jl:58` that ADR 0017 had to fix in its own Tier 2 commit (`adaa0ed`). `SCHEMA` declaration order is load-bearing too (`ALLATTRS`).
+1. **`SCHEMA` `:T` and the `trans*` columns** (`src/ReactiveDynamics.jl:62-72`, `transPriority`, `transRate`, `transCycleTime`, `transProbOfSuccess`, `transCapacity`, `transMaxLifeTime`, `transPreAction`, `transPostAction`, `transMultiplier`, `transName`, …). These name the static transition and are already right. Renaming them would also break `src/operators/joins.jl:40`, `!occursin("trans", string(attr)) && continue`, which selects the transition column family by substring — the mirror of the `"place"` filter at `joins.jl:33` and `equalize.jl:58` that ADR 0017 had to fix in its own Tier 2 commit (`adaa0ed`). `SCHEMA` declaration order is load-bearing too (`ALLATTRS`).
 2. **The serialized document.** `"transitions"` is already the top-level key (`src/serialize.jl:156,289,765`), and per-arc/per-statement `"transition"` keys refer to the static object (`:493,494,528,530,786,1014`). No wire-format change, therefore no `_legacy_key` read alias and no second deprecation set — the sharpest contrast with ADR 0017, whose Tier 3 needed both.
-3. **AA agent names and paths.** A live instance is entangled under the string `"$(state[i, :transName])_@$(state.t)"` (`src/solvers.jl:372`), built from the store column, not from the Julia type. Saved agent paths, `getagent` calls and wiring diagrams are unaffected.
+3. **AA agent names and paths.** A live instance is entangled under the string `"$(state[i, :transName])_@$(state.t)"` (`src/solvers.jl:374`), built from the store column, not from the Julia type. Saved agent paths, `getagent` calls and wiring diagrams are unaffected.
 4. **The state dump.** `bound_transition` is on the `_PROTOCOL_FIELDS` **exclusion** list (`src/interface/checkpoint.jl:37-40`), so it is never written into a `StateDump` — only a token's modeling attributes are. It is `nothing` at dump time anyway, because `dump_state` refuses to run unless the in-flight set is empty (ADR 0007 §C). Renaming the field therefore cannot invalidate a saved dump; the tuple in the list gets the new symbol and nothing else moves.
 
 ### Rejected micro-alternatives
@@ -214,7 +215,8 @@ git grep -nw 'Firing' -- src test demo docs/literate   # review every hit before
 #    src/state.jl:41-46       — the docstring, which already says "in-flight transition instance"
 
 # 4. the shim and the two user-facing strings
-#    src/ReactiveDynamics.jl:488-524   add `@deprecate_binding Transition Firing false`
+#    src/ReactiveDynamics.jl:531-542   add `@deprecate_binding Transition Firing false` — its own
+#                                      block, below ADR 0017's shim block at :486-529
 #    src/interface/checkpoint.jl:51-52 "in-flight transition(s)" → "in-flight firing(s)"
 #    src/solvers.jl:115                KEEP "transition $(…[:transName])" — it names the static row
 
@@ -222,6 +224,9 @@ git grep -nw 'Firing' -- src test demo docs/literate   # review every hit before
 #    in src/{solvers,ledger,predicates,visualize,state}.jl, src/interface/agents.jl, and the
 #    compiled-closure/action path src/{compilers,actions,exprnode}.jl. Leave alone the parameters
 #    that receive a transition NAME (`priority(a, transition)`, `Activate.transition::Symbol`).
+#    Same step, same new name: the `Firing`-valued LOCAL `trans_` → `firing`, 30 occurrences in
+#    src/solvers.jl and nowhere else. Record it here — it is not covered by the `\bTransition\b`
+#    sweep of step 2, and a prose sweep that misses it leaves `trans_` cited in the CONTRACT.
 
 julia -m Runic --inplace src test ext docs/make.jl demo
 julia --project=. -e 'using Pkg; Pkg.test()'
@@ -231,7 +236,7 @@ Step 3 is the real work and cannot be automated: `Transition` in `spec/` and in 
 
 ### Verification
 
-- Full suite green at the count current when this lands: **834 pass / 0 fail / 0 broken / 0 skipped** (828 at the ADR 0017 amendment commit, +6 from this ADR's own gate). No new tests are required for the rename itself — it is covered by every existing lifecycle test that reads the live vector — but the retired-vocabulary gate in `test/semantic/exports_resolve.jl` gains `transition_recipes`, `ongoing_transitions` and `bound_transition`, so neither the invented word nor a swapped name can reappear in `src/`. The `Transition` → `Firing` alias is asserted resolvable in the same file.
+- Full suite green at the count current when this lands. The exact count is environment-dependent, because three `@test_skip` environment guards survive in the suite: **835 pass / 0 fail / 0 broken / 0 skipped** locally when a Graphviz backend is installed, and **833 pass / 0 fail / 1 broken / 1 skipped** on CI, where the Graphviz guard at `test/semantic/visualization.jl:132` is taken (Graphviz is a system binary the runners do not install; the Plots and Arrow guards at `visualization.jl:203` and `analysis_observability.jl:333` never trip, since both packages are declared in `test/Project.toml`). Against 828 at the ADR 0017 amendment commit, this ADR's own gate accounts for +6. No new tests are required for the rename itself — it is covered by every existing lifecycle test that reads the live vector — but the retired-vocabulary gate in `test/semantic/exports_resolve.jl` gains `transition_recipes`, `ongoing_transitions` and `bound_transition`, so neither the invented word nor a swapped name can reappear in `src/`. The `Transition` → `Firing` alias is asserted resolvable in the same file.
 - `git grep -now 'firing' -- src` should be non-zero afterwards; it is 14 today and all of it is prose.
 - Round-trip a saved document written before the rename (`demo/bd_acquisition/model.rdj.json`) and diff the re-export: it must be byte-identical modulo key ordering, since no serialized key moves.
 - Load the package before running anything else. The two-transition-table collision is a *load-time* error (`duplicate field name`), so `julia --project=. -e 'using ReactiveDynamics'` is the cheapest check that step 0 was done correctly.

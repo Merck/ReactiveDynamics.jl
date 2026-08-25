@@ -148,7 +148,7 @@ to_json_model(prob)                                        # the inverse — a l
 
 ## Tests
 
-`test/semantic/*.jl`, two-tier — T1 characterization and T2 acceptance — with real assertions over operational semantics, not smoke tests. The suite is fully green (801 pass / 0 broken, no skips). `test/Project.toml` declares the test-only dependencies (Plots, Arrow, DataFrames, Distributions) so the weak-dependency extension paths are exercised, not skipped. A GitHub Actions scaffold (tests matrix, docs, Runic, TagBot, CompatHelper) has been added; the suite and the formatter ([Runic](https://github.com/fredrikekre/Runic.jl)) are also run locally.
+`test/semantic/*.jl`, two-tier — T1 characterization and T2 acceptance — with real assertions over operational semantics, not smoke tests. The suite is fully green with no `@test_broken` pins and no `@test_skip` placeholders; the exact tally depends on the environment, because three `@test_skip`s survive as environment guards (835 pass / 0 broken locally with a Graphviz backend installed, 833 pass / 1 environment-skipped / 834 on CI — see `spec/STATUS.md`). `test/Project.toml` declares the test-only dependencies (Plots, Arrow, DataFrames, Distributions) so the weak-dependency extension paths are exercised, not skipped. A GitHub Actions scaffold (tests matrix, docs, Runic, TagBot, CompatHelper) has been added; the suite and the formatter ([Runic](https://github.com/fredrikekre/Runic.jl)) are also run locally.
 
 ## Documentation and tutorials
 
