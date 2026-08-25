@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <!-- TEMPORARY: points at the PR #17 preview build while the rework lives off `main`. Revert to /dev/ once PR #17 merges and CI deploys /dev/ from main. -->
-  <a href="https://merck.github.io/ReactiveDynamics.jl/previews/PR17/"><img src="https://img.shields.io/badge/docs-preview-0A8A84.svg" alt="Documentation (PR #17 preview)"></a>
+  <a href="https://merck.github.io/ReactiveDynamics.jl/stable/"><img src="https://img.shields.io/badge/docs-stable-0A8A84.svg" alt="Documentation (stable)"></a>
+  <a href="https://merck.github.io/ReactiveDynamics.jl/dev/"><img src="https://img.shields.io/badge/docs-dev-0A8A84.svg" alt="Documentation (dev)"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0A8A84.svg" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/Julia-%E2%89%A5%201.12-9558B2.svg" alt="Julia 1.12+">
 </p>
