@@ -1,0 +1,317 @@
+{
+  "rd_format": "reactive-dynamics-model",
+  "meta": {
+    "tspan": 48.0,
+    "dt": 1.0
+  },
+  "population": [
+    {
+      "kind": "Project",
+      "place": "Project",
+      "attributes": {
+        "program": ":Onc",
+        "phase": ":Active",
+        "value": 100.0
+      },
+      "count": 3
+    },
+    {
+      "kind": "Project",
+      "place": "Project",
+      "attributes": {
+        "program": ":Immuno",
+        "phase": ":Active",
+        "value": 100.0
+      },
+      "count": 3
+    }
+  ],
+  "arcs": [
+    {
+      "structured": {
+        "kind": "Project",
+        "fields": [
+          {
+            "name": "program",
+            "value": {
+              "symbol": true,
+              "node": "const",
+              "value": "Onc"
+            }
+          },
+          {
+            "name": "phase",
+            "value": {
+              "symbol": true,
+              "node": "const",
+              "value": "Active"
+            }
+          },
+          {
+            "name": "value",
+            "value": {
+              "symbol": false,
+              "node": "const",
+              "value": 100.0
+            }
+          }
+        ]
+      },
+      "side": "rhs",
+      "transition": "intake_onc"
+    },
+    {
+      "structured": {
+        "kind": "Project",
+        "fields": [
+          {
+            "name": "program",
+            "value": {
+              "symbol": true,
+              "node": "const",
+              "value": "Immuno"
+            }
+          },
+          {
+            "name": "phase",
+            "value": {
+              "symbol": true,
+              "node": "const",
+              "value": "Active"
+            }
+          },
+          {
+            "name": "value",
+            "value": {
+              "symbol": false,
+              "node": "const",
+              "value": 100.0
+            }
+          }
+        ]
+      },
+      "side": "rhs",
+      "transition": "intake_imm"
+    },
+    {
+      "side": "lhs",
+      "predicate": {
+        "kind": "Project",
+        "clauses": [
+          [
+            "program",
+            "==",
+            {
+              "symbol": true,
+              "node": "const",
+              "value": "Onc"
+            }
+          ],
+          [
+            "phase",
+            "==",
+            {
+              "symbol": true,
+              "node": "const",
+              "value": "Active"
+            }
+          ]
+        ]
+      },
+      "transition": "trial_onc"
+    },
+    {
+      "place": "scientist",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "blocking": "block",
+        "return": "conserved"
+      },
+      "transition": "trial_onc"
+    },
+    {
+      "place": "budget",
+      "side": "lhs",
+      "modality": {
+        "allocation": "perstep",
+        "blocking": "block",
+        "return": "consumed"
+      },
+      "multiplicity": 20,
+      "transition": "trial_onc"
+    },
+    {
+      "side": "rhs",
+      "advance": {
+        "field": "phase",
+        "value": {
+          "symbol": true,
+          "node": "const",
+          "value": "Launched"
+        }
+      },
+      "transition": "trial_onc"
+    },
+    {
+      "place": "launch",
+      "side": "rhs",
+      "transition": "trial_onc"
+    },
+    {
+      "side": "lhs",
+      "predicate": {
+        "kind": "Project",
+        "clauses": [
+          [
+            "program",
+            "==",
+            {
+              "symbol": true,
+              "node": "const",
+              "value": "Immuno"
+            }
+          ],
+          [
+            "phase",
+            "==",
+            {
+              "symbol": true,
+              "node": "const",
+              "value": "Active"
+            }
+          ]
+        ]
+      },
+      "transition": "trial_imm"
+    },
+    {
+      "place": "scientist",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "blocking": "block",
+        "return": "conserved"
+      },
+      "transition": "trial_imm"
+    },
+    {
+      "place": "budget",
+      "side": "lhs",
+      "modality": {
+        "allocation": "perstep",
+        "blocking": "block",
+        "return": "consumed"
+      },
+      "multiplicity": 20,
+      "transition": "trial_imm"
+    },
+    {
+      "side": "rhs",
+      "advance": {
+        "field": "phase",
+        "value": {
+          "symbol": true,
+          "node": "const",
+          "value": "Launched"
+        }
+      },
+      "transition": "trial_imm"
+    },
+    {
+      "place": "launch",
+      "side": "rhs",
+      "transition": "trial_imm"
+    }
+  ],
+  "transitions": [
+    {
+      "name": "intake_onc",
+      "rate_mode": "deterministic",
+      "id": "intake_onc",
+      "rate": {
+        "symbol": false,
+        "node": "const",
+        "value": 1.5
+      }
+    },
+    {
+      "name": "intake_imm",
+      "rate_mode": "deterministic",
+      "id": "intake_imm",
+      "rate": {
+        "symbol": false,
+        "node": "const",
+        "value": 1.5
+      }
+    },
+    {
+      "name": "trial_onc",
+      "rate_mode": "deterministic",
+      "prob_of_success": {
+        "symbol": false,
+        "node": "const",
+        "value": 0.55
+      },
+      "priority": {
+        "symbol": false,
+        "node": "const",
+        "value": 3.0
+      },
+      "id": "trial_onc",
+      "rate": {
+        "symbol": false,
+        "node": "const",
+        "value": 4.0
+      },
+      "cycletime": {
+        "symbol": false,
+        "node": "const",
+        "value": 4.0
+      }
+    },
+    {
+      "name": "trial_imm",
+      "rate_mode": "deterministic",
+      "prob_of_success": {
+        "symbol": false,
+        "node": "const",
+        "value": 0.55
+      },
+      "id": "trial_imm",
+      "rate": {
+        "symbol": false,
+        "node": "const",
+        "value": 4.0
+      },
+      "cycletime": {
+        "symbol": false,
+        "node": "const",
+        "value": 4.0
+      }
+    }
+  ],
+  "params": [],
+  "places": [
+    {
+      "name": "Project",
+      "structured": true
+    },
+    {
+      "name": "scientist",
+      "init": 5.0
+    },
+    {
+      "name": "budget",
+      "cost": 1.0,
+      "init": 1.0e9
+    },
+    {
+      "name": "launch",
+      "reward": 4000.0,
+      "init": 1.0
+    }
+  ],
+  "version": "1.0"
+}
+
