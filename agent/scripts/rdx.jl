@@ -32,6 +32,12 @@ using Statistics
 # Argument parsing and the output envelope
 # ════════════════════════════════════════════════════════════════════════════════════════
 
+# Options that legitimately take several values. Repeating one of these accumulates; a comma list is
+# equivalent, so `--tally=a --tally=b` and `--tally=a,b` mean the same thing. Getting this wrong is
+# not a cosmetic bug: every one of these keys drives a CHECK, so a dropped value is a check that
+# silently did not run while the envelope still reports `pass`.
+const REPEATABLE = Set(["metric", "tally", "expect_binds", "expect_reusable"])
+
 # Split ARGS into positionals and `--key=value` / `--flag` options. Keys keep their dashes turned
 # into underscores so `--root-seed=1` reads as `opts["root_seed"]`.
 function parse_args(argv)
@@ -40,7 +46,16 @@ function parse_args(argv)
         if startswith(a, "--")
             body = a[3:end]
             k, v = occursin('=', body) ? split(body, '='; limit = 2) : (body, "true")
-            opts[replace(String(k), '-' => '_')] = String(v)
+            key, val = replace(String(k), '-' => '_'), String(v)
+            if !haskey(opts, key)
+                opts[key] = val
+            elseif key in REPEATABLE
+                opts[key] *= "," * val
+            elseif opts[key] != val
+                # Last-wins on a scalar option is how you run with a seed you did not intend. Refuse
+                # rather than silently pick one.
+                error("rdx: --$(k) given twice with different values ($(opts[key]) and $(val)); it takes one value")
+            end
         else
             push!(pos, a)
         end
@@ -50,8 +65,8 @@ end
 
 optf(opts, k, default) = haskey(opts, k) ? parse(Float64, opts[k]) : default
 opti(opts, k, default) = haskey(opts, k) ? parse(Int, opts[k]) : default
-# A repeatable option: `--metric=a --metric=b` collapses in the Dict, so accept a comma list too.
-optlist(opts, k) = haskey(opts, k) ? String.(split(opts[k], ',')) : String[]
+# A repeatable option, as a list. Either spelling reaches here as one comma-joined string.
+optlist(opts, k) = haskey(opts, k) ? String.(split(opts[k], ','; keepempty = false)) : String[]
 
 # The uniform envelope every command emits. `findings` is the machine-readable "what is wrong" list
 # an agent repairs against; `ok` is false exactly when the exit code is nonzero.
@@ -552,8 +567,10 @@ function main(argv)
     isempty(argv) && return emit("", false, nothing; error = "usage: rdx <$(join(sort(collect(keys(COMMANDS))), '|'))> ...")
     cmd = argv[1]
     haskey(COMMANDS, cmd) || return emit(cmd, false, nothing; error = "unknown command $(repr(cmd))")
-    pos, opts = parse_args(argv[2:end])
     try
+        # Inside the try: a bad option list is a caller error like any other and must come back as the
+        # envelope with exit 2, not as a Julia stack trace the calling agent cannot parse.
+        pos, opts = parse_args(argv[2:end])
         # Host code loads ONCE, here, before any command runs — and the command is then dispatched
         # through `invokelatest`, because the registry's constructors were defined in a world newer
         # than these methods and a direct call would hit a `MethodError: method too new`.

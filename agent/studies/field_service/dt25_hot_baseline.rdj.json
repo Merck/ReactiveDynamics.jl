@@ -1,0 +1,691 @@
+{
+  "rd_format": "reactive-dynamics-model",
+  "version": 1.0,
+  "meta": {
+    "tspan": 2080.0,
+    "dt": 0.25
+  },
+  "params": [
+    {
+      "name": "job_h",
+      "value": 4.75
+    },
+    {
+      "name": "serve_rate",
+      "value": 8.0
+    },
+    {
+      "name": "haz_pharma",
+      "value": 0.034389
+    },
+    {
+      "name": "haz_acad",
+      "value": 0.019243
+    }
+  ],
+  "places": [
+    {
+      "name": "tech",
+      "init": 7.0
+    },
+    {
+      "name": "laptop",
+      "init": 4.0
+    },
+    {
+      "name": "q_pharma_rig",
+      "init": 2.0
+    },
+    {
+      "name": "q_pharma_quick",
+      "init": 0.0
+    },
+    {
+      "name": "q_acad_rig",
+      "init": 10.0
+    },
+    {
+      "name": "q_acad_quick",
+      "init": 2.0
+    },
+    {
+      "name": "fixed_pharma"
+    },
+    {
+      "name": "fixed_acad"
+    },
+    {
+      "name": "breach_pharma",
+      "reward": -4200.0
+    },
+    {
+      "name": "breach_acad",
+      "reward": -650.0
+    },
+    {
+      "name": "backlog_meter"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "call_pharma_rig",
+      "name": "pharma call needing the rig",
+      "rate": 0.309375,
+      "cycletime": 0.0
+    },
+    {
+      "id": "call_pharma_quick",
+      "name": "pharma call, no rig",
+      "rate": 0.065625,
+      "cycletime": 0.0
+    },
+    {
+      "id": "call_acad_rig",
+      "name": "academic call needing the rig",
+      "rate": 0.53625,
+      "cycletime": 0.0
+    },
+    {
+      "id": "call_acad_quick",
+      "name": "academic call, no rig",
+      "rate": 0.11375,
+      "cycletime": 0.0
+    },
+    {
+      "id": "repair_pharma_rig",
+      "name": "pharma repair with the rig",
+      "rate": {
+        "node": "ref",
+        "kind": "param",
+        "name": "serve_rate"
+      },
+      "cycletime": {
+        "node": "ref",
+        "kind": "param",
+        "name": "job_h"
+      },
+      "priority": 10.0
+    },
+    {
+      "id": "repair_pharma_quick",
+      "name": "pharma repair without the rig",
+      "rate": {
+        "node": "ref",
+        "kind": "param",
+        "name": "serve_rate"
+      },
+      "cycletime": {
+        "node": "ref",
+        "kind": "param",
+        "name": "job_h"
+      },
+      "priority": 10.0
+    },
+    {
+      "id": "repair_acad_rig",
+      "name": "academic repair with the rig",
+      "rate": {
+        "node": "ref",
+        "kind": "param",
+        "name": "serve_rate"
+      },
+      "cycletime": {
+        "node": "ref",
+        "kind": "param",
+        "name": "job_h"
+      },
+      "priority": 1.0
+    },
+    {
+      "id": "repair_acad_quick",
+      "name": "academic repair without the rig",
+      "rate": {
+        "node": "ref",
+        "kind": "param",
+        "name": "serve_rate"
+      },
+      "cycletime": {
+        "node": "ref",
+        "kind": "param",
+        "name": "job_h"
+      },
+      "priority": 1.0
+    },
+    {
+      "id": "breach_pharma_tick",
+      "name": "pharma SLA breach accrual",
+      "cycletime": 0.0,
+      "rate": {
+        "node": "call",
+        "op": "*",
+        "args": [
+          {
+            "node": "call",
+            "op": "+",
+            "args": [
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_pharma_rig"
+              },
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_pharma_quick"
+              }
+            ]
+          },
+          {
+            "node": "ref",
+            "kind": "param",
+            "name": "haz_pharma"
+          }
+        ]
+      }
+    },
+    {
+      "id": "breach_acad_tick",
+      "name": "academic SLA breach accrual",
+      "cycletime": 0.0,
+      "rate": {
+        "node": "call",
+        "op": "*",
+        "args": [
+          {
+            "node": "call",
+            "op": "+",
+            "args": [
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_acad_rig"
+              },
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_acad_quick"
+              }
+            ]
+          },
+          {
+            "node": "ref",
+            "kind": "param",
+            "name": "haz_acad"
+          }
+        ]
+      }
+    },
+    {
+      "id": "backlog_tick",
+      "name": "backlog meter (job-hours accumulator)",
+      "cycletime": 0.0,
+      "rate": {
+        "node": "call",
+        "op": "+",
+        "args": [
+          {
+            "node": "call",
+            "op": "+",
+            "args": [
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_pharma_rig"
+              },
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_pharma_quick"
+              }
+            ]
+          },
+          {
+            "node": "call",
+            "op": "+",
+            "args": [
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_acad_rig"
+              },
+              {
+                "node": "ref",
+                "kind": "place",
+                "name": "q_acad_quick"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "arcs": [
+    {
+      "transition": "call_pharma_rig",
+      "place": "q_pharma_rig",
+      "side": "rhs"
+    },
+    {
+      "transition": "call_pharma_quick",
+      "place": "q_pharma_quick",
+      "side": "rhs"
+    },
+    {
+      "transition": "call_acad_rig",
+      "place": "q_acad_rig",
+      "side": "rhs"
+    },
+    {
+      "transition": "call_acad_quick",
+      "place": "q_acad_quick",
+      "side": "rhs"
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "q_pharma_rig",
+      "side": "lhs"
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "tech",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "laptop",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "fixed_pharma",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.75,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.25,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "q_pharma_rig",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.06875,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.93125,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_pharma_rig",
+      "place": "q_pharma_quick",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.18125,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.81875,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_pharma_quick",
+      "place": "q_pharma_quick",
+      "side": "lhs"
+    },
+    {
+      "transition": "repair_pharma_quick",
+      "place": "tech",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_pharma_quick",
+      "place": "fixed_pharma",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.75,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.25,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_pharma_quick",
+      "place": "q_pharma_rig",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.06875,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.93125,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_pharma_quick",
+      "place": "q_pharma_quick",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.18125,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.81875,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "q_acad_rig",
+      "side": "lhs"
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "tech",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "laptop",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "fixed_acad",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.75,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.25,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "q_acad_rig",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.06875,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.93125,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_rig",
+      "place": "q_acad_quick",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.18125,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.81875,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_quick",
+      "place": "q_acad_quick",
+      "side": "lhs"
+    },
+    {
+      "transition": "repair_acad_quick",
+      "place": "tech",
+      "side": "lhs",
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "repair_acad_quick",
+      "place": "fixed_acad",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.75,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.25,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_quick",
+      "place": "q_acad_rig",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.06875,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.93125,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "repair_acad_quick",
+      "place": "q_acad_quick",
+      "side": "rhs",
+      "multiplicity": {
+        "node": "choose",
+        "alts": [
+          {
+            "weight": 0.18125,
+            "value": {
+              "node": "const",
+              "value": 1.0,
+              "symbol": false
+            }
+          },
+          {
+            "weight": 0.81875,
+            "value": {
+              "node": "const",
+              "value": 0.0,
+              "symbol": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "transition": "breach_pharma_tick",
+      "place": "breach_pharma",
+      "side": "rhs"
+    },
+    {
+      "transition": "breach_acad_tick",
+      "place": "breach_acad",
+      "side": "rhs"
+    },
+    {
+      "transition": "backlog_tick",
+      "place": "backlog_meter",
+      "side": "rhs"
+    }
+  ]
+}

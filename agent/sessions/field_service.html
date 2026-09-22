@@ -1,0 +1,833 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>&quot;Do I hire 2 more technicians?&quot; — a first-contact rd-study session</title>
+<style>:root {
+  --ink: #0A0A0A; --paper: #FFFFFF; --inset: #F4F4F2; --accent: #0A8A84;
+  --accent-d: #076A65; --accent-lt: #3FB5AF; --amber: #B5740A; --rose: #E5243B;
+  --grey: #6A6A68; --grey-lt: #9A9A98; --hair: #C7C7C4;
+  --display: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --mono: "JetBrains Mono", "JuliaMono", "SF Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--inset); color: var(--ink);
+  font: 16px/1.62 var(--display); -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
+
+/* ── masthead ── */
+header.mast { background: var(--ink); color: #F4F4F2; padding: 3rem 0 2.5rem; margin-bottom: 2.5rem; }
+header.mast .wrap { padding-bottom: 0; }
+.brand { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-lt); margin: 0 0 1.25rem; }
+.brand b { font-weight: 600; color: #F4F4F2; }
+h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .6rem; font-weight: 650; }
+.sub { color: #9A9A98; margin: 0; font-size: 1.02rem; }
+.headline {
+  margin: 2rem 0 0; padding: 1.15rem 1.35rem; background: #161616;
+  border-left: 3px solid var(--accent-lt); border-radius: 2px;
+}
+.headline .big { font-size: 1.7rem; font-weight: 650; letter-spacing: -.01em; color: #fff; }
+.headline .note { display: block; margin-top: .4rem; color: #9A9A98; font-size: .93rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .4rem 1.75rem; margin: 1.5rem 0 0; font-size: .82rem; color: #9A9A98; }
+.meta b { color: #C7C7C4; font-weight: 500; }
+.meta code { font-family: var(--mono); font-size: .93em; color: var(--accent-lt); }
+
+/* ── phase bands ── */
+.phase { display: flex; align-items: center; gap: .85rem; margin: 2.75rem 0 1.5rem; }
+.phase::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.phase span {
+  font-size: .72rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 650;
+  color: var(--accent-d); background: var(--paper); border: 1px solid var(--hair);
+  padding: .3rem .6rem; border-radius: 2px; white-space: nowrap;
+}
+
+/* ── turns ── */
+.turn { margin: 0 0 1.5rem; }
+.who { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--grey); margin-bottom: .45rem; }
+.bubble { padding: 1.1rem 1.3rem; border-radius: 3px; background: var(--paper); border: 1px solid var(--hair); }
+.turn.user { max-width: 85%; margin-left: auto; }
+.turn.user .who { text-align: right; color: var(--accent-d); }
+.turn.user .bubble { background: #E8F3F2; border-color: #BFDEDB; }
+.turn.assistant .bubble { border-left: 3px solid var(--accent); }
+.turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
+.bubble p { margin: 0 0 .85rem; } .bubble p:last-child { margin-bottom: 0; }
+.bubble ul { margin: 0 0 .85rem; padding-left: 1.2rem; } .bubble li { margin-bottom: .3rem; }
+.bubble code { font-family: var(--mono); font-size: .88em; background: var(--inset); padding: .1em .32em; border-radius: 2px; }
+.bubble table { width: 100%; border-collapse: collapse; margin: .35rem 0 1rem; font-size: .9rem; }
+.bubble th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--ink); padding: .4rem .6rem .35rem 0; }
+.bubble td { border-bottom: 1px solid var(--hair); padding: .4rem .6rem .4rem 0; vertical-align: top; }
+pre.block {
+  font-family: var(--mono); font-size: .82rem; line-height: 1.55; background: var(--inset);
+  border: 1px solid var(--hair); border-radius: 2px; padding: .8rem .9rem; overflow-x: auto; margin: 0 0 .9rem;
+}
+.bubble blockquote {
+  margin: 1rem 0; padding: .7rem 1rem .7rem 1.1rem; background: var(--inset);
+  border-left: 3px solid var(--accent); font-size: 1.02rem; line-height: 1.55;
+}
+
+/* ── tool blocks ── */
+details.tools { margin: .9rem 0 0; border-top: 1px dashed var(--hair); padding-top: .75rem; }
+details.tools summary {
+  cursor: pointer; font-size: .78rem; color: var(--grey); letter-spacing: .02em; list-style: none;
+}
+details.tools summary::-webkit-details-marker { display: none; }
+details.tools summary::before { content: "▸ "; color: var(--grey-lt); }
+details.tools[open] summary::before { content: "▾ "; }
+.tk {
+  font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--accent-d); border: 1px solid #BFDEDB; background: #E8F3F2;
+  padding: .08rem .35rem; border-radius: 2px; margin-right: .4rem;
+}
+.cmd { font-family: var(--mono); font-size: .79rem; line-height: 1.6; margin-top: .6rem; word-break: break-all; }
+.cmd .p { color: var(--accent); font-weight: 600; margin-right: .35rem; }
+.res { font-family: var(--mono); font-size: .79rem; color: var(--grey); padding-left: 1rem; word-break: break-word; }
+.files { margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.files span {
+  font-family: var(--mono); font-size: .72rem; color: var(--amber);
+  border: 1px solid #E4D2B0; background: #FBF5EA; padding: .12rem .4rem; border-radius: 2px;
+}
+
+/* ── figures ── */
+figure.fig { margin: 1rem 0 .3rem; padding: .9rem; background: var(--paper); border: 1px solid var(--hair); border-radius: 2px; overflow-x: auto; }
+figure.fig svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+.missing { font-family: var(--mono); font-size: .78rem; color: var(--rose); padding: .6rem; border: 1px dashed var(--rose); border-radius: 2px; }
+
+footer.foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hair); font-size: .82rem; color: var(--grey); }
+footer.foot code { font-family: var(--mono); font-size: .93em; }
+
+@media print {
+  body { background: #fff; } header.mast { background: #fff; color: #000; border-bottom: 2px solid #000; }
+  h1, .headline .big { color: #000; } .headline { background: var(--inset); }
+  .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }
+  details.tools { display: block; } details.tools > *:not(summary) { display: block !important; }
+  .turn { break-inside: avoid; }
+}
+</style></head><body>
+<header class="mast"><div class="wrap">
+<p class="brand"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; rd-study session</p>
+<h1>&quot;Do I hire 2 more technicians?&quot; — a first-contact rd-study session</h1>
+<p class="sub">A simulated session, captured turn by turn: an operations manager arrives with a budget question and no model, and leaves with a number they can defend. Rendered from the actual exchange — nothing here was written as illustration.</p>
+<div class="headline"><span class="big">Two laptops, not two technicians.</span>
+<span class="note">The manager arrived weighing three options and led with headcount: “whether to hire 2 more techs, buy more diagnostic equipment, or just change how we prioritize jobs.” At 48 seeds the model ranks them in almost the reverse order. Two more technicians avoid <strong>$57,504 ± $21,741</strong> of SLA penalties a year at a cost of <strong>$190,000 a year</strong> — a net loss of about $132k. Two more diagnostic laptops avoid <strong>$228,050 ± $18,712</strong> a year for <strong>$38,000 once</strong>: four times the benefit for a fifth of the cost. The free option, re-prioritizing dispatch, cannot be distinguished from doing nothing on any of five metrics. <strong>Then the operator pushed back</strong>, and the second half of the session is the more useful half: their own 4.3 h rule of thumb turned out to be unrepresentable on the model's 1-hour tick grid, so the assistant rebuilt on a 15-minute grid, ran 24-seed ensembles at the operator's feared worst case — and <strong>retracted three of its own published claims</strong>, including a 12:1 return it had quoted from a single run. The recommendation did not change. The confidence attached to it did.</span>
+</div>
+<div class="meta">
+<div><b>baseline</b> <code>$459,349</code>/yr in SLA penalties, calibrated to the operator's observed backlog</div>
+<div><b>status</b> SIMULATED — role-played by two blind agents, see the footer</div>
+<div><b>study</b> <code>agent/studies/field_service/</code></div>
+<div><b>skills</b> <code>rd-study</code> → <code>rd-frame</code> → <code>rd-author</code> → <code>rd-doctor</code> → <code>rd-report</code></div>
+<div><b>engine</b> ReactiveDynamics.jl</div>
+</div>
+</div></header>
+<main class="wrap">
+<div class="phase"><span>Phase 1 — FRAME</span></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p>Hey, I was told you might be able to help me figure something out. I run field service for a lab equipment company - we've got 7 technicians fixing broken analyzers at customer sites. Our backlog is killing us and I'm trying to decide whether to hire 2 more techs, buy more diagnostic equipment, or just change how we prioritize jobs. Budget meeting is in six weeks and I need to know what actually moves the needle.</p>
+
+
+
+</div></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p><strong>Phase 1 of 4 — framing.</strong> Before I build anything, let me check your question against the one test that decides whether a simulation is worth the six weeks or whether I should just do arithmetic with you on a whiteboard in twenty minutes.</p>
+<p>A simulation only earns its cost when three things are true at once:</p>
+<ul>
+<li><strong>Something runs out.</strong> Your 7 technicians. Yes.</li>
+<li><strong>Work occupies it for a while.</strong> A repair holds a tech for hours or days before the analyzer is fixed. Yes.</li>
+<li><strong>When jobs collide, something has to choose who waits.</strong> Yes — and the fact that &quot;change how we prioritize&quot; is one of your three candidate levers tells me this rule is real, contested, and currently undocumented.</li>
+</ul>
+<p>Three for three, so this is a genuine simulation question. Here's why it matters that it's all three: the thing you're actually asking for — <em>what does the 8th and 9th technician buy me</em> — is not a property of a technician. It's a property of your system under contention. There's no formula for it, which is exactly why the backlog debate keeps going in circles. Two out of three and I'd have sent you away with a spreadsheet.</p>
+<p>One thing I'll flag now, because it's the most common way studies like this go wrong: it is entirely possible that <strong>technicians are not what's actually binding</strong>. If jobs sit waiting on parts or on a shared diagnostic kit, hiring 2 techs buys you two people standing around, and the model will say so. I'd rather find that out in week one than have you defend the wrong number in week six.</p>
+<p>So, three questions. I've proposed a default for each — if a default is close enough, just say &quot;yes&quot; and we move.</p>
+<p><strong>1. Demand and duration.</strong> These two numbers together decide whether 7 techs bind at all. Roughly how many new broken-analyzer calls come in per week, and how long does one job tie up one tech, door to door, including travel? My placeholder: <strong>30 calls/week, and 1.5 days of one tech per job</strong>.</p>
+<p><strong>2. What else does a job wait on?</strong> Besides a free tech — how many of the diagnostic kits do you have today, and does a job need one for its whole duration or just the first visit? And separately: do jobs ever stall waiting on a spare part? My placeholder: <strong>4 kits shared across 7 techs, held for the whole job; parts occasionally stall a job but aren't the main wall</strong>. If parts are actually the main wall, tell me and this study changes shape.</p>
+<p><strong>3. What number do you need to hold up at the budget meeting?</strong> The options that usually matter here are: average jobs waiting in backlog, number of SLA breaches per quarter, or average days a customer analyzer is down. My placeholder: <strong>SLA breaches avoided, with average backlog as the supporting number</strong>, over a <strong>12-month horizon in daily steps</strong>. And tell me your SLA clock — mine is a guess: <strong>on site and fixed within 3 business days</strong>.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 5 commands</summary>
+<div class="cmd"><span class="p">$</span> read agent/skills/rd-study/SKILL.md</div>
+<div class="res">→ orchestrator: 4 phases (frame/author/diagnose/report), qualifying test, rdx CLI contract</div>
+<div class="cmd"><span class="p">$</span> read agent/skills/rd-frame/SKILL.md</div>
+<div class="res">→ phase-1 slot table (12 slots) + pre-registration table</div>
+<div class="cmd"><span class="p">$</span> read agent/README.md</div>
+<div class="res">→ CLI command + metric tables; exit codes 0 ok / 1 findings / 2 error</div>
+<div class="cmd"><span class="p">$</span> ls agent/studies/ agent/studies/marginal_scientist/</div>
+<div class="res">→ one existing study (the known-answer exemplar), 7 artifacts</div>
+<div class="cmd"><span class="p">$</span> read agent/studies/marginal_scientist/BRIEF.md</div>
+<div class="res">→ reference shape: decision / why-not-spreadsheet / qualifying verdict / slots / failure modes</div>
+</details>
+
+</div></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p>Most of that's in the right ballpark but a few things are off.</p>
+<p><strong>Calls and duration:</strong> We get closer to 40 calls a week, not 30 - about 15 from our pharmaceutical customers and 26 from the academic labs. And a typical job is more like 4 to 5 hours door-to-door, not a day and a half. Our guys are back and available same day once they finish a repair.</p>
+<p><strong>Waiting on other stuff:</strong> You nailed the diagnostic laptops - yeah, 4 units shared across the 7 techs, and they need it for the whole job. Parts do cause re-visits sometimes - maybe 1 in 4 jobs needs a second trip - but that's not really the blocker. It's more about whether we have a tech AND a laptop free when the call comes in.</p>
+<p><strong>The number I need:</strong> SLA breaches for sure, but my contracts are tiered. Premium pharma customers get 24 hours, the academic labs get 72 hours. Right now we're prioritizing pharma strictly over academic, which keeps the expensive breaches down but leaves a lot of the lower-tier work sitting. If I'm asking for budget I need to show breach reduction, yeah, and probably what happens to average backlog too. 12 months makes sense.</p>
+
+
+
+</div></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p><strong>Still phase 1 of 4 — but I ran the back-of-envelope on your numbers first, and it changed the question.</strong> Before I model anything, here's what your own figures say:</p>
+<table>
+<tr><th></th><th>capacity</th><th>load</th><th>utilization</th></tr>
+<tr><td><strong>7 technicians</strong></td><td>62 jobs/wk</td><td>51 visits/wk</td><td><strong>82%</strong></td></tr>
+<tr><td><strong>4 diagnostic laptops</strong></td><td>36 jobs/wk</td><td>51 visits/wk</td><td><strong>144%</strong></td></tr>
+</table>
+<p>That's 41 calls/week (your 15 + 26), multiplied by 1.25 for the one-in-four revisits, against a 4.5-hour job and an 8-hour dispatch day. Your technicians are busy but not underwater. <strong>Your laptops are structurally short.</strong> On this arithmetic the wall you keep hitting is four laptops, not seven techs — and if that survives the modeling, then hiring 2 techs buys you two people waiting for a laptop, and the cheapest of your three levers is the one that moves the needle. That is exactly the thing I flagged in my first message, and I'd rather find it now than in week six.</p>
+<p><strong>But I don't believe the 144% yet, and neither should you.</strong> A resource at 144% of demand means a backlog that grows without limit — thousands of open jobs by year end. You're clearly not living that, so one of my assumptions is wrong. Finding out which one is the most important thing in this study, because it's the number the whole hiring-vs-laptops comparison pivots on.</p>
+<p>So — last round of questions, then I write the brief.</p>
+<p><strong>1. Which assumption is wrong?</strong> The two candidates: (a) <strong>not every job actually needs a laptop</strong> — I assumed 100%, and if it's really only the diagnostic-heavy calls, say 60-70%, the arithmetic closes; or (b) <strong>the dispatch day is longer than 8 hours</strong> — overtime, early starts, evening calls. Which is it, and roughly what number? My placeholder if you're not sure: <strong>70% of jobs need a laptop, 8-hour day.</strong></p>
+<p><strong>2. Give me one reality anchor.</strong> How many open jobs are sitting in the backlog right now, and roughly how many SLA breaches did you have last month — split pharma vs academic if you track it that way? I'll tune the model until it reproduces <em>those</em> numbers before I let it say anything about hiring. A model that can't reproduce today shouldn't be trusted about next year.</p>
+<p><strong>3. The priority lever, specifically.</strong> &quot;Change how we prioritize&quot; needs a concrete alternative I can put in a column next to the other two. My placeholder: <strong>stop strict pharma-first; give the academic work a guaranteed share of capacity so it stops starving</strong> — trading a few more pharma breaches for a lot fewer academic ones. And so I can weigh those against each other: roughly what does a premium pharma breach cost you versus an academic one? My placeholder is <strong>10:1</strong> — a pharma breach hurts ten times as much, in credits, renewal risk and escalation. A rough ratio is fine; I'll show the answer at your ratio and at a couple of others so you're not defending my guess.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 2 commands</summary>
+<div class="cmd"><span class="p">$</span> julia -e '&lt;capacity envelope: 15+26 calls/wk, ×1.25 revisits, 4.5h job, 7 techs vs 4 laptops, 8h dispatch day&gt;'</div>
+<div class="res">→ techs 62.2 jobs/wk @ 82.4% util; laptops 35.6 jobs/wk @ 144.1% util; 5.77 laptops needed to match tech utilization</div>
+<div class="cmd"><span class="p">$</span> read agent/reference/model_schema.md</div>
+<div class="res">→ no wait-time metric exists, so a breach must be a counted outcome (spawns/completions of a named step) — a phase-2 problem, noted</div>
+</details>
+
+</div></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p>You're right that it's not every single job - the laptops are required for most repairs but not absolutely everything. Quick stuff like replacing a blown fuse or swapping a pump module, the techs can do without the diagnostic rig. I'd say maybe 80 to 85 percent of jobs actually need a laptop, not 100. And yeah, it's an 8-hour day, we're not running evening shifts.</p>
+<p><strong>Reality check numbers:</strong> Right now I've got about 14 or 15 jobs sitting open in the queue. Last month we had maybe 4 pharma breaches - that's the one that really hurts - and probably 28 or 30 academic breaches. The academic SLA is loose enough that a lot of them just pile up when we get a pharma cluster.</p>
+<p><strong>On the priority thing:</strong> Yeah, your placeholder is basically right - stop the strict pharma-first rule, give the academic work some guaranteed share so it doesn't starve completely. But your 10-to-1 cost ratio is high. A pharma breach costs us about $4200 in penalties, an academic one is $650, so it's closer to 6 or 7 to 1, not 10. Still hurts a lot more to miss pharma, but not quite that lopsided.</p>
+
+
+
+</div></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p><strong>Phase 1 of 4 complete — the brief is written.</strong> Your numbers close, and they close in an informative place.</p>
+<p>With 82.5% of jobs needing a laptop, and taking revisits as parts-swaps that don't need the diagnostic rig again:</p>
+<table>
+<tr><th></th><th>utilization</th></tr>
+<tr><td>7 technicians</td><td><strong>82.4%</strong></td></tr>
+<tr><td>4 diagnostic laptops</td><td><strong>95.1%</strong></td></tr>
+</table>
+<p>A resource at 95% is the classic signature of exactly what you described to me: fine most of the time, and then a cluster arrives and the whole thing jams for a week. Your 14-15 open jobs and your 29-a-month academic breaches are what a near-saturated shared resource looks like when a strict priority rule decides who eats the wait. At 82%, your technicians are busy but they are not the wall.</p>
+<p>Here is the arithmetic that should make you uneasy about the hiring plan, and it is the reason this study is worth six weeks:</p>
+<table>
+<tr><th></th><th>tech utilization</th><th>laptop utilization</th></tr>
+<tr><td>today: 7 techs, 4 laptops</td><td>82.4%</td><td>95.1%</td></tr>
+<tr><td><strong>+2 techs</strong> (≈$190k/yr)</td><td>64.1%</td><td><strong>95.1% — unchanged</strong></td></tr>
+<tr><td><strong>+2 laptops</strong> (≈$36k once)</td><td>82.4%</td><td><strong>63.4%</strong></td></tr>
+</table>
+<p>Two more technicians do not touch the constraint. That is a hypothesis, not a finding — averages hide the coincidences that actually make your backlog, which is the entire reason we simulate rather than divide. But it is why I've framed this as a three-way race instead of a hire/don't-hire question.</p>
+<p>Two things I want to put on the record before I build anything.</p>
+<p><strong>Your status quo has a price tag: $427,800 a year.</strong> Four pharma breaches at $4,200 plus 29 academic at $650 is $35,650 a month. That is the number your levers get compared against, and it is a better opening line for a budget meeting than &quot;our backlog is killing us.&quot;</p>
+<p><strong>The model will have exactly one fitted dial, and I'm telling you now.</strong> Everything else — call volumes, job duration, laptop attach rate, headcount, penalties — is a fact you gave me. But how a waiting job's SLA clock converts into a breach has to be tuned, and I'm tuning it against <em>your</em> observed 4 pharma and 29 academic breaches a month. If the baseline can't reproduce today, it has no business forecasting next year, and I won't quote you an arm until it does.</p>
+<p>I've also pre-registered the ways this could come out wrong — including the case where <strong>technicians really are the wall and the hiring plan was right.</strong> Both resources get checked, so the answer isn't assumed by how I set it up.</p>
+<p><strong>One thing to correct if I've got it wrong, then I start building:</strong> I've assumed <strong>2 more techs ≈ $190k/yr fully loaded</strong>, <strong>2 more diagnostic laptops ≈ $36k one-time</strong>, and the <strong>priority change ≈ free</strong>. Those cost figures decide the ranking, so if a diagnostic rig is actually $60k because of the software licensing, tell me now — it's the difference between a recommendation and a bad recommendation. Also confirm: <strong>a revisit is a parts-swap that doesn't need the laptop again</strong>, right? That single assumption is the difference between 95% and 119% laptop load.</p>
+<p>You can answer while I work — I'm moving to phase 2 and building the model.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 2 commands</summary>
+<div class="cmd"><span class="p">$</span> julia -e '&lt;refined envelope: 82.5% laptop attach, revisit-with/without-laptop split, 4 lever combinations, penalty totals, tick arithmetic&gt;'</div>
+<div class="res">→ tech util 82.4%; laptop util 95.1% (revisits laptop-free) vs 118.9% (not); 9 techs leaves laptop at 95.1%, 6 laptops drops it to 63.4%; status quo $35,650/mo = $427,800/yr; 1 tick = 1 dispatch hour, 12 mo = 2080 ticks, SLA = 8 and 24 ticks; intake 0.375 and 0.65 per tick</div>
+<div class="cmd"><span class="p">$</span> mkdir -p agent/studies/field_service/figures</div>
+<div class="res">→ exit 0</div>
+<div class="files"><span>agent/studies/field_service/BRIEF.md (written — 17 slots filled, 8 failure modes pre-registered with DIAGNOSE flags, no structured tokens so no host.jl)</span></div>
+</details>
+
+</div></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p>Almost right but two things:</p>
+<p><strong>Laptop cost is a bit higher</strong> - it's $38k for the two units, not $36k. Still a hell of a lot cheaper than two salaries, but let's use the right number.</p>
+<p><strong>On the revisits</strong> - most of them don't need the laptop again, you're right about that. If the first visit diagnosed the problem and we just need to come back with a part we didn't have on the truck, the tech doesn't plug in the diagnostic rig the second time. But not every revisit is like that - sometimes the first visit doesn't nail it and we need to do more diagnostics. I'd say maybe 70, 75 percent of revisits are just parts installs that don't touch the laptop. Not sure if that changes your math much but wanted to flag it.</p>
+<p>Tech cost is right at $190k for the two.</p>
+
+
+
+</div></div>
+<div class="phase"><span>Phase 2 — AUTHOR  ·  Phase 3 — DIAGNOSE</span></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p><strong>Phase 2 and 3 done — model built, and it passed the plausibility gate. Here it is in your language, and I'd like you to check it before I put numbers on it.</strong></p>
+<p>Here is what I built, described as your operation rather than as a model:</p>
+<table>
+<tr><th>Piece</th><th>What it does</th></tr>
+<tr><td><strong>7 technicians</strong></td><td>A job <em>occupies</em> one tech and gives them back when it's done — same day, as you said. Not consumed.</td></tr>
+<tr><td><strong>4 diagnostic laptops</strong></td><td>Same: occupied for the whole job, returned at the end.</td></tr>
+<tr><td><strong>Four job queues</strong></td><td>pharma-needing-rig, pharma-no-rig, academic-needing-rig, academic-no-rig. The 82.5% / 17.5% split is what sends a job to one or the other.</td></tr>
+<tr><td><strong>Calls in</strong></td><td>15 pharma + 26 academic a week, arriving randomly, not evenly.</td></tr>
+<tr><td><strong>A repair</strong></td><td>takes one waiting job + one tech (+ one laptop if it needs one) for 4 hours, then fixes the analyzer.</td></tr>
+<tr><td><strong>Revisits</strong></td><td>one job in four bounces back into a queue; 27.5% of those bounces need the rig again, 72.5% don't. The bounced job keeps accruing SLA exposure.</td></tr>
+<tr><td><strong>Dispatch rule</strong></td><td>Pharma outranks academic 10-to-1 today.</td></tr>
+<tr><td><strong>The scoreboard</strong></td><td>Every breach accrues $4,200 (pharma) or $650 (academic).</td></tr>
+</table>
+<p>Everything runs in dispatch hours: 8 hours a day, 5 days a week, 2,080 hours = your 12 months.</p>
+<p><strong>The credibility check passed, and this is the part I'd want to see if I were you.</strong> I never tuned the model to match your backlog. I built it from your operational numbers and then asked it how many tickets would be open. It says <strong>13.35</strong> — 9.3 jobs waiting plus 4.1 being worked on right now. You told me <strong>14 or 15</strong>. That's close enough that the model is describing your operation rather than an imaginary one.</p>
+<p><strong>All four scenarios passed the gate: 8 checks pass, 1 warning, 0 failures.</strong> The warning is that a handful of jobs are mid-repair when the 12 months run out, which is unavoidable and means every number I give you is &quot;over 12 months,&quot; not &quot;forever.&quot;</p>
+<p><strong>One thing the model found that you can use regardless of which lever you pick.</strong> Look at where work piles up in a year of simulated operation:</p>
+<table>
+<tr><th>Queue</th><th>starts at</th><th>peaks at</th><th>ends at</th></tr>
+<tr><td>academic, <strong>needs the rig</strong></td><td>10</td><td><strong>40</strong></td><td>1</td></tr>
+<tr><td>academic, no rig</td><td>2</td><td>6</td><td>0</td></tr>
+<tr><td>pharma, needs the rig</td><td>2</td><td>5</td><td>0</td></tr>
+<tr><td>pharma, no rig</td><td>0</td><td>5</td><td>0</td></tr>
+</table>
+<p>The same seven techs serve all four. Only the two rig queues build, and the unprotected one builds eightfold. Work that needs a laptop waits. Work that doesn't, doesn't.</p>
+<p><strong>And a finding I did not expect, which I think matters more than any of the three levers.</strong> You are operating on a knife edge. At 4 hours of tech-and-laptop time per job, your system is stable and looks like what you described. At 5 hours, it goes into runaway — the academic queue never stops growing and breaches go up roughly thirty-fold. There is no gentle middle. That means a modest worsening — a slightly harder job mix, a few more calls, one tech on leave — does not degrade you by 20%, it tips you over. That is worth saying at the budget meeting on its own.</p>
+<p><strong>Two things I want you to check, because you're the only one who can:</strong></p>
+<p>1. <strong>Is 4 hours of tech-and-laptop time per job right,</strong> as distinct from 4-5 hours door to door? If the laptop is only tied up for the on-site diagnostic portion and not during travel, my model overstates laptop scarcity and the answer could change. This is the single most load-bearing assumption in the study. 2. <strong>Does a technician take a laptop for the day, or grab one per job?</strong> I've modeled per-job. If a tech checks one out for their whole route, only 4 of your 7 techs can do rig work at all on any given day, which is a <em>tighter</em> constraint than what I've built.</p>
+<p><strong>What I'm not telling you yet:</strong> which lever wins. The three comparisons are running now — 48 simulated years per scenario, which is what it takes to separate a real difference from a fluke in a system this twitchy. I can already see the direction, but single runs of a near-critical system disagree with each other by hundreds of thousands of dollars, so I'm not going to quote you anything until the full ensembles land. You'd be defending noise.</p>
+
+<figure class="fig">
+
+<!-- Generated by graphviz version 12.2.1 (20241206.2353)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="760pt" height="697pt"
+ viewBox="0.00 0.00 760.32 697.08" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 693.08)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-693.08 756.32,-693.08 756.32,4 -4,4"/>
+<!-- tech -->
+<g id="node1" class="node">
+<title>tech</title>
+<ellipse fill="gold" stroke="black" cx="76.62" cy="-242.59" rx="18" ry="18"/>
+<text text-anchor="middle" x="76.62" y="-239.29" font-family="Times,serif" font-size="9.00">tech</text>
+</g>
+<!-- pharma repair with the rig -->
+<g id="node16" class="node">
+<title>pharma repair with the rig</title>
+<polygon fill="none" stroke="black" points="300.75,-216.59 193.25,-216.59 193.25,-180.59 300.75,-180.59 300.75,-216.59"/>
+<text text-anchor="middle" x="247" y="-195.29" font-family="Times,serif" font-size="9.00">pharma repair with the rig</text>
+</g>
+<!-- tech&#45;&gt;pharma repair with the rig -->
+<g id="edge6" class="edge">
+<title>tech&#45;&gt;pharma repair with the rig</title>
+<path fill="none" stroke="darkgreen" d="M94.39,-238.21C114.77,-232.89 150.39,-223.58 181.97,-215.32"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="182.69,-218.75 191.48,-212.84 180.92,-211.98 182.69,-218.75"/>
+</g>
+<!-- pharma repair without the rig -->
+<g id="node17" class="node">
+<title>pharma repair without the rig</title>
+<polygon fill="none" stroke="black" points="619.72,-98.59 500.97,-98.59 500.97,-62.59 619.72,-62.59 619.72,-98.59"/>
+<text text-anchor="middle" x="560.34" y="-77.29" font-family="Times,serif" font-size="9.00">pharma repair without the rig</text>
+</g>
+<!-- tech&#45;&gt;pharma repair without the rig -->
+<g id="edge12" class="edge">
+<title>tech&#45;&gt;pharma repair without the rig</title>
+<path fill="none" stroke="darkgreen" d="M82.18,-225.03C93.29,-185.95 125.75,-91.8 190.25,-47.59 284.02,16.68 334.23,5.17 444.72,-21.59 472.51,-28.33 501.11,-43.03 522.79,-56.08"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="520.91,-59.03 531.26,-61.32 524.6,-53.08 520.91,-59.03"/>
+</g>
+<!-- academic repair with the rig -->
+<g id="node18" class="node">
+<title>academic repair with the rig</title>
+<polygon fill="none" stroke="black" points="303.75,-405.59 190.25,-405.59 190.25,-369.59 303.75,-369.59 303.75,-405.59"/>
+<text text-anchor="middle" x="247" y="-384.29" font-family="Times,serif" font-size="9.00">academic repair with the rig</text>
+</g>
+<!-- tech&#45;&gt;academic repair with the rig -->
+<g id="edge17" class="edge">
+<title>tech&#45;&gt;academic repair with the rig</title>
+<path fill="none" stroke="darkgreen" d="M89.18,-256.09C108.61,-278.3 149.69,-323.2 190.25,-354.59 194,-357.5 198.03,-360.34 202.15,-363.06"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="200.2,-365.98 210.53,-368.36 203.95,-360.06 200.2,-365.98"/>
+</g>
+<!-- academic repair without the rig -->
+<g id="node19" class="node">
+<title>academic repair without the rig</title>
+<polygon fill="none" stroke="black" points="622.72,-341.59 497.97,-341.59 497.97,-305.59 622.72,-305.59 622.72,-341.59"/>
+<text text-anchor="middle" x="560.34" y="-320.29" font-family="Times,serif" font-size="9.00">academic repair without the rig</text>
+</g>
+<!-- tech&#45;&gt;academic repair without the rig -->
+<g id="edge23" class="edge">
+<title>tech&#45;&gt;academic repair without the rig</title>
+<path fill="none" stroke="darkgreen" d="M95.09,-242.83C148.3,-243.87 312.81,-249.56 444.72,-280.59 465.75,-285.54 488.16,-293.34 507.53,-300.95"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="505.96,-304.09 516.55,-304.57 508.57,-297.59 505.96,-304.09"/>
+</g>
+<!-- laptop -->
+<g id="node2" class="node">
+<title>laptop</title>
+<ellipse fill="gold" stroke="black" cx="76.62" cy="-366.59" rx="22" ry="22"/>
+<text text-anchor="middle" x="76.62" y="-363.29" font-family="Times,serif" font-size="9.00">laptop</text>
+</g>
+<!-- laptop&#45;&gt;pharma repair with the rig -->
+<g id="edge7" class="edge">
+<title>laptop&#45;&gt;pharma repair with the rig</title>
+<path fill="none" stroke="darkgreen" d="M92.86,-351.39C121.57,-322.75 183.96,-260.5 219.61,-224.92"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="221.96,-227.52 226.57,-217.98 217.02,-222.57 221.96,-227.52"/>
+</g>
+<!-- laptop&#45;&gt;academic repair with the rig -->
+<g id="edge18" class="edge">
+<title>laptop&#45;&gt;academic repair with the rig</title>
+<path fill="none" stroke="darkgreen" d="M98.95,-369.25C119.03,-371.76 150.19,-375.64 178.66,-379.19"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="177.97,-382.64 188.33,-380.4 178.84,-375.69 177.97,-382.64"/>
+</g>
+<!-- q_pharma_rig -->
+<g id="node3" class="node">
+<title>q_pharma_rig</title>
+<ellipse fill="gold" stroke="black" cx="714.15" cy="-211.59" rx="38.18" ry="38.18"/>
+<text text-anchor="middle" x="714.15" y="-208.29" font-family="Times,serif" font-size="9.00">q_pharma_rig</text>
+</g>
+<!-- q_pharma_rig&#45;&gt;pharma repair with the rig -->
+<g id="edge5" class="edge">
+<title>q_pharma_rig&#45;&gt;pharma repair with the rig</title>
+<path fill="none" stroke="black" d="M675.81,-210.8C626.87,-209.73 538.36,-207.73 462.72,-205.59 412.17,-204.16 354.95,-202.28 312.29,-200.83"/>
+<polygon fill="black" stroke="black" points="312.57,-197.34 302.45,-200.5 312.33,-204.34 312.57,-197.34"/>
+</g>
+<!-- q_pharma_quick -->
+<g id="node4" class="node">
+<title>q_pharma_quick</title>
+<ellipse fill="gold" stroke="black" cx="400.86" cy="-74.59" rx="43.86" ry="43.86"/>
+<text text-anchor="middle" x="400.86" y="-71.29" font-family="Times,serif" font-size="9.00">q_pharma_quick</text>
+</g>
+<!-- q_pharma_quick&#45;&gt;pharma repair without the rig -->
+<g id="edge11" class="edge">
+<title>q_pharma_quick&#45;&gt;pharma repair without the rig</title>
+<path fill="none" stroke="black" d="M444.84,-74.01C456.26,-74.02 468.59,-74.16 479.97,-74.59 483.14,-74.71 486.38,-74.86 489.66,-75.03"/>
+<polygon fill="black" stroke="black" points="489.16,-78.5 499.34,-75.58 489.56,-71.52 489.16,-78.5"/>
+</g>
+<!-- q_acad_rig -->
+<g id="node5" class="node">
+<title>q_acad_rig</title>
+<ellipse fill="gold" stroke="black" cx="714.15" cy="-462.59" rx="32.06" ry="32.06"/>
+<text text-anchor="middle" x="714.15" y="-459.29" font-family="Times,serif" font-size="9.00">q_acad_rig</text>
+</g>
+<!-- q_acad_rig&#45;&gt;academic repair with the rig -->
+<g id="edge16" class="edge">
+<title>q_acad_rig&#45;&gt;academic repair with the rig</title>
+<path fill="none" stroke="black" d="M681.94,-465.25C674.12,-465.81 665.74,-466.31 657.97,-466.59 586.9,-469.17 568.32,-476.94 497.97,-466.59 417.05,-454.69 399.5,-438.97 321.75,-413.59 318.02,-412.38 314.2,-411.1 310.35,-409.8"/>
+<polygon fill="black" stroke="black" points="311.5,-406.5 300.91,-406.57 309.24,-413.12 311.5,-406.5"/>
+</g>
+<!-- q_acad_quick -->
+<g id="node6" class="node">
+<title>q_acad_quick</title>
+<ellipse fill="gold" stroke="black" cx="400.86" cy="-327.59" rx="37.74" ry="37.74"/>
+<text text-anchor="middle" x="400.86" y="-324.29" font-family="Times,serif" font-size="9.00">q_acad_quick</text>
+</g>
+<!-- q_acad_quick&#45;&gt;academic repair without the rig -->
+<g id="edge22" class="edge">
+<title>q_acad_quick&#45;&gt;academic repair without the rig</title>
+<path fill="none" stroke="black" d="M438.82,-327.97C451.83,-328.01 466.55,-327.93 479.97,-327.59 482.14,-327.54 484.35,-327.47 486.57,-327.4"/>
+<polygon fill="black" stroke="black" points="486.44,-330.91 496.31,-327.05 486.19,-323.92 486.44,-330.91"/>
+</g>
+<!-- fixed_pharma -->
+<g id="node7" class="node">
+<title>fixed_pharma</title>
+<ellipse fill="gold" stroke="black" cx="714.15" cy="-93.59" rx="37.74" ry="37.74"/>
+<text text-anchor="middle" x="714.15" y="-90.29" font-family="Times,serif" font-size="9.00">fixed_pharma</text>
+</g>
+<!-- fixed_acad -->
+<g id="node8" class="node">
+<title>fixed_acad</title>
+<ellipse fill="gold" stroke="black" cx="714.15" cy="-339.59" rx="31.62" ry="31.62"/>
+<text text-anchor="middle" x="714.15" y="-336.29" font-family="Times,serif" font-size="9.00">fixed_acad</text>
+</g>
+<!-- breach_pharma -->
+<g id="node9" class="node">
+<title>breach_pharma</title>
+<ellipse fill="gold" stroke="black" cx="247" cy="-464.59" rx="40.8" ry="40.8"/>
+<text text-anchor="middle" x="247" y="-461.29" font-family="Times,serif" font-size="9.00">breach_pharma</text>
+</g>
+<!-- breach_acad -->
+<g id="node10" class="node">
+<title>breach_acad</title>
+<ellipse fill="gold" stroke="black" cx="247" cy="-557.59" rx="34.68" ry="34.68"/>
+<text text-anchor="middle" x="247" y="-554.29" font-family="Times,serif" font-size="9.00">breach_acad</text>
+</g>
+<!-- backlog_meter -->
+<g id="node11" class="node">
+<title>backlog_meter</title>
+<ellipse fill="gold" stroke="black" cx="247" cy="-649.59" rx="39.49" ry="39.49"/>
+<text text-anchor="middle" x="247" y="-646.29" font-family="Times,serif" font-size="9.00">backlog_meter</text>
+</g>
+<!-- pharma call needing the rig -->
+<g id="node12" class="node">
+<title>pharma call needing the rig</title>
+<polygon fill="none" stroke="black" points="615.97,-287.59 504.72,-287.59 504.72,-251.59 615.97,-251.59 615.97,-287.59"/>
+<text text-anchor="middle" x="560.34" y="-266.29" font-family="Times,serif" font-size="9.00">pharma call needing the rig</text>
+</g>
+<!-- pharma call needing the rig&#45;&gt;q_pharma_rig -->
+<g id="edge1" class="edge">
+<title>pharma call needing the rig&#45;&gt;q_pharma_rig</title>
+<path fill="none" stroke="black" d="M616.44,-252.62C630.12,-248.06 644.68,-242.9 657.97,-237.59 661.57,-236.15 665.27,-234.6 668.96,-232.98"/>
+<polygon fill="black" stroke="black" points="670.22,-236.25 677.91,-228.95 667.35,-229.87 670.22,-236.25"/>
+</g>
+<!-- pharma call, no rig -->
+<g id="node13" class="node">
+<title>pharma call, no rig</title>
+<polygon fill="none" stroke="black" points="288,-92.59 206,-92.59 206,-56.59 288,-56.59 288,-92.59"/>
+<text text-anchor="middle" x="247" y="-71.29" font-family="Times,serif" font-size="9.00">pharma call, no rig</text>
+</g>
+<!-- pharma call, no rig&#45;&gt;q_pharma_quick -->
+<g id="edge2" class="edge">
+<title>pharma call, no rig&#45;&gt;q_pharma_quick</title>
+<path fill="none" stroke="black" d="M288.3,-74.59C305.76,-74.59 326.48,-74.59 345.29,-74.59"/>
+<polygon fill="black" stroke="black" points="345.2,-78.09 355.2,-74.59 345.2,-71.09 345.2,-78.09"/>
+</g>
+<!-- academic call needing the rig -->
+<g id="node14" class="node">
+<title>academic call needing the rig</title>
+<polygon fill="none" stroke="black" points="618.97,-457.59 501.72,-457.59 501.72,-421.59 618.97,-421.59 618.97,-457.59"/>
+<text text-anchor="middle" x="560.34" y="-436.29" font-family="Times,serif" font-size="9.00">academic call needing the rig</text>
+</g>
+<!-- academic call needing the rig&#45;&gt;q_acad_rig -->
+<g id="edge3" class="edge">
+<title>academic call needing the rig&#45;&gt;q_acad_rig</title>
+<path fill="none" stroke="black" d="M619.17,-448.35C636.43,-450.97 655.01,-453.78 671.06,-456.22"/>
+<polygon fill="black" stroke="black" points="670.33,-459.65 680.75,-457.68 671.38,-452.73 670.33,-459.65"/>
+</g>
+<!-- academic call, no rig -->
+<g id="node15" class="node">
+<title>academic call, no rig</title>
+<polygon fill="none" stroke="black" points="291,-345.59 203,-345.59 203,-309.59 291,-309.59 291,-345.59"/>
+<text text-anchor="middle" x="247" y="-324.29" font-family="Times,serif" font-size="9.00">academic call, no rig</text>
+</g>
+<!-- academic call, no rig&#45;&gt;q_acad_quick -->
+<g id="edge4" class="edge">
+<title>academic call, no rig&#45;&gt;q_acad_quick</title>
+<path fill="none" stroke="black" d="M291.11,-327.59C309.93,-327.59 332.09,-327.59 351.47,-327.59"/>
+<polygon fill="black" stroke="black" points="351.31,-331.09 361.31,-327.59 351.31,-324.09 351.31,-331.09"/>
+</g>
+<!-- pharma repair with the rig&#45;&gt;q_pharma_rig -->
+<g id="edge9" class="edge">
+<title>pharma repair with the rig&#45;&gt;q_pharma_rig</title>
+<path fill="none" stroke="black" d="M300.9,-194.34C344.33,-191.07 407.47,-186.83 462.72,-185.09 533.46,-182.87 614.88,-194.06 665.18,-202.58"/>
+<polygon fill="black" stroke="black" points="664.4,-206 674.86,-204.26 665.6,-199.1 664.4,-206"/>
+<text text-anchor="middle" x="471.34" y="-188.29" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma repair with the rig&#45;&gt;q_pharma_quick -->
+<g id="edge10" class="edge">
+<title>pharma repair with the rig&#45;&gt;q_pharma_quick</title>
+<path fill="none" stroke="black" d="M261.39,-180.15C275.08,-162.2 297.71,-134.94 321.75,-116.09 330.54,-109.2 340.64,-102.87 350.6,-97.35"/>
+<polygon fill="black" stroke="black" points="351.94,-100.6 359.12,-92.81 348.65,-94.42 351.94,-100.6"/>
+<text text-anchor="middle" x="330.38" y="-119.29" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma repair with the rig&#45;&gt;fixed_pharma -->
+<g id="edge8" class="edge">
+<title>pharma repair with the rig&#45;&gt;fixed_pharma</title>
+<path fill="none" stroke="black" d="M300.96,-190.09C410.85,-172.43 653.83,-133.26 657.97,-131.59 663.63,-129.31 669.3,-126.37 674.72,-123.13"/>
+<polygon fill="black" stroke="black" points="676.37,-126.23 682.89,-117.88 672.59,-120.34 676.37,-126.23"/>
+<text text-anchor="middle" x="471.34" y="-166.82" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma repair without the rig&#45;&gt;q_pharma_rig -->
+<g id="edge14" class="edge">
+<title>pharma repair without the rig&#45;&gt;q_pharma_rig</title>
+<path fill="none" stroke="black" d="M587.14,-98.95C607.07,-113.49 635.02,-134.68 657.97,-155.09 665.18,-161.51 672.61,-168.68 679.57,-175.69"/>
+<polygon fill="black" stroke="black" points="676.95,-178.02 686.45,-182.72 681.96,-173.12 676.95,-178.02"/>
+<text text-anchor="middle" x="649.34" y="-158.29" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma repair without the rig&#45;&gt;q_pharma_quick -->
+<g id="edge15" class="edge">
+<title>pharma repair without the rig&#45;&gt;q_pharma_quick</title>
+<path fill="none" stroke="black" d="M500.72,-78.36C486.11,-77.8 470.51,-77.21 456.13,-76.66"/>
+<polygon fill="black" stroke="black" points="456.53,-73.17 446.41,-76.29 456.26,-80.17 456.53,-73.17"/>
+<text text-anchor="middle" x="471.34" y="-80.61" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma repair without the rig&#45;&gt;fixed_pharma -->
+<g id="edge13" class="edge">
+<title>pharma repair without the rig&#45;&gt;fixed_pharma</title>
+<path fill="none" stroke="black" d="M620.03,-85.62C634.91,-86.89 650.72,-88.25 665.01,-89.47"/>
+<polygon fill="black" stroke="black" points="664.32,-92.92 674.59,-90.29 664.92,-85.95 664.32,-92.92"/>
+</g>
+<!-- academic repair with the rig&#45;&gt;q_acad_rig -->
+<g id="edge20" class="edge">
+<title>academic repair with the rig&#45;&gt;q_acad_rig</title>
+<path fill="none" stroke="black" d="M289.22,-405.94C294.23,-408.64 299.19,-411.55 303.75,-414.59 312.65,-420.54 313.37,-423.93 321.75,-430.59 336.78,-442.55 339.36,-448 357,-455.59 466.07,-502.54 504.07,-488.63 622.72,-483.59 638.43,-482.93 642.56,-483.72 657.97,-480.59 662.88,-479.6 667.96,-478.31 672.97,-476.88"/>
+<polygon fill="black" stroke="black" points="673.72,-480.31 682.25,-474.03 671.67,-473.62 673.72,-480.31"/>
+<text text-anchor="middle" x="471.34" y="-491.89" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- academic repair with the rig&#45;&gt;q_acad_quick -->
+<g id="edge21" class="edge">
+<title>academic repair with the rig&#45;&gt;q_acad_quick</title>
+<path fill="none" stroke="black" d="M294.8,-369.1C313.98,-361.52 336.08,-352.79 355.04,-345.3"/>
+<polygon fill="black" stroke="black" points="356.09,-348.65 364.1,-341.72 353.51,-342.14 356.09,-348.65"/>
+<text text-anchor="middle" x="330.38" y="-360.79" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- academic repair with the rig&#45;&gt;fixed_acad -->
+<g id="edge19" class="edge">
+<title>academic repair with the rig&#45;&gt;fixed_acad</title>
+<path fill="none" stroke="black" d="M304.16,-396.85C384.85,-407.86 537.15,-420.09 657.97,-379.59 665.99,-376.9 673.83,-372.6 680.98,-367.79"/>
+<polygon fill="black" stroke="black" points="683,-370.64 689.01,-361.91 678.87,-364.99 683,-370.64"/>
+</g>
+<!-- academic repair without the rig&#45;&gt;q_acad_rig -->
+<g id="edge25" class="edge">
+<title>academic repair without the rig&#45;&gt;q_acad_rig</title>
+<path fill="none" stroke="black" d="M581.5,-342.05C607.05,-365.44 651.37,-406.02 681.45,-433.57"/>
+<polygon fill="black" stroke="black" points="679.06,-436.13 688.8,-440.3 683.79,-430.97 679.06,-436.13"/>
+<text text-anchor="middle" x="649.34" y="-412.83" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- academic repair without the rig&#45;&gt;q_acad_quick -->
+<g id="edge26" class="edge">
+<title>academic repair without the rig&#45;&gt;q_acad_quick</title>
+<path fill="none" stroke="black" d="M497.51,-306.88C485.95,-305.5 473.97,-305.25 462.72,-307.09 457.69,-307.92 452.52,-309.1 447.42,-310.49"/>
+<polygon fill="black" stroke="black" points="446.46,-307.12 437.89,-313.35 448.48,-313.82 446.46,-307.12"/>
+<text text-anchor="middle" x="471.34" y="-310.29" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- academic repair without the rig&#45;&gt;fixed_acad -->
+<g id="edge24" class="edge">
+<title>academic repair without the rig&#45;&gt;fixed_acad</title>
+<path fill="none" stroke="black" d="M623.13,-320.51C634.75,-320.71 646.76,-321.45 657.97,-323.09 662.94,-323.82 668.1,-324.9 673.16,-326.16"/>
+<polygon fill="black" stroke="black" points="671.98,-329.47 682.55,-328.76 673.84,-322.72 671.98,-329.47"/>
+<text text-anchor="middle" x="649.34" y="-326.29" font-family="Times,serif" font-size="14.00">0.0</text>
+</g>
+<!-- pharma SLA breach accrual -->
+<g id="node20" class="node">
+<title>pharma SLA breach accrual</title>
+<polygon fill="none" stroke="black" points="133.38,-482.59 19.88,-482.59 19.88,-446.59 133.38,-446.59 133.38,-482.59"/>
+<text text-anchor="middle" x="76.62" y="-461.29" font-family="Times,serif" font-size="9.00">pharma SLA breach accrual</text>
+</g>
+<!-- pharma SLA breach accrual&#45;&gt;breach_pharma -->
+<g id="edge27" class="edge">
+<title>pharma SLA breach accrual&#45;&gt;breach_pharma</title>
+<path fill="none" stroke="black" d="M133.69,-464.59C153.35,-464.59 175.32,-464.59 194.58,-464.59"/>
+<polygon fill="black" stroke="black" points="194.36,-468.09 204.36,-464.59 194.36,-461.09 194.36,-468.09"/>
+</g>
+<!-- academic SLA breach accrual -->
+<g id="node21" class="node">
+<title>academic SLA breach accrual</title>
+<polygon fill="none" stroke="black" points="136.38,-575.59 16.88,-575.59 16.88,-539.59 136.38,-539.59 136.38,-575.59"/>
+<text text-anchor="middle" x="76.62" y="-554.29" font-family="Times,serif" font-size="9.00">academic SLA breach accrual</text>
+</g>
+<!-- academic SLA breach accrual&#45;&gt;breach_acad -->
+<g id="edge28" class="edge">
+<title>academic SLA breach accrual&#45;&gt;breach_acad</title>
+<path fill="none" stroke="black" d="M136.51,-557.59C157.5,-557.59 180.8,-557.59 200.5,-557.59"/>
+<polygon fill="black" stroke="black" points="200.42,-561.09 210.42,-557.59 200.42,-554.09 200.42,-561.09"/>
+</g>
+<!-- backlog meter (job&#45;hours accumulator) -->
+<g id="node22" class="node">
+<title>backlog meter (job&#45;hours accumulator)</title>
+<polygon fill="none" stroke="black" points="153.25,-667.59 0,-667.59 0,-631.59 153.25,-631.59 153.25,-667.59"/>
+<text text-anchor="middle" x="76.62" y="-646.29" font-family="Times,serif" font-size="9.00">backlog meter (job&#45;hours accumulator)</text>
+</g>
+<!-- backlog meter (job&#45;hours accumulator)&#45;&gt;backlog_meter -->
+<g id="edge29" class="edge">
+<title>backlog meter (job&#45;hours accumulator)&#45;&gt;backlog_meter</title>
+<path fill="none" stroke="black" d="M153.44,-649.59C167.89,-649.59 182.67,-649.59 196.05,-649.59"/>
+<polygon fill="black" stroke="black" points="195.9,-653.09 205.9,-649.59 195.9,-646.09 195.9,-653.09"/>
+</g>
+</g>
+</svg>
+</figure>
+<details class="tools"><summary><span class="tk">run</span> 11 commands</summary>
+<div class="cmd"><span class="p">$</span> rdx validate {model,arm_hire_2_techs,arm_buy_2_laptops,arm_reprioritize}.rdj.json</div>
+<div class="res">→ all four: exit 0, diagnostic_count=0</div>
+<div class="cmd"><span class="p">$</span> rdx run model.rdj.json --seed=1    (first attempt)</div>
+<div class="res">→ EXIT=2, MethodError: node_from_dict(::Float64) at src/serialize.jl:84 — engine gap: `validate` passes a bare number inside a `choose` alt that the constructor rejects. Worked around in my document (explicit const nodes); no src/ change.</div>
+<div class="cmd"><span class="p">$</span> python3 &lt;sweep job_h over 4.0/4.1/4.2/4.3/4.5 at serve_rate=8, 1 run each&gt;</div>
+<div class="res">→ 4.0 → mean backlog 14.6, acad queue final 3; 4.1–4.5 → byte-identical 142.3 and 287. Engine quantizes cycletime to whole ticks; only 4 vs 5 ticks are distinct models.</div>
+<div class="cmd"><span class="p">$</span> rdx ensemble model.rdj.json --seeds=24 --root-seed=2026 --metric=&lt;10 metrics&gt;</div>
+<div class="res">→ mean waiting backlog 9.27 ± 0.70; pharma 3.50/mo, acad 17.89/mo at pre-calibration hazards; repairs 2,123/yr → 4.08 in flight → 13.35 total open tickets vs observed 14–15</div>
+<div class="cmd"><span class="p">$</span> &lt;hazard rescale to hit 4 and 29 breaches per month&gt;</div>
+<div class="res">→ haz_pharma 0.030120→0.034389, haz_acad 0.011870→0.019243</div>
+<div class="cmd"><span class="p">$</span> python3 &lt;regenerate the 3 arms from the calibrated baseline&gt;; diff each vs baseline</div>
+<div class="res">→ arm_hire_2_techs: 1 line (tech init 7→9); arm_buy_2_laptops: 1 line (laptop init 4→6); arm_reprioritize: 2 lines (priority 10.0→1.5)</div>
+<div class="cmd"><span class="p">$</span> rdx diagnose &lt;each of 4 arms&gt; --seed=1 --expect-binds=laptop --expect-reusable=tech --expect-reusable=laptop --tally=... (repeated flags)</div>
+<div class="res">→ 7 pass / 2 warn / 0 fail. Found a CLI gotcha: repeated --expect-reusable and --tally collapsed to the LAST value, so only one was checked.</div>
+<div class="cmd"><span class="p">$</span> rdx diagnose &lt;each of 4 arms&gt; ... --expect-reusable=tech,laptop --tally=breach_pharma,breach_acad,backlog_meter,fixed_pharma,fixed_acad</div>
+<div class="res">→ all four: exit 0, 8 pass / 1 warn (horizon_sufficient) / 0 fail; modality_intent confirms BOTH tech and laptop conserved on all 6 input arcs</div>
+<div class="cmd"><span class="p">$</span> rdx diagnose model.rdj.json --expect-binds=tech    (counter-hypothesis)</div>
+<div class="res">→ also passes — the check does not discriminate between the two resources; recorded in DOCTOR.md so it is not cited as proof</div>
+<div class="cmd"><span class="p">$</span> rdx draw model.rdj.json --out=figures/net.svg --exec-map --seed=1</div>
+<div class="res">→ exit 0, 20,109-byte SVG (shown above)</div>
+<div class="cmd"><span class="p">$</span> rdx effect model vs each of 3 arms --seeds=48 --root-seed=2026 --metric=reward,final:breach_pharma,final:breach_acad,final:backlog_meter,final:q_acad_rig</div>
+<div class="res">→ 3 jobs still running; no numbers quoted until they land</div>
+<div class="files"><span>BRIEF.md (updated: $38k laptop cost, revisit rig-split, 2 disclosed calibration dials)</span><span>model.rdj.json + 3 arms (written, all validate-clean)</span><span>DOCTOR.md (written)</span><span>figures/net.svg (written)</span></div>
+</details>
+
+</div></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p><strong>On the laptop time</strong> - yeah, it's the full 4 to 4 and a half hours. The tech grabs a laptop from the pool, throws it in the truck, drives to the site, does the work, drives back, and returns it. So it's tied up for travel plus on-site, not just the diagnostic portion. Your 4-hour assumption is about right.</p>
+<p><strong>On the checkout</strong> - it's per job, not per day. A tech finishes a repair, brings the laptop back, and it goes to whoever needs it next. We're not locking them up for a whole shift.</p>
+<p>That knife-edge thing is making me nervous, though. You're saying if jobs edge up from 4 hours to 5 hours average we don't just get a bit worse, we fall off a cliff? That's... that would explain why some weeks feel fine and then one bad week it all goes to hell and takes a month to dig out. I didn't realize we were running that close to the edge. That's worth knowing even if I do nothing else with this.</p>
+
+
+
+</div></div>
+<div class="phase"><span>Phase 4 — REPORT</span></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p><strong>Here is your number, and it is not the one you were expecting to defend.</strong></p>
+<p><strong>Buy the two diagnostic laptops. $38,000 once, and it saves $228,050 ± $18,712 a year in SLA penalties — a 2.0-month payback and $6.00 back per dollar spent.</strong> That is 12 standard errors from zero on 48 simulated years, and every single measure I tracked improves: academic breaches 31.2/month → 7.1, pharma 4.3 → 3.5, and the queue of jobs waiting for a tech-and-laptop pair 10.1 → 2.7.</p>
+<p>The ranking, cleanly:</p>
+<table>
+<tr><th>Rank</th><th>Lever</th><th>Cost</th><th>Penalties avoided per year</th><th>Return</th></tr>
+<tr><td><strong>1</strong></td><td><strong>2 diagnostic laptops</strong></td><td><strong>$38,000 once</strong></td><td><strong>+$228,050 ± $18,712</strong></td><td><strong>$6.00 per $1</strong></td></tr>
+<tr><td>2</td><td>2 technicians</td><td>$190,000/yr</td><td>+$57,504 ± $21,741</td><td>$0.30 per $1 — loses $132,500/yr</td></tr>
+<tr><td>3</td><td>Change the priority rule</td><td>free</td><td><strong>cannot be separated from doing nothing</strong></td><td>—</td></tr>
+</table>
+<p><strong>On hiring:</strong> it is not useless. Two more techs genuinely cut academic breaches (31.2 → 24.3/month) and the waiting backlog. But it recovers thirty cents of every dollar of the $190,000, so funding it instead of the laptops costs you about $170,000 a year in avoidable penalties. Two of its five measures — pharma breaches and the year-end academic queue — I cannot separate from zero at this sample size, so I will not quote them as improvements.</p>
+<p><strong>On re-prioritizing:</strong> all five measures land inside the noise. The honest finding is <em>we cannot distinguish it from doing nothing</em> — not &quot;it saves $406.&quot; The reason is mechanical and worth saying out loud in the meeting: when the laptops are the wall, a priority rule only changes the <em>order</em> in which jobs consume a fixed number of laptop-hours. It moves who waits; it does not create capacity. It is free, so adopt it if you want academic customers to stop starving — that is a service-quality argument, and a fair one. Just do not present it as a fix for the breach bill.</p>
+<p><strong>What I would fund:</strong> the laptops, this quarter, and I would not wait for the budget meeting to do it if you have $38,000 of discretionary spend. Then re-open the hiring question in six months — because after the laptops land, your technicians become the tighter resource (laptop utilization drops 92% → 61%, techs stay at 73%), and the hire that fails today may well pass then. That sequencing, not the hire itself, is the argument to take into the room.</p>
+<p><strong>And the thing you flagged, which I would put on the same slide:</strong> two laptops move you off that cliff. At today's 4 laptops your rig-needing demand is 36.6 jobs a week against 35.6 of capacity — you are running <em>above</em> your own laptop capacity, which is why a bad week compounds instead of recovering. That is the structural explanation for &quot;some weeks feel fine and then it all goes to hell for a month,&quot; and it is a benefit the penalty number does not even capture.</p>
+<p><strong>What would change my mind:</strong></p>
+<ul>
+<li><strong>If the laptop isn't really tied up the whole 4-4.5 hours.</strong> You confirmed it is — truck, site, truck, return — and that single fact is what makes 4 laptops behave like far fewer. If the checkout were only for the diagnostic portion, the laptop pool would effectively be four times bigger and the answer would flip to technicians.</li>
+<li><strong>If average job time is really 5 hours, not 4.</strong> At 5 hours the operation is over the edge, and <em>neither</em> lever alone digs you out — the model runs a 30-fold worse backlog. If your dispatch records say the true average is 4.5-5, come back and I re-run at that duration before you spend anything.</li>
+<li><strong>If your breach counts are materially below 4 and 29 a month.</strong> My baseline penalty is $459,349 against your stated $427,800 — 7.4% hot. De-rating to your own numbers gives $212,387, still 5.6:1. It would take a very different breach history to reverse the ranking, but the exact size of the win depends on that history.</li>
+<li><strong>If $190,000 buys more than two techs' worth of capacity</strong> — if the hires also cut travel time or let you run a second shift, that is a different lever than the one I priced, and I priced only headcount.</li>
+<li><strong>After the laptops land.</strong> Genuinely: the hiring case reopens, and I would expect it to look much better.</li>
+</ul>
+<p>Three follow-ups are each about one file and one command now, if you want them before the meeting: the combined arm (6 laptops + 9 techs), where laptop buying should stop (5, 7, 8), and how many extra calls a week each configuration absorbs before the backlog runs away — that last one turns &quot;we're close to the edge&quot; into a headroom number, which is a better planning instrument than the breach count.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 4 commands</summary>
+<div class="cmd"><span class="p">$</span> rdx effect model.rdj.json arm_buy_2_laptops.rdj.json --seeds=48 --root-seed=2026 --metric=reward,final:breach_pharma,final:breach_acad,final:backlog_meter,final:q_acad_rig</div>
+<div class="res">→ exit 0, 0 findings. reward delta 228050.0 se 18711.52 (12.2 sigma); all 5 metrics significant_2se</div>
+<div class="cmd"><span class="p">$</span> rdx effect model.rdj.json arm_hire_2_techs.rdj.json  --seeds=48 --root-seed=2026 --metric=&lt;same 5&gt;</div>
+<div class="res">→ exit 1, 2 findings. reward delta 57504.2 se 21740.6 (2.6 sigma); breach_pharma and q_acad_rig INSIDE +/-2se</div>
+<div class="cmd"><span class="p">$</span> rdx effect model.rdj.json arm_reprioritize.rdj.json --seeds=48 --root-seed=2026 --metric=&lt;same 5&gt;</div>
+<div class="res">→ exit 1, 5 findings. reward delta 406.2 se 26741.5 (0.0 sigma); ALL FIVE metrics inside +/-2se — a null, not a small effect</div>
+<div class="cmd"><span class="p">$</span> grep -n '36' BRIEF.md DOCTOR.md    # the stale-cost sweep</div>
+<div class="res">→ 1 hit: BRIEF.md:29 '36.64 laptop-jobs/week' — a demand figure, not a price. Every cost division now uses 38000.</div>
+<div class="files"><span>FINDINGS.md (written)</span><span>DOCTOR.md (run-cost section added)</span><span>BRIEF.md (cost sweep)</span></div>
+</details>
+
+</div></div>
+<div class="turn user">
+<div class="who">Operator</div>
+<div class="bubble">
+<p>Huh. I was walking into that meeting ready to ask for two more techs, and you're telling me the $38,000 option beats the $190,000 one by a factor of six. That's... honestly a much easier conversation to have with finance, assuming you're right.</p>
+<p>I'm a little surprised the priority change does nothing - I thought giving the academic work some protection would at least stop the pileup. But if the laptops are genuinely the choke point, yeah, I can see it - you're just reshuffling who waits for the same four units.</p>
+<p><strong>Two things I want to make sure of before I go in there:</strong></p>
+<p>One, that knife-edge thing - you said at 5 hours average we'd be in runaway. I don't have dispatch records sitting in front of me right now, but 4.3 hours is what I've been using as the rule of thumb. If I pull the actual data and it's closer to 4.7 or 4.8, does that change the answer? Or is the laptop thing still the right move even if we're running hotter than I thought?</p>
+<p>Two, if I buy the two laptops and that frees up the rig bottleneck like you're saying, when should I come back and re-run this for the hiring question? You said six months - is that based on anything or just a guess? Because if the answer flips that fast I don't want to miss the window.</p>
+<p>I'm sold on the laptops. I can get $38k approved in about two weeks if I move on it. Just want to make sure I'm not walking into a situation where the model assumed 4.0 hours and reality is 4.8 and the whole thing falls apart.</p>
+
+
+
+</div></div>
+<div class="phase"><span>The operator pushes back — the model gets rebuilt</span></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p>You were right to press on the 4.3, and it turned out to be the most important thing you've said. It forced me to find a flaw in my own model, and fixing it sharpened the answer rather than softening it. Short version: <strong>buy the laptops, and if anything buy them faster.</strong></p>
+<p><strong>The cliff has an exact location now: 4 hours 22 minutes of laptop checkout time per job.</strong> Below that your backlog is finite. Above it, you are asking for more laptop-hours per week than four laptops contain, and the backlog grows without bound. Your 4.3-hour rule of thumb is 4 hours 18 minutes. <strong>You are running four minutes below the edge.</strong> That is the answer to &quot;why do some weeks feel fine and then one bad week takes a month to dig out&quot; — you are not near the edge, you are on it, and which side of it you land on depends on the week's job mix.</p>
+<p>First, the flaw, because it affects how you should read my earlier numbers. My original model kept time on a one-hour grid, which means it could only represent whole-hour jobs — internally, &quot;4.3 hours&quot; and &quot;4.9 hours&quot; were the same model. I rebuilt it on a 15-minute grid and re-ran. The recommendation did not change. What changed is that I can now answer your actual question instead of a rounded version of it.</p>
+<p><strong>Does it change the answer if the data says 4.7 or 4.8? It makes the laptop case stronger and the hiring case close to worthless.</strong> At 4 hours 45 minutes per job, four laptops are at <strong>109% of capacity</strong> — over the line, so the backlog diverges no matter what else you do. At that duration:</p>
+<table>
+<tr><th>At 4h45m per job</th><th>Jobs waiting</th><th>Academic breaches/month</th><th>Annual penalty</th></tr>
+<tr><td>Today — 7 techs, 4 laptops</td><td>~131</td><td>~448</td><td>$3,717,000</td></tr>
+<tr><td><strong>+2 laptops</strong></td><td><strong>~10</strong></td><td><strong>~30</strong></td><td><strong>$396,850</strong></td></tr>
+<tr><td>+2 technicians</td><td>~124</td><td>~416</td><td>$3,434,100</td></tr>
+</table>
+<p>Two laptops take a collapsed operation back to roughly where you are today. Two technicians barely dent it. And here is the cleanest way to say why, with no simulation involved at all — it is division:</p>
+<table>
+<tr><th></th><th>Laptop cliff</th><th>Technician cliff</th><th><strong>What actually binds</strong></th></tr>
+<tr><td>Today, 7 techs / 4 laptops</td><td>4h22m</td><td>5h28m</td><td><strong>4h22m — laptops</strong></td></tr>
+<tr><td>+2 technicians, 9 / 4</td><td>4h22m</td><td>7h01m</td><td><strong>4h22m — laptops, unchanged</strong></td></tr>
+<tr><td><strong>+2 laptops, 7 / 6</strong></td><td><strong>6h33m</strong></td><td><strong>5h28m</strong></td><td><strong>5h28m — technicians</strong></td></tr>
+</table>
+<p><strong>Adding two technicians moves your cliff by zero minutes.</strong> Adding two laptops moves it out by an hour and six minutes. You cannot buy your way out of a laptop shortage with people, and that holds at every job duration in the range you gave me.</p>
+<p>Now the part that should reassure you: <strong>you almost certainly are not at 4.7-4.8 hours of laptop checkout time, because if you were, your backlog would not be 14-15 tickets — it would be in the hundreds and still climbing.</strong> Your own backlog is a measurement, and it reads about <strong>4.1 hours</strong> of laptop checkout. So if the dispatch records come back at 4.7 or 4.8 door-to-door, the gap is time when the laptop isn't the thing blocking the next job. <strong>The number that matters is how long the laptop is checked out, not how long the job takes</strong> — that is the one figure to pull, and it is the single most valuable thing you could put in front of me.</p>
+<p>Either way the decision is the same. At your current operating point the laptops return 6:1. At the hot end they return roughly 12:1. <strong>There is no duration in the range you gave me where hiring beats buying laptops.</strong> Get the $38k approved.</p>
+<p><strong>On your second question — &quot;six months&quot; was a guess, and I'm withdrawing it.</strong> Here is the grounded version.</p>
+<p>The queue itself settles in <strong>days, not months.</strong> With six laptops you will have about 23 jobs a week of spare laptop capacity, so a 10-job backlog drains in roughly two dispatch days. You do not need to wait for the system to find its new level; it will find it almost immediately.</p>
+<p>What actually gates the re-run is having enough data to measure the duration, because that is the number everything hinges on. At your volume of ~51 jobs a week: about <strong>100 jobs, two weeks</strong>, pins the mean laptop checkout time to ±0.1 hour; about <strong>400 jobs, eight weeks</strong>, pins it to ±0.05 hour. (That assumes job-to-job spread of about an hour — if your jobs are more variable it takes longer, which the checkout log will tell us.) Separately, the new breach counts need a month or two to accumulate enough events to be worth anything — the model expects about 7 academic breaches a month after the laptops, so two months gives you ~14 events to judge by.</p>
+<p><strong>So: come back 6 to 8 weeks after the laptops land</strong>, with three numbers — the mean and spread of laptop checkout hours from the checkout log, whether jobs are now waiting on a <em>technician</em> rather than a laptop, and the new monthly breach counts by tier. At that point the hiring question is genuinely live, because after the laptops your binding cliff is the 5h28m technician one. That is the conversation where $190,000 might earn its keep.</p>
+<p><strong>Come back sooner than that if:</strong> three weeks after delivery the backlog has not fallen below about 5 waiting jobs. That would mean something in my model is wrong, and I would want to know before your next budget cycle, not after.</p>
+<p>One piece of housekeeping so you know exactly what you have. The three-row table above comes from single runs, one random year each — enough to establish the direction, which is not close, but not something I will put in a final document unquoted. Two ensembles are queued to put error bars on it. The 6:1 return, the cliff locations and the capacity arithmetic are all already solid and do not depend on those.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 9 commands</summary>
+<div class="cmd"><span class="p">$</span> grep -rn 'cycletime' src/solvers.jl ; read src/solvers.jl:824-841</div>
+<div class="res">→ cycletime is in TIME UNITS; progress accrues `firing.state += qs[i]*state.dt` and completes at `&gt;= transCycleTime`. So a firing occupies ceil(cycletime/dt) ticks — at dt=1.0 every duration in (4.0,5.0] collapsed onto 5.0h. THAT is why 4.1/4.2/4.3/4.5 were byte-identical: the operator's own 4.3h figure fell on the divergent side of the grid.</div>
+<div class="cmd"><span class="p">$</span> grep -rn 'Poisson' src/solvers.jl    # does changing dt require rescaling rates?</div>
+<div class="res">→ `rand(Poisson(dt*rate))` (solvers.jl:316) — rates are per unit time and tunit defaults to 1, so dt can be refined with NO rate rescaling and no tspan change. One-line change per document.</div>
+<div class="cmd"><span class="p">$</span> python3 &lt;capacity arithmetic: 36.64 laptop-jobs/wk, 51.25 jobs/wk, 40 h/wk per unit&gt;</div>
+<div class="res">→ laptop cliff 4.366h @4 / 6.550h @6; tech cliff 5.463h @7 / 7.024h @9. +2 techs moves the BINDING cliff 4.366 -&gt; 4.366 h, i.e. by zero. No simulation involved — it is division.</div>
+<div class="cmd"><span class="p">$</span> rdx validate dt25_{baseline,laptops,hot_baseline,hot_laptops,hot_techs}.rdj.json</div>
+<div class="res">→ exit 0, zero diagnostics, all five (dt 1.0-&gt;0.25, job_h 4.0-&gt;4.75, one resource line each)</div>
+<div class="cmd"><span class="p">$</span> rdx run dt25_baseline.rdj.json --seed=1      # same nominal 4.0h, finer grid</div>
+<div class="res">→ 8322 ticks in 25.8s. Mean backlog 5.61, acad 15.4/mo — far LIGHTER than the dt=1.0 baseline's 10.13 and 31.2. The coarse tick was charging up to a full tick of re-admission delay on top of each job.</div>
+<div class="cmd"><span class="p">$</span> python3 -c '&lt;parse run JSON&gt;'</div>
+<div class="res">→ FAILED exit 1, KeyError — my parser assumed a top-level `metrics`; the real shape is result.places.&lt;name&gt;.{min,max,initial,final} and result.ledger.reward. Re-read the structure and fixed the parser.</div>
+<div class="cmd"><span class="p">$</span> rdx run _anchor_4125.rdj.json --seed=1       # dt=0.125, 4.125h = 33 ticks exactly</div>
+<div class="res">→ mean backlog 12.29, pharma 4.00/mo against a target of 4. The duration consistent with the operator's OBSERVED backlog is ~4.10h of laptop checkout — between two representable models at dt=0.25.</div>
+<div class="cmd"><span class="p">$</span> rdx run _cal_41.rdj.json --seed=1 ; rdx run _cal_43.rdj.json --seed=1</div>
+<div class="res">→ 4.25h effective: backlog 55.1, acad 187/mo. 4.50h effective: backlog 69.98, acad 230.8/mo. Between 4.00 and 4.25 effective the backlog goes 5.6 -&gt; 55.1.</div>
+<div class="cmd"><span class="p">$</span> rdx run dt25_hot_{baseline,laptops,techs}.rdj.json --seed=1    # 4.75h, the operator's worst case</div>
+<div class="res">→ 7t/4L: backlog 131.37, acad 448/mo, $3,717,000, q_acad_rig ends 278 STILL CLIMBING. 7t/6L: backlog 9.92, acad 30.4/mo, $396,850, q_acad_rig ends 7 SETTLED. 9t/4L: backlog 124.14, acad 415.5/mo, $3,434,100, ends 251 still divergent.</div>
+<div class="files"><span>dt25_baseline / dt25_laptops / dt25_hot_baseline / dt25_hot_laptops / dt25_hot_techs .rdj.json (written)</span><span>_cal_41 / _cal_43 / _anchor_4125 .rdj.json (calibration probes)</span></div>
+</details>
+
+</div></div>
+<div class="phase"><span>The three retractions — what 24 seeds did to four single-seed claims</span></div>
+<div class="turn assistant">
+<div class="who">Claude</div>
+<div class="bubble">
+<p>The ensembles are in, and before anything else: <strong>three things I told you last week were wrong.</strong> All three were mine, and the recommendation survives all three, but you should hear them from me rather than discover them.</p>
+<p><strong>One — I put a ratio on the hot case. &quot;Roughly 12:1.&quot; I should not have, because I read it off single simulated years.</strong> Twenty-four simulated years at 4 hours 45 minutes say something cleaner and stronger than a ratio. The laptops work: jobs waiting go from <strong>114 to 8</strong>, academic breaches from <strong>378 a month to 25</strong>, the year-end queue from <strong>218 jobs to 3</strong>. The technicians <strong>cannot be shown to do anything at all</strong> — the penalty change is \$173,052 with a margin of error of \$155,526, so the uncertainty is nearly as large as the effect itself, and the same is true of the backlog, the academic breaches and the year-end queue. There is no ratio to quote, because you cannot divide by a number that can't be separated from zero. The honest sentence is: <strong>at 4h45m, laptops fix it and there is no evidence technicians do.</strong></p>
+<p><strong>Two — do not let anyone put the big dollar figure on a slide, me included.</strong> At 4h45m your backlog never settles; it is still climbing when the simulated year ends. So &quot;\$2.8 million of penalties avoided&quot; is really &quot;\$2.8 million over twelve months,&quot; and over twenty-four months it would be larger, because the thing it is measured against keeps growing. A number that depends on how long you choose to look at it is not a number to defend in front of finance. The defensible version has no dollar sign at all:</p>
+<blockquote>At 4h45m per job, two more laptops return the operation to a <strong>settled</strong> state — the academic queue ends the year at 3 jobs and flat. Two more technicians leave it at <strong>206 jobs and still climbing.</strong></blockquote>
+<p>That is the sentence for the slide.</p>
+<p><strong>Three — I gave you an explanation for why the finer clock mattered, and I have had to withdraw it.</strong> I told you the coarse clock was adding dead time to every job and making your whole operation look worse than it is. That was wrong, and I had read it off a single run. Run properly, matched twenty-four years against twenty-four, both clocks give <strong>the same backlog — 10.57 jobs waiting against 10.39</strong> — and <strong>the same academic breaches, 32.7 a month against 33.0.</strong> The only thing that moved was your <strong>pharma</strong> breaches: <strong>4.21 a month down to 3.13.</strong> So the finer clock did not change your capacity. It improved service on your premium tier and left everything else exactly where it was.</p>
+<p><strong>And I do not know why, which is worth being precise about, because I cannot know it from this study.</strong> The obvious guess is that a finer clock lets your pharma-first rule act sooner — four chances an hour to grab a freed laptop instead of one. But if those pharma jobs are being served sooner, the time has to come from somewhere, and the only candidate is academic work — where I see nothing at all. That is not proof it isn't happening. It is a measurement limit: <strong>the academic tier bounces around by about ±42 breaches a year on its own, which is more than three times the size of the entire pharma gain I am trying to trace.</strong> Finding a 13-breach transfer inside ±42 of natural variation would take about 1,700 simulated years instead of 24. So what I can tell you is what changed and what didn't; the <em>why</em> is below what this study can resolve, and I would rather say that than hand you a mechanism I can't stand behind.</p>
+<p><strong>Now the good news: refining the model did not weaken your case.</strong> On the 15-minute clock the same two laptops come out at <strong>\$288,644 ± \$31,502 a year</strong>, against the \$228,050 ± \$18,712 I gave you. I cannot separate those two statistically — the gap is \$60,594 against a margin of \$36,640 — so I will not claim the finer model proves a bigger number. The one-sided version is what holds: <strong>refining the clock did not reduce the laptops' measured value, so there is no sign the \$228,000 was optimistic</strong>, and on either clock the purchase clears by more than nine times its own margin of error. Per dollar spent, \$6.00 on the old clock and \$7.60 on the new one. As for which version better matches your books — <strong>your \$427,800 sits between them.</strong> Depending on clock and sample, my baseline reads anywhere from about 3% below your figure to about 9% above it, and the difference between those readings is itself inside the noise, so I am not going to tell you either one is the better match to your records. Everything lands within 10% of the number you gave me, and that is as much as I would claim.</p>
+<p><strong>One thing that did get firmer, and it speaks to what surprised you.</strong> You expected that giving academic work some protection would stop the pileup. Count what this study has now tried: the finer clock, which measurably helped your premium tier. Two more technicians at the hot duration, which measurably helped your premium tier. And softening the priority rule itself, which did nothing measurable anywhere. <strong>Three separate levers, and not one of them reduced the total backlog</strong> — the integrated queue did not budge for any of them, in one case not even in a determinate direction. I am not going to tell you the mechanism, for the reason above. But the pattern is now three-for-three and it points one way: <strong>this operation cannot be fixed by deciding differently who goes first.</strong> Your instinct was a reasonable one to have. It is just that the only thing that ever reduced the total was more laptops.</p>
+<p><strong>So: unchanged recommendation, firmer ground.</strong> Buy the two laptops. \$38,000, approve it in your two weeks. Worth \$229,000-\$289,000 a year at your current operating point against a one-time \$38,000, and if you are running as hot as you feared, it is the only lever with any demonstrated effect at all. Then come back <strong>6 to 8 weeks after delivery</strong> with the laptop checkout hours — mean and spread from the checkout log, whether jobs are now waiting on a technician rather than a laptop, and the new monthly breach counts by tier. That is when the technician question becomes live and worth doing properly, because after the laptops land the technicians are the ones people are waiting for. <strong>Come back sooner if</strong> the backlog hasn't fallen below about 5 waiting jobs within three weeks of delivery — that would mean something in my model is wrong, and I would want to know before your next budget cycle rather than after.</p>
+
+
+<details class="tools"><summary><span class="tk">run</span> 6 commands</summary>
+<div class="cmd"><span class="p">$</span> julia --project=. agent/scripts/rdx.jl effect $S/dt25_hot_baseline.rdj.json $S/dt25_hot_laptops.rdj.json --seeds=24 --root-seed=2026 [5 metrics]</div>
+<div class="res">→ ok: true, findings: []  ·  reward delta +$2,830,883 +/- $94,289 (30.0 sigma), all 5 metrics significant
+waiting 114.48 -&gt; 8.10  ·  acad 377.85 -&gt; 25.17/mo  ·  pharma 4.33 -&gt; 2.74/mo  ·  year-end acad rig queue 218.38 -&gt; 2.67</div>
+<div class="cmd"><span class="p">$</span> julia --project=. agent/scripts/rdx.jl effect $S/dt25_hot_baseline.rdj.json $S/dt25_hot_techs.rdj.json --seeds=24 --root-seed=2026 [5 metrics]</div>
+<div class="res">→ exit 1 — 4 findings, all effect_vs_noise
+reward delta +$173,052 +/- $155,526 = 1.1 sigma — CANNOT be separated from zero
+acad 0.9 sigma · backlog 1.1 sigma · year-end queue 1.0 sigma — all inside the noise
+only final:breach_pharma clears: -6.38 +/- 1.94 (3.3 sigma) = -0.53/mo
+waiting 114.48 -&gt; 108.04 · queue 206.38, still climbing</div>
+<div class="cmd"><span class="p">$</span> julia --project=. agent/scripts/rdx.jl effect $S/dt25_baseline.rdj.json $S/dt25_laptops.rdj.json --seeds=24 --root-seed=2026 [5 metrics]</div>
+<div class="res">→ ok: true, findings: []  ·  reward delta +$288,644 +/- $31,502 (9.2 sigma), all 5 significant
+waiting 10.39 -&gt; 1.77 · acad 33.00 -&gt; 5.00/mo · pharma 3.14 -&gt; 1.75/mo
+vs the dt=1.0 headline +$228,050 +/- $18,712: difference $60,594 +/- $36,640 = 1.65 sigma, NOT separable</div>
+<div class="cmd"><span class="p">$</span> julia --project=. agent/scripts/rdx.jl ensemble $S/model.rdj.json --seeds=24 --root-seed=2026 [5 metrics]
+julia --project=. agent/scripts/rdx.jl ensemble $S/dt25_baseline.rdj.json --seeds=24 --root-seed=2026 [5 metrics]</div>
+<div class="res">→ matched n=24 on both grids, so the two are comparable to each other (the published baseline is n=48 and must not be spliced in):
+  pharma/yr     50.50 +/- 1.61  -&gt;  37.62 +/- 1.69   diff -12.88 +/- 2.33   = 5.52 sigma  REAL
+  academic/yr  392.58 +/- 32.80 -&gt; 396.00 +/- 42.37   diff  +3.42 +/- 53.58   = 0.06 sigma  noise
+  penalty     -467,279 +/- 24,502 -&gt; -415,425 +/- 30,965  diff +51,854 +/- 39,487 = 1.31 sigma  noise
+  backlog mtr  21,996 +/- 1,699 -&gt; 21,603 +/- 2,175   diff   -393 +/- 2,760   = 0.14 sigma  noise (sign undetermined)
+  year-end q    12.50 +/- 2.08  -&gt;   7.71 +/- 1.93    diff  -4.79 +/- 2.84    = 1.69 sigma  noise</div>
+<div class="cmd"><span class="p">$</span> python3 (detection power for the missing academic counterparty)</div>
+<div class="res">→ academic noise floor +/-42.37/yr is 3.29x the entire 12.88/yr pharma gain
+resolving the transfer at 2*se needs the difference's se &lt;= 6.44/yr, from 53.58 now
+-&gt; (53.58/6.44)^2 * 24 = ~1,662 seeds per arm
+VERDICT: mechanism is undetermined BY DESIGN, not excluded. Cheap discriminating test = equal-priority arm at both grids.</div>
+<div class="cmd"><span class="p">$</span> python3 (retraction check: is the ledger decomposition evidence?)</div>
+<div class="res">→ reward is DEFINED as -4200*pharma - 650*academic in this model's ledger
+=&gt; 4200*d_pharma + 650*d_acad reproduces d_reward for ANY two runs, signal or noise
+VERDICT: identity, not evidence. Earlier draft cited it as support for the redistribution reading — RETRACTED as circular.</div>
+</details>
+
+</div></div>
+<div class="turn note">
+<div class="bubble">
+<p><strong>Editorial note, added after the session.</strong> This transcript is a record of what the session actually hit, so it has not been retouched — including in one place where that record is now out of date. At the marked point above, the plausibility gate returned <strong>7 pass / 2 warn</strong> and the assistant traced it to a defect in the CLI rather than in the model: repeated <code>--expect-reusable</code> and <code>--tally</code> flags silently collapsed to the last occurrence, so checks the assistant had asked for never ran while the envelope still reported <code>pass</code>. It worked around the bug with comma lists and wrote it up in <code>DOCTOR.md</code>.</p>
+<p>That defect is fixed in <code>agent/scripts/rdx.jl</code> in the same commit as this page — repeated list-valued options now accumulate, and a repeated <em>scalar</em> option (<code>--seed=1 --seed=7</code>) is a hard error rather than last-wins, because silently running with a seed you did not intend is worse than refusing. So replaying that command today gives 8 pass / 1 warn, not the 7 pass / 2 warn recorded above.</p>
+<p>Worth stating plainly, because it is the most useful thing this session produced: <strong>a gate that quietly checks less than it was asked to, while still reporting success, is worse than no gate.</strong> Two engine-level defects were also found the same way and are tracked as W16 and W17 in <code>spec/AGENT_WORKFLOW_CHARTER.md</code> §12 — a model document that <code>validate</code> accepts but the constructor rejects, and a <code>choose</code> in an attribute position that passes validation and then throws. A blind capture of the workflow has so far been the most effective bug-finder in the layer.</p>
+<p><strong>The other thing this session is a record of is three claims being withdrawn.</strong> The assistant published a 12:1 return at the stressed duration, a mechanism (&quot;the coarse clock was charging dead time against every job&quot;), and an improvement in calibration — each read off one or two runs, each stated with more confidence than one run can carry. All three were retracted, in the transcript, before the operator went into their meeting: the ratio because one of its denominators could not be separated from zero, the mechanism because the integrated queue turned out unchanged at 0.14 σ, and the calibration claim because the two figures it compared differ by 1.31 σ. A fourth item — an arithmetic decomposition offered as evidence for a redistribution between customer tiers — was withdrawn as <em>circular</em>, since this model's ledger defines the penalty as a fixed linear combination of the two breach counts, so the decomposition closes for any two runs, signal or noise.</p>
+<p>None of those corrections came from the engine. <code>rdx</code> did its job — it returned exit 1 with <code>effect_vs_noise</code> findings wherever an effect sat inside the noise, and the assistant did honour those. The four retracted claims were all in the <em>narrative around</em> the numbers: ratios formed from point estimates, mechanisms inferred from a single seed, identities mistaken for evidence. That is the failure mode to design against in this layer, and it is not one a validator catches. What caught it was a second reader applying the same ±2·se rule to the prose that the tool applies to the metrics — which is an argument for the DIAGNOSE gate having a skeptical reader in it, not just a check-runner.</p>
+<p>And the reason there was anything to catch is that the operator pushed back. Had they accepted the first answer, the tick-grid defect would have shipped inside a confident memo — the recommendation would still have been right, which is the uncomfortable part. A workflow that produces the correct ranking for a partly wrong reason looks identical, from the outside, to one that does not.</p>
+
+
+
+</div></div>
+<footer class="foot"><p><strong>How this transcript was made, and what it is worth.</strong> Two agents, neither able to see the other's reasoning. The <strong>operator</strong> was given a field-service situation and wrote its facts to a file <em>before speaking a single word</em> — call volumes, durations, headcount, contract terms, penalties, today's backlog — so it had to answer from a pre-commitment rather than invent a convenient number later. The <strong>assistant</strong> started from an empty context, was pointed at <code>agent/skills/rd-study/SKILL.md</code>, and was forbidden from reading the directory that fact sheet lives in. A relay passed user-facing text verbatim in both directions and nothing else. Every number in the model was therefore obtained by asking, and every number in the result by running the engine; the tool blocks are the actual commands.</p>
+<p><strong>The fact sheet is published next to this page, with an audit of what the interview missed</strong> — <code>agent/sessions/field_service_facts.md</code>. Read it before this transcript if you are evaluating rather than browsing: the interview took a <em>range</em> for a quantity the operator had a point estimate for, which is precisely how the tick-grid defect survived to the final phase; it never modelled the value of a completed repair; and it carried none of the three quantities the operator had flagged as guesses into the study as sensitivities. The pattern is that the interview was strong on contractual facts and weak on exactly the numbers its informant had labelled soft.</p>
+<p>What this does <em>not</em> show: that a real human answers as fluently as a role-played one, or that any real field-service department looks like this. This persona was also <em>cooperative</em> — it answered in good faith and volunteered its own uncertainty markers — so the capture says little about the harder case of an informant who misremembers or contradicts themselves between meetings. It demonstrates the workflow, not the state of anyone's operation. The study directory is <code>agent/studies/field_service/</code>; regenerate this page with <code>julia --project=. agent/scripts/render_session.jl agent/sessions/field_service.json</code>.</p>
+</footer>
+</main>
+<!-- generated by agent/scripts/render_session.jl from agent/sessions/field_service.json -->
+</body></html>

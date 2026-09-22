@@ -14,9 +14,11 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 | `scripts/diagnose.jl` | the plausibility checks (`rdx diagnose`), the part that carries modeling judgement |
 | `scripts/gen_reference.jl` | regenerates `reference/model_schema.md` from the loaded module; `--check` is the drift gate |
 | `scripts/acceptance.jl` | the known-answer test — drives the published shadow price through the JSON path |
+| `scripts/render_session.jl` | renders a captured session transcript as a single self-contained HTML page |
 | `skills/` | the skills themselves (`rd-study` orchestrator + one per phase) |
 | `reference/` | generated extracts of the authoring schema — never hand-edited |
 | `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test |
+| `sessions/` | captured end-to-end sessions — what the workflow is like to *use*, not just what it produces |
 
 ## The skills
 
@@ -77,6 +79,16 @@ julia --project=. agent/scripts/gen_reference.jl --check    # the generated refe
 ```
 
 `acceptance.jl` asserts at two strengths: the *scientific* claim is hard (the delta lands inside the published \$19.0M ± \$2.5M band and clears 2·se), while bit-reproducibility against the recorded run is a soft note — Julia's `hash` is not stable across versions and the member seeds derive from it, so the stream can move without any semantics changing.
+
+## Captured sessions — what it is like to use
+
+`studies/` shows you what the workflow *produces*. `sessions/` shows you what it is like to *use*: which questions get asked, which defaults get proposed, what happens when the user's numbers contradict the assistant's arithmetic. Each session is a JSON transcript rendered to one self-contained HTML page — no external CSS, fonts or JS, figures inlined.
+
+```bash
+julia --project=. agent/scripts/render_session.jl agent/sessions/field_service.json
+```
+
+They are captured blind, by two agents that cannot see each other's reasoning, so a transcript is evidence rather than marketing; the protocol and its limits are in [`sessions/README.md`](sessions/README.md).
 
 ## Keeping the reference honest
 
