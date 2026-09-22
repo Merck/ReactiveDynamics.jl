@@ -12,9 +12,25 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 |---|---|
 | `scripts/rdx.jl` | the CLI — one entry point per phase, JSON on stdout, meaningful exit codes |
 | `scripts/diagnose.jl` | the plausibility checks (`rdx diagnose`), the part that carries modeling judgement |
+| `scripts/gen_reference.jl` | regenerates `reference/model_schema.md` from the loaded module; `--check` is the drift gate |
+| `scripts/acceptance.jl` | the known-answer test — drives the published shadow price through the JSON path |
 | `skills/` | the skills themselves (`rd-study` orchestrator + one per phase) |
 | `reference/` | generated extracts of the authoring schema — never hand-edited |
 | `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test |
+
+## The skills
+
+`rd-study` is the entry point; it runs the four phases and reads one phase skill at a time.
+
+| Skill | Phase | Produces | Gate to clear |
+|---|---|---|---|
+| `rd-study` | orchestrator | the study directory | the three-part qualifying test — something binds, something takes time, something is decided mid-flight |
+| `rd-frame` | 1. frame | `BRIEF.md` | every slot filled, failure modes pre-registered |
+| `rd-author` | 2. author | `model.rdj.json` + one file per arm | `rdx validate` returns zero diagnostics |
+| `rd-doctor` | 3. diagnose | `DOCTOR.md` | `rdx diagnose` exits 0, or every failure is understood and stated |
+| `rd-report` | 4. report | `FINDINGS.md` | headline, decision rule and caveats all present |
+
+The gates are the point. DIAGNOSE standing between AUTHOR and REPORT is what keeps the workflow's most likely bad output — a confident wrong number — from reaching a memo.
 
 ## The CLI
 
@@ -52,6 +68,19 @@ julia --project=. agent/scripts/rdx.jl effect $S/model.rdj.json $S/arm_hire_fift
 ```
 
 The second command prints `delta: 18.991, se: 2.528`. If it ever prints something else, the workflow has regressed against the engine — that is what makes it a test rather than a demo.
+
+Both checks are wrapped as runnable gates, and both run in the `Agent layer` CI workflow on any change under `agent/` or `src/`:
+
+```bash
+julia --project=. agent/scripts/acceptance.jl              # the known-answer study, end to end
+julia --project=. agent/scripts/gen_reference.jl --check    # the generated reference is not stale
+```
+
+`acceptance.jl` asserts at two strengths: the *scientific* claim is hard (the delta lands inside the published \$19.0M ± \$2.5M band and clears 2·se), while bit-reproducibility against the recorded run is a soft note — Julia's `hash` is not stable across versions and the member seeds derive from it, so the stream can move without any semantics changing.
+
+## Keeping the reference honest
+
+`reference/model_schema.md` is generated, so the skills cannot describe an engine that no longer exists. One table inside the generator is hand-maintained — the JSON-key ⇒ store-column mapping, which lives function-local inside `src/serialize.jl` and cannot be read out of the module. It is guarded rather than trusted: the generator asserts every column it names exists in `SCHEMA` and every JSON key it documents is read by `src/serialize.jl` or `rdx.jl`, and refuses to emit otherwise. Regenerate with `gen_reference.jl` after any change to the schema, the whitelists or the action verbs.
 
 ## Portability
 

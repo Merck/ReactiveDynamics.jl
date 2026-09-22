@@ -1,0 +1,50 @@
+# The `agent/` layer's two gates (spec/AGENT_WORKFLOW_CHARTER.md §6, W1/W6).
+#
+# Kept out of CI.yml deliberately: this guards the agent-facing surface, not the engine, and it runs
+# on one configuration rather than the version × OS matrix. Path-filtered so it only fires when the
+# agent layer or the source it is generated from actually moves.
+#
+#  1. REFERENCE DRIFT — `agent/reference/model_schema.md` is generated from the loaded module (the
+#     schema, the op/dist/ref/predicate whitelists, the action verbs). A stale extract means the
+#     skills are telling an agent about an engine that no longer exists, which is worse than telling
+#     it nothing. This is the charter's Tier-2 anti-drift rule, inherited from the docs charter §D4.
+#
+#  2. KNOWN ANSWER — the marginal-scientist study drives a published result (≈ +$19M ± $2.5M shadow
+#     price) through the JSON-document path end to end. It is the only check that distinguishes "the
+#     workflow found the right answer" from "the workflow found a confident one", so a regression in
+#     the engine's semantics, the allocator, or the CLI surfaces here rather than in a user's memo.
+name: Agent layer
+on:
+  push:
+    branches: [main]
+    paths: ['agent/**', 'src/**', '.github/workflows/AgentLayer.yml']
+  pull_request:
+    paths: ['agent/**', 'src/**', '.github/workflows/AgentLayer.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  agent:
+    name: Reference drift + known answer
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: write   # julia-actions/cache prunes stale caches
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+
+      - name: Reference extract is not stale
+        run: julia --project=. agent/scripts/gen_reference.jl --check
+
+      # No Graphviz step: the acceptance path never draws, so it needs no system binary.
+      - name: Known-answer study reproduces
+        run: julia --project=. agent/scripts/acceptance.jl

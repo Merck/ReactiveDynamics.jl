@@ -150,6 +150,8 @@ The spec and the docs are not background reading for this layer; they are its wo
 
 **Tier 2 — generated extracts (cannot drift, by construction).** A script regenerates, from source: the public export surface, the JSON document's key set, the modality truth table, the op/dist/ref whitelists (`OP_WHITELIST`, `DIST_WHITELIST`, `REF_KINDS`, `PRED_OP_WHITELIST`), the attribute defaults. The suite already carries an `exports_resolve.jl` invariant asserting the docs' symbols resolve against the live surface and a retired-vocabulary grep gate; the same mechanism extends to the skill's extract, so **the skill's API reference is validated by the test suite that validates the engine's.** A drifted extract fails CI. This is the "no invented API" gate of the docs charter, inherited.
 
+*Delivered as `agent/scripts/gen_reference.jl` → `agent/reference/model_schema.md`, gated by `--check` in the `Agent layer` workflow.* One honest limitation surfaced in the build: the JSON-key ⇒ store-column mapping is **function-local** inside `src/serialize.jl`'s read/emit pairs, not an exported table, so it cannot be read out of the module and that one table is hand-maintained. It is guarded rather than trusted — the generator asserts every column it names exists in `SCHEMA` (or is a real `ArcSpec` field) and every JSON key it documents is actually read by `src/serialize.jl` or `rdx.jl`, and *refuses to emit* otherwise. A rename on either side breaks the generator instead of silently producing a reference that lies. That assertion immediately earned its cost: it is what surfaced W14, by proving `population[].count`/`attributes` are read by nothing in `src/`.
+
 **Tier 3 — genuinely new procedural prose (the only hand-written part).** The interview and its question bank; the qualifying test; the slot table and its mapping to the object model; the plausibility check list; the calibration discipline (currently tacit in `MVP_BD_DEMO.md` and the case-study openings); the briefing template. None of this exists anywhere yet, and all of it is procedure rather than semantics — so it cannot contradict the contract.
 
 ## 7. The review surface, and the road to an editor pane
@@ -213,19 +215,31 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started.
 | Facet | ID | Deliverable | Status |
 |---|---|---|---|
 | Charter | — | This document | ✅ |
-| Spine | W1 | Four phases minimally end-to-end on a known-answer study | ⬜ |
-| Frame | W2 | `rd-frame` skill: slot table, question bank, qualifying test | ⬜ |
-| Author | W3 | `rd-author` skill: JSON authoring + validate/repair loop | ⬜ |
-| Diagnose | W4 | `rd-doctor`: the plausibility check list + `DOCTOR.md` | ⬜ |
-| Report | W5 | `rd-report`: the signature briefing, delegating register and charts | ⬜ |
-| Knowledge | W6 | Tier-2 generated extract + the CI drift gate | ⬜ |
-| Runtime | W7 | Julia CLI scripts (`validate`/`run`/`ensemble`/`draw`) | ⬜ |
+| Spine | W1 | Four phases minimally end-to-end on a known-answer study | ✅ `f8379b0` |
+| Frame | W2 | `rd-frame` skill: slot table, question bank, qualifying test | ✅ |
+| Author | W3 | `rd-author` skill: JSON authoring + validate/repair loop | ✅ |
+| Diagnose | W4 | `rd-doctor`: the plausibility check list + `DOCTOR.md` | ✅ `f8379b0` |
+| Report | W5 | `rd-report`: the signature briefing, delegating register and charts | ✅ |
+| Knowledge | W6 | Tier-2 generated extract + the CI drift gate | ✅ `gen_reference.jl` + `.github/workflows/AgentLayer.yml` |
+| Runtime | W7 | Julia CLI scripts (`validate`/`run`/`ensemble`/`draw`) | ✅ `f8379b0` |
 | Runtime | W8 | MCP server `rd` with a persistent session + spec resources | ⬜ |
 | Agents | W9 | `rd-modeler`, `rd-critic` (`rd-calibrator` phase 2) | ⬜ |
 | Enforcement | W10 | `PostToolUse` validate hook on `*.rdj.json` | ⬜ |
 | Surface | W11 | `card.html` self-contained model card | ⬜ |
 | Packaging | W12 | `plugin.json`, commands, marketplace publication | ⬜ |
 | Upstream | W13 | Generic attribute-bag token kind in `src/` (+ semantic tests, `log_token_fields` default) — the §11.2 data-only path | ⬜ |
+| Upstream | W14 | `from_json_model` should instantiate `d["population"]` — today it validates the array and drops it, so a document's t=0 tokens materialize under `rdx` (which reads it and builds `PopulationEntry`s) and silently do not under a bare engine call | ⬜ |
+| Upstream | W15 | Make `validate` total — a transition missing `"id"` throws out of `src/serialize.jl` instead of returning a `Diagnostic`, which costs the repair loop the JSON path it repairs against. `rdx` wraps the throw as a synthetic `:error` diagnostic; the engine should not need the wrapper | ⬜ |
+
+### W1 — what the spine actually delivered (2026-09-22, `f8379b0`)
+
+`agent/studies/marginal_scientist/` reproduces the published shadow price **to the digit** — `rdx effect` returns `delta 18.991, se 2.528` against the case study's ≈ +\$19M ± \$2.5M — entirely through the JSON-document path, with `host.jl` (a token type and a registry) as the only Julia. That is the §11.3 acceptance criterion met: the agent-facing surface and the hand-authored surface are demonstrably the same engine, not an approximation of it.
+
+Three findings worth carrying forward:
+
+- **The gate discriminates.** On the `demo/bd_acquisition` fixture `rdx diagnose` reports 2 fails (five dead transitions; the wrong resource binding) and exits 1; on the study it reports 8 pass / 1 warn / 0 fail and exits 0. The checks were built to be capable of failing, and they do.
+- **One warning was carried, not cleared.** The study's horizon truncates (two trials in flight at t=48), so `FINDINGS.md` states the headline as a **lower bound** rather than suppressing the warn. That is the intended discipline (§3.3) exercised once for real.
+- **Two arms, two complete documents.** The convention is one self-contained validate-clean document per arm in the same directory, differing in as few lines as possible — here exactly one (`"init": 4.0` → `5.0`). Accepting the duplication buys a diff that *is* the intervention and an arm that replays forever on its own; a patch-and-overlay scheme would forfeit both.
 
 ## 13. Decisions log
 
@@ -234,3 +248,6 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started.
 - **2026-09-22 — Skill-and-script first, MCP second.** MCP is justified by session persistence and cross-client reach, not by capability; the portable layer must remain usable without it.
 - **2026-09-22 — A plausibility gate stands between the model and the headline number.** `validate` checks schema, not sense. Without §3.3 the workflow's most likely output is a confident wrong number, which would damage the framework more than no workflow at all.
 - **2026-09-22 — The plugin lives in-repo under `agent/`; the token seam is generic-kind-first with `host.jl` as a named escape hatch; the first increment is spine-thin across all four phases on a known-answer study** (§11.1–§11.3, maintainer-ratified). The through-line of all three: keep the knowledge layer un-drifted by construction, keep the authored artifact inert by default, and validate the *sequence* before deepening any single phase.
+- **2026-09-22 — One self-contained document per experimental arm, not a patch.** Arms live side by side in the study directory and differ in as few lines as possible. The duplication is the price of two properties worth more than it: the `diff` between two files *is* the intervention, reviewable at a glance by someone who knows nothing about the formalism, and every arm replays from `(model, seed)` on its own forever without needing the baseline it was derived from.
+- **2026-09-22 — The known-answer test asserts at two strengths.** `agent/scripts/acceptance.jl` treats the *scientific* claim as hard (the delta lands inside the published band and clears 2·se) and *bit-reproducibility* against the recorded run as soft (reported, not fatal). Julia's `hash` is explicitly not stable across versions and the member seeds derive from it, so the seed stream can move without any semantics changing; blocking a merge on the last digits would train people to ignore the gate. The soft note still prints, because if the engine did not change, a moved stream is worth investigating.
+- **2026-09-22 — The agent layer gets its own CI workflow, not a step in `CI.yml`.** `Agent layer` runs the reference drift gate and the known-answer study on one configuration, path-filtered to `agent/**` and `src/**`. It guards the agent-facing surface rather than the engine, so it does not belong on the version × OS matrix — and keeping it separate means the acceptance study's 40 seconds are paid once per relevant change rather than six times per push.
