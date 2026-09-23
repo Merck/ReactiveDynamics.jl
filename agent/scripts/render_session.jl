@@ -1,8 +1,8 @@
 #!/usr/bin/env julia
 #
-# render_session.jl — render a captured rd-study session as a self-contained HTML transcript.
+# render_session.jl — render a captured rd-study session as a self-contained HTML page.
 #
-#   julia --project=. agent/scripts/render_session.jl SESSION.json [--out=SESSION.html]
+#   julia --project=. agent/scripts/render_session.jl PAGE.json [--out=PAGE.html]
 #
 # The point of the artifact: the four phases produce documents, but what SELLS the workflow is the
 # shape of the conversation that produced them — the questions asked, the defaults proposed, the
@@ -11,13 +11,18 @@
 # degrade to system stacks, figures are inlined), which means it can be mailed, committed, or opened
 # from a USB stick five years from now and still look like itself.
 #
+# A transcript is the spine, not the whole page: `sections` puts authored sheets BEFORE the dialogue,
+# which is what turns a captured session into a capability overview that happens to end in a
+# demonstration. `agent/overview.json` is that shape; `agent/sessions/*.json` are bare transcripts.
+#
 # Input schema — one JSON object:
 #
-#   { "title": …, "subtitle": …, "headline": …, "headline_note": …,
+#   { "title": …, "subtitle": …, "brand": …, "headline": …, "headline_note": …,
 #     "meta":  { "<label>": "<value>", … },          # rendered as the provenance strip
 #     "hero":  { "stats":   [ { "value": …, "label": …, "note": … } ],   # every key optional
 #                "text":    "<markdown-ish>",
 #                "figures": [ { "svg": …, "caption": … } ] },
+#     "sections": [ { "title": …, "text": … | "file": …, "stats": [ … ], "figures": [ … ] } ],
 #     "turns": [ { "role": "user"|"assistant"|"note",
 #                  "text": "<markdown-ish>",          # see the grammar note below
 #                  "phase": "FRAME"|…,                # optional; starts a new phase band
@@ -27,18 +32,21 @@
 #                  "files": [ "path (written)", … ],
 #                  "figures": [ { "svg": …, "caption": … } ],
 #                  "figure": "<path to an .svg>" } ],  # one-element alias for `figures`, no caption
+#     "turns": { "file": "<another page>.json" },       # …or import another document's transcript
 #     "appendix": [ { "title": …, "text": "<markdown-ish>" | "file": "<path to a .md>",
 #                     "stats": [ … ], "figures": [ … ] } ],
 #     "footer": "<markdown-ish>" }
 #
 # `hero` is the skim card between the masthead and the first turn, laid out stats → text → figures: a
-# reader who never opens a turn must be able to state the recommendation from it alone. `appendix`
-# entries come after the transcript under a band heavier than a phase — they are deliverables, not
-# turns, so they are never collapsed.
+# reader who never opens a turn must be able to state the recommendation from it alone. `sections` and
+# `appendix` render identically — a band heavier than a phase over a full-width sheet, never collapsed —
+# because both are authored divisions rather than dialogue; they differ only in where they sit.
 #
 # Any node that takes `text` takes `file` instead: a path to a Markdown deliverable, imported at render
 # time (see `md_import`). Prefer it over pasting the document into the JSON, because a report
-# transcribed by hand is a report that can quietly disagree with the one the study shipped.
+# transcribed by hand is a report that can quietly disagree with the one the study shipped. `turns`
+# imports the same way, from another page document — so a page can present a captured session it does
+# not own, and there is still exactly one copy of that session under version control.
 #
 # The block grammar in every `text`: paragraphs, `- ` bullets, `1. ` ordered lists, `## `/`### `
 # sub-heads, `| pipe |` tables, ``` fences, `> ` blockquotes, `!figure path.svg | caption` (consecutive
@@ -381,13 +389,14 @@ function hero_html(hero)
     return String(take!(io))
 end
 
-# Appendix entries are deliverables, not turns: a band heavier than a phase, a full-width sheet, the
-# same block grammar as a turn — and never collapsed, because a folded deliverable reads as an
-# afterthought nobody was meant to open.
-function appendix_html(entries)
+# Sheets are the page's authored divisions — the overview sections before the dialogue, the
+# deliverables after it. A band heavier than a phase, a full-width sheet, the same block grammar as a
+# turn — and never collapsed, because a folded deliverable reads as an afterthought nobody was meant
+# to open.
+function sheets_html(entries, default_title = "Appendix")
     io = IOBuffer()
     for e in entries
-        println(io, "<div class=\"phase band\"><span>", esc(string(get(e, "title", "Appendix"))), "</span></div>")
+        println(io, "<div class=\"phase band\"><span>", esc(string(get(e, "title", default_title))), "</span></div>")
         println(io, "<section class=\"appx prose\">")
         println(io, stats_html(get(e, "stats", [])))
         println(io, body_html(node_text(e)))
@@ -395,6 +404,18 @@ function appendix_html(entries)
         println(io, "</section>")
     end
     return String(take!(io))
+end
+
+# `turns` is normally the transcript itself. It may instead name another page document, whose turns are
+# spliced in — the `file` idiom the appendix already uses, for the same reason: a page that presents a
+# captured session should not carry a second copy of it that can drift from the one being maintained.
+function resolve_turns(t)
+    t isa AbstractVector && return t
+    t isa AbstractDict || return Any[]
+    f = string(get(t, "file", ""))
+    isempty(f) && return Any[]
+    isfile(f) || error("render_session: turns file not found: $f")
+    return get(JSON.parsefile(f), "turns", Any[])
 end
 
 const CSS = """
@@ -558,6 +579,16 @@ footer.foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid va
 footer.foot code { font-family: var(--mono); font-size: .93em; }
 
 @media print {
+  /* On paper the measure is the page, not 50rem: a 50rem wrap is wider than Letter's printable width,
+     so any full-width box (the hero, a stat row, a sheet) used to run off the right edge. Hand the
+     margin to `@page` and let the wrap fill what is left — which also gets four stat cards back onto
+     one row, since they no longer have to wrap inside a box that is itself overflowing. */
+  @page { margin: 14mm 12mm; }
+  .wrap { max-width: none; padding: 0; }
+  /* A fence scrolls sideways on screen; on paper there is nowhere to scroll, so an overlong line would
+     be silently cut — the one failure mode a page arguing for auditability cannot have. Wrap instead.
+     `.cmd`/`.res` already wrap, which is why captured output only ever soft-wraps. */
+  pre.block { white-space: pre-wrap; overflow-wrap: break-word; }
   body { background: #fff; } header.mast { background: #fff; color: #000; border-bottom: 2px solid #000; }
   h1, .headline .big { color: #000; } .headline { background: var(--inset); }
   .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }
@@ -586,7 +617,8 @@ function render(doc, jsonpath)
 
     # masthead
     println(io, "<header class=\"mast\"><div class=\"wrap\">")
-    println(io, "<p class=\"brand\"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; rd-study session</p>")
+    kicker = get(doc, "brand", "rd-study session")
+    println(io, "<p class=\"brand\"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; ", esc(kicker), "</p>")
     println(io, "<h1>", inline(get(doc, "title", "")), "</h1>")
     sub = get(doc, "subtitle", "")
     isempty(sub) || println(io, "<p class=\"sub\">", inline(sub), "</p>")
@@ -607,10 +639,12 @@ function render(doc, jsonpath)
     end
     println(io, "</div></header>")
 
-    # hero, then transcript, then the deliverables
+    # hero, then the authored sections, then the transcript, then the deliverables
     println(io, "<main class=\"wrap\">")
     println(io, hero_html(get(doc, "hero", Dict())))
-    for turn in get(doc, "turns", [])
+    secs = sheets_html(get(doc, "sections", []), "Overview")
+    isempty(secs) || println(io, secs)
+    for turn in resolve_turns(get(doc, "turns", []))
         ph = get(turn, "phase", "")
         isempty(ph) || println(io, "<div class=\"phase\"><span>", esc(ph), "</span></div>")
 
@@ -629,7 +663,7 @@ function render(doc, jsonpath)
         )
         println(io, "</div></div>")
     end
-    println(io, appendix_html(get(doc, "appendix", [])))
+    println(io, sheets_html(get(doc, "appendix", [])))
 
     foot = get(doc, "footer", "")
     isempty(foot) || println(io, "<footer class=\"foot\">", body_html(foot), "</footer>")
@@ -640,7 +674,7 @@ function render(doc, jsonpath)
 end
 
 function main(argv)
-    isempty(argv) && (println(stderr, "usage: render_session.jl SESSION.json [--out=SESSION.html]"); return 2)
+    isempty(argv) && (println(stderr, "usage: render_session.jl PAGE.json [--out=PAGE.html]"); return 2)
     src = argv[1]
     isfile(src) || (println(stderr, "render_session: no such file: $src"); return 2)
     out = ""
@@ -652,9 +686,10 @@ function main(argv)
     doc = JSON.parsefile(src)
     html = render(doc, src)
     write(out, html)
-    nturns = length(get(doc, "turns", []))
-    ncmds = sum(length(get(t, "tools", [])) for t in get(doc, "turns", []); init = 0)
-    println("render_session: wrote $out — $nturns turns, $ncmds commands, $(round(sizeof(html) / 1024, digits = 1)) KiB self-contained")
+    turns = resolve_turns(get(doc, "turns", []))
+    nsec = length(get(doc, "sections", []))
+    ncmds = sum(length(get(t, "tools", [])) for t in turns; init = 0)
+    println("render_session: wrote $out — $nsec sections, $(length(turns)) turns, $ncmds commands, $(round(sizeof(html) / 1024, digits = 1)) KiB self-contained")
     return 0
 end
 

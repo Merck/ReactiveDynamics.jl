@@ -6,6 +6,8 @@ It is chartered in **[`spec/AGENT_WORKFLOW_CHARTER.md`](../spec/AGENT_WORKFLOW_C
 
 Why it lives in-repo rather than in a separate plugin repository: the skills' reference material is *generated from this source tree* and guarded by the same drift gate as the docs. A skill that drifts from the engine is worse than no skill.
 
+**Evaluating rather than building? Open [`overview.html`](overview.html).** One self-contained page: what the layer does and why the gate in the middle is the differentiator, how it is built (skills, subagents, MCP, the hook, the knowledge tiers), the integration surface, how to drive it from Claude Code today — and then the engagement-scale `portfolio_bid` study as the demonstration, with the briefing it produced attached in full. Regenerate with `julia --project=. agent/scripts/render_session.jl agent/overview.json`.
+
 ## Layout
 
 | Path | What it is |
@@ -14,12 +16,14 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 | `scripts/diagnose.jl` | the plausibility checks (`rdx diagnose`), the part that carries modeling judgement |
 | `scripts/gen_reference.jl` | regenerates `reference/model_schema.md` from the loaded module; `--check` is the drift gate |
 | `scripts/acceptance.jl` | the known-answer test — drives the published shadow price through the JSON path |
-| `scripts/render_session.jl` | renders a captured session transcript as a single self-contained HTML page |
+| `scripts/render_session.jl` | renders a page document — authored sections, a captured transcript, or both — as one self-contained HTML file |
 | `scripts/chartkit.jl` | data-driven SVG charts (bars with error bars, paired dots, waterfall, traced ceiling) — no plotting dep, so a study's figures build anywhere the CLI runs |
 | `skills/` | the skills themselves (`rd-study` orchestrator + one per phase) |
 | `reference/` | generated extracts of the authoring schema — never hand-edited |
 | `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test, `portfolio_bid/` the one at engagement scale |
 | `sessions/` | captured end-to-end sessions — what the workflow is like to *use*, not just what it produces |
+| `overview.json` → `overview.html` | the capability overview page: authored sections, then the `portfolio_bid` transcript imported as its demo |
+| `figures.jl` → `figures/` | the two structural diagrams on that page (the phase pipeline, the integration surface), generated from tables that cite the charter's tracker ids |
 
 ## The skills
 

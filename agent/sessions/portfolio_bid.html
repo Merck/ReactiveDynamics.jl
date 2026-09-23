@@ -161,6 +161,16 @@ footer.foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid va
 footer.foot code { font-family: var(--mono); font-size: .93em; }
 
 @media print {
+  /* On paper the measure is the page, not 50rem: a 50rem wrap is wider than Letter's printable width,
+     so any full-width box (the hero, a stat row, a sheet) used to run off the right edge. Hand the
+     margin to `@page` and let the wrap fill what is left — which also gets four stat cards back onto
+     one row, since they no longer have to wrap inside a box that is itself overflowing. */
+  @page { margin: 14mm 12mm; }
+  .wrap { max-width: none; padding: 0; }
+  /* A fence scrolls sideways on screen; on paper there is nowhere to scroll, so an overlong line would
+     be silently cut — the one failure mode a page arguing for auditability cannot have. Wrap instead.
+     `.cmd`/`.res` already wrap, which is why captured output only ever soft-wraps. */
+  pre.block { white-space: pre-wrap; overflow-wrap: break-word; }
   body { background: #fff; } header.mast { background: #fff; color: #000; border-bottom: 2px solid #000; }
   h1, .headline .big { color: #000; } .headline { background: var(--inset); }
   .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }

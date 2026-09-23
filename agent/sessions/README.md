@@ -9,6 +9,8 @@ julia --project=. agent/scripts/render_session.jl agent/sessions/<name>.json
 
 The transcript JSON is the source of truth and is meant to be read as diffable text; the HTML is generated and safe to regenerate. The schema is documented in the header of `agent/scripts/render_session.jl`: a `title`/`subtitle`/`headline` block, a `meta` map rendered as the provenance strip, a `hero` skim card of `stats`/`text`/`figures`, `turns[]` — each with a `role` (`user` / `assistant` / `note`), the turn text, an optional `phase` label that starts a new band, an optional `tools[]` of `{cmd, out}` pairs rendered as a collapsed evidence block, and `figures[]` that get inlined — and `appendix[]` for the deliverables, where an entry takes `"file"` in place of `"text"` to import a study's Markdown report at render time.
 
+A transcript is the spine of a page, not necessarily the whole of one. `sections[]` puts authored sheets *before* the dialogue with the same block grammar as the appendix, and `turns` may be `{"file": "<another page>.json"}` instead of a list — which imports another document's transcript rather than copying it. [`agent/overview.html`](../overview.html) is that shape: a capability overview whose demonstration is the `portfolio_bid` session below, so the session has exactly one representation under version control and still stands alone as its own page.
+
 ## Two provenances, and what each one is worth
 
 A transcript is only worth showing if it was not written to flatter the thing it demonstrates. Two kinds live in this directory, they are worth different things, and the provenance strip at the top of each rendered page says which one you are reading.
