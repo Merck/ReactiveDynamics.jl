@@ -44,7 +44,7 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 /* ── stat cards ── */
 .stats { display: flex; flex-wrap: wrap; gap: .75rem; }
 .stat {
-  flex: 1 1 10.5rem; min-width: 9.5rem; background: var(--paper); border: 1px solid var(--hair);
+  flex: 1 1 8.5rem; min-width: 8rem; background: var(--paper); border: 1px solid var(--hair);
   border-top: 2px solid var(--accent); border-radius: 2px; padding: .9rem 1rem 1rem;
 }
 .stat .label { font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--grey); }
@@ -188,7 +188,10 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   details.tools::details-content, details.fold::details-content {
     content-visibility: visible !important; block-size: auto !important;
   }
-  .turn, .stats, figure.fig { break-inside: avoid; }
+  /* Keep the short things whole. An assistant turn with its commands expanded is routinely taller than
+     a sheet, and `break-inside: avoid` on that just pushes it to the next page and leaves this one
+     half blank — so let it flow across the break instead. */
+  .turn.user, .turn.note, .stats, figure.fig { break-inside: avoid; }
   .hero { background: #fff; border-top-color: #000; }
   .stat { border-top-color: #000; }
   .figs { display: block; } .figs > * + * { margin-top: .8rem; }

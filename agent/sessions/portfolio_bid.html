@@ -44,7 +44,7 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 /* ── stat cards ── */
 .stats { display: flex; flex-wrap: wrap; gap: .75rem; }
 .stat {
-  flex: 1 1 10.5rem; min-width: 9.5rem; background: var(--paper); border: 1px solid var(--hair);
+  flex: 1 1 8.5rem; min-width: 8rem; background: var(--paper); border: 1px solid var(--hair);
   border-top: 2px solid var(--accent); border-radius: 2px; padding: .9rem 1rem 1rem;
 }
 .stat .label { font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--grey); }
@@ -70,6 +70,13 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 .turn.user .bubble { background: #E8F3F2; border-color: #BFDEDB; }
 .turn.assistant .bubble { border-left: 3px solid var(--accent); }
 .turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
+
+/* An elision, drawn as a seam across the column rather than a bubble: it is not part of the dialogue,
+   it is the place where the dialogue was cut. */
+.gap { display: flex; align-items: baseline; gap: .8rem; margin: 1.4rem 0 1.9rem; color: var(--grey-lt); }
+.gap::before, .gap::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.gap b { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.gap i { font-style: normal; font-size: .8rem; color: var(--grey); max-width: 60%; }
 
 /* ── prose: shared by turn bubbles, the hero blurb and appendix entries ── */
 .prose p { margin: 0 0 .85rem; } .prose p:last-child { margin-bottom: 0; }
@@ -181,14 +188,18 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   details.tools::details-content, details.fold::details-content {
     content-visibility: visible !important; block-size: auto !important;
   }
-  .turn, .stats, figure.fig { break-inside: avoid; }
+  /* Keep the short things whole. An assistant turn with its commands expanded is routinely taller than
+     a sheet, and `break-inside: avoid` on that just pushes it to the next page and leaves this one
+     half blank — so let it flow across the break instead. */
+  .turn.user, .turn.note, .stats, figure.fig { break-inside: avoid; }
   .hero { background: #fff; border-top-color: #000; }
   .stat { border-top-color: #000; }
   .figs { display: block; } .figs > * + * { margin-top: .8rem; }
   .phase.band { break-before: page; } .phase.band span { color: #fff; background: #000; }
   .appx { border: none; padding: 0; }
 }
-</style></head><body>
+</style>
+</head><body>
 <header class="mast"><div class="wrap">
 <p class="brand"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; rd-study session</p>
 <h1>&quot;Is the banker's number right?&quot; — pricing three in-licensed assets against a group that is already full</h1>

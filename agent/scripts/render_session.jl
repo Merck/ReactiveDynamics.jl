@@ -492,7 +492,7 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 /* ── stat cards ── */
 .stats { display: flex; flex-wrap: wrap; gap: .75rem; }
 .stat {
-  flex: 1 1 10.5rem; min-width: 9.5rem; background: var(--paper); border: 1px solid var(--hair);
+  flex: 1 1 8.5rem; min-width: 8rem; background: var(--paper); border: 1px solid var(--hair);
   border-top: 2px solid var(--accent); border-radius: 2px; padding: .9rem 1rem 1rem;
 }
 .stat .label { font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--grey); }
