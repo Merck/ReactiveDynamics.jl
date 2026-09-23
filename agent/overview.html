@@ -71,6 +71,13 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 .turn.assistant .bubble { border-left: 3px solid var(--accent); }
 .turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
 
+/* An elision, drawn as a seam across the column rather than a bubble: it is not part of the dialogue,
+   it is the place where the dialogue was cut. */
+.gap { display: flex; align-items: baseline; gap: .8rem; margin: 1.4rem 0 1.9rem; color: var(--grey-lt); }
+.gap::before, .gap::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.gap b { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.gap i { font-style: normal; font-size: .8rem; color: var(--grey); max-width: 60%; }
+
 /* ── prose: shared by turn bubbles, the hero blurb and appendix entries ── */
 .prose p { margin: 0 0 .85rem; } .prose p:last-child { margin-bottom: 0; }
 .prose ul, .prose ol { margin: 0 0 .85rem; padding-left: 1.2rem; } .prose li { margin-bottom: .3rem; }
@@ -188,7 +195,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   .phase.band { break-before: page; } .phase.band span { color: #fff; background: #000; }
   .appx { border: none; padding: 0; }
 }
-</style></head><body>
+</style>
+</head><body>
 <header class="mast"><div class="wrap">
 <p class="brand"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; the agentic layer — a capability overview</p>
 <h1>A skill layer that carries a business question to a defensible number</h1>
@@ -200,10 +208,10 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <div><b>layer</b> <code>agent/</code> — five skills, one CLI, a generated schema reference, two worked studies, two captured sessions</div>
 <div><b>shipped</b> the skills, <code>rdx.jl</code>, the nine plausibility checks, the generated reference, both CI gates, both studies</div>
 <div><b>open</b> the MCP server (W8), the three subagents (W9), the validate hook (W10), plugin packaging (W12)</div>
-<div><b>trust boundary</b> eval-free JSON IR + pure <code>validate</code> (ADR 0005 / 0006); the one code seam is an opt-in <code>--host=FILE</code></div>
-<div><b>demo</b> <code>agent/studies/portfolio_bid/</code> — a $740M in-licensing decision, 9 arms × 120 seeds</div>
-<div><b>charter</b> <code>spec/AGENT_WORKFLOW_CHARTER.md</code> — §5 layer division, §6 knowledge tiers, §12 tracker</div>
 <div><b>engine</b> ReactiveDynamics.jl — timed, stochastic, resource-constrained Petri net on AlgebraicAgents.jl</div>
+<div><b>trust boundary</b> eval-free JSON IR + pure <code>validate</code> (ADR 0005 / 0006); the one code seam is an opt-in <code>--host=FILE</code></div>
+<div><b>charter</b> <code>spec/AGENT_WORKFLOW_CHARTER.md</code> — §5 layer division, §6 knowledge tiers, §12 tracker</div>
+<div><b>demo</b> <code>agent/studies/portfolio_bid/</code> — a $740M in-licensing decision, 9 arms × 120 seeds</div>
 </div>
 </div></header>
 <main class="wrap">

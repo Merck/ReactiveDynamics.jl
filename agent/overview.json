@@ -4,15 +4,15 @@
   "subtitle": "ReactiveDynamics.jl simulates timed, resource-constrained processes. The gap between owning that engine and answering a question with it is expert knowledge — the contract, the allocator semantics, the calibration discipline. This layer is that knowledge, made executable: four phases, five skills, one CLI, and a gate in the middle that is allowed to refuse.",
   "headline": "A model here is inert data and the validator is a pure function — which is what makes an agent a safe author of one.",
   "headline_note": "Every model is a single JSON document whose expressions are node-tagged trees from a closed whitelist, never `Meta.parse`d and never `eval`ed on load. `ReactiveDynamics.validate(doc)` is a static pass returning a vector of diagnostics with JSON paths, and `from_json_model` refuses to build anything it rejects. The engine's own source says what that is for: *an LLM runs this to self-check a model before from_json.* So the agent emits structured data, repairs against machine-readable paths, and — because `(model, seed)` determines a run contractually — every number it quotes replays exactly. The layer below is the trust boundary; the layer above is procedure.",
-  "meta": {
-    "layer": "`agent/` — five skills, one CLI, a generated schema reference, two worked studies, two captured sessions",
-    "shipped": "the skills, `rdx.jl`, the nine plausibility checks, the generated reference, both CI gates, both studies",
-    "open": "the MCP server (W8), the three subagents (W9), the validate hook (W10), plugin packaging (W12)",
-    "engine": "ReactiveDynamics.jl — timed, stochastic, resource-constrained Petri net on AlgebraicAgents.jl",
-    "trust boundary": "eval-free JSON IR + pure `validate` (ADR 0005 / 0006); the one code seam is an opt-in `--host=FILE`",
-    "charter": "`spec/AGENT_WORKFLOW_CHARTER.md` — §5 layer division, §6 knowledge tiers, §12 tracker",
-    "demo": "`agent/studies/portfolio_bid/` — a $740M in-licensing decision, 9 arms × 120 seeds"
-  },
+  "meta": [
+    { "layer": "`agent/` — five skills, one CLI, a generated schema reference, two worked studies, two captured sessions" },
+    { "shipped": "the skills, `rdx.jl`, the nine plausibility checks, the generated reference, both CI gates, both studies" },
+    { "open": "the MCP server (W8), the three subagents (W9), the validate hook (W10), plugin packaging (W12)" },
+    { "engine": "ReactiveDynamics.jl — timed, stochastic, resource-constrained Petri net on AlgebraicAgents.jl" },
+    { "trust boundary": "eval-free JSON IR + pure `validate` (ADR 0005 / 0006); the one code seam is an opt-in `--host=FILE`" },
+    { "charter": "`spec/AGENT_WORKFLOW_CHARTER.md` — §5 layer division, §6 knowledge tiers, §12 tracker" },
+    { "demo": "`agent/studies/portfolio_bid/` — a $740M in-licensing decision, 9 arms × 120 seeds" }
+  ],
   "hero": {
     "stats": [
       { "value": "4", "label": "phases, each ending in a file", "note": "FRAME → AUTHOR → DIAGNOSE → REPORT; nothing important lives in scrollback" },

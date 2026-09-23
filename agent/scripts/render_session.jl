@@ -20,7 +20,8 @@
 #   { "title": …, "subtitle": …, "brand": …, "headline": …, "headline_note": …,
 #     "compact": true,                               # on paper, let sheets flow instead of each
 #                                                    #   starting a new page — for short documents
-#     "meta":  { "<label>": "<value>", … },          # rendered as the provenance strip
+#     "meta":  { "<label>": "<value>", … },          # rendered as the provenance strip; write it as
+#              [ { "<label>": "<value>" }, … ],       #   a list instead where the order matters
 #     "hero":  { "stats":   [ { "value": …, "label": …, "note": … } ],   # every key optional
 #                "text":    "<markdown-ish>",
 #                "figures": [ { "svg": …, "caption": … } ] },
@@ -34,7 +35,10 @@
 #                  "files": [ "path (written)", … ],
 #                  "figures": [ { "svg": …, "caption": … } ],
 #                  "figure": "<path to an .svg>" } ],  # one-element alias for `figures`, no caption
-#     "turns": { "file": "<another page>.json" },       # …or import another document's transcript
+#     "turns": { "file": "<another page>.json",         # …or import another document's transcript,
+#                "pick": [1, 2, 6, 7],                   #   optionally an excerpt of it (1-based)
+#                "elisions": { "6": "…", "end": "…" } },  #   what each cut run contained, keyed by the
+#                                                        #   pick it precedes ("end" for the tail)
 #     "appendix": [ { "title": …, "text": "<markdown-ish>" | "file": "<path to a .md>",
 #                     "stats": [ … ], "figures": [ … ] } ],
 #     "footer": "<markdown-ish>" }
@@ -411,13 +415,37 @@ end
 # `turns` is normally the transcript itself. It may instead name another page document, whose turns are
 # spliced in — the `file` idiom the appendix already uses, for the same reason: a page that presents a
 # captured session should not carry a second copy of it that can drift from the one being maintained.
+#
+# `pick` takes an excerpt instead of the whole thing, for a page that shows what the workflow is LIKE
+# without reprinting an hour of it. An excerpt has to read as one: every cut run leaves a marker carrying
+# its own count, so the page can never imply the session was four exchanges long, and `elisions` lets the
+# author say what was in the cut — the count is computed, only the description is written by hand.
 function resolve_turns(t)
     t isa AbstractVector && return t
     t isa AbstractDict || return Any[]
     f = string(get(t, "file", ""))
     isempty(f) && return Any[]
     isfile(f) || error("render_session: turns file not found: $f")
-    return get(JSON.parsefile(f), "turns", Any[])
+    turns = get(JSON.parsefile(f), "turns", Any[])
+    pick = get(t, "pick", nothing)
+    pick === nothing && return turns
+
+    notes = get(t, "elisions", Dict())
+    gap(n, key) = Dict(
+        "role" => "gap", "text" => string(n, n == 1 ? " exchange omitted" : " exchanges omitted"),
+        "note" => string(get(notes, key, "")),
+    )
+    out, prev = Any[], 0
+    for i in pick
+        idx = Int(i)
+        1 <= idx <= length(turns) ||
+            error("render_session: turns pick $idx is outside 1:$(length(turns)) in $f")
+        idx > prev && idx > prev + 1 && push!(out, gap(idx - prev - 1, string(idx)))
+        push!(out, turns[idx])
+        prev = idx
+    end
+    prev < length(turns) && push!(out, gap(length(turns) - prev, "end"))
+    return out
 end
 
 const CSS = """
@@ -490,6 +518,13 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 .turn.user .bubble { background: #E8F3F2; border-color: #BFDEDB; }
 .turn.assistant .bubble { border-left: 3px solid var(--accent); }
 .turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
+
+/* An elision, drawn as a seam across the column rather than a bubble: it is not part of the dialogue,
+   it is the place where the dialogue was cut. */
+.gap { display: flex; align-items: baseline; gap: .8rem; margin: 1.4rem 0 1.9rem; color: var(--grey-lt); }
+.gap::before, .gap::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.gap b { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.gap i { font-style: normal; font-size: .8rem; color: var(--grey); max-width: 60%; }
 
 /* ── prose: shared by turn bubbles, the hero blurb and appendix entries ── */
 .prose p { margin: 0 0 .85rem; } .prose p:last-child { margin-bottom: 0; }
@@ -601,7 +636,10 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   details.tools::details-content, details.fold::details-content {
     content-visibility: visible !important; block-size: auto !important;
   }
-  .turn, .stats, figure.fig { break-inside: avoid; }
+  /* Keep the short things whole. An assistant turn with its commands expanded is routinely taller than
+     a sheet, and `break-inside: avoid` on that just pushes it to the next page and leaves this one
+     half blank — so let it flow across the break instead. */
+  .turn.user, .turn.note, .stats, figure.fig { break-inside: avoid; }
   .hero { background: #fff; border-top-color: #000; }
   .stat { border-top-color: #000; }
   .figs { display: block; } .figs > * + * { margin-top: .8rem; }
@@ -639,7 +677,9 @@ function render(doc, jsonpath)
     meta = get(doc, "meta", Dict())
     if !isempty(meta)
         println(io, "<div class=\"meta\">")
-        for (k, v) in meta
+        # A JSON object parses to an unordered Dict, so a strip written `what it is` first can render
+        # last. Where the order is part of the argument, author `meta` as a list of one-pair objects.
+        for (k, v) in (meta isa AbstractVector ? [only(pairs(e)) for e in meta] : collect(pairs(meta)))
             println(io, "<div><b>", esc(k), "</b> ", inline(v), "</div>")
         end
         println(io, "</div>")
@@ -652,10 +692,18 @@ function render(doc, jsonpath)
     secs = sheets_html(get(doc, "sections", []), "Overview")
     isempty(secs) || println(io, secs)
     for turn in resolve_turns(get(doc, "turns", []))
+        role = get(turn, "role", "assistant")
+        if role == "gap"
+            note = string(get(turn, "note", ""))
+            println(io, "<div class=\"gap\"><b>", esc(node_text(turn)), "</b>")
+            isempty(note) || println(io, "<i>", inline(note), "</i>")
+            println(io, "</div>")
+            continue
+        end
+
         ph = get(turn, "phase", "")
         isempty(ph) || println(io, "<div class=\"phase\"><span>", esc(ph), "</span></div>")
 
-        role = get(turn, "role", "assistant")
         println(io, "<div class=\"turn $role\">")
         label = get(ROLE_LABEL, role, "")
         isempty(label) || println(io, "<div class=\"who\">", esc(label), "</div>")
@@ -696,7 +744,9 @@ function main(argv)
     turns = resolve_turns(get(doc, "turns", []))
     nsec = length(get(doc, "sections", []))
     ncmds = sum(length(get(t, "tools", [])) for t in turns; init = 0)
-    println("render_session: wrote $out — $nsec sections, $(length(turns)) turns, $ncmds commands, $(round(sizeof(html) / 1024, digits = 1)) KiB self-contained")
+    ngap = count(t -> get(t, "role", "") == "gap", turns)
+    nturn = length(turns) - ngap
+    println("render_session: wrote $out — $nsec sections, $nturn turns$(ngap > 0 ? " (excerpt, $ngap elisions)" : ""), $ncmds commands, $(round(sizeof(html) / 1024, digits = 1)) KiB self-contained")
     return 0
 end
 
