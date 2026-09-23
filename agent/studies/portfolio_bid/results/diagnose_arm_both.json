@@ -1,0 +1,250 @@
+{
+  "error": null,
+  "ok": true,
+  "command": "diagnose",
+  "findings": [],
+  "result": {
+    "checks": [
+      {
+        "message": "All 8 transitions fired at least once.",
+        "verdict": "pass",
+        "evidence": {
+          "spawns": {
+            "adv_acq_filed": 1.0,
+            "adv_own_p1": 27.0,
+            "adv_own_p2": 16.0,
+            "adv_own_filed": 2.0,
+            "discovery": 32.0,
+            "adv_acq_p3": 2.0,
+            "adv_acq_p2": 3.0,
+            "adv_own_p3": 6.0
+          }
+        },
+        "check": "transitions_fire"
+      },
+      {
+        "message": "54 successful completions over the horizon.",
+        "verdict": "pass",
+        "evidence": {
+          "successes": {
+            "adv_acq_filed": 1.0,
+            "adv_own_p1": 12.0,
+            "adv_own_p2": 3.0,
+            "adv_own_filed": 1.0,
+            "discovery": 32.0,
+            "adv_acq_p3": 1.0,
+            "adv_acq_p2": 2.0,
+            "adv_own_p3": 2.0
+          }
+        },
+        "check": "completions_exist"
+      },
+      {
+        "message": "Resources are contended (minimum in-flight fill fraction 1.0; pools run to zero: own_p2, acq_filed, own_p3, fte, own_market, acq_market, acq_p2, own_filed, acq_p3).",
+        "verdict": "pass",
+        "evidence": {
+          "starved_places": [
+            "own_p2",
+            "acq_filed",
+            "own_p3",
+            "fte",
+            "own_market",
+            "acq_market",
+            "acq_p2",
+            "own_filed",
+            "acq_p3"
+          ],
+          "min_saturation": 1.0
+        },
+        "check": "contention_exists"
+      },
+      {
+        "message": "The intended resource binds: fte runs to zero.",
+        "verdict": "pass",
+        "evidence": {
+          "expected": [
+            "fte"
+          ],
+          "starved_places": [
+            "own_p2",
+            "acq_filed",
+            "own_p3",
+            "fte",
+            "own_market",
+            "acq_market",
+            "acq_p2",
+            "own_filed",
+            "acq_p3"
+          ]
+        },
+        "check": "intended_resource_binds"
+      },
+      {
+        "message": "Every resource declared reusable is conserved on all its input arcs: fte.",
+        "verdict": "pass",
+        "evidence": {
+          "conserved": [
+            "fte"
+          ]
+        },
+        "check": "modality_intent"
+      },
+      {
+        "message": "9 instance(s) still in flight at the horizon; pools still trending in the final quarter (own_p3, acq_market, own_p1). The reported number is horizon-truncated — extend tspan until the quantity of interest settles, or state the truncation as a limitation.",
+        "verdict": "warn",
+        "evidence": {
+          "still_moving": {
+            "own_p3": -0.367,
+            "acq_market": 0.333,
+            "own_p1": 0.222
+          },
+          "ongoing_at_end": 9
+        },
+        "check": "horizon_sufficient"
+      },
+      {
+        "message": "No pool grows without bound (declared tallies exempt: acq_market, own_market).",
+        "verdict": "pass",
+        "evidence": {
+          "tallies": [
+            "acq_market",
+            "own_market"
+          ]
+        },
+        "check": "bounded_pools"
+      },
+      {
+        "message": "Ledger flows are non-trivial (reward 2300.0, cost 1388.0).",
+        "verdict": "pass",
+        "evidence": {
+          "reward": 2300.0,
+          "cost": 1388.4999999999986
+        },
+        "check": "ledger_wired"
+      },
+      {
+        "message": "7 of 7 transitions carry a success probability below 1.",
+        "verdict": "pass",
+        "evidence": {
+          "transitions_with_pos": 7,
+          "below_one": 7
+        },
+        "check": "stochasticity"
+      }
+    ],
+    "passed": 8,
+    "run": {
+      "ledger": {
+        "reward": 2300.0,
+        "cost": 1388.4999999999986,
+        "net": 911.5000000000014
+      },
+      "spawns": {
+        "adv_acq_filed": 1.0,
+        "adv_own_p1": 27.0,
+        "adv_own_p2": 16.0,
+        "adv_own_filed": 2.0,
+        "discovery": 32.0,
+        "adv_acq_p3": 2.0,
+        "adv_acq_p2": 3.0,
+        "adv_own_p3": 6.0
+      },
+      "completions": {
+        "adv_acq_filed": 1.0,
+        "adv_own_p1": 19.0,
+        "adv_own_p2": 13.0,
+        "adv_own_filed": 2.0,
+        "discovery": 32.0,
+        "adv_acq_p3": 2.0,
+        "adv_acq_p2": 3.0,
+        "adv_own_p3": 5.0
+      },
+      "t_end": 121.0,
+      "ongoing_at_end": 9,
+      "places": {
+        "own_p2": {
+          "max": 4.0,
+          "min": 0.0,
+          "initial": 4.0,
+          "final": 0.0
+        },
+        "acq_filed": {
+          "max": 1.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "own_p3": {
+          "max": 3.0,
+          "min": 0.0,
+          "initial": 3.0,
+          "final": 0.0
+        },
+        "fte": {
+          "max": 40.0,
+          "min": 0.0,
+          "initial": 40.0,
+          "final": 0.0
+        },
+        "own_market": {
+          "max": 1.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 1.0
+        },
+        "acq_market": {
+          "max": 1.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 1.0
+        },
+        "acq_p2": {
+          "max": 3.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "cash": {
+          "max": 6000.0,
+          "min": 4611.5,
+          "initial": 6000.0,
+          "final": 4611.5
+        },
+        "own_filed": {
+          "max": 1.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "acq_p3": {
+          "max": 2.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "own_p1": {
+          "max": 15.0,
+          "min": 4.0,
+          "initial": 4.0,
+          "final": 9.0
+        }
+      },
+      "ticks": 122,
+      "min_saturation": 1.0,
+      "successes": {
+        "adv_acq_filed": 1.0,
+        "adv_own_p1": 12.0,
+        "adv_own_p2": 3.0,
+        "adv_own_filed": 1.0,
+        "discovery": 32.0,
+        "adv_acq_p3": 1.0,
+        "adv_acq_p2": 2.0,
+        "adv_own_p3": 2.0
+      }
+    },
+    "seed": 1,
+    "warned": 1,
+    "failed": 0
+  }
+}
+

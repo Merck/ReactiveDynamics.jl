@@ -1,0 +1,131 @@
+{
+  "error": null,
+  "ok": false,
+  "command": "effect",
+  "findings": [
+    {
+      "metric": "enpv",
+      "message": "Δ = -8.038 is within ±2 se (181.1) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    },
+    {
+      "metric": "net",
+      "message": "Δ = -14.99 is within ±2 se (277.8) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    },
+    {
+      "metric": "reward",
+      "message": "Δ = 255.0 is within ±2 se (281.4) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    },
+    {
+      "metric": "final:own_market",
+      "message": "Δ = 0.2833 is within ±2 se (0.3127) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    },
+    {
+      "metric": "final:acq_market",
+      "message": "Δ = 0.0 is within ±2 se (0.0) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    },
+    {
+      "metric": "min:fte",
+      "message": "Δ = 0.0 is within ±2 se (0.0) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    }
+  ],
+  "result": {
+    "nseed": 120,
+    "root_seed": 2026,
+    "metrics": {
+      "enpv": {
+        "variant": 976.9568973183135,
+        "se": 90.54775313317286,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 984.9950952346511,
+        "delta": -8.038197916337595,
+        "significant_2se": false
+      },
+      "final:acq_market": {
+        "variant": 0.0,
+        "se": 0.0,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 0.0,
+        "delta": 0.0,
+        "significant_2se": false
+      },
+      "reward": {
+        "variant": 2812.5,
+        "se": 140.72255019879998,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 2557.5,
+        "delta": 255.0,
+        "significant_2se": false
+      },
+      "cost": {
+        "variant": 1322.3975000000005,
+        "se": 3.7572715020108185,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 1052.4116666666669,
+        "delta": 269.98583333333363,
+        "significant_2se": true
+      },
+      "final:own_market": {
+        "variant": 3.125,
+        "se": 0.15635838910977778,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 2.841666666666667,
+        "delta": 0.2833333333333332,
+        "significant_2se": false
+      },
+      "net": {
+        "variant": 1490.1024999999995,
+        "se": 138.8916827859862,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 1505.0883333333331,
+        "delta": -14.98583333333363,
+        "significant_2se": false
+      },
+      "max:own_p1": {
+        "variant": 16.108333333333334,
+        "se": 0.8188339446706586,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 25.741666666666667,
+        "delta": -9.633333333333333,
+        "significant_2se": true
+      },
+      "min:fte": {
+        "variant": 0.0,
+        "se": 0.0,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 0.0,
+        "delta": 0.0,
+        "significant_2se": false
+      },
+      "successes:adv_own_p2": {
+        "variant": 5.433333333333334,
+        "se": 0.17293364551652168,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 4.108333333333333,
+        "delta": 1.3250000000000002,
+        "significant_2se": true
+      }
+    }
+  }
+}
+

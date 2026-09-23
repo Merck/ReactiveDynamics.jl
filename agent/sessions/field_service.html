@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>&quot;Do I hire 2 more technicians?&quot; — a first-contact rd-study session</title>
 <style>:root {
-  --ink: #0A0A0A; --paper: #FFFFFF; --inset: #F4F4F2; --accent: #0A8A84;
+  --ink: #0A0A0A; --paper: #FFFFFF; --inset: #F4F4F2; --hero: #FAF8F3; --accent: #0A8A84;
   --accent-d: #076A65; --accent-lt: #3FB5AF; --amber: #B5740A; --rose: #E5243B;
   --grey: #6A6A68; --grey-lt: #9A9A98; --hair: #C7C7C4;
   --display: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
@@ -32,6 +32,26 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 .meta b { color: #C7C7C4; font-weight: 500; }
 .meta code { font-family: var(--mono); font-size: .93em; color: var(--accent-lt); }
 
+/* ── hero: the skim card ── */
+.hero {
+  background: var(--hero); border: 1px solid var(--hair); border-top: 3px solid var(--ink);
+  border-radius: 2px; padding: 2.1rem 1.9rem 1.9rem; margin: 0 0 .5rem;
+}
+.hero-text { margin-top: 1.5rem; font-size: 1.04rem; }
+.hero-text p, .hero-text ul, .hero-text ol { max-width: 38rem; }
+.hero .figs { margin-top: 1.6rem; }
+
+/* ── stat cards ── */
+.stats { display: flex; flex-wrap: wrap; gap: .75rem; }
+.stat {
+  flex: 1 1 10.5rem; min-width: 9.5rem; background: var(--paper); border: 1px solid var(--hair);
+  border-top: 2px solid var(--accent); border-radius: 2px; padding: .9rem 1rem 1rem;
+}
+.stat .label { font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--grey); }
+.stat .value { font-size: 2.45rem; font-weight: 650; letter-spacing: -.035em; line-height: 1.08; margin-top: .15rem; }
+.stat .note { font-size: .78rem; line-height: 1.45; color: var(--grey); margin-top: .45rem; }
+.bubble .stats, .appx .stats { margin-bottom: 1.15rem; }
+
 /* ── phase bands ── */
 .phase { display: flex; align-items: center; gap: .85rem; margin: 2.75rem 0 1.5rem; }
 .phase::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
@@ -50,20 +70,55 @@ h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .
 .turn.user .bubble { background: #E8F3F2; border-color: #BFDEDB; }
 .turn.assistant .bubble { border-left: 3px solid var(--accent); }
 .turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
-.bubble p { margin: 0 0 .85rem; } .bubble p:last-child { margin-bottom: 0; }
-.bubble ul { margin: 0 0 .85rem; padding-left: 1.2rem; } .bubble li { margin-bottom: .3rem; }
-.bubble code { font-family: var(--mono); font-size: .88em; background: var(--inset); padding: .1em .32em; border-radius: 2px; }
-.bubble table { width: 100%; border-collapse: collapse; margin: .35rem 0 1rem; font-size: .9rem; }
-.bubble th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--ink); padding: .4rem .6rem .35rem 0; }
-.bubble td { border-bottom: 1px solid var(--hair); padding: .4rem .6rem .4rem 0; vertical-align: top; }
+
+/* ── prose: shared by turn bubbles, the hero blurb and appendix entries ── */
+.prose p { margin: 0 0 .85rem; } .prose p:last-child { margin-bottom: 0; }
+.prose ul, .prose ol { margin: 0 0 .85rem; padding-left: 1.2rem; } .prose li { margin-bottom: .3rem; }
+.prose code { font-family: var(--mono); font-size: .88em; background: var(--inset); padding: .1em .32em; border-radius: 2px; }
+.prose a { color: var(--accent-d); text-decoration: underline; text-underline-offset: .15em; }
+.prose table { width: 100%; border-collapse: collapse; margin: .35rem 0 1rem; font-size: .9rem; }
+.prose th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--ink); padding: .4rem .6rem .35rem 0; }
+.prose td { border-bottom: 1px solid var(--hair); padding: .4rem .6rem .4rem 0; vertical-align: top; }
 pre.block {
   font-family: var(--mono); font-size: .82rem; line-height: 1.55; background: var(--inset);
   border: 1px solid var(--hair); border-radius: 2px; padding: .8rem .9rem; overflow-x: auto; margin: 0 0 .9rem;
 }
-.bubble blockquote {
+.prose blockquote {
   margin: 1rem 0; padding: .7rem 1rem .7rem 1.1rem; background: var(--inset);
   border-left: 3px solid var(--accent); font-size: 1.02rem; line-height: 1.55;
 }
+.prose .head2 {
+  font-size: 1.12rem; font-weight: 650; letter-spacing: -.01em; margin: 1.7rem 0 .6rem;
+  padding-bottom: .3rem; border-bottom: 1px solid var(--hair);
+}
+.prose .head3 { font-size: .95rem; font-weight: 650; letter-spacing: .015em; color: var(--accent-d); margin: 1.35rem 0 .45rem; }
+.prose > .head2:first-child, .prose > .head3:first-child { margin-top: 0; }
+
+/* ── collapsibles authored in the text (`+++`), as opposed to the tool blocks ── */
+details.fold { margin: 1.1rem 0; border: 1px solid var(--hair); border-radius: 2px; background: var(--paper); }
+details.fold > summary {
+  cursor: pointer; list-style: none; padding: .55rem .85rem; font-size: .86rem; font-weight: 600;
+  color: var(--accent-d); background: var(--inset); border-bottom: 1px solid transparent;
+}
+details.fold[open] > summary { border-bottom-color: var(--hair); }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸ "; color: var(--grey-lt); font-weight: 400; }
+details.fold[open] > summary::before { content: "▾ "; }
+.fold-body { padding: .95rem 1rem 1rem; }
+
+/* ── appendix: a deliverable, so a heavier band and a full sheet under it ── */
+.phase.band { margin: 3.5rem 0 1.4rem; }
+.phase.band::after { height: 2px; background: var(--ink); }
+.phase.band span {
+  font-size: .78rem; letter-spacing: .11em; padding: .4rem .8rem;
+  color: #F4F4F2; background: var(--ink); border-color: var(--ink);
+}
+.appx {
+  background: var(--paper); border: 1px solid var(--hair); border-radius: 2px;
+  padding: 1.7rem 1.9rem; line-height: 1.72;
+}
+.appx p, .appx ul, .appx ol, .appx blockquote, .appx .head2, .appx .head3 { max-width: 40rem; }
+.appx > p:first-of-type { font-size: 1.05rem; }
 
 /* ── tool blocks ── */
 details.tools { margin: .9rem 0 0; border-top: 1px dashed var(--hair); padding-top: .75rem; }
@@ -78,9 +133,11 @@ details.tools[open] summary::before { content: "▾ "; }
   color: var(--accent-d); border: 1px solid #BFDEDB; background: #E8F3F2;
   padding: .08rem .35rem; border-radius: 2px; margin-right: .4rem;
 }
-.cmd { font-family: var(--mono); font-size: .79rem; line-height: 1.6; margin-top: .6rem; word-break: break-all; }
+/* terminal text is line-oriented: a captured command or its output keeps its own line breaks, or a
+   column-aligned table of results reflows into one paragraph and stops being readable as evidence */
+.cmd { font-family: var(--mono); font-size: .79rem; line-height: 1.6; margin-top: .6rem; white-space: pre-wrap; overflow-wrap: break-word; }
 .cmd .p { color: var(--accent); font-weight: 600; margin-right: .35rem; }
-.res { font-family: var(--mono); font-size: .79rem; color: var(--grey); padding-left: 1rem; word-break: break-word; }
+.res { font-family: var(--mono); font-size: .79rem; color: var(--grey); padding-left: 1rem; white-space: pre-wrap; overflow-wrap: break-word; }
 .files { margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .35rem; }
 .files span {
   font-family: var(--mono); font-size: .72rem; color: var(--amber);
@@ -88,9 +145,17 @@ details.tools[open] summary::before { content: "▾ "; }
 }
 
 /* ── figures ── */
-figure.fig { margin: 1rem 0 .3rem; padding: .9rem; background: var(--paper); border: 1px solid var(--hair); border-radius: 2px; overflow-x: auto; }
+.figs { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1rem 0 .3rem; }
+.figs > * { flex: 1 1 17rem; min-width: 0; }
+figure.fig { margin: 0; padding: .9rem; background: var(--paper); border: 1px solid var(--hair); border-radius: 2px; overflow-x: auto; }
 figure.fig svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+figure.fig figcaption { margin-top: .6rem; font-size: .78rem; line-height: 1.5; color: var(--grey); }
 .missing { font-family: var(--mono); font-size: .78rem; color: var(--rose); padding: .6rem; border: 1px dashed var(--rose); border-radius: 2px; }
+
+@media (max-width: 34rem) {
+  .stat, .figs > * { flex-basis: 100%; }
+  .hero, .appx { padding-left: 1.15rem; padding-right: 1.15rem; }
+}
 
 footer.foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hair); font-size: .82rem; color: var(--grey); }
 footer.foot code { font-family: var(--mono); font-size: .93em; }
@@ -99,8 +164,19 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   body { background: #fff; } header.mast { background: #fff; color: #000; border-bottom: 2px solid #000; }
   h1, .headline .big { color: #000; } .headline { background: var(--inset); }
   .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }
-  details.tools { display: block; } details.tools > *:not(summary) { display: block !important; }
-  .turn { break-inside: avoid; }
+  /* force every collapsible open on paper: the `display` pair covers engines that hide the children
+     themselves, `::details-content` the ones (Chrome 131+) that hide the slot instead. */
+  details.tools, details.fold { display: block; }
+  details.tools > *:not(summary), details.fold > *:not(summary) { display: block !important; }
+  details.tools::details-content, details.fold::details-content {
+    content-visibility: visible !important; block-size: auto !important;
+  }
+  .turn, .stats, figure.fig { break-inside: avoid; }
+  .hero { background: #fff; border-top-color: #000; }
+  .stat { border-top-color: #000; }
+  .figs { display: block; } .figs > * + * { margin-top: .8rem; }
+  .phase.band { break-before: page; } .phase.band span { color: #fff; background: #000; }
+  .appx { border: none; padding: 0; }
 }
 </style></head><body>
 <header class="mast"><div class="wrap">
@@ -119,10 +195,12 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div>
 </div></header>
 <main class="wrap">
+
 <div class="phase"><span>Phase 1 — FRAME</span></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>Hey, I was told you might be able to help me figure something out. I run field service for a lab equipment company - we've got 7 technicians fixing broken analyzers at customer sites. Our backlog is killing us and I'm trying to decide whether to hire 2 more techs, buy more diagnostic equipment, or just change how we prioritize jobs. Budget meeting is in six weeks and I need to know what actually moves the needle.</p>
 
 
@@ -130,7 +208,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Phase 1 of 4 — framing.</strong> Before I build anything, let me check your question against the one test that decides whether a simulation is worth the six weeks or whether I should just do arithmetic with you on a whiteboard in twenty minutes.</p>
 <p>A simulation only earns its cost when three things are true at once:</p>
 <ul>
@@ -162,7 +241,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>Most of that's in the right ballpark but a few things are off.</p>
 <p><strong>Calls and duration:</strong> We get closer to 40 calls a week, not 30 - about 15 from our pharmaceutical customers and 26 from the academic labs. And a typical job is more like 4 to 5 hours door-to-door, not a day and a half. Our guys are back and available same day once they finish a repair.</p>
 <p><strong>Waiting on other stuff:</strong> You nailed the diagnostic laptops - yeah, 4 units shared across the 7 techs, and they need it for the whole job. Parts do cause re-visits sometimes - maybe 1 in 4 jobs needs a second trip - but that's not really the blocker. It's more about whether we have a tech AND a laptop free when the call comes in.</p>
@@ -173,7 +253,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Still phase 1 of 4 — but I ran the back-of-envelope on your numbers first, and it changed the question.</strong> Before I model anything, here's what your own figures say:</p>
 <table>
 <tr><th></th><th>capacity</th><th>load</th><th>utilization</th></tr>
@@ -198,7 +279,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>You're right that it's not every single job - the laptops are required for most repairs but not absolutely everything. Quick stuff like replacing a blown fuse or swapping a pump module, the techs can do without the diagnostic rig. I'd say maybe 80 to 85 percent of jobs actually need a laptop, not 100. And yeah, it's an 8-hour day, we're not running evening shifts.</p>
 <p><strong>Reality check numbers:</strong> Right now I've got about 14 or 15 jobs sitting open in the queue. Last month we had maybe 4 pharma breaches - that's the one that really hurts - and probably 28 or 30 academic breaches. The academic SLA is loose enough that a lot of them just pile up when we get a pharma cluster.</p>
 <p><strong>On the priority thing:</strong> Yeah, your placeholder is basically right - stop the strict pharma-first rule, give the academic work some guaranteed share so it doesn't starve completely. But your 10-to-1 cost ratio is high. A pharma breach costs us about $4200 in penalties, an academic one is $650, so it's closer to 6 or 7 to 1, not 10. Still hurts a lot more to miss pharma, but not quite that lopsided.</p>
@@ -208,7 +290,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Phase 1 of 4 complete — the brief is written.</strong> Your numbers close, and they close in an informative place.</p>
 <p>With 82.5% of jobs needing a laptop, and taking revisits as parts-swaps that don't need the diagnostic rig again:</p>
 <table>
@@ -244,7 +327,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>Almost right but two things:</p>
 <p><strong>Laptop cost is a bit higher</strong> - it's $38k for the two units, not $36k. Still a hell of a lot cheaper than two salaries, but let's use the right number.</p>
 <p><strong>On the revisits</strong> - most of them don't need the laptop again, you're right about that. If the first visit diagnosed the problem and we just need to come back with a part we didn't have on the truck, the tech doesn't plug in the diagnostic rig the second time. But not every revisit is like that - sometimes the first visit doesn't nail it and we need to do more diagnostics. I'd say maybe 70, 75 percent of revisits are just parts installs that don't touch the laptop. Not sure if that changes your math much but wanted to flag it.</p>
@@ -256,7 +340,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <div class="phase"><span>Phase 2 — AUTHOR  ·  Phase 3 — DIAGNOSE</span></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Phase 2 and 3 done — model built, and it passed the plausibility gate. Here it is in your language, and I'd like you to check it before I put numbers on it.</strong></p>
 <p>Here is what I built, described as your operation rather than as a model:</p>
 <table>
@@ -284,9 +369,13 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <p>The same seven techs serve all four. Only the two rig queues build, and the unprotected one builds eightfold. Work that needs a laptop waits. Work that doesn't, doesn't.</p>
 <p><strong>And a finding I did not expect, which I think matters more than any of the three levers.</strong> You are operating on a knife edge. At 4 hours of tech-and-laptop time per job, your system is stable and looks like what you described. At 5 hours, it goes into runaway — the academic queue never stops growing and breaches go up roughly thirty-fold. There is no gentle middle. That means a modest worsening — a slightly harder job mix, a few more calls, one tech on leave — does not degrade you by 20%, it tips you over. That is worth saying at the budget meeting on its own.</p>
 <p><strong>Two things I want you to check, because you're the only one who can:</strong></p>
-<p>1. <strong>Is 4 hours of tech-and-laptop time per job right,</strong> as distinct from 4-5 hours door to door? If the laptop is only tied up for the on-site diagnostic portion and not during travel, my model overstates laptop scarcity and the answer could change. This is the single most load-bearing assumption in the study. 2. <strong>Does a technician take a laptop for the day, or grab one per job?</strong> I've modeled per-job. If a tech checks one out for their whole route, only 4 of your 7 techs can do rig work at all on any given day, which is a <em>tighter</em> constraint than what I've built.</p>
+<ol>
+<li><strong>Is 4 hours of tech-and-laptop time per job right,</strong> as distinct from 4-5 hours door to door? If the laptop is only tied up for the on-site diagnostic portion and not during travel, my model overstates laptop scarcity and the answer could change. This is the single most load-bearing assumption in the study.</li>
+<li><strong>Does a technician take a laptop for the day, or grab one per job?</strong> I've modeled per-job. If a tech checks one out for their whole route, only 4 of your 7 techs can do rig work at all on any given day, which is a <em>tighter</em> constraint than what I've built.</li>
+</ol>
 <p><strong>What I'm not telling you yet:</strong> which lever wins. The three comparisons are running now — 48 simulated years per scenario, which is what it takes to separate a real difference from a fluke in a system this twitchy. I can already see the direction, but single runs of a near-critical system disagree with each other by hundreds of thousands of dollars, so I'm not going to quote you anything until the full ensembles land. You'd be defending noise.</p>
 
+<div class="figs">
 <figure class="fig">
 
 <!-- Generated by graphviz version 12.2.1 (20241206.2353)
@@ -616,6 +705,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </g>
 </svg>
 </figure>
+</div>
+
 <details class="tools"><summary><span class="tk">run</span> 11 commands</summary>
 <div class="cmd"><span class="p">$</span> rdx validate {model,arm_hire_2_techs,arm_buy_2_laptops,arm_reprioritize}.rdj.json</div>
 <div class="res">→ all four: exit 0, diagnostic_count=0</div>
@@ -645,7 +736,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>On the laptop time</strong> - yeah, it's the full 4 to 4 and a half hours. The tech grabs a laptop from the pool, throws it in the truck, drives to the site, does the work, drives back, and returns it. So it's tied up for travel plus on-site, not just the diagnostic portion. Your 4-hour assumption is about right.</p>
 <p><strong>On the checkout</strong> - it's per job, not per day. A tech finishes a repair, brings the laptop back, and it goes to whoever needs it next. We're not locking them up for a whole shift.</p>
 <p>That knife-edge thing is making me nervous, though. You're saying if jobs edge up from 4 hours to 5 hours average we don't just get a bit worse, we fall off a cliff? That's... that would explain why some weeks feel fine and then one bad week it all goes to hell and takes a month to dig out. I didn't realize we were running that close to the edge. That's worth knowing even if I do nothing else with this.</p>
@@ -656,7 +748,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <div class="phase"><span>Phase 4 — REPORT</span></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Here is your number, and it is not the one you were expecting to defend.</strong></p>
 <p><strong>Buy the two diagnostic laptops. $38,000 once, and it saves $228,050 ± $18,712 a year in SLA penalties — a 2.0-month payback and $6.00 back per dollar spent.</strong> That is 12 standard errors from zero on 48 simulated years, and every single measure I tracked improves: academic breaches 31.2/month → 7.1, pharma 4.3 → 3.5, and the queue of jobs waiting for a tech-and-laptop pair 10.1 → 2.7.</p>
 <p>The ranking, cleanly:</p>
@@ -696,7 +789,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 </div></div>
 <div class="turn user">
 <div class="who">Operator</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>Huh. I was walking into that meeting ready to ask for two more techs, and you're telling me the $38,000 option beats the $190,000 one by a factor of six. That's... honestly a much easier conversation to have with finance, assuming you're right.</p>
 <p>I'm a little surprised the priority change does nothing - I thought giving the academic work some protection would at least stop the pileup. But if the laptops are genuinely the choke point, yeah, I can see it - you're just reshuffling who waits for the same four units.</p>
 <p><strong>Two things I want to make sure of before I go in there:</strong></p>
@@ -710,7 +804,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <div class="phase"><span>The operator pushes back — the model gets rebuilt</span></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>You were right to press on the 4.3, and it turned out to be the most important thing you've said. It forced me to find a flaw in my own model, and fixing it sharpened the answer rather than softening it. Short version: <strong>buy the laptops, and if anything buy them faster.</strong></p>
 <p><strong>The cliff has an exact location now: 4 hours 22 minutes of laptop checkout time per job.</strong> Below that your backlog is finite. Above it, you are asking for more laptop-hours per week than four laptops contain, and the backlog grows without bound. Your 4.3-hour rule of thumb is 4 hours 18 minutes. <strong>You are running four minutes below the edge.</strong> That is the answer to &quot;why do some weeks feel fine and then one bad week takes a month to dig out&quot; — you are not near the edge, you are on it, and which side of it you land on depends on the week's job mix.</p>
 <p>First, the flaw, because it affects how you should read my earlier numbers. My original model kept time on a one-hour grid, which means it could only represent whole-hour jobs — internally, &quot;4.3 hours&quot; and &quot;4.9 hours&quot; were the same model. I rebuilt it on a 15-minute grid and re-ran. The recommendation did not change. What changed is that I can now answer your actual question instead of a rounded version of it.</p>
@@ -765,7 +860,8 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
 <div class="phase"><span>The three retractions — what 24 seeds did to four single-seed claims</span></div>
 <div class="turn assistant">
 <div class="who">Claude</div>
-<div class="bubble">
+<div class="bubble prose">
+
 <p>The ensembles are in, and before anything else: <strong>three things I told you last week were wrong.</strong> All three were mine, and the recommendation survives all three, but you should hear them from me rather than discover them.</p>
 <p><strong>One — I put a ratio on the hot case. &quot;Roughly 12:1.&quot; I should not have, because I read it off single simulated years.</strong> Twenty-four simulated years at 4 hours 45 minutes say something cleaner and stronger than a ratio. The laptops work: jobs waiting go from <strong>114 to 8</strong>, academic breaches from <strong>378 a month to 25</strong>, the year-end queue from <strong>218 jobs to 3</strong>. The technicians <strong>cannot be shown to do anything at all</strong> — the penalty change is \$173,052 with a margin of error of \$155,526, so the uncertainty is nearly as large as the effect itself, and the same is true of the backlog, the academic breaches and the year-end queue. There is no ratio to quote, because you cannot divide by a number that can't be separated from zero. The honest sentence is: <strong>at 4h45m, laptops fix it and there is no evidence technicians do.</strong></p>
 <p><strong>Two — do not let anyone put the big dollar figure on a slide, me included.</strong> At 4h45m your backlog never settles; it is still climbing when the simulated year ends. So &quot;\$2.8 million of penalties avoided&quot; is really &quot;\$2.8 million over twelve months,&quot; and over twenty-four months it would be larger, because the thing it is measured against keeps growing. A number that depends on how long you choose to look at it is not a number to defend in front of finance. The defensible version has no dollar sign at all:</p>
@@ -813,7 +909,8 @@ VERDICT: identity, not evidence. Earlier draft cited it as support for the redis
 
 </div></div>
 <div class="turn note">
-<div class="bubble">
+<div class="bubble prose">
+
 <p><strong>Editorial note, added after the session.</strong> This transcript is a record of what the session actually hit, so it has not been retouched — including in one place where that record is now out of date. At the marked point above, the plausibility gate returned <strong>7 pass / 2 warn</strong> and the assistant traced it to a defect in the CLI rather than in the model: repeated <code>--expect-reusable</code> and <code>--tally</code> flags silently collapsed to the last occurrence, so checks the assistant had asked for never ran while the envelope still reported <code>pass</code>. It worked around the bug with comma lists and wrote it up in <code>DOCTOR.md</code>.</p>
 <p>That defect is fixed in <code>agent/scripts/rdx.jl</code> in the same commit as this page — repeated list-valued options now accumulate, and a repeated <em>scalar</em> option (<code>--seed=1 --seed=7</code>) is a hard error rather than last-wins, because silently running with a seed you did not intend is worse than refusing. So replaying that command today gives 8 pass / 1 warn, not the 7 pass / 2 warn recorded above.</p>
 <p>Worth stating plainly, because it is the most useful thing this session produced: <strong>a gate that quietly checks less than it was asked to, while still reporting success, is worse than no gate.</strong> Two engine-level defects were also found the same way and are tracked as W16 and W17 in <code>spec/AGENT_WORKFLOW_CHARTER.md</code> §12 — a model document that <code>validate</code> accepts but the constructor rejects, and a <code>choose</code> in an attribute position that passes validation and then throws. A blind capture of the workflow has so far been the most effective bug-finder in the layer.</p>
@@ -824,6 +921,7 @@ VERDICT: identity, not evidence. Earlier draft cited it as support for the redis
 
 
 </div></div>
+
 <footer class="foot"><p><strong>How this transcript was made, and what it is worth.</strong> Two agents, neither able to see the other's reasoning. The <strong>operator</strong> was given a field-service situation and wrote its facts to a file <em>before speaking a single word</em> — call volumes, durations, headcount, contract terms, penalties, today's backlog — so it had to answer from a pre-commitment rather than invent a convenient number later. The <strong>assistant</strong> started from an empty context, was pointed at <code>agent/skills/rd-study/SKILL.md</code>, and was forbidden from reading the directory that fact sheet lives in. A relay passed user-facing text verbatim in both directions and nothing else. Every number in the model was therefore obtained by asking, and every number in the result by running the engine; the tool blocks are the actual commands.</p>
 <p><strong>The fact sheet is published next to this page, with an audit of what the interview missed</strong> — <code>agent/sessions/field_service_facts.md</code>. Read it before this transcript if you are evaluating rather than browsing: the interview took a <em>range</em> for a quantity the operator had a point estimate for, which is precisely how the tick-grid defect survived to the final phase; it never modelled the value of a completed repair; and it carried none of the three quantities the operator had flagged as guesses into the study as sensitivities. The pattern is that the interview was strong on contractual facts and weak on exactly the numbers its informant had labelled soft.</p>
 <p>What this does <em>not</em> show: that a real human answers as fluently as a role-played one, or that any real field-service department looks like this. This persona was also <em>cooperative</em> — it answered in good faith and volunteered its own uncertainty markers — so the capture says little about the harder case of an informant who misremembers or contradicts themselves between meetings. It demonstrates the workflow, not the state of anyone's operation. The study directory is <code>agent/studies/field_service/</code>; regenerate this page with <code>julia --project=. agent/scripts/render_session.jl agent/sessions/field_service.json</code>.</p>

@@ -1,0 +1,101 @@
+{
+  "error": null,
+  "ok": false,
+  "command": "effect",
+  "findings": [
+    {
+      "metric": "min:fte",
+      "message": "Δ = 0.008333 is within ±2 se (0.01667) — not distinguishable from noise at n = 120. Raise the seed count or strengthen the lever before reporting this number.",
+      "verdict": "fail",
+      "check": "effect_vs_noise"
+    }
+  ],
+  "result": {
+    "nseed": 120,
+    "root_seed": 2026,
+    "metrics": {
+      "enpv": {
+        "variant": 1532.3494100675402,
+        "se": 115.98677307011285,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 1225.9185658634276,
+        "delta": 306.43084420411265,
+        "significant_2se": true
+      },
+      "final:acq_market": {
+        "variant": 0.875,
+        "se": 0.099364812751154,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 0.5333333333333333,
+        "delta": 0.3416666666666667,
+        "significant_2se": true
+      },
+      "reward": {
+        "variant": 4135.0,
+        "se": 186.10012753798568,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 3034.1666666666665,
+        "delta": 1100.8333333333335,
+        "significant_2se": true
+      },
+      "cost": {
+        "variant": 1667.2749999999992,
+        "se": 6.629313519193425,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 1095.9166666666665,
+        "delta": 571.3583333333327,
+        "significant_2se": true
+      },
+      "final:own_market": {
+        "variant": 3.2333333333333334,
+        "se": 0.16552656267352842,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 2.5416666666666665,
+        "delta": 0.6916666666666669,
+        "significant_2se": true
+      },
+      "net": {
+        "variant": 2467.7250000000004,
+        "se": 182.81500152302257,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 1938.2500000000002,
+        "delta": 529.4750000000001,
+        "significant_2se": true
+      },
+      "max:own_p1": {
+        "variant": 14.891666666666667,
+        "se": 0.7843763542922082,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 27.625,
+        "delta": -12.733333333333333,
+        "significant_2se": true
+      },
+      "min:fte": {
+        "variant": 0.008333333333333333,
+        "se": 0.008333333333333335,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 0.0,
+        "delta": 0.008333333333333333,
+        "significant_2se": false
+      },
+      "successes:adv_own_p2": {
+        "variant": 5.95,
+        "se": 0.20054052774432865,
+        "n_variant": 120,
+        "n_baseline": 120,
+        "baseline": 3.3916666666666666,
+        "delta": 2.5583333333333336,
+        "significant_2se": true
+      }
+    }
+  }
+}
+

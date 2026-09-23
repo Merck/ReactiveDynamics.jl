@@ -36,7 +36,7 @@ using Statistics
 # equivalent, so `--tally=a --tally=b` and `--tally=a,b` mean the same thing. Getting this wrong is
 # not a cosmetic bug: every one of these keys drives a CHECK, so a dropped value is a check that
 # silently did not run while the envelope still reports `pass`.
-const REPEATABLE = Set(["metric", "tally", "expect_binds", "expect_reusable"])
+const REPEATABLE = Set(["metric", "tally", "expect_binds", "expect_reusable", "trace"])
 
 # Split ARGS into positionals and `--key=value` / `--flag` options. Keys keep their dashes turned
 # into underscores so `--root-seed=1` reads as `opts["root_seed"]`.
@@ -319,6 +319,22 @@ end
 
 nrow_sol(prob) = isempty(prob.sol) ? 0 : size(prob.sol, 1)
 
+# The whole per-tick series for named places, not just the trough and the peak. `pool_stats` answers
+# "did it run out"; this answers "for how long, and when" — which is the difference between a
+# contention claim and a chart of one. Opt-in, because a 120-tick run over 11 places is a wall of
+# numbers in an envelope meant to be read.
+function pool_traces(prob, wanted)
+    out = Dict{String, Any}("t" => collect(prob.sol.t))
+    for s in wanted
+        s in names(prob.sol) || error(
+            "rdx run --trace: no place named $(repr(s)); this run has " *
+                join(sort(place_names(prob)), ", ")
+        )
+        out[s] = collect(prob.sol[!, s])
+    end
+    return out
+end
+
 # ════════════════════════════════════════════════════════════════════════════════════════
 # Named metrics — an ensemble reduction without user code
 # ════════════════════════════════════════════════════════════════════════════════════════
@@ -376,7 +392,7 @@ function resolve_metric(spec::AbstractString, opts)
     )
 end
 
-summary_dict(s) = Dict(
+summary_dict(s) = Dict{String, Any}(
     "mean" => s.mean, "sem" => s.sem, "q25" => s.q25,
     "median" => s.median, "q75" => s.q75, "n" => s.n,
 )
@@ -412,6 +428,9 @@ function cmd_run(pos, opts, registry)
     result = run_summary(prob)
     result["seed"] = seed
 
+    wanted = optlist(opts, "trace")
+    isempty(wanted) || (result["trace"] = pool_traces(prob, wanted))
+
     if haskey(opts, "out")
         dir = abspath(opts["out"])
         RD.export_run(prob, dir)
@@ -439,9 +458,15 @@ function cmd_ensemble(pos, opts, registry)
         simulating_builder(json, registry, tspan); nseed = nseed, root_seed = root
     )
 
+    # `--per-seed` adds the raw member values next to the summary. A spread is the one thing a reader
+    # has to see rather than be told: it is what makes an error bar credible instead of decorative.
+    per_seed = haskey(opts, "per_seed")
+
     out = Dict{String, Any}()
     for m in metrics
-        out[m] = summary_dict(RD.summarize(ens, resolve_metric(m, opts)))
+        f = resolve_metric(m, opts)
+        out[m] = summary_dict(RD.summarize(ens, f))
+        per_seed && (out[m]["samples"] = [Float64(f(mem)) for mem in ens.members])
     end
     return emit(
         "ensemble", true,

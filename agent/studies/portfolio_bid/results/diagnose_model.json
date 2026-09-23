@@ -1,0 +1,268 @@
+{
+  "error": null,
+  "ok": false,
+  "command": "diagnose",
+  "findings": [
+    {
+      "message": "Dead transition(s): adv_acq_filed, adv_acq_p2, adv_acq_p3. Each never spawned over the horizon — check the rate, whether the input places are ever simultaneously available, and whether the transition is deactivated. A dead transition silently removes a mechanism from the model.",
+      "verdict": "fail",
+      "evidence": {
+        "spawns": {
+          "adv_acq_filed": 0.0,
+          "adv_own_p1": 22.0,
+          "adv_own_p2": 13.0,
+          "adv_own_filed": 5.0,
+          "discovery": 34.0,
+          "adv_acq_p3": 0.0,
+          "adv_acq_p2": 0.0,
+          "adv_own_p3": 7.0
+        },
+        "dead": [
+          "adv_acq_filed",
+          "adv_acq_p2",
+          "adv_acq_p3"
+        ]
+      },
+      "check": "transitions_fire"
+    }
+  ],
+  "result": {
+    "checks": [
+      {
+        "message": "Dead transition(s): adv_acq_filed, adv_acq_p2, adv_acq_p3. Each never spawned over the horizon — check the rate, whether the input places are ever simultaneously available, and whether the transition is deactivated. A dead transition silently removes a mechanism from the model.",
+        "verdict": "fail",
+        "evidence": {
+          "spawns": {
+            "adv_acq_filed": 0.0,
+            "adv_own_p1": 22.0,
+            "adv_own_p2": 13.0,
+            "adv_own_filed": 5.0,
+            "discovery": 34.0,
+            "adv_acq_p3": 0.0,
+            "adv_acq_p2": 0.0,
+            "adv_own_p3": 7.0
+          },
+          "dead": [
+            "adv_acq_filed",
+            "adv_acq_p2",
+            "adv_acq_p3"
+          ]
+        },
+        "check": "transitions_fire"
+      },
+      {
+        "message": "61 successful completions over the horizon.",
+        "verdict": "pass",
+        "evidence": {
+          "successes": {
+            "adv_acq_filed": 0.0,
+            "adv_own_p1": 14.0,
+            "adv_own_p2": 4.0,
+            "adv_own_filed": 4.0,
+            "discovery": 34.0,
+            "adv_acq_p3": 0.0,
+            "adv_acq_p2": 0.0,
+            "adv_own_p3": 5.0
+          }
+        },
+        "check": "completions_exist"
+      },
+      {
+        "message": "Resources are contended (minimum in-flight fill fraction 1.0; pools run to zero: own_p2, own_p3, fte, own_market, own_filed).",
+        "verdict": "pass",
+        "evidence": {
+          "starved_places": [
+            "own_p2",
+            "own_p3",
+            "fte",
+            "own_market",
+            "own_filed"
+          ],
+          "min_saturation": 1.0
+        },
+        "check": "contention_exists"
+      },
+      {
+        "message": "The intended resource binds: fte runs to zero.",
+        "verdict": "pass",
+        "evidence": {
+          "expected": [
+            "fte"
+          ],
+          "starved_places": [
+            "own_p2",
+            "own_p3",
+            "fte",
+            "own_market",
+            "own_filed"
+          ]
+        },
+        "check": "intended_resource_binds"
+      },
+      {
+        "message": "Every resource declared reusable is conserved on all its input arcs: fte.",
+        "verdict": "pass",
+        "evidence": {
+          "conserved": [
+            "fte"
+          ]
+        },
+        "check": "modality_intent"
+      },
+      {
+        "message": "7 instance(s) still in flight at the horizon; pools still trending in the final quarter (own_market, own_p2). The reported number is horizon-truncated — extend tspan until the quantity of interest settles, or state the truncation as a limitation.",
+        "verdict": "warn",
+        "evidence": {
+          "still_moving": {
+            "own_market": 0.289,
+            "own_p2": 1.9
+          },
+          "ongoing_at_end": 7
+        },
+        "check": "horizon_sufficient"
+      },
+      {
+        "message": "No pool grows without bound (declared tallies exempt: own_market).",
+        "verdict": "pass",
+        "evidence": {
+          "tallies": [
+            "own_market"
+          ]
+        },
+        "check": "bounded_pools"
+      },
+      {
+        "message": "Ledger flows are non-trivial (reward 3600.0, cost 1071.0).",
+        "verdict": "pass",
+        "evidence": {
+          "reward": 3600.0,
+          "cost": 1070.700000000001
+        },
+        "check": "ledger_wired"
+      },
+      {
+        "message": "7 of 7 transitions carry a success probability below 1.",
+        "verdict": "pass",
+        "evidence": {
+          "transitions_with_pos": 7,
+          "below_one": 7
+        },
+        "check": "stochasticity"
+      }
+    ],
+    "passed": 7,
+    "run": {
+      "ledger": {
+        "reward": 3600.0,
+        "cost": 1070.700000000001,
+        "net": 2529.2999999999993
+      },
+      "spawns": {
+        "adv_acq_filed": 0.0,
+        "adv_own_p1": 22.0,
+        "adv_own_p2": 13.0,
+        "adv_own_filed": 5.0,
+        "discovery": 34.0,
+        "adv_acq_p3": 0.0,
+        "adv_acq_p2": 0.0,
+        "adv_own_p3": 7.0
+      },
+      "completions": {
+        "adv_acq_filed": 0.0,
+        "adv_own_p1": 20.0,
+        "adv_own_p2": 10.0,
+        "adv_own_filed": 4.0,
+        "discovery": 34.0,
+        "adv_acq_p3": 0.0,
+        "adv_acq_p2": 0.0,
+        "adv_own_p3": 6.0
+      },
+      "t_end": 121.0,
+      "ongoing_at_end": 7,
+      "places": {
+        "own_p2": {
+          "max": 5.0,
+          "min": 0.0,
+          "initial": 4.0,
+          "final": 5.0
+        },
+        "acq_filed": {
+          "max": 0.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "own_p3": {
+          "max": 3.0,
+          "min": 0.0,
+          "initial": 3.0,
+          "final": 0.0
+        },
+        "fte": {
+          "max": 40.0,
+          "min": 0.0,
+          "initial": 40.0,
+          "final": 4.0
+        },
+        "own_market": {
+          "max": 4.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 4.0
+        },
+        "acq_market": {
+          "max": 0.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "acq_p2": {
+          "max": 0.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "cash": {
+          "max": 6000.0,
+          "min": 4929.299999999997,
+          "initial": 6000.0,
+          "final": 4929.299999999997
+        },
+        "own_filed": {
+          "max": 3.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "acq_p3": {
+          "max": 0.0,
+          "min": 0.0,
+          "initial": 0.0,
+          "final": 0.0
+        },
+        "own_p1": {
+          "max": 17.0,
+          "min": 4.0,
+          "initial": 4.0,
+          "final": 16.0
+        }
+      },
+      "ticks": 122,
+      "min_saturation": 1.0,
+      "successes": {
+        "adv_acq_filed": 0.0,
+        "adv_own_p1": 14.0,
+        "adv_own_p2": 4.0,
+        "adv_own_filed": 4.0,
+        "discovery": 34.0,
+        "adv_acq_p3": 0.0,
+        "adv_acq_p2": 0.0,
+        "adv_own_p3": 5.0
+      }
+    },
+    "seed": 1,
+    "warned": 1,
+    "failed": 1
+  }
+}
+

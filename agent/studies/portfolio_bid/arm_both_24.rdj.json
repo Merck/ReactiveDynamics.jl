@@ -1,0 +1,450 @@
+{
+  "rd_format": "reactive-dynamics-model",
+  "version": "1.0",
+  "meta": {
+    "tspan": 120.0,
+    "dt": 1.0
+  },
+  "places": [
+    {
+      "name": "fte",
+      "init": 40
+    },
+    {
+      "name": "cash",
+      "init": 6000,
+      "cost": 1.0
+    },
+    {
+      "name": "own_p1",
+      "init": 4
+    },
+    {
+      "name": "own_p2",
+      "init": 4
+    },
+    {
+      "name": "own_p3",
+      "init": 3
+    },
+    {
+      "name": "own_filed",
+      "init": 0
+    },
+    {
+      "name": "own_market",
+      "init": 0,
+      "reward": 900.0
+    },
+    {
+      "name": "acq_p2",
+      "init": 0
+    },
+    {
+      "name": "acq_p3",
+      "init": 0
+    },
+    {
+      "name": "acq_filed",
+      "init": 0
+    },
+    {
+      "name": "acq_market",
+      "init": 0,
+      "reward": 1400.0
+    }
+  ],
+  "transitions": [
+    {
+      "id": "adv_own_p1",
+      "name": "adv_own_p1",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 18.0,
+      "prob_of_success": 0.55,
+      "priority": 1.0
+    },
+    {
+      "id": "adv_own_p2",
+      "name": "adv_own_p2",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 24.0,
+      "prob_of_success": 0.38,
+      "priority": 2.0
+    },
+    {
+      "id": "adv_own_p3",
+      "name": "adv_own_p3",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 30.0,
+      "prob_of_success": 0.62,
+      "priority": 3.0
+    },
+    {
+      "id": "adv_own_filed",
+      "name": "adv_own_filed",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 12.0,
+      "prob_of_success": 0.9,
+      "priority": 4.0
+    },
+    {
+      "id": "adv_acq_p2",
+      "name": "adv_acq_p2",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 14.0,
+      "prob_of_success": 0.48,
+      "priority": 2.5
+    },
+    {
+      "id": "adv_acq_p3",
+      "name": "adv_acq_p3",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 30.0,
+      "prob_of_success": 0.65,
+      "priority": 3.0
+    },
+    {
+      "id": "adv_acq_filed",
+      "name": "adv_acq_filed",
+      "rate": 3.0,
+      "rate_mode": "deterministic",
+      "cycletime": 12.0,
+      "prob_of_success": 0.9,
+      "priority": 4.0
+    },
+    {
+      "id": "discovery",
+      "name": "discovery",
+      "rate": 0.35
+    }
+  ],
+  "arcs": [
+    {
+      "transition": "adv_own_p1",
+      "side": "lhs",
+      "place": "own_p1",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p1",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 3,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p1",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 0.6,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p1",
+      "side": "rhs",
+      "place": "own_p2",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_own_p2",
+      "side": "lhs",
+      "place": "own_p2",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p2",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 6,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p2",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 1.2,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p2",
+      "side": "rhs",
+      "place": "own_p3",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_own_p3",
+      "side": "lhs",
+      "place": "own_p3",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p3",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 10,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p3",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 2.5,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_p3",
+      "side": "rhs",
+      "place": "own_filed",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_own_filed",
+      "side": "lhs",
+      "place": "own_filed",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_filed",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 2,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_filed",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 0.8,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_own_filed",
+      "side": "rhs",
+      "place": "own_market",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_acq_p2",
+      "side": "lhs",
+      "place": "acq_p2",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p2",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 6,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p2",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 1.6,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p2",
+      "side": "rhs",
+      "place": "acq_p3",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_acq_p3",
+      "side": "lhs",
+      "place": "acq_p3",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p3",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 10,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p3",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 3.0,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_p3",
+      "side": "rhs",
+      "place": "acq_filed",
+      "multiplicity": 1
+    },
+    {
+      "transition": "adv_acq_filed",
+      "side": "lhs",
+      "place": "acq_filed",
+      "multiplicity": 1,
+      "modality": {
+        "allocation": "upfront",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_filed",
+      "side": "lhs",
+      "place": "fte",
+      "multiplicity": 2,
+      "modality": {
+        "allocation": "upfront",
+        "return": "conserved",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_filed",
+      "side": "lhs",
+      "place": "cash",
+      "multiplicity": 0.9,
+      "modality": {
+        "allocation": "perstep",
+        "return": "consumed",
+        "blocking": "block"
+      }
+    },
+    {
+      "transition": "adv_acq_filed",
+      "side": "rhs",
+      "place": "acq_market",
+      "multiplicity": 1
+    },
+    {
+      "transition": "discovery",
+      "side": "rhs",
+      "place": "own_p1",
+      "multiplicity": 1
+    }
+  ],
+  "rules": [
+    {
+      "id": "deal_closes",
+      "guard": {
+        "node": "call",
+        "op": ">",
+        "args": [
+          {
+            "node": "timeref"
+          },
+          {
+            "node": "const",
+            "value": 6.0
+          }
+        ]
+      },
+      "action": {
+        "verb": "seq",
+        "stmts": [
+          {
+            "verb": "set_marking",
+            "name": "acq_p2",
+            "value": {
+              "node": "const",
+              "value": 3
+            },
+            "mode": "inc"
+          },
+          {
+            "verb": "set_marking",
+            "name": "fte",
+            "value": {
+              "node": "const",
+              "value": 24
+            },
+            "mode": "inc"
+          }
+        ]
+      },
+      "fire_mode": "once"
+    }
+  ]
+}

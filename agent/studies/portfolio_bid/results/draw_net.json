@@ -1,0 +1,11 @@
+{
+  "error": null,
+  "ok": true,
+  "command": "draw",
+  "findings": [],
+  "result": {
+    "layer": "structure",
+    "artifact": "agent/studies/portfolio_bid/figures/net.svg"
+  }
+}
+

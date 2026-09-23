@@ -1,0 +1,11 @@
+{
+  "error": null,
+  "ok": true,
+  "command": "draw",
+  "findings": [],
+  "result": {
+    "layer": "exec_map",
+    "artifact": "agent/studies/portfolio_bid/figures/exec_map.svg"
+  }
+}
+

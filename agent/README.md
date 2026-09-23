@@ -15,9 +15,10 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 | `scripts/gen_reference.jl` | regenerates `reference/model_schema.md` from the loaded module; `--check` is the drift gate |
 | `scripts/acceptance.jl` | the known-answer test — drives the published shadow price through the JSON path |
 | `scripts/render_session.jl` | renders a captured session transcript as a single self-contained HTML page |
+| `scripts/chartkit.jl` | data-driven SVG charts (bars with error bars, paired dots, waterfall, traced ceiling) — no plotting dep, so a study's figures build anywhere the CLI runs |
 | `skills/` | the skills themselves (`rd-study` orchestrator + one per phase) |
 | `reference/` | generated extracts of the authoring schema — never hand-edited |
-| `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test |
+| `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test, `portfolio_bid/` the one at engagement scale |
 | `sessions/` | captured end-to-end sessions — what the workflow is like to *use*, not just what it produces |
 
 ## The skills
@@ -45,9 +46,9 @@ julia --project=. agent/scripts/rdx.jl <command> [args] [--flag=value ...]
 | Command | Does |
 |---|---|
 | `validate MODEL` | static, eval-free schema check → diagnostics with JSON paths |
-| `run MODEL --seed=N` | one seeded run → per-place troughs, per-transition spawns/completions, ledger totals; `--out=DIR` writes an export bundle |
+| `run MODEL --seed=N` | one seeded run → per-place troughs, per-transition spawns/completions, ledger totals; `--trace=P[,P...]` adds the full per-tick series for those places, `--out=DIR` writes an export bundle |
 | `diagnose MODEL --seed=N` | the plausibility gate — nine checks against the brief's declared intent |
-| `ensemble MODEL --seeds=N --metric=M` | seeded ensemble → mean ± sem, quartiles |
+| `ensemble MODEL --seeds=N --metric=M` | seeded ensemble → mean ± sem, quartiles; `--per-seed` adds the raw member values |
 | `effect BASE VARIANT --metric=M --seeds=N` | two-arm treatment effect Δ ± se, with a significance verdict |
 | `draw MODEL --out=PATH` | the net; `--exec-map --seed=N` decorates it with run statistics |
 
@@ -80,6 +81,12 @@ julia --project=. agent/scripts/gen_reference.jl --check    # the generated refe
 
 `acceptance.jl` asserts at two strengths: the *scientific* claim is hard (the delta lands inside the published \$19.0M ± \$2.5M band and clears 2·se), while bit-reproducibility against the recorded run is a soft note — Julia's `hash` is not stable across versions and the member seeds derive from it, so the stream can move without any semantics changing.
 
+## Worked example — a study at engagement scale
+
+`studies/portfolio_bid/` is the same four artifacts on a decision the size of real work: a VP of corporate development pricing three in-licensed clinical assets against a 40-FTE development group that the company's own pipeline already fills. Eleven places, eight transitions, twenty-nine arcs, **nine arms**, 120 seeds per arm — and no structured tokens and no `host.jl`, so the entire study is data. The headline is a number an NPV model structurally cannot produce: the same three assets are worth **+\$744M ± 144** with the FTE ceiling lifted and **+\$241M ± 90** against the real group, so **\$503M ± 169 of the seller's valuation is stranded in a queue** — and twelve more development FTE are worth **+\$370M ± 106 given the deal** against **−\$8M ± 91 without it**.
+
+It is also where the layer's numeric discipline is visible, in three files that are worth copying into any study of this size: `README.md` is the **provenance file** — every command, every number it produced, and the rule that the report may quote nothing absent from it; `figures.jl` draws through `chartkit.jl` straight out of `results/*.json`, so a figure cannot drift from the number it illustrates; and `numbers.jl` **re-derives every published table** from those same envelopes, simulating nothing. The last one exists because `validate` and `diagnose` both inspect the *model*, and neither can see a number mistyped into prose — which is a mistake this study made and caught that way.
+
 ## Captured sessions — what it is like to use
 
 `studies/` shows you what the workflow *produces*. `sessions/` shows you what it is like to *use*: which questions get asked, which defaults get proposed, what happens when the user's numbers contradict the assistant's arithmetic. Each session is a JSON transcript rendered to one self-contained HTML page — no external CSS, fonts or JS, figures inlined.
@@ -88,7 +95,9 @@ julia --project=. agent/scripts/gen_reference.jl --check    # the generated refe
 julia --project=. agent/scripts/render_session.jl agent/sessions/field_service.json
 ```
 
-They are captured blind, by two agents that cannot see each other's reasoning, so a transcript is evidence rather than marketing; the protocol and its limits are in [`sessions/README.md`](sessions/README.md).
+A session's appendix publishes the study's own deliverable rather than a copy of it: an appendix entry takes `"file": "…/FINDINGS.md"` in place of `"text"`, imported at render time, so the page cannot quietly disagree with the report the study shipped.
+
+Two kinds of transcript live here and each page states which it is. A **blind capture** is recorded by two agents that cannot see each other's reasoning — evidence rather than marketing, and so far the layer's most effective bug-finder. A **scripted walkthrough** composes the dialogue around a finished study, where every command shown was really run and every number is a real measurement traceable to the study's `README.md`. The protocol and the limits of each are in [`sessions/README.md`](sessions/README.md).
 
 ## Keeping the reference honest
 
