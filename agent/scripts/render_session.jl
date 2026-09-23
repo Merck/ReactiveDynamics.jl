@@ -18,6 +18,8 @@
 # Input schema — one JSON object:
 #
 #   { "title": …, "subtitle": …, "brand": …, "headline": …, "headline_note": …,
+#     "compact": true,                               # on paper, let sheets flow instead of each
+#                                                    #   starting a new page — for short documents
 #     "meta":  { "<label>": "<value>", … },          # rendered as the provenance strip
 #     "hero":  { "stats":   [ { "value": …, "label": …, "note": … } ],   # every key optional
 #                "text":    "<markdown-ish>",
@@ -613,7 +615,12 @@ function render(doc, jsonpath)
     println(io, "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">")
     println(io, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
     println(io, "<title>", esc(get(doc, "title", "rd-study session")), "</title>")
-    println(io, "<style>", CSS, "</style></head><body>")
+    println(io, "<style>", CSS, "</style>")
+    # A sheet normally starts a fresh sheet of paper, which is right for a long document and wrong for a
+    # short one: four brief sections become four mostly-empty pages. `"compact": true` lets them flow.
+    get(doc, "compact", false) === true &&
+        println(io, "<style>@media print { .phase.band { break-before: auto; } }</style>")
+    println(io, "</head><body>")
 
     # masthead
     println(io, "<header class=\"mast\"><div class=\"wrap\">")

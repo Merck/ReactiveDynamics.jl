@@ -1,10 +1,10 @@
 #!/usr/bin/env julia
 #
-# figures.jl — the two structural diagrams on the overview page.
+# figures.jl — the structural diagrams on the overview and pitch pages.
 #
 #   julia --project=. agent/figures.jl
 #
-# A study's figures carry measurements and belong to `scripts/chartkit.jl`. These two carry structure
+# A study's figures carry measurements and belong to `scripts/chartkit.jl`. These carry structure
 # instead — the phase sequence, and the surface a user reaches it through — so there is no number in
 # them to drift. What they CAN drift against is the charter's tracker, which is why they are generated
 # from the tables below rather than drawn by hand: every shipped/planned mark sits once, next to the
@@ -114,7 +114,71 @@ function pipeline_svg()
     return CK.shell(join(parts), ybr + 44 + 8; title = title, subtitle = subtitle)
 end
 
-# ── figure 2: the integration surface ─────────────────────────────────────────────────────────────
+# ── figure 2: the same sequence, for the pitch page ───────────────────────────────────────────────
+
+# `pipeline.svg` names the skill and the file each phase leaves behind, which is what a reader
+# evaluating the layer needs and exactly what a reader evaluating the OFFER does not. Same four steps,
+# same refusal branch, stated in the language of the decision instead of the language of the tool.
+const PROMISE = [
+    ("Describe the decision", "A conversation, not a specification: the choice, what is scarce, how long the work takes."),
+    ("We build your operation", "A running model of the queue you actually have — capacity, cycle times, failure rates, cash."),
+    ("We try to break it", "Nine checks ask whether the thing you called scarce is what really binds. A failure blocks the answer."),
+    ("A number you can defend", "A central estimate, a spread, a conservative floor — and a seed that reproduces all three exactly."),
+]
+
+function promise_svg()
+    title = "From a question to a number you can take to a board"
+    subtitle = "Four steps, and the third one is allowed to stop the other three."
+    head = CK.head_height(title, subtitle)
+
+    gap = 16.0
+    boxw = (W - 2PAD - 3gap) / 4
+    boxh = 120.0
+    ytop = head + 20.0
+    parts = [CK.head_block(title, subtitle)]
+
+    for (i, (name, detail)) in enumerate(PROMISE)
+        x = PAD + (i - 1) * (boxw + gap)
+        last = i == length(PROMISE)
+        push!(parts, CK.rect(x, ytop, boxw, boxh; fill = CK.PAPER, stroke = CK.HAIR, sw = 1.0))
+        push!(parts, CK.rect(x, ytop, boxw, 2.5; fill = last ? CK.INK : CK.ACCENT))
+        push!(
+            parts, CK.txt(
+                x + 13, ytop + 25, "0" * string(i);
+                size = 9.2, family = CK.MONO, fill = last ? CK.INK : CK.ACCENT_D, weight = 600
+            )
+        )
+        for (j, l) in enumerate(CK.wrap_lines(name, boxw - 26, 11.4; maxlines = 2))
+            push!(parts, CK.txt(x + 13, ytop + 44 + 14 * (j - 1), l; size = 11.4, weight = 600))
+        end
+        for (j, l) in enumerate(CK.wrap_lines(detail, boxw - 26, 8.8; maxlines = 4))
+            push!(parts, CK.txt(x + 13, ytop + 74 + 10.5 * (j - 1), l; size = 8.8, fill = CK.GREY))
+        end
+        last || push!(parts, arrow_r(x + boxw + 2, x + boxw + gap - 2, ytop + boxh / 2))
+    end
+
+    xd = PAD + 2 * (boxw + gap) + boxw / 2
+    ybr = ytop + boxh + 30
+    push!(parts, arrow_d(xd, ytop + boxh + 3, ybr, stroke = CK.ROSE))
+    bx, bw = PAD + boxw + gap, 3boxw + 2gap
+    push!(parts, CK.rect(bx, ybr, bw, 44; fill = "#FDF3F4", stroke = CK.ROSE, sw = 1.0))
+    push!(
+        parts, CK.txt(
+            bx + 14, ybr + 19, "If nothing in your process is actually scarce, we say so and stop.";
+            size = 10.2, weight = 600
+        )
+    )
+    push!(
+        parts, CK.txt(
+            bx + 14, ybr + 34, "A spreadsheet is the right tool for some questions. This is not one of them.";
+            size = 9.2, fill = CK.GREY
+        )
+    )
+
+    return CK.shell(join(parts), ybr + 44 + 8; title = title, subtitle = subtitle)
+end
+
+# ── figure 3: the integration surface ─────────────────────────────────────────────────────────────
 
 # how a user reaches the layer · what that path is made of · status, with the tracker id
 const REACH = [
@@ -215,7 +279,7 @@ end
 
 # ── build ─────────────────────────────────────────────────────────────────────────────────────────
 
-for (name, svg) in ("pipeline" => pipeline_svg(), "surface" => surface_svg())
+for (name, svg) in ("pipeline" => pipeline_svg(), "promise" => promise_svg(), "surface" => surface_svg())
     path = joinpath(FIGDIR, name * ".svg")
     write(path, svg)
     println("figures: wrote $(relpath(path, dirname(HERE))) — $(round(sizeof(svg) / 1024, digits = 1)) KiB")

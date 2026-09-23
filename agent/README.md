@@ -8,6 +8,8 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 
 **Evaluating rather than building? Open [`overview.html`](overview.html).** One self-contained page: what the layer does and why the gate in the middle is the differentiator, how it is built (skills, subagents, MCP, the hook, the knowledge tiers), the integration surface, how to drive it from Claude Code today — and then the engagement-scale `portfolio_bid` study as the demonstration, with the briefing it produced attached in full. Regenerate with `julia --project=. agent/scripts/render_session.jl agent/overview.json`.
 
+**[`pitch.html`](pitch.html)** is the same capability for a reader who will not evaluate an architecture: one page, no CLI and no component inventory, the money case as the proof, and an explicit list of what the layer does *not* claim. Both pages quote the same study, so a number that changes in `studies/portfolio_bid/` changes in both — grep before editing either.
+
 ## Layout
 
 | Path | What it is |
@@ -23,7 +25,8 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 | `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test, `portfolio_bid/` the one at engagement scale |
 | `sessions/` | captured end-to-end sessions — what the workflow is like to *use*, not just what it produces |
 | `overview.json` → `overview.html` | the capability overview page: authored sections, then the `portfolio_bid` transcript imported as its demo |
-| `figures.jl` → `figures/` | the two structural diagrams on that page (the phase pipeline, the integration surface), generated from tables that cite the charter's tracker ids |
+| `pitch.json` → `pitch.html` | the same capability as a one-page pitch — no tooling surface, the case as the argument, the non-claims stated |
+| `figures.jl` → `figures/` | the three structural diagrams on those pages (phase pipeline, the same sequence in plain language, integration surface), generated from tables that cite the charter's tracker ids |
 
 ## The skills
 
