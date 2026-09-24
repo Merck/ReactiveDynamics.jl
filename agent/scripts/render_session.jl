@@ -25,7 +25,7 @@
 #     "hero":  { "stats":   [ { "value": …, "label": …, "note": … } ],   # every key optional
 #                "text":    "<markdown-ish>",
 #                "figures": [ { "svg": …, "caption": … } ] },
-#     "sections": [ { "title": …, "text": … | "file": …, "stats": [ … ], "figures": [ … ] } ],
+#     "sections": [ { "title": …, "text": … | "file": …, "stats": [ … ], "figures": [ … ], "models": [ … ] } ],
 #     "turns": [ { "role": "user"|"assistant"|"note",
 #                  "text": "<markdown-ish>",          # see the grammar note below
 #                  "phase": "FRAME"|…,                # optional; starts a new phase band
@@ -468,6 +468,7 @@ function sheets_html(entries, default_title = "Appendix")
         println(io, stats_html(get(e, "stats", [])))
         println(io, body_html(node_text(e)))
         println(io, figures_html(get(e, "figures", [])))
+        println(io, models_html(get(e, "models", [])))
         println(io, "</section>")
     end
     return String(take!(io))
