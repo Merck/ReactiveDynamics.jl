@@ -382,7 +382,20 @@ ARMS = {
     "arm_build_now_even.rdj.json": {"build_now": 1.0, "capex_even": 1.0},
 }
 
+# Outcome worlds (turn 6: no ensembles). Each option is run with the readouts FORCED to one of the
+# four outcomes, and the four paths are weighted by the stated odds by arithmetic in analyze.py.
+# Only p_k / p_t change; the slip and lead-time draws per seed are the same in every world and option.
+WORLDS = {"both": (1.0, 1.0), "konly": (1.0, 0.0), "tonly": (0.0, 1.0), "neither": (0.0, 0.0)}
+SCEN_ARMS = ["model", "arm_cmo", "arm_cmo_tern_only", "arm_build_now", "arm_build_after",
+             "model_literal", "arm_cmo_literal", "arm_cmo_tern_only_literal",
+             "model_no2", "arm_cmo_no2", "arm_cmo_tern_only_no2"]
+
 if __name__ == "__main__":
     for name, ov in ARMS.items():
         build(ov, name)
-    print("wrote", len(ARMS), "documents; value per tenth-batch:", VAL)
+    os.makedirs(os.path.join(HERE, "scenarios"), exist_ok=True)
+    for arm in SCEN_ARMS:
+        ov = dict(ARMS[arm + ".rdj.json"])
+        for w, (pk, pt) in WORLDS.items():
+            build(dict(ov, p_k=pk, p_t=pt), os.path.join("scenarios", f"{arm}__{w}.rdj.json"))
+    print("wrote", len(ARMS), "documents +", len(SCEN_ARMS) * len(WORLDS), "scenario copies; value per tenth-batch:", VAL)

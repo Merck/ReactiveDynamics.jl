@@ -44,7 +44,7 @@ Time origin t = 0 is 1 October 2026; one tick = one month; horizon t = 75 (end 2
 | **Reassigning the CMO slot** | Term sheet reserves capacity, not a product — the user's reading, not confirmed. If Tern fails, Kestrel can move in via PAS (CMO won't be ready before Kestrel files) | tested both ways: `arm_cmo` (reassign allowed) and `arm_cmo_tern_only` |
 | **Second CMO contract** | Turn 5: if both assets succeed, sign a second contract the same week on the same terms ($5M/yr, 3-year minimum, $0.4M/batch, 12–15 months to ready) — the user's estimate, no term sheet. Assumed not to open before mid-2028 like the first | place `cmo2` (40 tenths), signed at max(Tern readout, t = 20) to start the next month, ready after its own `U(12,15)` draw; both assets reach it by PAS. `second_cmo = 0` sensitivity |
 | **Horizon and tick** | Through end-2032, monthly | `meta.tspan = 75.0`, `meta.dt = 1.0` |
-| **Headline metrics** | eNPV at 9% WACC ($M); P(supply-constrained launch) per asset | `enpv --annual=0.09 --periods-per-year=12`; `final:k_short`, `final:t_short` (0/1 per run → ensemble mean is the probability) |
+| **Headline metrics** | eNPV at 9% WACC ($M); P(supply-constrained launch) per asset | `enpv --annual=0.09 --periods-per-year=12`; `final:k_short`, `final:t_short` (0/1 per path; turn 6: odds-weighted over forced-world paths, see Analysis plan) |
 
 ## The arms
 
@@ -59,7 +59,7 @@ All arms are the same network and differ only in `params` (diff any arm against 
 
 ## Analysis plan
 
-Ensembles with `--per-seed` on every simulated arm with one shared `--root-seed`, 96 seeds; the effect of each option is the mean of the per-seed difference against `model` (paired), ± its standard error, computed by a logged script. Metrics: eNPV at 9% (`enpv --annual=0.09 --periods-per-year=12`); `final:k_short` and `final:t_short` (P of a supply-constrained launch, first six months); `final:k_short_any` (Kestrel short at any time, turn 5); `final:t_file_delay` (months Tern's filing slips past readout + 3 because its filed site's PPQ is not done — P(> 0) and mean, turn 5); `final:k_lost`, `final:t_lost`; `final:k_success`/`final:t_success` (pairing check and state breakdown).
+**Superseded in turn 6 (operator decision: no ensembles; one 96-seed ensemble took 53 minutes).** The plan as run: forced-outcome copies of each decision arm, one per readout world (both succeed / Kestrel only / Tern only / neither; `scenarios/`, written by `gen_models.py`). Each copy is run with single-seed `rdx run` calls in the foreground: seeds 1–3 in the both-succeed world, where the options actually compete for capacity, and seed 1 elsewhere, with the same seeds across options. `analyze.py` averages the seeds within each world and weights the worlds by the stated odds (0.60 × 0.45 and so on). The result is arithmetic on a handful of example paths, not an ensemble mean, so no standard error is claimed. The metrics are unchanged: eNPV at 9% is recomputed from traced flows with the `rdx enpv` discounting and checked against each run's ledger, together with `k_short`, `t_short`, `k_short_any`, `t_file_delay`, `k_lost` and `t_lost`. The peak-value and Kestrel-50% sensitivities reuse the same paths (revalued or reweighted); the cost-only variants are PV arithmetic. The *Previous plan* was 96-seed paired ensembles against `model` with a shared root seed.
 
 ## What could go wrong (pre-registered, for DIAGNOSE)
 

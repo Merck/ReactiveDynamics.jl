@@ -1,0 +1,11 @@
+{"chart": "bars_error", "unit": "$M", "digits": 1, "sortby": "none",
+ "title": "eNPV of each option against waiting, base case",
+ "subtitle": "Odds-weighted single paths (3 seeds when both succeed, 1 otherwise); no error bars because no spread was measured. Kestrel 60%, Tern 45%, 9% WACC.",
+ "x_label": "eNPV vs wait ($M)", "zero_label": "wait",
+ "series": [
+  {"label": "Reserve CMO now, both assets", "value": 0.9, "note": "Tern short at launch 0.00 (wait 0.18)"},
+  {"label": "Reserve CMO now, Tern only", "value": 0.3, "note": "Kestrel short at some point 0.09"},
+  {"label": "Build line after readouts", "value": -23.0, "note": "Tern short at launch 0.18"},
+  {"label": "Build line now", "value": -105.8, "note": "Tern short at launch 0.18"},
+  {"label": "Tern only, no second contract", "value": -72.5, "note": "vs wait without one; Kestrel short 0.27"}
+ ]}

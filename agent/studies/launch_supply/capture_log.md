@@ -204,3 +204,183 @@ walk-away 5M saving PV at t=14: 4.522
 capex PV phased 20/50/30: 103.64  even: 104.60  diff (even - phased cost): 0.95
 exit 0
 ```
+
+### turn 6
+
+Compute relay from the operator, not from the user. The ensemble batch was cancelled after the first of 15 ensembles, because each 96-seed ensemble took 53 minutes on this machine: `rdx ensemble` rebuilds and recompiles the model for every seed. The operator's decision was "no ensembles. Keep it simple." Instead, use single-seed `rdx run` calls in the foreground with the same seeds across options and forced readout worlds, combined with the odds (Kestrel 0.60, Tern 0.45) by arithmetic, stated plainly, with no spread that was not measured. The relay pointed to the one completed ensemble (baseline `model.rdj.json`, 96 seeds, root seed 2609) as a file under `~/rd_relay/`. **It was not read.** Blind rule 1 forbids reading anything under that path, so no number from it appears here or in FINDINGS.md.
+
+Forced-world copies of the 11 decision arms (the 5 options, plus the `_literal` and `_no2` variants of `model`/`arm_cmo`/`arm_cmo_tern_only`) were generated. Each world sets the readout outcomes: both = Kestrel ok and Tern ok; konly = Kestrel ok and Tern fails; tonly = Kestrel fails and Tern ok; neither = both fail.
+
+```
+python3 agent/studies/launch_supply/gen_models.py
+wrote 22 documents + 44 scenario copies; value per tenth-batch: {'year1': (0.923913043478261, 0.6296296296296295), 'peak': (1.8888888888888888, 1.59375)}
+exit 0
+```
+
+Each path was run one at a time in the foreground by `run_scenarios.sh ARM WORLD SEED ...`. That script calls `rdx run scenarios/<arm>__<world>.rdj.json --seed=S --trace=cash,k_sold,t_sold,k_lost,t_lost,k_age,t_age,k_stock,t_stock,k_short,k_short_any,t_short,t_file_delay,own_used,cmo_used,cmo2_used,l2_used` and saves the verbatim JSON output to `runs/<arm>__<world>__s<S>.json`. Batches were kept to 12 or fewer runs. Every batch line reported `exit 0`. The coverage is shown below, verified over the saved outputs:
+
+```
+python3 - (parse every runs/*.json, check "ok")
+51 run files, unparseable: []
+{('both', 's1'): 11, ('both', 's2'): 11, ('both', 's3'): 11, ('konly', 's1'): 8, ('neither', 's1'): 5, ('tonly', 's1'): 5}
+each: {'error': None, 'ok': True, 'command': 'run', 'findings': []}
+exit 0
+```
+
+Per-path summary of the both-succeed world. The eNPV is recomputed from the traced flows by `analyze.load`, and launch months are the first month with k_age/t_age > 0:
+
+```
+arm_build_after__both__s1  npv 1380.1 Klaunch 24 Tlaunch 37 Tdelay 2 Kshort_any 0 Klost 0 Tlost 62 Tshort 1
+arm_build_after__both__s2  npv 1447.3 Klaunch 25 Tlaunch 30 Tdelay 0 Kshort_any 0 Klost 0 Tlost 114 Tshort 0
+arm_build_after__both__s3  npv 1430.9 Klaunch 23 Tlaunch 35 Tdelay 2 Kshort_any 0 Klost 0 Tlost 92 Tshort 1
+arm_build_now__both__s1    npv 1376.7 Klaunch 24 Tlaunch 37 Tdelay 2 Kshort_any 0 Klost 0 Tlost 62 Tshort 1
+arm_build_now__both__s2    npv 1446.8 Klaunch 25 Tlaunch 30 Tdelay 0 Kshort_any 0 Klost 0 Tlost 112 Tshort 0
+arm_build_now__both__s3    npv 1429.4 Klaunch 23 Tlaunch 35 Tdelay 2 Kshort_any 0 Klost 0 Tlost 92 Tshort 1
+arm_cmo__both__s1          npv 1516.2 Klaunch 24 Tlaunch 35 Tdelay 0 Kshort_any 0 Klost 0 Tlost 0 Tshort 0
+arm_cmo__both__s2          npv 1518.7 Klaunch 25 Tlaunch 33 Tdelay 3 Kshort_any 0 Klost 0 Tlost 0 Tshort 0
+arm_cmo__both__s3          npv 1581.2 Klaunch 23 Tlaunch 33 Tdelay 0 Kshort_any 0 Klost 0 Tlost 0 Tshort 0
+arm_cmo_tern_only__both__s1 npv 1516.6 Klaunch 24 Tlaunch 35 Tdelay 0 Kshort_any 0 Klost 0 Tlost 0 Tshort 0
+arm_cmo_tern_only__both__s2 npv 1519.0 Klaunch 25 Tlaunch 33 Tdelay 3 Kshort_any 0 Klost 0 Tlost 0 Tshort 0
+arm_cmo_tern_only__both__s3 npv 1576.2 Klaunch 23 Tlaunch 33 Tdelay 0 Kshort_any 1 Klost 8 Tlost 0 Tshort 0
+arm_cmo_tern_only_no2__both__s1 npv 956.0 Klaunch 24 Tlaunch 35 Tdelay 0 Kshort_any 1 Klost 1037 Tlost 0 Tshort 0
+arm_cmo_tern_only_no2__both__s2 npv 971.6 Klaunch 25 Tlaunch 33 Tdelay 3 Kshort_any 1 Klost 1016 Tlost 0 Tshort 0
+arm_cmo_tern_only_no2__both__s3 npv 1000.9 Klaunch 23 Tlaunch 33 Tdelay 0 Kshort_any 1 Klost 1069 Tlost 0 Tshort 0
+arm_cmo_no2__both__s1      npv 1291.0 ... Tlost 688 ; s2 1283.1 Tdelay 3 Tlost 715 ; s3 1338.6 Tlost 733 (Kshort_any 0 all)
+model__both__s1            npv 1464.3 Klaunch 24 Tlaunch 37 Tdelay 2 Kshort_any 0 Klost 0 Tlost 62 Tshort 1
+model__both__s2            npv 1533.1 Klaunch 25 Tlaunch 30 Tdelay 0 Kshort_any 0 Klost 0 Tlost 110 Tshort 0
+model__both__s3            npv 1516.0 Klaunch 23 Tlaunch 35 Tdelay 2 Kshort_any 0 Klost 0 Tlost 92 Tshort 1
+model_no2__both__s1        npv 1214.7 Tdelay 2 Kshort_any 0 Klost 0 Tlost 815 Tshort 1
+model_no2__both__s2        npv 1186.3 Tdelay 0 Kshort_any 1 Klost 32 Tlost 1060 Tshort 0
+model_no2__both__s3        npv 1237.8 Tdelay 2 Kshort_any 1 Klost 13 Tlost 903 Tshort 1
+model_literal__both__s1..3 npv 1449.3 / 1488.8 / 1487.6, Tlost 97 / 210 / 157
+exit 0
+```
+
+Scenario weighting by `analyze.py`. The ledger check asserts that the recomputed reward and cost match each run's ledger. The seed mean is taken within each world, and the worlds are weighted by the odds. Worlds that are missing for a sensitivity arm are borrowed from its base arm and marked `(= base)`. For `_no2` this holds by construction, because the second contract can only be signed when both assets succeed. For `_literal`, the tonly and neither worlds are borrowed; with one asset or none there is no contention, so the literal rule and the patient-first rule should coincide, and konly bears that out (1096.3 vs 1096.2).
+
+```
+python3 agent/studies/launch_supply/analyze.py
+weights (p_k=0.6, p_t=0.45): {'both': 0.27, 'konly': 0.33, 'tonly': 0.18, 'neither': 0.22} | value per tenth-batch (0.923913043478261, 0.6296296296296295)
+per world, mean over seeds shown (single paths when one seed): eNPV $M | K short launch / K short ever / T short launch / T filing delay (months)
+  both     model                        seeds s1,s2,s3 eNPV   1504.5 | 0.00 0.00 0.67 1.33
+  both     arm_cmo                      seeds s1,s2,s3 eNPV   1538.7 | 0.00 0.00 0.00 1.00
+  both     arm_cmo_tern_only            seeds s1,s2,s3 eNPV   1537.2 | 0.00 0.33 0.00 1.00
+  both     arm_build_now                seeds s1,s2,s3 eNPV   1417.6 | 0.00 0.00 0.67 1.33
+  both     arm_build_after              seeds s1,s2,s3 eNPV   1419.4 | 0.00 0.00 0.67 1.33
+  both     model_literal                seeds s1,s2,s3 eNPV   1475.2 | 0.00 0.00 0.67 1.33
+  both     arm_cmo_literal              seeds s1,s2,s3 eNPV   1538.8 | 0.00 0.00 0.00 1.00
+  both     arm_cmo_tern_only_literal    seeds s1,s2,s3 eNPV   1538.8 | 0.00 0.33 0.00 1.00
+  both     model_no2                    seeds s1,s2,s3 eNPV   1212.9 | 0.00 0.67 0.67 1.33
+  both     arm_cmo_no2                  seeds s1,s2,s3 eNPV   1304.2 | 0.00 0.00 0.00 1.00
+  both     arm_cmo_tern_only_no2        seeds s1,s2,s3 eNPV    976.2 | 0.00 1.00 0.00 1.00
+  konly    model                        seeds s1       eNPV   1096.2 | 0.00 0.00 0.00 0.00
+  konly    arm_cmo                      seeds s1       eNPV   1087.4 | 0.00 0.00 0.00 0.00
+  konly    arm_cmo_tern_only            seeds s1       eNPV   1086.6 | 0.00 0.00 0.00 0.00
+  konly    arm_build_now                seeds s1       eNPV    989.7 | 0.00 0.00 0.00 0.00
+  konly    arm_build_after              seeds s1       eNPV   1096.2 | 0.00 0.00 0.00 0.00
+  konly    model_literal                seeds s1       eNPV   1096.3 | 0.00 0.00 0.00 0.00
+  konly    arm_cmo_literal              seeds s1       eNPV   1087.5 | 0.00 0.00 0.00 0.00
+  konly    arm_cmo_tern_only_literal    seeds s1       eNPV   1086.8 | 0.00 0.00 0.00 0.00
+  konly    model_no2                    seeds s1       eNPV   1096.2 | 0.00 0.00 0.00 0.00  (= model)
+  konly    arm_cmo_no2                  seeds s1       eNPV   1087.4 | 0.00 0.00 0.00 0.00  (= arm_cmo)
+  konly    arm_cmo_tern_only_no2        seeds s1       eNPV   1086.6 | 0.00 0.00 0.00 0.00  (= arm_cmo_tern_only)
+  tonly    model                        seeds s1       eNPV    438.9 | 0.00 0.00 0.00 0.00
+  tonly    arm_cmo                      seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00
+  tonly    arm_cmo_tern_only            seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00
+  tonly    arm_build_now                seeds s1       eNPV    328.0 | 0.00 0.00 0.00 0.00
+  tonly    arm_build_after              seeds s1       eNPV    438.9 | 0.00 0.00 0.00 0.00
+  tonly    model_literal                seeds s1       eNPV    438.9 | 0.00 0.00 0.00 0.00  (= model)
+  tonly    arm_cmo_literal              seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00  (= arm_cmo)
+  tonly    arm_cmo_tern_only_literal    seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00  (= arm_cmo_tern_only)
+  tonly    model_no2                    seeds s1       eNPV    438.9 | 0.00 0.00 0.00 0.00  (= model)
+  tonly    arm_cmo_no2                  seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00  (= arm_cmo)
+  tonly    arm_cmo_tern_only_no2        seeds s1       eNPV    420.3 | 0.00 0.00 0.00 0.00  (= arm_cmo_tern_only)
+  neither  model                        seeds s1       eNPV      0.0 | 0.00 0.00 0.00 0.00
+  neither  arm_cmo                      seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00
+  neither  arm_cmo_tern_only            seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00
+  neither  arm_build_now                seeds s1       eNPV   -123.9 | 0.00 0.00 0.00 0.00
+  neither  arm_build_after              seeds s1       eNPV      0.0 | 0.00 0.00 0.00 0.00
+  neither  model_literal                seeds s1       eNPV      0.0 | 0.00 0.00 0.00 0.00  (= model)
+  neither  arm_cmo_literal              seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00  (= arm_cmo)
+  neither  arm_cmo_tern_only_literal    seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00  (= arm_cmo_tern_only)
+  neither  model_no2                    seeds s1       eNPV      0.0 | 0.00 0.00 0.00 0.00  (= model)
+  neither  arm_cmo_no2                  seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00  (= arm_cmo)
+  neither  arm_cmo_tern_only_no2        seeds s1       eNPV     -9.4 | 0.00 0.00 0.00 0.00  (= arm_cmo_tern_only)
+
+weighted by the odds (arithmetic over the paths above; not an ensemble):
+  model                        eNPV    847.0  vs model:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo                      eNPV    847.9  vs model:    +0.9 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only            eNPV    847.2  vs model:    +0.3 | P(K short launch) 0.00  P(K short ever) 0.09  P(T short launch) 0.00  P(T files late) 0.09
+  arm_build_now                eNPV    741.1  vs model:  -105.8 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_build_after              eNPV    824.0  vs model:   -23.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  model_literal                eNPV    839.1  vs model_literal:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo_literal              eNPV    847.9  vs model_literal:    +8.8 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only_literal    eNPV    847.7  vs model_literal:    +8.6 | P(K short launch) 0.00  P(K short ever) 0.09  P(T short launch) 0.00  P(T files late) 0.09
+  model_no2                    eNPV    768.2  vs model_no2:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.18  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo_no2                  eNPV    784.6  vs model_no2:   +16.3 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only_no2        eNPV    695.7  vs model_no2:   -72.5 | P(K short launch) 0.00  P(K short ever) 0.27  P(T short launch) 0.00  P(T files late) 0.09
+exit 0
+```
+
+```
+python3 agent/studies/launch_supply/analyze.py --peak     (same paths revalued at peak-year value; the dynamics do not depend on value)
+weighted by the odds (arithmetic over the paths above; not an ensemble):
+  model                        eNPV   1896.6  vs model:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo                      eNPV   1917.0  vs model:   +20.4 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only            eNPV   1915.9  vs model:   +19.3 | P(K short launch) 0.00  P(K short ever) 0.09  P(T short launch) 0.00  P(T files late) 0.09
+  arm_build_now                eNPV   1790.7  vs model:  -105.9 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_build_after              eNPV   1873.4  vs model:   -23.2 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  model_literal                eNPV   1876.0  vs model_literal:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo_literal              eNPV   1917.1  vs model_literal:   +41.1 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only_literal    eNPV   1916.8  vs model_literal:   +40.8 | P(K short launch) 0.00  P(K short ever) 0.09  P(T short launch) 0.00  P(T files late) 0.09
+  model_no2                    eNPV   1677.9  vs model_no2:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.18  P(T short launch) 0.18  P(T files late) 0.18
+  arm_cmo_no2                  eNPV   1739.0  vs model_no2:   +61.1 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.09
+  arm_cmo_tern_only_no2        eNPV   1591.7  vs model_no2:   -86.2 | P(K short launch) 0.00  P(K short ever) 0.27  P(T short launch) 0.00  P(T files late) 0.09
+exit 0
+```
+
+```
+python3 agent/studies/launch_supply/analyze.py --pk=0.5   (same paths, worlds reweighted for Kestrel at 50%)
+weighted by the odds (arithmetic over the paths above; not an ensemble):
+  model                        eNPV    738.7  vs model:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.15  P(T files late) 0.15
+  arm_cmo                      eNPV    737.2  vs model:    -1.5 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.07
+  arm_cmo_tern_only            eNPV    736.7  vs model:    -2.0 | P(K short launch) 0.00  P(K short ever) 0.07  P(T short launch) 0.00  P(T files late) 0.07
+  arm_build_now                eNPV    630.9  vs model:  -107.9 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.15  P(T files late) 0.15
+  arm_build_after              eNPV    719.6  vs model:   -19.1 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.15  P(T files late) 0.15
+  model_literal                eNPV    732.2  vs model_literal:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.15  P(T files late) 0.15
+  arm_cmo_literal              eNPV    737.3  vs model_literal:    +5.1 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.07
+  arm_cmo_tern_only_literal    eNPV    737.1  vs model_literal:    +4.9 | P(K short launch) 0.00  P(K short ever) 0.07  P(T short launch) 0.00  P(T files late) 0.07
+  model_no2                    eNPV    673.1  vs model_no2:    +0.0 | P(K short launch) 0.00  P(K short ever) 0.15  P(T short launch) 0.15  P(T files late) 0.15
+  arm_cmo_no2                  eNPV    684.5  vs model_no2:   +11.3 | P(K short launch) 0.00  P(K short ever) 0.00  P(T short launch) 0.00  P(T files late) 0.07
+  arm_cmo_tern_only_no2        eNPV    610.4  vs model_no2:   -62.7 | P(K short launch) 0.00  P(K short ever) 0.23  P(T short launch) 0.00  P(T files late) 0.07
+exit 0
+```
+
+Figure, from the weighted table above:
+
+```
+julia --project=. agent/scripts/chartkit.jl agent/studies/launch_supply/figures/options_vs_wait.json --out=agent/studies/launch_supply/figures/options_vs_wait.svg
+chartkit: wrote agent/studies/launch_supply/figures/options_vs_wait.svg — bars_error, 6.2 KiB, self-contained
+exit 0
+```
+
+Path-by-path check of the weighted deltas (same run files; `paired.py` imports `analyze.runs`/`analyze.W`). This is the variation across the 3 both-world paths; it is not a standard error:
+
+```
+python3 agent/studies/launch_supply/paired.py   (run from the study directory)
+both-world per-seed difference vs its wait reference, and the odds-weighted delta if that path were the both-world path (other worlds: seed 1)
+  arm_cmo                  vs model      both-world d s1..s3   +51.9   -14.3   +65.2 | weighted per path   +5.7  -12.2   +9.3
+  arm_cmo_tern_only        vs model      both-world d s1..s3   +52.2   -14.1   +60.2 | weighted per path   +5.5  -12.4   +7.7
+  arm_build_now            vs model      both-world d s1..s3   -87.7   -86.3   -86.6 | weighted per path -106.0 -105.7 -105.8
+  arm_build_after          vs model      both-world d s1..s3   -84.3   -85.7   -85.1 | weighted per path  -22.8  -23.1  -23.0
+  arm_cmo_no2              vs model_no2  both-world d s1..s3   +76.3   +96.8  +100.7 | weighted per path  +12.3  +17.8  +18.9
+  arm_cmo_tern_only_no2    vs model_no2  both-world d s1..s3  -258.7  -214.7  -236.9 | weighted per path  -78.4  -66.6  -72.5
+walk5: PV of $5M at t=14 4.522; arm_cmo +0.99 (P doomed = neither 0.22); arm_cmo_tern_only +2.49 (P doomed = Tern fails 0.55)
+exit 0
+```
+
+```
+julia --project=. agent/scripts/rdx.jl draw agent/studies/launch_supply/scenarios/model__both.rdj.json --out=agent/studies/launch_supply/figures/exec_map_wait_both_s1.svg --exec-map --seed=1
+"ok": true, "layer": "exec_map", "artifact": ".../figures/exec_map_wait_both_s1.svg"
+exit 0
+```
