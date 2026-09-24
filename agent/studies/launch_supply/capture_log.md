@@ -670,3 +670,33 @@ review: both late 14 / 37 tonly late 0 / 30 -> overall P(late) 0.102
 wait: both late 13 / 37 overall 0.095
 exit 0
 ```
+
+### turn 9
+
+User request (final turn, summary): three edits to the ExCo paragraph. (1) Add that at Kestrel PoS 50% the result is roughly break-even, around +$1.6M. (2) Replace "about $84–87M worse" for building with the range, which he read as −$73M to −$105M across 8 paths. (3) Say "$9–11M" for the failure cost, to cover the roughly $1M of understated in-house validation cost. On his side: legal confirms the slot can be reassigned; regulatory confirms Tern can be filed on our line if Kestrel fails. No new simulation runs this turn (coordinator).
+
+Check of each edit against stored runs (no simulation):
+
+```
+python3 agent/studies/launch_supply/paired_both.py   (excerpt)
+ both +38.7 (se 4.1, n 37) | konly -8.8 (se 0.07, n 3) | tonly -31.7 (se 5.95, n 10) | neither -9.4 (se 0.00, n 3)
+ weighted delta -0.2, se 1.5; delta - 2se -3.3, delta + 2se +2.9
+ arm_build_now: both-world d vs wait mean -86.9 se 3.1 n 8 range -104.7..-72.8; Tern short 6/8
+ arm_build_after: both-world d vs wait mean -84.3 se 0.6 n 8 range -86.8..-82.3; Tern short 6/8
+exit 0
+```
+
+- Edit 1 holds: `exit_review.py --pk=0.5` (turn 8) gives weighted delta +1.61, se 0.91, -2se -0.22, +2se +3.44.
+- Edit 2 is right for build-now only: build now -104.7 to -72.8, build after -86.8 to -82.3 (8 paths each, both succeed). Both ranges are quoted.
+- Edit 3 is accepted as a conservative bound, with a correction to my turn-8 caveat. The measured non-both costs are 8.76 / 9.40 (range 9.25–9.66) / 9.38. The Tern-only decomposition (turn 8) is all CMO fee plus forfeit: cost difference -9.40, Tern revenue difference +0.00. So own-line PPQ is charged identically under wait and under review. The user's $0.5M/batch was for a backup-site qualification; under the review rule the own line is Tern's only filed site, as it is under wait, so a higher own-line PPQ cost would fall on both options and largely cancel. My "understated by about $1M" overstated the gap in the comparison.
+- The no-review row in FINDINGS is updated from turn 7's -1.1 ± 3.4 (Tern only on 3 paths) to paired_both's current -0.2 ± 1.5 (Tern only on 10 paths).
+
+Figure regenerated from the turn-8 numbers:
+
+```
+julia --project=. agent/scripts/chartkit.jl agent/studies/launch_supply/figures/options_vs_wait.json --out=agent/studies/launch_supply/figures/options_vs_wait.svg
+chartkit: wrote agent/studies/launch_supply/figures/options_vs_wait.svg — bars_error, 12.9 KiB, self-contained
+exit 0
+```
+
+(A first render with a subtitle reading "error bars 2 standard errors" was replaced after reading chartkit.jl, which draws ±1 se dark and ±2 se grey whiskers.)
