@@ -1,165 +1,127 @@
 # Fill-finish capacity for Kestrel and Tern: what to take to ExCo
 
-> The REPORT artifact (phase 4 of 4). The recommendation comes first, then the numbers behind it, then how they were computed. **Read this before any number below.** Every figure is a single simulated path, or an average of a few paths, combined across the four readout outcomes using the stated odds (Kestrel 0.60, Tern 0.45, independent). The ensembles were cancelled (see "How the numbers were made"). That is why no number carries an error bar: none was measured. Where the paths disagree, that is shown instead.
+> The REPORT artifact (phase 4 of 4), revision 2 (turn 7). The recommendation comes first, then the numbers, then how they were computed. **Read this before any number below.** Each figure comes from single simulated paths, one per seed, with the readout outcomes forced. When both readouts succeed there are **37 paired paths** for wait and reserve-now (seeds 1–37). There are 8 for the two build options, and 3 for each other outcome. The same seed gives both options the same readout dates, slips and lead times. The four outcomes are combined using the stated odds (Kestrel 0.60, Tern 0.45, independent). The ± figures are standard errors across paths, and the probability ranges are 95% Wilson intervals on the path counts. The relayed 96-seed ensemble of the wait option serves as an independent check on the wait-option numbers.
 
-## **Reserve the CMO slot now, usable by both assets: about break-even in money (+$0.9M vs waiting), and it removes the risk of a supply-short Tern launch**
+## **Reserve the CMO slot now, usable by either asset: neutral in expectation (−$1.1M ± $3.4M vs waiting), and Tern's launch is fully supplied if both succeed**
 
-**Recommendation: sign the CMO reservation before 30 November 2026, with the slot usable for either asset. Do not build a second line, now or after the readouts. Do not tie the reservation to Tern alone unless a second CMO contract is genuinely available.**
+**Recommendation: sign the reservation before 30 November 2026, usable for either asset. Do not build a second line. Do not use the Tern-only structure unless the second CMO contract is in writing.**
 
-- **Money: the CFO is right that it does not pay for itself on expected value.** In the base case (year-1 value per batch, 9% WACC, through end-2032), reserving now is worth **+$0.9M** of eNPV against waiting (weighted $847.9M vs $847.0M). That is a tie. Re-weighted path by path, the three both-succeed paths give **+$5.7M, −$12.2M and +$9.3M**, so even the sign is not settled.
-- **What the fee buys is launch protection.** Reserving now takes the chance of a **supply-short Tern launch from 0.18 to 0.00**. It also takes the chance of **Tern filing late because its PPQ waits behind Kestrel on our own line from 0.18 to 0.00**.
-- **What it costs if everything fails.** If both readouts fail, the reservation loses **$9.4M** of NPV (the walk-away).
-- **Kestrel is not at risk at launch under any option.** P(supply-short Kestrel launch) is 0.00 under every option and every sensitivity we ran.
-- **Decision rule.** The brief's rule was to act if the gain holds at its low end (Δ − 2·se > 0). It cannot be applied here, because no standard error was measured. On the money alone, the honest answer is "not distinguishable from waiting". The case for reserving is ExCo's first question, P(supply-short launch), bought for a bounded downside. **Reserve if ExCo will pay up to about $9M of NPV, the cost when both fail, to take Tern's supply-short-launch risk from about 1 in 5 to zero. Otherwise wait.**
+- **Money is neutral.** Against waiting, reserving now comes to **−$1.1M ± $3.4M**, so the plausible range runs from −$7.8M to +$5.6M. The value of the reservation sits entirely in the both-succeed world, where it is **+$38.7M ± $4.1M** and positive on 34 of 37 paths. In every other world it is a cost:
+
+  | Outcome | Chance | Reserve now vs wait | Paths |
+  |---|---|---|---|
+  | Both succeed | 0.27 | +$38.7M ± $4.1M | 37 |
+  | Kestrel only | 0.33 | −$8.8M | 3 |
+  | Tern only | 0.18 | −$36.7M ± $17.7M | 3 |
+  | Both fail | 0.22 | −$9.4M | 3 |
+
+- **What it buys.** If both succeed and we wait, Tern is short at launch on **26 of 37 paths** (0.70, range 0.54–0.83), which is **0.19 overall (0.15–0.22)**. With the reservation it is short on **0 of 37** paths (at most 0.09 given both succeed, at most 0.025 overall).
+- **What it does not buy: an on-time Tern filing.** When both succeed, Tern files late on 14 of 37 paths with the reservation (1–3 months) and on 13 of 37 under wait (2–3 months). Over all four outcomes the chance of a late filing is 0.162 with the reservation and 0.095 without.
+- **Kestrel is never short at launch** under either option (0 of 37 paths).
+- **Decision rule.** The brief's test was Δ − 2·se > 0, and on money it fails (−$7.8M). The honest statement is therefore "neutral in expectation". Reserve if ExCo values a fully supplied Tern launch in the both-succeed world above a premium of roughly zero, with exposure of $9.4M if both fail and $18.6M–$72.1M if only Tern succeeds.
 
 ![Options against waiting](figures/options_vs_wait.svg)
 
+*(The figure still shows last turn's 3-path values and is to be regenerated. The table below supersedes it.)*
+
 ## What each option costs and protects against
 
-Base case: patient-first allocation, a 2-month Kestrel floor, and a second CMO contract signed if both assets succeed. eNPV is in $M. "Short" means demand went unmet in the asset's first six months.
+eNPV is in $M, at 9% WACC through end-2032, at the year-1 value per batch.
 
-| Option | eNPV | vs wait | P(Kestrel short at launch) | P(Kestrel short ever) | P(Tern short at launch) | P(Tern files late) | NPV if both fail |
-|---|---|---|---|---|---|---|---|
-| Wait | 847.0 | — | 0.00 | 0.00 | 0.18 | 0.18 | 0.0 |
-| **Reserve CMO now, both assets** | 847.9 | **+0.9** | 0.00 | 0.00 | **0.00** | 0.09 | −9.4 |
-| Reserve CMO now for Tern, second slot later | 847.2 | +0.3 | 0.00 | 0.09 | 0.00 | 0.09 | −9.4 |
-| Build second line after readouts | 824.0 | −23.0 | 0.00 | 0.00 | 0.18 | 0.18 | 0.0 |
-| Build second line now | 741.1 | −105.8 | 0.00 | 0.00 | 0.18 | 0.18 | −123.9 |
+| Option | vs wait, overall | vs wait, if both succeed | Tern short at launch, if both succeed | Tern files late, if both succeed | Kestrel short at launch |
+|---|---|---|---|---|---|
+| Wait | — | — | 26/37 | 13/37 (2–3 months) | 0/37 |
+| **Reserve now, either asset** | **−1.1 ± 3.4** | **+38.7 ± 4.1** | **0/37** | 14/37 (1–3 months) | 0/37 |
+| Build after readouts | −23.0 (3 paths, turn 6) | −84.3 ± 0.6 (8 paths) | 6/8 | — | 0 |
+| Build now | −105.8 (3 paths, turn 6) | −86.9 ± 3.1 (8 paths) | 6/8 | — | 0 |
 
-How to read the probabilities. Supply trouble only arises when **both** readouts succeed, which happens with probability 0.27. A 0.18 is that 0.27 multiplied by 2 of the 3 both-succeed paths; a 0.09 is 1 of the 3. These are counts on three example paths, not measured frequencies.
+**What a Tern shortfall costs.** When both succeed and we wait, Tern loses demand on **37 of 37 paths**, including paths that do not count as short at launch.
 
-- **Wait.** On 2 of 3 both-succeed paths, Tern's PPQ waits behind Kestrel's stock build on our own line. Tern then files **2 months late** and launches short, losing 6.2 to 11.0 batches of demand. Kestrel is never short.
-- **Reserve now, both assets.** Tern files with the CMO as its site, so its PPQ never competes with Kestrel. Tern is never short and never loses demand. **The one late filing (3 months) has a different cause.** On that path Tern read out early and the CMO was not yet qualified (12–15 months after signing). Reserving removes the "stuck behind Kestrel" delay entirely, but not every delay. If only one asset succeeds, the reservation costs a little against waiting: Kestrel only $1,087.4M vs $1,096.2M; Tern only $420.3M vs $438.9M.
-- **Build now.** Capex is committed whatever the readouts show: the option loses $123.9M if both fail. Worse, the line is not ready in time to help either launch. Tern's shortfall and late filing are the same as under waiting. This confirms the prior that a build is a long-term capacity decision, not launch insurance.
-- **Build after the readouts.** It costs $23.0M against waiting and protects neither launch, for the same reason.
+- **Size:** on average **10.7 batches, worth $50.9M PV**, with a range of 5.9–20.3 batches and $27.8M–95.9M.
+- **Duration:** 5 to 10 months, starting just after Tern's launch (months 35–44 of the model, around late 2029 to mid 2030).
+- **With the reservation:** Tern loses no demand on any of the 37 paths.
 
-## Your turn-5 questions
+**Why the reservation sometimes loses money.** The reservation makes the CMO Tern's filed site. When Tern reads out early and the CMO is not yet qualified (12–15 months after signing), Tern's filing waits, while under wait Tern would have qualified on our own line.
 
-**Is Kestrel ever at risk, even after its first six months?** Yes, in one setup: **the slot reserved for Tern only, and no second CMO contract available.** Kestrel then runs short on all three both-succeed paths, losing 101.6 to 106.9 batches of demand (1016 to 1069 tenths), all after its first six months. Weighted, that is P(Kestrel short ever) = 0.27. Two smaller cases also appear:
+- Both-succeed seed 2 shows it: Tern launches in month 33 instead of month 30, and the path comes to −$14.3M.
+- All 3 negative both-succeed paths are this case (−$14.3M, −$3.7M, −$5.5M).
+- So is the Tern-only path that costs $72.1M.
 
-- Tern-only with a second contract: 0.8 batch on one path, at the hand-over to the second contract.
-- Waiting with no second contract: 3.2 and 1.3 batches on two paths.
+**Kestrel.** Under wait, Kestrel runs slightly short later in its life on 4 of 37 both-succeed paths, losing 0.5 to 3.7 batches, never in its first six months. With the reservation that happens on 0 of 37 paths.
 
-**Odds that Tern files late because its PPQ is stuck behind Kestrel:**
+## Sensitivities
 
-| Option | P(late) | How late |
+On the 37 paired paths:
+
+| Case | Reserve now vs wait, overall | If both succeed |
 |---|---|---|
-| Wait | 0.18 | 2 months |
-| Build now | 0.18 | 2 months |
-| Build after the readouts | 0.18 | 2 months |
-| Either reserve-now option | 0.00 for this cause | — |
+| Value per batch at the peak rate | +$15.0M ± $8.8M (−$2.5M to +$32.5M) | +$117.3M ± $10.5M, negative on 1 of 37 paths |
+| Kestrel PoS 0.50 | −$4.5M ± $4.1M | — |
 
-The reserve-now options still carry 0.09 of a 3-month delay, from the CMO not being ready in time. At your "two months off Tern's launch" rule, that is the price of the option that removes the larger risk.
+Also at the peak rate, the build options remain negative when both succeed: −$88.7M (build now) and −$85.0M (build after) over 8 paths.
 
-**Does "reserve for Tern now, add a second slot later" beat "reserve now for both"?** **No. It ties at best, and it loses badly if the second slot does not materialise.**
+**Still on 3 paths from turn 6, so indicative only and measured against the earlier base:**
 
-- With a second contract available on your terms, the two are the same within noise: +$0.3M vs +$0.9M.
-- Without a second contract, Tern-only is the worst CMO option. It comes to **−$72.5M** against waiting, while reserve-for-both comes to **+$16.3M**. It is also the one setup where Kestrel runs short.
-- The second contract is your estimate, with no term sheet, so **the finding is: reserve for both.** The Tern-only structure only matches it if someone can put the second contract in writing.
-- One check to make before signing: the model assumes the term sheet reserves capacity, not a product, so Kestrel can move in if Tern fails. That was your reading, and it is not confirmed. If the slot turns out to be product-locked, the Tern-only numbers are the ones that apply.
+- No second CMO contract: reserve-for-both +$16.3M, reserve-for-Tern-only −$72.5M. The latter is the one setup where Kestrel runs materially short: about 102–107 batches, all after its first six months.
+- Literal allocation rule: reserve-for-both +$8.8M.
+- A $5M walk-away: about +$1.0M.
+- Even capex phasing: $0.95M worse.
+- The 2-month Kestrel floor: no change.
+
+**Tern-only structure.** "Reserve for Tern now, add a second slot later" ties reserve-for-both when a second contract exists (+$0.3M vs +$0.9M in turn 6, on 3 paths). It is far worse without one. It stays off the recommendation unless the second contract is written.
+
+## Cross-check against the 96-seed wait ensemble
+
+The ensemble (root seed 2609) realized success rates of Kestrel 0.5417 and Tern 0.3542. Our forced-world means for the wait option, reweighted to those rates, compare as follows:
+
+| Measure | Our paths, reweighted | Ensemble | Agrees |
+|---|---|---|---|
+| eNPV | $751.2M | $765.96M ± $61.65M | yes |
+| Chance Tern short at launch | 0.135 | 0.146 ± 0.036 | yes |
+| Chance Kestrel short at some point | 0.021 | 0.021 ± 0.015 | yes |
+| Tern demand lost | 20.6 tenths | 24.0 ± 5.0 tenths | yes |
+| Late Tern filing, average months | 0.145 | 0.042 ± 0.029 | **no, about 3.5 standard errors apart** |
+
+The late-filing mismatch is unexplained. The ensemble's per-seed samples, conditioned on both succeeding, would settle it. Until then, **the late-filing figures are the least reliable in this report.** The ensemble covers only the wait option, so it confirms the level of the wait figures but says nothing about the differences between options.
 
 ## What would change the answer
 
-All figures are against the matching wait option, over the same paths.
+- **The reservation becomes clearly positive** if a batch is worth more than its year-1 rate: +$15.0M overall at the peak rate.
+- **Whether a second contract really exists.** It is what separates reserving for both from reserving for Tern only.
+- **Allowing Tern a backup qualification on our own line.** This would remove the reservation's one self-inflicted risk, the delay when the CMO qualifies late. It has not been modelled yet.
+- **The Tern-only world** rests on 3 paths and supplies most of the ±$3.4M uncertainty.
 
-| If… | Reserve now, both | Reserve for Tern only | Build now | Build after |
-|---|---|---|---|---|
-| Base case | +0.9 | +0.3 | −105.8 | −23.0 |
-| **Value per batch at the peak rate, not year-1** | **+20.4** | +19.3 | −105.9 | −23.2 |
-| **No second CMO contract** | **+16.3** | **−72.5** | not run | not run |
-| No second contract, at peak value | +61.1 | −86.2 | not run | not run |
-| Your literal allocation rule (Kestrel's full buffer before any Tern batch) | +8.8 | +8.6 | not run | not run |
-| Literal rule, at peak value | +41.1 | +40.8 | not run | not run |
-| **Kestrel PoS 0.50 (your own belief)** | **−1.5** | −2.0 | −107.9 | −19.1 |
-| Walk-away after failure costs $5M (as quoted in the room), not $10M | +1.0 on top | +2.5 on top | — | — |
-| Capex spread evenly, not 20/50/30 | — | — | $0.95M worse | — |
-| No 2-month Kestrel floor | no change | not run | not run | not run |
+## Caveats
 
-- **The recommendation strengthens** if a batch is worth more than its year-1 rate, if the second contract is uncertain, or if the allocation really is the literal rule. In each of those cases reserving now is clearly positive.
-- **It weakens to a tie** at Kestrel PoS 0.50 (−$1.5M). Even there, the protection of Tern's launch is unchanged.
-- **Building is negative in every case we tested.**
-- **The 2-month floor made no difference.** It reproduced the base paths exactly: with capacity available, Kestrel's stock never falls near it, and without capacity it cannot be met anyway.
-
-## Caveats (scope, not apology)
-
-- **Few paths.** When both succeed, each option was run on 3 paths (seeds 1–3), with the same seeds, and therefore the same readout slips and lead-time draws, across options. Each single-asset world and the both-fail world rest on **one** path. The spread in the both-succeed world is material: the reserve-now gain ranges from −$14.3M to +$65.2M across the three paths. So the weighted eNPV figures are indicative, and a 1-in-3 count is not a probability estimate.
-- **Horizon truncation.** Everything stops at end-2032, while both assets are still selling and any second line would still be running. So the eNPVs undercount value after 2032. **The build options are understated** by whatever the line earns after 2032. That is a direction, not a reversal: capacity arriving after both launches does not change P(supply-short launch).
-- **Kestrel's 15% share-loss penalty never triggered**, because Kestrel was never short in its first six months. The result does not depend on how that penalty is sized.
-- **Assumptions you gave us without paperwork:** the second contract's terms and timing; reassignment of the reserved slot; marketed volume growth of +5%/yr.
-- **The one completed 96-seed ensemble** (baseline wait option, root seed 2609) was relayed as a file. **It was not read.** Under this session's rules nothing outside the conversation may be consulted. If you want it as a cross-check on the wait figures here, paste its result into the conversation.
+- The horizon ends in 2032, so any value earned after 2032 is not counted. The build options are understated as a result.
+- Kestrel's 15% share-loss penalty never triggered.
+- Three inputs are the user's estimates without paperwork: the second contract, the reassignment of the slot, and +5%/yr marketed growth.
+- The sensitivities other than peak value and Kestrel PoS 0.50 remain on 3 paths.
 
 ## Why a spreadsheet cannot produce this
 
-Priced asset by asset, as in the CFO's frame, a reserved slot for either asset is simply an expected fee against an expected shortfall. That comes out close to zero, and the model agrees on the money. What a per-asset view cannot see is *which* risk the fee removes. The exposure exists only in the 0.27 world where both succeed, and there three timed things collide:
-
-- Tern's three PPQ batches must be done before filing, on whichever site it files with.
-- Kestrel's six-month stock build is running on the same own line in the same months.
-- The only way onto any other site is a PAS, about 6 months after approval.
-
-Change the Tern readout date by a few months and the collision moves. On one path it vanishes under waiting, and instead the CMO's own lead time bites. The value of the slot is a race between readout dates and qualification lead times, decided month by month by the allocation rule.
+The reservation's value exists only in the joint outcome where both succeed. In that outcome it depends on a race between Tern's readout date and two other timelines: the CMO's qualification lead time, and Kestrel's six-month stock build on the same own line. The same fee that protects Tern's supply in one race can delay Tern's filing in another. The net comes from month-by-month allocation under drawn dates, not from any per-asset expected value.
 
 <details>
-<summary>The model: what is in it (click to expand)</summary>
+<summary>The model (click to expand)</summary>
 
-One monthly model, from 1 October 2026 (t = 0) to end-2032 (t = 75). Capacity is counted in tenths of a batch; money is in $M (the cash pool is in $0.001M).
-
-| Element | What it is | Role |
-|---|---|---|
-| Own line | 12.8 effective batches/month, marketed products first (9/month today, +5%/yr) | reusable capacity, held for a month and returned |
-| CMO slot | up to 4 batches/month, ready 12–15 months after signing | appears on the ready date; $5M/yr in advance, 3-year minimum, $0.4M/batch |
-| Second CMO contract | same terms, signed if both assets succeed | Kestrel and Tern reach it by PAS |
-| Second line | 12 batches/month, ready 30–36 months after approval | $120M capex phased 20/50/30, $10M/yr fixed once operating |
-| Readouts | Kestrel 0.60, ~March 2027 + 0–2 months; Tern 0.45, ~Dec 2027 ± 3 months | drawn once at t = 0 |
-| Regulatory clock | readout + 3 → filing, + 12 → approval, + 1 → launch; filed site needs 3 PPQ batches before filing; other sites by PAS (~6 months) | rules on the drawn dates |
-| Planner | each month allocates next month's capacity: Kestrel launch build and demand → Tern PPQ → Tern → Kestrel buffer; each tier own line → line 2 → CMO → second CMO | the contention rule (patient-first; literal rule as sensitivity) |
-
-The model is data: 22 JSON documents written by `gen_models.py`, plus 44 forced-outcome copies in `scenarios/`, with no custom code. Each option differs from waiting in one or two parameters:
-
-```diff
-  model.rdj.json               {}                                          wait
-+ arm_cmo.rdj.json             {"cmo_now": 1.0}                            reserve now, usable by both
-+ arm_cmo_tern_only.rdj.json   {"cmo_now": 1.0, "cmo_reassign": 0.0}       reserve now for Tern
-+ arm_build_now.rdj.json       {"build_now": 1.0}
-+ arm_build_after.rdj.json     {"build_after": 1.0}
-```
-
-</details>
-
-<details>
-<summary>Execution map: the wait option, both succeed, seed 1</summary>
-
-![execution map](figures/exec_map_wait_both_s1.svg)
-
-The model's structure, decorated with run statistics from the wait option when both readouts succeed (seed 1). This is the path on which Tern's PPQ waits behind Kestrel on the own line and Tern files 2 months late.
+The model is unchanged from turn 6. It is monthly, from 1 October 2026 to end-2032, with capacity counted in tenths of a batch. It uses the own line, the reserved CMO slot, a second CMO contract if both succeed, a possible second line, the readout draws, the regulatory clock including PAS, and the patient-first planner. It consists of 22 JSON documents from `gen_models.py` plus forced-outcome copies in `scenarios/`. Each option differs from waiting in one or two parameters (`cmo_now`, `cmo_reassign`, `build_now`, `build_after`).
 
 </details>
 
 ## How the numbers were made
 
-1. **Frame**: `BRIEF.md`, signed off in turn 4, with the turn-5 corrections folded in.
-2. **Author**: `gen_models.py` writes 22 documents. All pass `rdx validate` with no errors.
-3. **Diagnose**: `DOCTOR.md`. Every diagnosed arm is 7 pass · 1 warn · 1 fail or 6 pass · 2 warn · 1 fail. The fail is `transitions_fire`, on transitions that are unused by design. The warns are `horizon_sufficient`, carried into the caveats, and `bounded_pools` on capacity-used tallies. The own line is confirmed as the binding resource.
-4. **Report**: the ensembles were cancelled by the operator after the first took 53 minutes. In their place:
-   - each of 11 option variants was forced into each readout world (both succeed / Kestrel only / Tern only / neither);
-   - the variants were run with single-seed `rdx run` calls: seeds 1–3 when both succeed, seed 1 otherwise, the same seeds for every option, 51 runs in all, every one `ok`;
-   - the seeds were averaged within each world, and the worlds were weighted by 0.27 / 0.33 / 0.18 / 0.22.
-   - eNPV is recomputed from each run's monthly flows with the `rdx enpv` discounting (flow / 1.09^(t/12)) and checked against each run's ledger.
+1. **Frame**: `BRIEF.md`.
+2. **Author**: `gen_models.py`, all documents pass validation.
+3. **Diagnose**: `DOCTOR.md`.
+4. **Report**: 141 single-seed `rdx run` paths in total (90 this turn), every one `ok`. The command, output excerpt and exit code for each are in `capture_log.md`, turns 6–7.
 
-Replay from the repository root:
+The headline numbers come from:
 
 ```bash
-python3 agent/studies/launch_supply/gen_models.py
-agent/studies/launch_supply/run_scenarios.sh arm_cmo both 1 model both 1   # … one triple per path; see capture_log.md turn 6
-python3 agent/studies/launch_supply/analyze.py              # base case
-python3 agent/studies/launch_supply/analyze.py --peak       # peak value per batch
-python3 agent/studies/launch_supply/analyze.py --pk=0.5     # Kestrel PoS 0.50
-(cd agent/studies/launch_supply && python3 paired.py)       # path-by-path deltas
+(cd agent/studies/launch_supply && python3 paired_both.py)            # base case
+(cd agent/studies/launch_supply && python3 paired_both.py --peak)     # peak value per batch
+(cd agent/studies/launch_supply && python3 paired_both.py --pk=0.5)   # Kestrel PoS 0.50
 ```
 
-Each run is determined by (document, seed). Rerun a triple and you get the same path, byte for byte. Every command and its output is in `capture_log.md` (turns 1–6), and the verbatim run outputs are in `runs/`.
-
-## Cheap next steps (say which, if any)
-
-- Put the second contract's terms in writing, or ask the CMO for them. That single fact decides between the two reservation structures.
-- Rerun the single-asset worlds on seeds 2–3 so they rest on more than one path: 12 more runs, about 8 minutes.
-- Test a fallback where Tern's PPQ may run on our own line if the CMO is not qualified in time. That would target the one remaining 3-month late-filing path under reserve-now.
+Each path is determined by (document, seed), and the verbatim outputs are in `runs/`.
