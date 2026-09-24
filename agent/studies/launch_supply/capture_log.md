@@ -661,3 +661,12 @@ arm_cmo exit 1
 ```
 
 Runs this turn, final count: 75 simulation runs plus 3 diagnose runs = 78.
+
+Overall chance of a late Tern filing under the review rule (konly and neither worlds are 0/3 under both options, and tonly is 0/30 under wait):
+
+```
+python3 -c "... from paired_both import load, seeds, W ..."
+review: both late 14 / 37 tonly late 0 / 30 -> overall P(late) 0.102
+wait: both late 13 / 37 overall 0.095
+exit 0
+```
