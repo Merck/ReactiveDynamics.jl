@@ -85,7 +85,8 @@ def base_params():
     return {
         # business uncertainty (drawn at t = 0)
         "p_k": 0.60, "p_t": 0.45,
-        "k_ok": 0.0, "t_ok": 0.0, "k_slip": 0.0, "t_shift": 0.0, "cmo_lead": 12.0, "build_lead": 30.0,
+        "k_ok": 0.0, "t_ok": 0.0, "k_slip": 0.0, "t_shift": 0.0, "cmo_lead": 12.0, "build_lead": 30.0, "cmo2_lead": 12.0,
+        "cmo2_start": 999.0, "cmo2_ready_t": 999.0,
         # state written by rules
         "t_file_t": 999.0, "cmo_start": 999.0, "cmo_resigned": 0.0, "cmo_ready_t": 999.0, "l2_start": 999.0, "l2_ready_t": 999.0,
         "k_share": 1.0,
@@ -97,7 +98,11 @@ def base_params():
         "wait_cmo": 1.0,      # 1 = if either readout succeeds, take the CMO's mid-2028 opening
         "build_now": 0.0,     # 1 = approve the second line at ExCo (t = 2)
         "build_after": 0.0,   # 1 = approve the second line after Tern's readout if both succeed
-        "k_first": 1.0,       # 1 = Kestrel's full six-month buffer before any Tern batch (literal rule)
+        "k_first": 0.0,       # 0 = base (turn 5): Kestrel's launch build + this month's demand + 2-month floor,
+                              #     then Tern, then Kestrel's buffer; 1 = literal rule: Kestrel's full
+                              #     six-month buffer before any Tern batch
+        "k_floor": 2.0,       # months of forward stock Kestrel never drops below (turn 5 guardrail)
+        "second_cmo": 1.0,    # 1 = if both succeed, sign a second CMO contract on the same terms (turn 5)
         "walk2": 1.0,         # 1 = walking away after failure costs two annual fees ($10M), 0 = one ($5M)
         "capex_even": 0.0,    # 1 = spread the $120M evenly over 36 months instead of 20/50/30
     }
@@ -108,7 +113,9 @@ def build(overrides, name):
     places = [
         {"name": "cash", "init": 1.0e12, "cost": 0.001},         # $0.001M units; deep, must never bind
         {"name": "line", "init": LINE_TENTHS},
-        {"name": "cmo"}, {"name": "line2"},
+        {"name": "cmo"}, {"name": "line2"}, {"name": "cmo2"},
+        {"name": "cmo2_active"}, {"name": "cmo2_ready"}, {"name": "k_cmo2_ok"}, {"name": "t_cmo2_ok"},
+        {"name": "k_short_any"},                                   # Kestrel lost demand at any time (turn 5)
         {"name": "mkt_done"},
         {"name": "k_stock"}, {"name": "t_stock"}, {"name": "k_orders"}, {"name": "t_orders"},
         {"name": "k_sold", "reward": 0.0}, {"name": "t_sold", "reward": 0.0},  # reward set below
@@ -121,7 +128,7 @@ def build(overrides, name):
         {"name": "k_short"}, {"name": "t_short"},
         {"name": "k_success"}, {"name": "t_success"},             # mirrors of the draws, for pairing checks
         {"name": "own_used"}, {"name": "cmo_used"}, {"name": "l2_used"},  # tallies of capacity-months used
-        {"name": "own_free"}, {"name": "cmo_free"}, {"name": "l2_free"},  # planner mirrors: unallocated capacity
+        {"name": "own_free"}, {"name": "cmo_free"}, {"name": "l2_free"}, {"name": "cmo2_free"}, {"name": "cmo2_used"},  # planner mirrors: unallocated capacity
     ]
     # reward is a static per-place column: bake the arm's value per tenth-batch in
     for p in places:
@@ -150,27 +157,30 @@ def build(overrides, name):
         plan.append({"verb": "set_params", "assigns": [{"name": name, "value": node}]})
         prm.setdefault(name, 0.0)
         return P(name)
-    free = {"own": let("pl_free_own", mx(0.0, sub(S("line"), MKT_NEXT))), "l2": S("line2"), "cmo": S("cmo")}
+    free = {"own": let("pl_free_own", mx(0.0, sub(S("line"), MKT_NEXT))), "l2": S("line2"), "cmo": S("cmo"), "cmo2": S("cmo2")}
     k_gap = let("pl_k_gap", mx(0.0, ce(sub(mul(60.0, P("k_share"), dK(add(S("k_age"), 6.0))), S("k_stock")))))
     t_gap = let("pl_t_gap", mx(0.0, ce(sub(mul(60.0, dT(add(S("t_age"), 6.0))), S("t_stock")))))
     # Kestrel's need in two tiers. `k_first = 1` (the user's literal rule): Kestrel's whole need,
     # buffer included, before any Tern batch. `k_first = 0`: Kestrel's launch build and this month's
     # demand first, then Tern, then Kestrel's buffer top-up.
+    # Guardrail (both versions): never below `k_floor` months of forward stock. Under the literal
+    # rule the six-month gap already covers it.
     k_dem = ce(mul(10.0, P("k_share"), dK(S("k_age"))))
+    k_floor_gap = let("pl_k_floor", mx(0.0, ce(sub(mul(10.0, P("k_floor"), P("k_share"), dK(add(S("k_age"), P("k_floor")))), S("k_stock")))))
     k_base_need = let("pl_k_base", add(mul(P("k_first"), k_gap), mul(sub(1.0, P("k_first")),
-                      add(mul(sub(1.0, S("k_launched")), k_gap), mul(S("k_launched"), mn(k_gap, k_dem))))))
+                      add(mul(sub(1.0, S("k_launched")), k_gap), mul(S("k_launched"), mn(k_gap, mx(k_dem, k_floor_gap)))))))
     k_buf_need = let("pl_k_buf", mx(0.0, sub(k_gap, k_base_need)))
     ppq_need = let("pl_ppq_need", mul(sub(1.0, P("cmo_now")), P("t_ok"), ind(ge(T1, T_READ)), sub(1.0, S("t_filed")),
                    mx(0.0, sub(30.0, S("t_ppq_done")))))
     t_own_ok = mul(S("t_pre"), sub(1.0, P("cmo_now")))
     ok = {
-        "k": {"own": S("k_pre"), "l2": S("k_l2_ok"), "cmo": S("k_cmo_ok")},
-        "t": {"own": t_own_ok, "l2": S("t_l2_ok"), "cmo": S("t_cmo_ok")},
+        "k": {"own": S("k_pre"), "l2": S("k_l2_ok"), "cmo": S("k_cmo_ok"), "cmo2": S("k_cmo2_ok")},
+        "t": {"own": t_own_ok, "l2": S("t_l2_ok"), "cmo": S("t_cmo_ok"), "cmo2": S("t_cmo2_ok")},
     }
     rates = {}
     def fill(tag, asset, need):
         rem = need
-        for site in ("own", "l2", "cmo"):
+        for site in ("own", "l2", "cmo", "cmo2"):
             use = let(f"r_{tag}_{site}", mul(ok[asset][site], mn(rem, free[site])))
             rates[(tag, site)] = use
             free[site] = let(f"pl_free_{site}", mx(0.0, sub(free[site], use)))
@@ -184,7 +194,7 @@ def build(overrides, name):
     # mirrors of the capacity left unallocated for next month: 0 = the site binds. A batch holds its
     # site for one month and returns it inside that month, so the site itself never reads empty in
     # the end-of-month snapshot; these are what `diagnose --expect-binds` can see.
-    for site in ("own", "l2", "cmo"):
+    for site in ("own", "l2", "cmo", "cmo2"):
         plan.append({"verb": "set_marking", "name": f"{site}_free", "value": free[site], "mode": "set"})
 
     PM = 10000.0
@@ -197,13 +207,13 @@ def build(overrides, name):
     # batch transitions (each firing = one tenth of a batch on a site for one month; 3% rejected)
     for tag in ("k_base", "t_make", "k_buf"):
         asset = tag[0]
-        for site, place, varcost in (("own", "line", 15), ("l2", "line2", 15), ("cmo", "cmo", 40)):  # $0.15M / $0.4M per batch
+        for site, place, varcost in (("own", "line", 15), ("l2", "line2", 15), ("cmo", "cmo", 40), ("cmo2", "cmo2", 40)):  # $0.15M / $0.4M per batch
             tid = f"{tag}_{site}"
             tr(tid, rates[(tag, site)], 1.0, REJECT_POS, PRIO[tag])
             arc(tid, place, "lhs", 1, True)
             arc(tid, "cash", "lhs", varcost)
             arc(tid, f"{asset}_stock", "rhs", 1)
-            arc(tid, {"line": "own_used", "cmo": "cmo_used", "line2": "l2_used"}[place], "rhs", 1)
+            arc(tid, {"line": "own_used", "cmo": "cmo_used", "line2": "l2_used", "cmo2": "cmo2_used"}[place], "rhs", 1)
 
     # Tern PPQ on the own line (only when Tern is NOT filed on the reserved CMO)
     tr("t_ppq_own", ppq_use, 1.0, REJECT_POS, PRIO["t_make"])
@@ -235,6 +245,10 @@ def build(overrides, name):
     # year-2 fee on the reserved slot: paid unless the slot is doomed AND walk-away costs one fee
     tr("cmo_fee_y2", ind(AND(y2_now, OR(NOT(doomed), on(P("walk2"))))))
     arc("cmo_fee_y2", "cash", "lhs", 5000)
+    # second contract, same terms; never terminated (it is only signed when both assets succeed)
+    anniv2 = AND(ge(T, P("cmo2_start")), eq(mul(12.0, fl(div(sub(T, P("cmo2_start")), 12.0))), sub(T, P("cmo2_start"))))
+    tr("cmo2_fee", ind(AND(on(S("cmo2_active")), anniv2)))
+    arc("cmo2_fee", "cash", "lhs", 5000)
 
     # second line: capex 20/50/30 over three years from approval (or even), then $10M/yr fixed
     m = sub(T, P("l2_start"))
@@ -262,6 +276,7 @@ def build(overrides, name):
             setp(t_shift=fl(smp("Uniform", -3.0, 4.0))),      # -3..+3 months
             setp(cmo_lead=fl(smp("Uniform", 12.0, 16.0))),    # 12..15 months
             setp(build_lead=fl(smp("Uniform", 30.0, 37.0))),  # 30..36 months
+            setp(cmo2_lead=fl(smp("Uniform", 12.0, 16.0))),   # second contract, 12..15 months (drawn last: earlier draws unchanged)
             setm("k_success", P("k_ok")), setm("t_success", P("t_ok")),
         ]),
         # Kestrel: own line is the filed site (PPQ Q1 2027)
@@ -317,6 +332,16 @@ def build(overrides, name):
         rule("k_short_launch", AND(gt(S("k_lost"), 0.5), lt(S("k_age"), 6.5)),
              [setm("k_short", 1.0), setp(k_share=0.85)]),
         rule("t_short_launch", AND(gt(S("t_lost"), 0.5), lt(S("t_age"), 6.5)), [setm("t_short", 1.0)]),
+        rule("k_short_ever", gt(S("k_lost"), 0.5), [setm("k_short_any", 1.0)]),
+        # second CMO contract (turn 5): once both readouts are in and both succeeded, sign the next
+        # opening (not before mid-2028, t = 21); both assets reach it by PAS
+        rule("cmo2_sign", AND(on(P("second_cmo")), on(P("k_ok")), on(P("t_ok")), ge(T, mx(T_READ, 20.0))),
+             [setm("cmo2_active", 1.0), setp(cmo2_start=add(T, 1.0))]),
+        rule("cmo2_ready_r", AND(on(S("cmo2_active")), ge(T, add(P("cmo2_start"), P("cmo2_lead")))),
+             [setm("cmo2", CMO_TENTHS), setm("cmo2_ready", 1.0), setp(cmo2_ready_t=T)]),
+        rule("k_cmo2_pas", AND(on(S("cmo2_ready")), ge(T, add(mx(P("cmo2_ready_t"), K_APPROVE), 6.0))), [setm("k_cmo2_ok", 1.0)]),
+        rule("t_cmo2_pas", AND(on(S("cmo2_ready")), on(S("t_filed")), ge(T, add(mx(P("cmo2_ready_t"), T_APPROVE), 6.0))),
+             [setm("t_cmo2_ok", 1.0)]),
     ]
 
     rules.append(rule("planner", ge(T, 0.0), plan, mode="every_tick"))   # LAST: sees this tick's final state
@@ -330,17 +355,30 @@ def build(overrides, name):
         json.dump(doc, f, indent=1)
 
 ARMS = {
+    # the options (base: turn-5 allocation, 2-month floor, second contract if both succeed)
     "model.rdj.json": {},                                                   # wait
-    "arm_cmo.rdj.json": {"cmo_now": 1.0},                                   # reserve now, reassignable
-    "arm_cmo_tern_only.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0},    # reserve now, Tern only
+    "arm_cmo.rdj.json": {"cmo_now": 1.0},                                   # reserve now, usable by both
+    "arm_cmo_tern_only.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0},    # reserve now for Tern
     "arm_build_now.rdj.json": {"build_now": 1.0},
     "arm_build_after.rdj.json": {"build_after": 1.0},
-    # sensitivities of the headline contrast (wait vs reserve now)
-    "arm_cmo_walk5.rdj.json": {"cmo_now": 1.0, "walk2": 0.0},
+    # sensitivities
+    "model_literal.rdj.json": {"k_first": 1.0},
+    "arm_cmo_literal.rdj.json": {"cmo_now": 1.0, "k_first": 1.0},
+    "arm_cmo_tern_only_literal.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0, "k_first": 1.0},
+    "model_no2.rdj.json": {"second_cmo": 0.0},
+    "arm_cmo_no2.rdj.json": {"cmo_now": 1.0, "second_cmo": 0.0},
+    "arm_cmo_tern_only_no2.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0, "second_cmo": 0.0},
     "model_pk50.rdj.json": {"p_k": 0.50},
     "arm_cmo_pk50.rdj.json": {"cmo_now": 1.0, "p_k": 0.50},
+    "arm_cmo_tern_only_pk50.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0, "p_k": 0.50},
     "model_peak.rdj.json": {"k_val": VAL["peak"][0], "t_val": VAL["peak"][1]},
     "arm_cmo_peak.rdj.json": {"cmo_now": 1.0, "k_val": VAL["peak"][0], "t_val": VAL["peak"][1]},
+    "arm_cmo_tern_only_peak.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0, "k_val": VAL["peak"][0], "t_val": VAL["peak"][1]},
+    "model_nofloor.rdj.json": {"k_floor": 0.0},
+    "arm_cmo_nofloor.rdj.json": {"cmo_now": 1.0, "k_floor": 0.0},
+    # cost-only variants: same trajectories, different cash timing
+    "arm_cmo_walk5.rdj.json": {"cmo_now": 1.0, "walk2": 0.0},
+    "arm_cmo_tern_only_walk5.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0, "walk2": 0.0},
     "arm_build_now_even.rdj.json": {"build_now": 1.0, "capex_even": 1.0},
 }
 

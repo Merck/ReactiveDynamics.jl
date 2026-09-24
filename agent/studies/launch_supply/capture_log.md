@@ -141,3 +141,66 @@ model_tonly | 7 pass · 1 warn · 1 fail | reward 741.7, cost 67.64 | nonpass=['
 never fired in any run: []
 exit 1 (each: transitions_fire fails on design-dead transitions; see DOCTOR.md)
 ```
+
+### turn 5
+
+User: base case = patient-first allocation (Kestrel launch build + monthly demand, then Tern, then Kestrel buffer), literal rule as sensitivity; guardrail Kestrel never below ~2 months forward stock in both (drop if complicated, but report whether it matters); allow a second CMO contract on the same terms if both succeed (user's estimate), no-second-contract as sensitivity; flag the setup where Kestrel runs short at any time; report odds Tern files late because its PPQ is stuck behind Kestrel, per option. "Run it."
+
+AUTHOR: `k_first` default 0, new `k_floor` (2), `second_cmo` (1), places `cmo2`, `k_short_any`, draw `cmo2_lead` appended last in the draws rule (earlier draws unchanged). 22 documents.
+
+```
+python3 agent/studies/launch_supply/gen_models.py
+wrote 22 documents; value per tenth-batch: {'year1': (0.923913043478261, 0.6296296296296295), 'peak': (1.8888888888888888, 1.59375)}
+exit 0
+for f in agent/studies/launch_supply/*.rdj.json; do rdx validate $f; done
+all 22: "error_count": 0, exit 0
+```
+
+Forced-state runs (/tmp/lstest copies with p_k/p_t pinned), seed 1:
+
+```
+bash /tmp/lstest/run_all.sh ...   # rdx run <doc> --seed=1 --trace=k_sold,t_sold,k_lost,t_lost,k_age,t_age,k_stock,t_stock,own_used,cmo_used,cmo2_used,l2_used,t_file_delay
+arm_build_after_both         rew  2356.0 cost  272.0 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 142.0 Tlost 62 Tshort 1 Tdelay 2 | cmo 785 cmo2 475 l2 1228 fees 5+5 | Kstock min post-launch 92.0
+arm_build_now_both           rew  2356.0 cost  259.9 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 142.0 Tlost 62 Tshort 1 Tdelay 2 | cmo 193 cmo2 67 l2 2228 fees 5+5 | Kstock min post-launch 91.0
+arm_cmo_both                 rew  2445.4 cost  179.9 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1678 cmo2 924 l2 0 fees 7+5 | Kstock min post-launch 121.0
+arm_cmo_konly                rew  1703.7 cost   98.1 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@None Ty1 None Tlost 0 Tshort 0 Tdelay 0 | cmo 1234 cmo2 0 l2 0 fees 7+0 | Kstock min post-launch 121.0
+arm_cmo_literal_both         rew  2445.4 cost  180.0 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1675 cmo2 929 l2 0 fees 7+5 | Kstock min post-launch 121.0
+arm_cmo_nofloor_both         rew  2445.4 cost  179.9 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1678 cmo2 924 l2 0 fees 7+5 | Kstock min post-launch 121.0
+arm_cmo_tern_only_both       rew  2445.4 cost  179.8 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1368 cmo2 1241 l2 0 fees 7+5 | Kstock min post-launch 46.0
+arm_cmo_tern_only_konly      rew  1703.7 cost   98.4 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@None Ty1 None Tlost 0 Tshort 0 Tdelay 0 | cmo 1237 cmo2 0 l2 0 fees 7+0 | Kstock min post-launch 92.0
+arm_cmo_tern_only_no2_both   rew  1487.3 cost  104.0 K@24 Ky1 230.0 Klost 1037 Kshort6 0 Kany 1 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1370 cmo2 0 l2 0 fees 7+0 | Kstock min post-launch 2.0
+arm_cmo_tern_only_tonly      rew   741.7 cost   91.5 K@None Ky1 None Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1375 cmo2 0 l2 0 fees 7+0 | Kstock min post-launch None
+arm_cmo_tonly                rew   741.7 cost   91.5 K@None Ky1 None Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 1375 cmo2 0 l2 0 fees 7+0 | Kstock min post-launch None
+model_both                   rew  2356.0 cost  164.5 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 142.0 Tlost 62 Tshort 1 Tdelay 2 | cmo 1395 cmo2 1072 l2 0 fees 5+5 | Kstock min post-launch 92.0
+model_konly                  rew  1703.7 cost   88.1 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@None Ty1 None Tlost 0 Tshort 0 Tdelay 0 | cmo 1235 cmo2 0 l2 0 fees 5+0 | Kstock min post-launch 93.0
+model_literal_both           rew  2334.0 cost  163.1 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 107.0 Tlost 97 Tshort 1 Tdelay 2 | cmo 1399 cmo2 1033 l2 0 fees 5+5 | Kstock min post-launch 94.0
+model_no2_both               rew  1881.9 cost   95.5 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 142.0 Tlost 815 Tshort 1 Tdelay 2 | cmo 1408 cmo2 0 l2 0 fees 5+0 | Kstock min post-launch 91.0
+model_nofloor_both           rew  2356.0 cost  164.5 K@24 Ky1 230.0 Klost 0 Kshort6 0 Kany 0 | T@37 Ty1 142.0 Tlost 62 Tshort 1 Tdelay 2 | cmo 1395 cmo2 1072 l2 0 fees 5+5 | Kstock min post-launch 92.0
+model_tonly                  rew   741.7 cost   67.6 K@None Ky1 None Klost 0 Kshort6 0 Kany 0 | T@35 Ty1 204.0 Tlost 0 Tshort 0 Tdelay 0 | cmo 825 cmo2 0 l2 0 fees 5+0 | Kstock min post-launch None
+exit 0 (each)
+```
+
+```
+bash /tmp/lstest/diag_all.sh model arm_cmo arm_cmo_tern_only arm_build_now model_both arm_cmo_tern_only_both arm_cmo_tern_only_no2_both
+arm_build_now | 6 pass · 2 warn · 1 fail | reward 1704.0, cost 212.7 | nonpass=['transitions_fire', 'horizon_sufficient', 'bounded_pools']
+      bounded_pools Unbounded growth in cmo_free: each ends at its maximum, well above its initial level, and is still rising. Check for a missing downstream transition or an intak
+arm_cmo | 7 pass · 1 warn · 1 fail | reward 1704.0, cost 98.07 | nonpass=['transitions_fire', 'horizon_sufficient']
+arm_cmo_tern_only | 7 pass · 1 warn · 1 fail | reward 1704.0, cost 98.39 | nonpass=['transitions_fire', 'horizon_sufficient']
+arm_cmo_tern_only_both | 6 pass · 2 warn · 1 fail | reward 2445.0, cost 179.8 | nonpass=['transitions_fire', 'horizon_sufficient', 'bounded_pools']
+      bounded_pools Unbounded growth in cmo2_used: each ends at its maximum, well above its initial level, and is still rising. Check for a missing downstream transition or an inta
+arm_cmo_tern_only_no2_both | 7 pass · 1 warn · 1 fail | reward 1487.0, cost 104.0 | nonpass=['transitions_fire', 'horizon_sufficient']
+model | 7 pass · 1 warn · 1 fail | reward 1704.0, cost 88.1 | nonpass=['transitions_fire', 'horizon_sufficient']
+model_both | 6 pass · 2 warn · 1 fail | reward 2356.0, cost 164.5 | nonpass=['transitions_fire', 'horizon_sufficient', 'bounded_pools']
+      bounded_pools Unbounded growth in cmo2_used: each ends at its maximum, well above its initial level, and is still rising. Check for a missing downstream transition or an inta
+never fired in any run: ['l2_capex_even', 't_make_l2']
+exit 1 (each; transitions_fire design-dead, see DOCTOR.md)
+```
+
+Cost-only variants, exact PV shift at 9% using the same discounting as `rdx enpv` (flow / 1.09^(t/12)):
+
+```
+python3 -c "d=lambda t:1.09**(-t/12); ... "
+walk-away 5M saving PV at t=14: 4.522
+capex PV phased 20/50/30: 103.64  even: 104.60  diff (even - phased cost): 0.95
+exit 0
+```
