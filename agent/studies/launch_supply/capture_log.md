@@ -384,3 +384,177 @@ julia --project=. agent/scripts/rdx.jl draw agent/studies/launch_supply/scenario
 "ok": true, "layer": "exec_map", "artifact": ".../figures/exec_map_wait_both_s1.svg"
 exit 0
 ```
+
+### turn 7
+
+The user asked three things:
+
+1. Put a range on the probabilities by running more both-succeed paths, plus the 12 single-asset runs offered last turn: "I'd rather wait a day than present two runs out of three."
+2. Say what "Tern short" costs in batches, $M and duration, and explain the −$12.2M path.
+3. Check this framing: "Sign the CMO reservation before 30 November, usable for either product. Expected value is neutral, around break-even. Worst case, if both trials fail, we lose about $9–10M. In return, if both succeed, Tern launches on time and in full instead of short and two months late. Building a second line loses money in every case we ran."
+
+He will have legal confirm reassignment and will ask the CMO for indicative terms on a second slot. He agrees to keep Tern-only off the recommendation unless the second contract is in writing.
+
+Compute relay, not from the user. The 96-seed wait ensemble summary was pasted into the conversation, and relayed compute output is usable, so it is recorded here verbatim:
+
+```
+rdx ensemble agent/studies/launch_supply/model.rdj.json --seeds=96 --root-seed=2609 --per-seed --annual=0.09 --periods-per-year=12 (exit 0, 3171 s)
+| metric | mean | sem | median | q25 | q75 | n |
+| enpv | 765.9561 | 61.6450 | 1072.5145 | 0.0000 | 1135.8647 | 96 |
+| final:k_success | 0.5417 | 0.0511 | 1.0000 | 0.0000 | 1.0000 | 96 |
+| final:t_success | 0.3542 | 0.0491 | 0.0000 | 0.0000 | 1.0000 | 96 |
+| final:k_short | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 96 |
+| final:k_short_any | 0.0208 | 0.0147 | 0.0000 | 0.0000 | 0.0000 | 96 |
+| final:t_short | 0.1458 | 0.0362 | 0.0000 | 0.0000 | 0.0000 | 96 |
+| final:t_file_delay | 0.0417 | 0.0293 | 0.0000 | 0.0000 | 0.0000 | 96 |
+| final:k_lost | 0.1771 | 0.1574 | 0.0000 | 0.0000 | 0.0000 | 96 |
+| final:t_lost | 24.0417 | 4.9599 | 0.0000 | 0.0000 | 0.0000 | 96 |
+```
+
+The compute rule still stands: no ensemble or effect calls, and about 100 single-seed runs this turn. The per-seed samples are available on request.
+
+This turn made 90 runs, all with `run_scenarios.sh` and all `exit 0`, taking about 56 s each:
+
+- wait (`model`) and reserve-now (`arm_cmo`) with both readouts succeeding, seeds 4–37 (68 runs);
+- the same two options in the Kestrel-only, Tern-only and neither worlds, seeds 2–3 (12 runs);
+- `arm_build_now` and `arm_build_after` with both succeeding, seeds 4–8 (10 runs).
+
+```
+./run_scenarios.sh model konly 2 arm_cmo konly 2 model tonly 2 arm_cmo tonly 2 model neither 2 arm_cmo neither 2 model konly 3 arm_cmo konly 3 model tonly 3 arm_cmo tonly 3   -> 10 x exit 0 (9:18.92 total)
+./run_scenarios.sh model neither 3 arm_cmo neither 3 model both 4 arm_cmo both 4 ... model both 7                -> 9 x exit 0
+./run_scenarios.sh arm_cmo both 7 {model,arm_cmo} both 8..11                                                       -> 9 x exit 0
+./run_scenarios.sh {model,arm_cmo} both 12..15 model both 16                                                        -> 9 x exit 0 (see note)
+./run_scenarios.sh arm_cmo both 16 {model,arm_cmo} both 17..20                                                      -> 9 x exit 0 (see note)
+./run_scenarios.sh {model,arm_cmo} both 21..24 model both 25                                                        -> 9 x exit 0
+./run_scenarios.sh arm_cmo both 25 {model,arm_cmo} both 26..29                                                      -> 9 x exit 0
+./run_scenarios.sh {model,arm_cmo} both 30..32 model both 33                                                        -> 7 x exit 0 (4:31.79)
+./run_scenarios.sh arm_cmo both 33 {model,arm_cmo} both 34..36                                                      -> 7 x exit 0 (4:50.13)
+./run_scenarios.sh model both 37 arm_cmo both 37 {arm_build_now,arm_build_after} both 4..6                          -> 8 x exit 0 (5:06.15)
+./run_scenarios.sh {arm_build_now,arm_build_after} both 7..8                                                        -> 4 x exit 0 (2:32.29)
+ls runs | wc -l   -> 141
+```
+
+**Protocol note.** The seed 12–16 and seed 16–20 batches exceeded the 600 s tool timeout. The harness moved them to the background, and the next two batches started while they were still running, so up to three runs overlapped. I did not choose to background anything. Afterwards, batches were cut to 8 or fewer runs. Both background tasks finished with every line `exit 0`, and each wrote different files. A run is determined by (document, seed), so the overlap cannot change any result.
+
+`paired_both.py` computes the paired comparison: the same seed gives the same readout dates, slips and lead times in both options. Its standard errors are across paths.
+
+```
+python3 agent/studies/launch_supply/paired_both.py
+BOTH SUCCEED, wait vs reserve-now, 37 paired paths (s1..s37)
+ seed  d_eNPV |  dK_rev  dT_rev  d_cost | wait: Tlaunch delay Tshort Tlost(batches) TlostPV months_short | cmo: Tlaunch delay Tshort Tlost
+ s1     +51.9 |    +0.0   +65.0   -13.2 | 37 2 1   6.2   29.2 38-42 (5)      | 35 0 0 0.0
+ s2     -14.3 |    +0.0    -3.6   -10.8 | 30 0 0  11.0   51.9 38-44 (7)      | 33 3 0 0.0
+ s3     +65.2 |    +0.0   +79.9   -14.7 | 35 2 1   9.2   43.6 36-42 (7)      | 33 0 0 0.0
+ s4     +47.1 |    +0.0   +61.2   -14.1 | 31 0 1  12.9   61.2 36-43 (8)      | 31 0 0 0.0
+ s5     +57.9 |    +0.0   +71.5   -13.6 | 36 2 1   7.5   35.5 37-42 (6)      | 34 0 0 0.0
+ s6     +27.9 |    +0.0   +40.9   -13.0 | 29 0 0  12.5   59.6 36-42 (7)      | 30 1 0 0.0
+ s7     +51.8 |    +0.0   +65.0   -13.3 | 37 2 1   6.2   29.2 38-42 (5)      | 35 0 0 0.0
+ s8     +42.2 |    +0.0   +56.0   -13.9 | 30 0 1  15.7   74.6 35-44 (10)     | 31 1 0 0.0
+ s9     +20.9 |    +0.0   +33.0   -12.1 | 31 0 1  14.7   69.8 35-44 (10)     | 33 2 0 0.0
+ s10    +91.0 |    +0.0  +107.0   -16.0 | 35 3 1  11.1   52.4 36-43 (8)      | 32 0 0 0.0
+ s11    +51.0 |    +0.0   +63.6   -12.5 | 37 2 1   5.9   27.8 38-42 (5)      | 35 0 0 0.0
+ s12    +27.8 |    +0.0   +40.8   -13.0 | 31 0 0   8.6   40.8 37-41 (5)      | 31 0 0 0.0
+ s13    +85.6 |    +3.4   +97.9   -15.7 | 35 2 1  13.1   61.6 36-44 (9)      | 33 0 0 0.0
+ s14     +9.6 |    +0.0   +21.4   -11.8 | 31 0 0   8.4   39.9 37-41 (5)      | 32 1 0 0.0
+ s15     +4.4 |    +0.0   +16.3   -11.9 | 29 0 0  15.2   72.1 36-43 (8)      | 32 3 0 0.0
+ s16    +51.6 |   +25.0   +40.4   -13.8 | 30 0 1  20.3   95.9 35-44 (10)     | 33 3 0 0.0
+ s17    +68.8 |    +0.0   +83.0   -14.2 | 38 3 1   6.3   29.5 39-43 (5)      | 35 0 0 0.0
+ s18    +28.1 |    +0.0   +40.9   -12.8 | 29 0 0  12.5   59.6 36-41 (6)      | 30 1 0 0.0
+ s19    +50.4 |    +0.0   +63.6   -13.2 | 37 2 1   5.9   27.8 38-42 (5)      | 35 0 0 0.0
+ s20    +14.6 |    +0.0   +26.2   -11.7 | 31 0 0  13.4   63.1 37-44 (8)      | 33 2 0 0.0
+ s21    +50.5 |    +0.0   +64.0   -13.5 | 36 2 1   5.9   28.0 37-41 (5)      | 34 0 0 0.0
+ s22    +35.7 |    +0.0   +48.3   -12.6 | 33 0 1  10.2   48.3 37-42 (6)      | 33 0 0 0.0
+ s23    +72.8 |   +11.5   +76.8   -15.5 | 33 0 1  16.3   76.8 35-44 (10)     | 33 0 0 0.0
+ s24     +7.8 |    +0.0   +20.0   -12.2 | 30 0 0  16.0   75.5 36-44 (9)      | 33 3 0 0.0
+ s25    +30.8 |    +0.0   +44.4   -13.6 | 30 0 0  13.3   63.0 36-43 (8)      | 31 1 0 0.0
+ s26    +40.2 |    +0.0   +52.7   -12.4 | 33 0 1  11.1   52.7 36-42 (7)      | 33 0 0 0.0
+ s27     -3.7 |    +0.0    +6.6   -10.3 | 30 0 1  13.0   62.0 35-44 (9)      | 33 3 0 0.0
+ s28    +51.8 |    +0.0   +64.5   -12.8 | 37 2 1   6.1   28.8 38-42 (5)      | 35 0 0 0.0
+ s29    +48.9 |    +0.0   +61.8   -13.0 | 32 0 1  13.0   61.8 35-42 (8)      | 32 0 0 0.0
+ s30    +57.8 |    +0.0   +71.5   -13.7 | 36 2 1   7.5   35.5 37-42 (6)      | 34 0 0 0.0
+ s31    +41.1 |    +0.0   +53.2   -12.1 | 33 0 1  11.2   53.2 36-42 (7)      | 33 0 0 0.0
+ s32     -5.5 |    +0.0    +4.9   -10.4 | 31 0 0   8.8   41.8 37-44 (6)      | 33 2 0 0.0
+ s33    +27.4 |    +4.0   +36.3   -13.0 | 31 0 0  15.6   73.1 37-44 (8)      | 33 2 0 0.0
+ s34    +26.7 |    +0.0   +38.5   -11.8 | 33 0 1   8.1   38.5 37-41 (5)      | 33 0 0 0.0
+ s35    +26.6 |    +0.0   +38.5   -11.9 | 33 0 1   8.1   38.5 37-41 (5)      | 33 0 0 0.0
+ s36    +65.5 |    +0.0   +79.8   -14.3 | 36 2 1   9.3   43.8 37-43 (7)      | 34 0 0 0.0
+ s37    +24.6 |    +0.0   +35.6   -11.1 | 34 0 1   7.5   35.6 37-41 (5)      | 34 0 0 0.0
+
+ d_eNPV (reserve - wait | both): mean +38.7 se 4.1 n 37; min -14.3 max +91.0; negative on 3 of 37
+ wait     Tern short at launch 26/37 = 0.70 (95% Wilson 0.54-0.83) | files late 13/37 = 0.35 (0.22-0.51), months [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0] | any Tern demand lost 37/37; lost batches mean 10.7 se 0.6; lost value PV mean 50.9 se 2.9 $M | Kestrel short ever 4/37, at launch 0/37
+ reserve  Tern short at launch 0/37 = 0.00 (95% Wilson 0.00-0.09) | files late 14/37 = 0.38 (0.24-0.54), months [1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 3.0] | any Tern demand lost 0/37; lost batches mean 0.0 se 0.0; lost value PV mean 0.0 se 0.0 $M | Kestrel short ever 0/37, at launch 0/37
+
+ reserve-now late filings (seed: months late, Tern launch reserve vs wait): [('s2', 3.0, 33, 30), ('s6', 1.0, 30, 29), ('s8', 1.0, 31, 30), ('s9', 2.0, 33, 31), ('s14', 1.0, 32, 31), ('s15', 3.0, 32, 29), ('s16', 3.0, 33, 30), ('s18', 1.0, 30, 29), ('s20', 2.0, 33, 31), ('s24', 3.0, 33, 30), ('s25', 1.0, 31, 30), ('s27', 3.0, 33, 30), ('s32', 2.0, 33, 31), ('s33', 2.0, 33, 31)]
+
+SINGLE-ASSET AND NEITHER WORLDS, paired, seeds available in both options
+ konly    s1: d_eNPV   -8.9 = dK   +0.0 dT   +0.0 dCost   -8.9 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+ konly    s2: d_eNPV   -8.8 = dK   +0.0 dT   +0.0 dCost   -8.8 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+ konly    s3: d_eNPV   -8.6 = dK   +0.0 dT   +0.0 dCost   -8.6 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+ tonly    s1: d_eNPV  -18.6 = dK   +0.0 dT   +0.0 dCost  -18.6 | Tlaunch wait 35 reserve 35, delay wait 0 reserve 0
+ tonly    s2: d_eNPV  -72.1 = dK   +0.0 dT  -55.4 dCost  -16.7 | Tlaunch wait 30 reserve 33, delay wait 0 reserve 3
+ tonly    s3: d_eNPV  -19.5 = dK   +0.0 dT   +0.0 dCost  -19.5 | Tlaunch wait 33 reserve 33, delay wait 0 reserve 0
+ neither  s1: d_eNPV   -9.4 = dK   +0.0 dT   +0.0 dCost   -9.4 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+ neither  s2: d_eNPV   -9.4 = dK   +0.0 dT   +0.0 dCost   -9.4 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+ neither  s3: d_eNPV   -9.4 = dK   +0.0 dT   +0.0 dCost   -9.4 | Tlaunch wait None reserve None, delay wait 0 reserve 0
+
+WEIGHTED reserve-now vs wait (odds weights {'both': 0.27, 'konly': 0.33, 'tonly': 0.18, 'neither': 0.22} )
+ both +38.7 (se 4.1, n 37) | konly -8.8 (se 0.07, n 3) | tonly -36.7 (se 17.68, n 3) | neither -9.4 (se 0.00, n 3)
+ weighted delta -1.1, se 3.4; delta - 2se -7.8, delta + 2se +5.6
+ P(Tern short at launch) wait = 0.27 x 26/37 = 0.190 (0.27 x Wilson: 0.146-0.223); reserve = 0.27 x 0/37
+ arm_build_now: both-world d vs wait mean -86.9 se 3.1 n 8 range -104.7..-72.8; Tern short 6/8
+ arm_build_after: both-world d vs wait mean -84.3 se 0.6 n 8 range -86.8..-82.3; Tern short 6/8
+
+ wait eNPV | both: mean 1511.0 se 7.6 n 37
+ wait eNPV | konly: mean 1096.1 n 3
+ wait eNPV | tonly: mean 479.6 n 3
+ wait eNPV | neither: mean 0.0 n 3
+
+WEIGHTED P(Tern files late) and mean months late, by world (paths):
+ model    P(late) 0.095  mean months late 0.204  [both 13/37, konly 0/3, tonly 0/3, neither 0/3]
+ arm_cmo  P(late) 0.162  mean months late 0.384  [both 14/37, konly 0/3, tonly 1/3, neither 0/3]
+
+ENSEMBLE CROSS-CHECK (wait): forced-world eNPV at realized rates 751.2 vs ensemble 765.9561 (sem 61.6450); at design odds 856.0
+  t_short: 0.1919 x 0.703 = 0.135 vs ensemble 0.1458 (sem 0.0362)
+  t_file_delay months: 0.1919 x 0.757 = 0.145 vs ensemble 0.0417 (sem 0.0293)
+  k_short_any: 0.1919 x 0.108 = 0.021 vs ensemble 0.0208 (sem 0.0147); t_lost tenths: 0.1919 x 107.5 = 20.6 vs ensemble 24.0417 (sem 4.9599)
+exit 0
+```
+
+Kestrel's lost demand under wait on the four both-succeed paths where it ran short:
+
+```
+python3 -c "... from paired_both import load, seeds ..."
+s13 wait Kestrel lost 0.5 batches; first-6-month short 0.0
+s16 wait Kestrel lost 3.7 batches; first-6-month short 0.0
+s23 wait Kestrel lost 1.7 batches; first-6-month short 0.0
+s33 wait Kestrel lost 0.6 batches; first-6-month short 0.0
+exit 0
+```
+
+The same paired paths, revalued at the peak value per batch and reweighted for Kestrel PoS 0.50. `paired_both.py` now passes its flags through to `analyze`. After the label fix, the P(Tern short) line prints the world weight rather than a hard-coded 0.27; the base-case numbers are unchanged.
+
+```
+python3 agent/studies/launch_supply/paired_both.py --peak   (excerpt)
+ d_eNPV (reserve - wait | both): mean +117.3 se 10.5 n 37; min -19.8 max +255.0; negative on 1 of 37
+ both +117.3 (se 10.5, n 37) | konly -8.8 (se 0.07, n 3) | tonly -65.0 (se 45.98, n 3) | neither -9.4 (se 0.00, n 3)
+ weighted delta +15.0, se 8.8; delta - 2se -2.5, delta + 2se +32.5
+ P(Tern short at launch) wait = 0.270 x 26/37 = 0.190 (0.270 x Wilson: 0.146-0.223); reserve = 0.270 x 0/37
+ arm_build_now: both-world d vs wait mean -88.7 se 7.3 n 8 range -132.2..-55.7; Tern short 6/8
+ arm_build_after: both-world d vs wait mean -85.0 se 0.9 n 8 range -89.1..-81.6; Tern short 6/8
+ model    P(late) 0.095  mean months late 0.204  [both 13/37, konly 0/3, tonly 0/3, neither 0/3]
+ arm_cmo  P(late) 0.162  mean months late 0.384  [both 14/37, konly 0/3, tonly 1/3, neither 0/3]
+exit 0
+```
+
+```
+python3 agent/studies/launch_supply/paired_both.py --pk=0.5   (excerpt)
+ d_eNPV (reserve - wait | both): mean +38.7 se 4.1 n 37; min -14.3 max +91.0; negative on 3 of 37
+ both +38.7 (se 4.1, n 37) | konly -8.8 (se 0.07, n 3) | tonly -36.7 (se 17.68, n 3) | neither -9.4 (se 0.00, n 3)
+ weighted delta -4.5, se 4.1; delta - 2se -12.7, delta + 2se +3.6
+ P(Tern short at launch) wait = 0.225 x 26/37 = 0.158 (0.225 x Wilson: 0.122-0.186); reserve = 0.225 x 0/37
+ arm_build_now: both-world d vs wait mean -86.9 se 3.1 n 8 range -104.7..-72.8; Tern short 6/8
+ arm_build_after: both-world d vs wait mean -84.3 se 0.6 n 8 range -86.8..-82.3; Tern short 6/8
+ model    P(late) 0.079  mean months late 0.170  [both 13/37, konly 0/3, tonly 0/3, neither 0/3]
+ arm_cmo  P(late) 0.160  mean months late 0.395  [both 14/37, konly 0/3, tonly 1/3, neither 0/3]
+exit 0
+```
