@@ -120,10 +120,10 @@ end
 # evaluating the layer needs and exactly what a reader evaluating the OFFER does not. Same four steps,
 # same refusal branch, stated in the language of the decision instead of the language of the tool.
 const PROMISE = [
-    ("Describe the decision", "A conversation, not a specification: the choice, what is scarce, how long the work takes."),
-    ("We build your operation", "A running model of the queue you actually have — capacity, cycle times, failure rates, cash."),
-    ("We try to break it", "Nine checks ask whether the thing you called scarce is what really binds. A failure blocks the answer."),
-    ("A number you can defend", "A central estimate, a spread, a conservative floor — and a seed that reproduces all three exactly."),
+    ("Describe the decision", "A conversation, not a specification: the choice, what drives it, how the parts interact over time."),
+    ("We build your operation", "A running model of how it behaves — shared capacity, delays, feedback, decisions taken mid-course, cash."),
+    ("We try to break it", "Nine checks ask whether the model does what you said the business does. A failure blocks the answer."),
+    ("A number you can defend", "A central estimate with the evidence behind it — and a seed that reproduces it exactly."),
 ]
 
 function promise_svg()
@@ -164,13 +164,13 @@ function promise_svg()
     push!(parts, CK.rect(bx, ybr, bw, 44; fill = "#FDF3F4", stroke = CK.ROSE, sw = 1.0))
     push!(
         parts, CK.txt(
-            bx + 14, ybr + 19, "If nothing in your process is actually scarce, we say so and stop.";
+            bx + 14, ybr + 19, "If the model does not behave like your business, you get the diagnosis, not a number.";
             size = 10.2, weight = 600
         )
     )
     push!(
         parts, CK.txt(
-            bx + 14, ybr + 34, "A spreadsheet is the right tool for some questions. This is not one of them.";
+            bx + 14, ybr + 34, "A spreadsheet is the right tool for some questions, and we say so when it is.";
             size = 9.2, fill = CK.GREY
         )
     )
@@ -317,7 +317,7 @@ function architecture_svg()
     push!(parts, CK.txt(PAD + 16, y + 17, "You — an analyst, a strategy lead, a VP"; size = 11.2, weight = 600))
     push!(
         parts, CK.txt(
-            PAD + 16, y + 31, "in plain business language: the decision, what is scarce, how long things take";
+            PAD + 16, y + 31, "in plain business language: the decision, what drives it, how things interact over time";
             size = 8.9, fill = CK.GREY
         )
     )

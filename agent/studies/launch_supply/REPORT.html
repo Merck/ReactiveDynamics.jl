@@ -1,0 +1,1613 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fill-finish capacity for Kestrel and Tern: what to take to ExCo</title>
+<style>:root {
+  --ink: #0A0A0A; --paper: #FFFFFF; --inset: #F4F4F2; --hero: #FAF8F3; --accent: #0A8A84;
+  --accent-d: #076A65; --accent-lt: #3FB5AF; --amber: #B5740A; --rose: #E5243B;
+  --grey: #6A6A68; --grey-lt: #9A9A98; --hair: #C7C7C4;
+  --display: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --mono: "JetBrains Mono", "JuliaMono", "SF Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--inset); color: var(--ink);
+  font: 16px/1.62 var(--display); -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 50rem; margin: 0 auto; padding: 0 1.25rem 5rem; }
+
+/* ── masthead ── */
+header.mast { background: var(--ink); color: #F4F4F2; padding: 3rem 0 2.5rem; margin-bottom: 2.5rem; }
+header.mast .wrap { padding-bottom: 0; }
+.brand { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-lt); margin: 0 0 1.25rem; }
+.brand b { font-weight: 600; color: #F4F4F2; }
+h1 { font-size: 2.1rem; line-height: 1.18; letter-spacing: -.02em; margin: 0 0 .6rem; font-weight: 650; }
+.sub { color: #9A9A98; margin: 0; font-size: 1.02rem; }
+.headline {
+  margin: 2rem 0 0; padding: 1.15rem 1.35rem; background: #161616;
+  border-left: 3px solid var(--accent-lt); border-radius: 2px;
+}
+.headline .big { font-size: 1.7rem; font-weight: 650; letter-spacing: -.01em; color: #fff; }
+.headline .note { display: block; margin-top: .4rem; color: #9A9A98; font-size: .93rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .4rem 1.75rem; margin: 1.5rem 0 0; font-size: .82rem; color: #9A9A98; }
+.meta b { color: #C7C7C4; font-weight: 500; }
+.meta code { font-family: var(--mono); font-size: .93em; color: var(--accent-lt); }
+
+/* ── hero: the skim card ── */
+.hero {
+  background: var(--hero); border: 1px solid var(--hair); border-top: 3px solid var(--ink);
+  border-radius: 2px; padding: 2.1rem 1.9rem 1.9rem; margin: 0 0 .5rem;
+}
+.hero-text { margin-top: 1.5rem; font-size: 1.04rem; }
+.hero-text p, .hero-text ul, .hero-text ol { max-width: 38rem; }
+.hero .figs { margin-top: 1.6rem; }
+
+/* ── stat cards ── */
+.stats { display: flex; flex-wrap: wrap; gap: .75rem; }
+.stat {
+  flex: 1 1 8.5rem; min-width: 8rem; background: var(--paper); border: 1px solid var(--hair);
+  border-top: 2px solid var(--accent); border-radius: 2px; padding: .9rem 1rem 1rem;
+}
+.stat .label { font-size: .67rem; letter-spacing: .13em; text-transform: uppercase; color: var(--grey); }
+.stat .value { font-size: 2.45rem; font-weight: 650; letter-spacing: -.035em; line-height: 1.08; margin-top: .15rem; }
+.stat .note { font-size: .78rem; line-height: 1.45; color: var(--grey); margin-top: .45rem; }
+.bubble .stats, .appx .stats { margin-bottom: 1.15rem; }
+
+/* ── phase bands ── */
+.phase { display: flex; align-items: center; gap: .85rem; margin: 2.75rem 0 1.5rem; }
+.phase::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.phase span {
+  font-size: .72rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 650;
+  color: var(--accent-d); background: var(--paper); border: 1px solid var(--hair);
+  padding: .3rem .6rem; border-radius: 2px; white-space: nowrap;
+}
+
+/* ── turns ── */
+.turn { margin: 0 0 1.5rem; }
+.who { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--grey); margin-bottom: .45rem; }
+.bubble { padding: 1.1rem 1.3rem; border-radius: 3px; background: var(--paper); border: 1px solid var(--hair); }
+.turn.user { max-width: 85%; margin-left: auto; }
+.turn.user .who { text-align: right; color: var(--accent-d); }
+.turn.user .bubble { background: #E8F3F2; border-color: #BFDEDB; }
+.turn.assistant .bubble { border-left: 3px solid var(--accent); }
+.turn.note .bubble { background: transparent; border: 1px dashed var(--hair); color: var(--grey); font-size: .91rem; }
+
+/* An elision, drawn as a seam across the column rather than a bubble: it is not part of the dialogue,
+   it is the place where the dialogue was cut. */
+.gap { display: flex; align-items: baseline; gap: .8rem; margin: 1.4rem 0 1.9rem; color: var(--grey-lt); }
+.gap::before, .gap::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.gap b { font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.gap i { font-style: normal; font-size: .8rem; color: var(--grey); max-width: 60%; }
+
+/* ── prose: shared by turn bubbles, the hero blurb and appendix entries ── */
+.prose p { margin: 0 0 .85rem; } .prose p:last-child { margin-bottom: 0; }
+.prose ul, .prose ol { margin: 0 0 .85rem; padding-left: 1.2rem; } .prose li { margin-bottom: .3rem; }
+.prose code { font-family: var(--mono); font-size: .88em; background: var(--inset); padding: .1em .32em; border-radius: 2px; }
+.prose a { color: var(--accent-d); text-decoration: underline; text-underline-offset: .15em; }
+.prose table { width: 100%; border-collapse: collapse; margin: .35rem 0 1rem; font-size: .9rem; }
+.prose th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--ink); padding: .4rem .6rem .35rem 0; }
+.prose td { border-bottom: 1px solid var(--hair); padding: .4rem .6rem .4rem 0; vertical-align: top; }
+pre.block {
+  font-family: var(--mono); font-size: .82rem; line-height: 1.55; background: var(--inset);
+  border: 1px solid var(--hair); border-radius: 2px; padding: .8rem .9rem; overflow-x: auto; margin: 0 0 .9rem;
+}
+.prose blockquote {
+  margin: 1rem 0; padding: .7rem 1rem .7rem 1.1rem; background: var(--inset);
+  border-left: 3px solid var(--accent); font-size: 1.02rem; line-height: 1.55;
+}
+.prose .head2 {
+  font-size: 1.12rem; font-weight: 650; letter-spacing: -.01em; margin: 1.7rem 0 .6rem;
+  padding-bottom: .3rem; border-bottom: 1px solid var(--hair);
+}
+.prose .head3 { font-size: .95rem; font-weight: 650; letter-spacing: .015em; color: var(--accent-d); margin: 1.35rem 0 .45rem; }
+.prose > .head2:first-child, .prose > .head3:first-child { margin-top: 0; }
+
+/* ── collapsibles authored in the text (`+++`), as opposed to the tool blocks ── */
+details.fold { margin: 1.1rem 0; border: 1px solid var(--hair); border-radius: 2px; background: var(--paper); }
+details.fold > summary {
+  cursor: pointer; list-style: none; padding: .55rem .85rem; font-size: .86rem; font-weight: 600;
+  color: var(--accent-d); background: var(--inset); border-bottom: 1px solid transparent;
+}
+details.fold[open] > summary { border-bottom-color: var(--hair); }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸ "; color: var(--grey-lt); font-weight: 400; }
+details.fold[open] > summary::before { content: "▾ "; }
+.fold-body { padding: .95rem 1rem 1rem; }
+
+/* ── appendix: a deliverable, so a heavier band and a full sheet under it ── */
+.phase.band { margin: 3.5rem 0 1.4rem; }
+.phase.band::after { height: 2px; background: var(--ink); }
+.phase.band span {
+  font-size: .78rem; letter-spacing: .11em; padding: .4rem .8rem;
+  color: #F4F4F2; background: var(--ink); border-color: var(--ink);
+}
+.appx {
+  background: var(--paper); border: 1px solid var(--hair); border-radius: 2px;
+  padding: 1.7rem 1.9rem; line-height: 1.72;
+}
+.appx p, .appx ul, .appx ol, .appx blockquote, .appx .head2, .appx .head3 { max-width: 40rem; }
+.appx > p:first-of-type { font-size: 1.05rem; }
+
+/* ── tool blocks ── */
+details.tools { margin: .9rem 0 0; border-top: 1px dashed var(--hair); padding-top: .75rem; }
+details.tools summary {
+  cursor: pointer; font-size: .78rem; color: var(--grey); letter-spacing: .02em; list-style: none;
+}
+details.tools summary::-webkit-details-marker { display: none; }
+details.tools summary::before { content: "▸ "; color: var(--grey-lt); }
+details.tools[open] summary::before { content: "▾ "; }
+.tk {
+  font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--accent-d); border: 1px solid #BFDEDB; background: #E8F3F2;
+  padding: .08rem .35rem; border-radius: 2px; margin-right: .4rem;
+}
+/* terminal text is line-oriented: a captured command or its output keeps its own line breaks, or a
+   column-aligned table of results reflows into one paragraph and stops being readable as evidence */
+.cmd { font-family: var(--mono); font-size: .79rem; line-height: 1.6; margin-top: .6rem; white-space: pre-wrap; overflow-wrap: break-word; }
+.cmd .p { color: var(--accent); font-weight: 600; margin-right: .35rem; }
+.res { font-family: var(--mono); font-size: .79rem; color: var(--grey); padding-left: 1rem; white-space: pre-wrap; overflow-wrap: break-word; }
+.exit { font-size: .68rem; letter-spacing: .04em; padding: .04rem .32rem; border-radius: 2px; margin-left: .45rem; white-space: nowrap; }
+.exit.x0 { color: var(--accent-d); background: #E8F3F2; border: 1px solid #BFDEDB; }
+.exit.x1 { color: var(--amber); background: #FBF5EA; border: 1px solid #E4D2B0; }
+.exit.x2 { color: var(--rose); background: #FDF3F4; border: 1px solid #F3C2C8; }
+pre.block.json { font-size: .74rem; max-height: 22rem; margin: .45rem 0 .2rem 1rem; }
+details.model { margin: 1rem 0 .2rem; border: 1px solid var(--accent); border-radius: 2px; background: #F7FBFB; }
+details.model > summary {
+  cursor: pointer; list-style: none; padding: .55rem .85rem; font-size: .86rem; font-weight: 600; color: var(--ink);
+}
+details.model > summary::-webkit-details-marker { display: none; }
+details.model > summary::before { content: "▸ "; color: var(--accent); font-weight: 400; }
+details.model[open] > summary::before { content: "▾ "; }
+details.model .mc { font-family: var(--mono); font-size: .74rem; font-weight: 400; color: var(--grey); margin-left: .5rem; }
+.model-body { padding: .2rem .9rem .9rem; background: var(--paper); border-top: 1px solid #BFDEDB; }
+.mlabel { font-size: .78rem; color: var(--grey); margin: .7rem 0 .35rem; }
+pre.block.model-src { max-height: 28rem; font-size: .72rem; }
+pre.block.diff { font-size: .74rem; max-height: 28rem; }
+pre.block.diff ins { text-decoration: none; color: var(--accent-d); background: #E8F3F2; }
+pre.block.diff del { text-decoration: none; color: var(--rose); background: #FDF3F4; }
+.files { margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.files span {
+  font-family: var(--mono); font-size: .72rem; color: var(--amber);
+  border: 1px solid #E4D2B0; background: #FBF5EA; padding: .12rem .4rem; border-radius: 2px;
+}
+
+/* ── figures ── */
+.figs { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1rem 0 .3rem; }
+.figs > * { flex: 1 1 17rem; min-width: 0; }
+figure.fig { margin: 0; padding: .9rem; background: var(--paper); border: 1px solid var(--hair); border-radius: 2px; overflow-x: auto; }
+figure.fig svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+figure.fig figcaption { margin-top: .6rem; font-size: .78rem; line-height: 1.5; color: var(--grey); }
+.missing { font-family: var(--mono); font-size: .78rem; color: var(--rose); padding: .6rem; border: 1px dashed var(--rose); border-radius: 2px; }
+
+@media (max-width: 34rem) {
+  .stat, .figs > * { flex-basis: 100%; }
+  .hero, .appx { padding-left: 1.15rem; padding-right: 1.15rem; }
+}
+
+footer.foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hair); font-size: .82rem; color: var(--grey); }
+footer.foot code { font-family: var(--mono); font-size: .93em; }
+
+@media print {
+  /* On paper the measure is the page, not 50rem: a 50rem wrap is wider than Letter's printable width,
+     so any full-width box (the hero, a stat row, a sheet) used to run off the right edge. Hand the
+     margin to `@page` and let the wrap fill what is left — which also gets four stat cards back onto
+     one row, since they no longer have to wrap inside a box that is itself overflowing. */
+  @page { margin: 14mm 12mm; }
+  .wrap { max-width: none; padding: 0; }
+  /* A fence scrolls sideways on screen; on paper there is nowhere to scroll, so an overlong line would
+     be silently cut — the one failure mode a page arguing for auditability cannot have. Wrap instead.
+     `.cmd`/`.res` already wrap, which is why captured output only ever soft-wraps. */
+  pre.block { white-space: pre-wrap; overflow-wrap: break-word; }
+  body { background: #fff; } header.mast { background: #fff; color: #000; border-bottom: 2px solid #000; }
+  h1, .headline .big { color: #000; } .headline { background: var(--inset); }
+  .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }
+  /* force every collapsible open on paper: the `display` pair covers engines that hide the children
+     themselves, `::details-content` the ones (Chrome 131+) that hide the slot instead. */
+  details.tools, details.fold, details.model { display: block; }
+  details.tools > *:not(summary), details.fold > *:not(summary), details.model > *:not(summary) { display: block !important; }
+  /* …except a model's full source: on paper it would be pages of JSON nobody reads there. The drawing
+     and an arm's diff stay, and the summary line says where the document lives. */
+  pre.block.model-src, pre.block.json { max-height: none; } pre.block.model-src { display: none; }
+  details.tools::details-content, details.fold::details-content, details.model::details-content {
+    content-visibility: visible !important; block-size: auto !important;
+  }
+  /* Keep the short things whole. An assistant turn with its commands expanded is routinely taller than
+     a sheet, and `break-inside: avoid` on that just pushes it to the next page and leaves this one
+     half blank — so let it flow across the break instead. */
+  .turn.user, .turn.note, .stats, figure.fig { break-inside: avoid; }
+  .hero { background: #fff; border-top-color: #000; }
+  .stat { border-top-color: #000; }
+  .figs { display: block; } .figs > * + * { margin-top: .8rem; }
+  .phase.band { break-before: page; } .phase.band span { color: #fff; background: #000; }
+  .appx { border: none; padding: 0; }
+}
+</style>
+<style>@media print { .phase.band { break-before: auto; } }</style>
+<style>.execmap { max-height: 78vh; overflow: auto; border: 1px solid #C7C7C4; background: #fff; padding: 8px; }
+.execmap figure.fig { border: 0; padding: 0; }
+@media print {
+  .screen-only { display: none !important; }
+  .execmap { max-height: none; overflow: visible; border: 0; padding: 0; break-inside: avoid; }
+  .execmap figure.fig svg { width: auto !important; max-width: 100%; height: 8.6in !important; }
+}
+</style></head><body>
+<header class="mast"><div class="wrap">
+<p class="brand"><b>ReactiveDynamics.jl</b> &nbsp;·&nbsp; study report · generated</p>
+<h1>Fill-finish capacity for Kestrel and Tern: what to take to ExCo</h1>
+<p class="sub">A ReactiveDynamics.jl study, generated from <code>agent/studies/launch_supply</code> and laid out to the six-part report template.</p>
+<div class="headline"><span class="big">Reserve the CMO slot now, usable by either asset, and review at Kestrel's readout: +$3.8M ± $1.1M vs waiting, with a bounded cost in every outcome except both-succeed</span>
+</div>
+<div class="meta">
+<div><b>study</b> <code>agent/studies/launch_supply</code></div>
+<div><b>recommended option</b> <code>arm_cmo_exit.rdj.json</code></div>
+<div><b>generated</b> 2026-09-25 at commit <code>c319de4</code></div>
+</div>
+</div></header>
+<main class="wrap">
+
+<div class="phase band"><span>About this report</span></div>
+<section class="appx prose">
+
+<p>This report is generated from the study directory <code>agent/studies/launch_supply</code> and is laid out to the six-part report template every study follows. It is safe to forward: every figure is embedded, nothing links back into the repository, and nothing in it was written by hand after the study closed. The prose is the study's own briefing, the model section is computed from the model document that produced the numbers, and the provenance section names the commit and the runs.</p>
+<table>
+<tr><th>Slot</th><th>Status</th><th>Source</th></tr>
+<tr><td>1 · Headline: number and verdict</td><td>present</td><td>FINDINGS.md, first section</td></tr>
+<tr><td>2 · Decision rule, caveats as scope</td><td>present</td><td>FINDINGS.md, 5 section(s)</td></tr>
+<tr><td>3 · Why a spreadsheet cannot produce this</td><td>present</td><td>FINDINGS.md</td></tr>
+<tr><td>4 · The model: elements, units, the arm diff</td><td>present</td><td>generated from <code>arm_cmo_exit.rdj.json</code> and BRIEF.md's slot table</td></tr>
+<tr><td>5 · Hero visual: the execution map</td><td>present</td><td><code>agent/studies/launch_supply/figures/exec_map_reserve_review_both_s1.svg</code></td></tr>
+<tr><td>6 · How we got it, and provenance</td><td>present</td><td>FINDINGS.md, plus generated from the repository and <code>runs/</code></td></tr>
+</table>
+<blockquote>The REPORT artifact (phase 4 of 4), final revision (turn 9). The recommendation comes first, then the numbers, then how they were computed. <strong>Read this before any number below.</strong> Each figure comes from single simulated paths, one per seed, with the readout outcomes forced. Paired paths per outcome: both succeed 37 (seeds 1–37); Tern only 30 (seeds 1–30, for the recommended rule); Kestrel only and both fail 3 each; the two build options 8 in the both-succeed outcome. The same seed gives every option the same readout dates, slips and lead times. The four outcomes are combined using the stated odds (Kestrel 0.60, Tern 0.45, independent: 0.27 / 0.33 / 0.18 / 0.22). The ± figures are standard errors across paths, and the probability ranges are 95% Wilson intervals on the path counts. The relayed 96-seed ensemble of the wait option serves as an independent check.</blockquote>
+
+
+
+</section>
+<div class="phase band"><span>1 · The answer and the decision rule</span></div>
+<section class="appx prose">
+
+<p><strong>Recommendation: sign the reservation before 30 November 2026, usable for either asset. At Kestrel's readout (March 2027), if Kestrel has failed, move Tern's PPQ in-house, file Tern on our own line, give the CMO notice and pay the forfeit. If Kestrel has succeeded, keep the reservation. Do not build a second line. Do not use the Tern-only structure unless the second CMO contract is in writing.</strong></p>
+<p><strong>The wording the user will take to ExCo:</strong></p>
+<blockquote>We recommend reserving the CMO fill-finish slot now, before 30 November 2026, usable by either Kestrel or Tern, and reviewing it at Kestrel's readout in March 2027. If Kestrel fails, Tern's validation batches move to our own line, Tern files there, and we give the CMO notice and pay the forfeit. If Kestrel succeeds, the reservation stands. Modelled over paired simulated paths, this is worth about +$3.8M (±$1.1M) against waiting at the stated odds, and about +$25M if a batch earns its peak-year value. At a 50% chance of Kestrel succeeding it is roughly break-even, around +$1.6M. Its purpose is supply protection. If both products succeed (27% chance at the stated odds), it is worth about +$39M and prevents a Tern launch shortfall that otherwise occurs on 26 of 37 paths, costing on average about 11 batches and $51M. If either product fails, the cost is a bounded $9–11M. We do not recommend building a second line. Even when both products succeed, it is $73–105M worse than waiting if built now and $82–87M worse if built after the readouts (8 paths each). We do not recommend a Tern-only reservation unless the second CMO contract is in writing. The one remaining risk is the CMO qualifying late: if both succeed, Tern's filing can be delayed, and 3 of 37 paths lose money, the worst about $14M.</blockquote>
+<ul>
+<li><strong>Money is positive and passes the brief's test.</strong> Against waiting: <strong>+$3.8M ± $1.1M</strong>, plausible range +$1.6M to +$6.0M, so Δ − 2·se &gt; 0. The value sits in the both-succeed world. Every other world is a near-fixed cost, measured at $8.8M–9.7M. The ExCo wording says $9–11M, a conservative bound; see Caveats.</li>
+</ul>
+<table>
+<tr><th>Outcome</th><th>Chance</th><th>Reserve now + review vs wait</th><th>Paths</th></tr>
+<tr><td>Both succeed</td><td>0.27</td><td>+$38.7M ± $4.1M</td><td>37</td></tr>
+<tr><td>Kestrel only</td><td>0.33</td><td>−$8.8M ± $0.07M</td><td>3</td></tr>
+<tr><td>Tern only</td><td>0.18</td><td>−$9.4M ± $0.02M (range −$9.7M to −$9.3M)</td><td>30</td></tr>
+<tr><td>Both fail</td><td>0.22</td><td>−$9.4M ± $0.00M</td><td>3</td></tr>
+</table>
+<ul>
+<li><strong>The review rule removes the Tern-only tail.</strong></li>
+<li>Without the rule, reserving lost $31.7M ± $6.0M in the Tern-only world over 10 paths. Four of the 10 fell below −$20M, the worst lost $72.1M, and 4 of 10 filed late.</li>
+<li>With the rule, the loss is all fee and forfeit. Tern's revenue matches waiting on all 30 paths, 0 of 30 file late, and 0 of 30 lose demand.</li>
+<li>The rule never fires when Kestrel succeeds. Checked: it gives the same result as plain reserve-now in the both-succeed and Kestrel-only worlds.</li>
+<li><strong>What it buys.</strong> If both succeed and we wait, Tern is short at launch on <strong>26 of 37 paths</strong>, which is <strong>0.19 overall (0.15–0.22)</strong>. With the reservation it is short on <strong>0 of 37</strong>.</li>
+<li><strong>What it does not buy: an on-time Tern filing.</strong> When both succeed, Tern files late on 14 of 37 paths with the reservation (1–3 months) and on 13 of 37 under wait (2–3 months). Overall, the chance of a late Tern filing is 0.102 with reservation and review, and 0.095 without.</li>
+<li><strong>Kestrel is never short at launch</strong> under either option (0 of 37 paths).</li>
+<li><strong>The remaining downside is a late CMO qualification.</strong> 3 of 37 both-succeed paths lose money (−$14.3M, −$3.7M, −$5.5M). In each, Tern reads out before the CMO has qualified, and the CMO is Tern's only filed site.</li>
+<li><strong>Two confirmations the user holds.</strong> Legal confirms that the slot can be reassigned; regulatory confirms that Tern can be filed on our line if Kestrel fails. Both are assumed by the model. If either reverses, the recommendation must be re-run.</li>
+</ul>
+<div class="figs"><figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 437" width="100%" height="437" preserveAspectRatio="xMidYMid meet" role="img"><title>Reserve the CMO now, review at Kestrel's readout: eNPV against waiting — Paired single paths (same seed, same dates in both options), whiskers ±1 se (dark) and ±2 se (grey) across paths. Top two bars: odds-weighted overall. Others: given the outcome. Kestrel 60%, Tern 45%, 9% WACC, year-1 value per batch.</title><text x="18" y="21" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="14.5" fill="#0A0A0A" font-weight="600">Reserve the CMO now, review at Kestrel's readout: eNPV against waiting</text><text x="18" y="38" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="11.5" fill="#6A6A68">Paired single paths (same seed, same dates in both options), whiskers ±1 se (dark) and ±2 se (grey) across paths.</text><text x="18" y="53" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="11.5" fill="#6A6A68">Top two bars: odds-weighted overall. Others: given the outcome. Kestrel 60%, Tern 45%, 9% WACC, year-1 value per</text><text x="18" y="68" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="11.5" fill="#6A6A68">batch.</text><text x="283.84" y="104.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Overall: reserve + review (recommended)</text><text x="283.84" y="116" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">Δ−2se +1.6; 37/3/30/3 paths</text><rect x="293.84" y="120" width="361.12" height="32" fill="#F4F4F2"/><text x="283.84" y="136.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#6A6A68" text-anchor="end">Overall: reserve, no review</text><text x="283.84" y="148" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">Tern-only on 10 paths</text><text x="283.84" y="168.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Both succeed (27%)</text><text x="283.84" y="180" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">37 paths; Tern short 0/37 (wait 26/37)</text><rect x="293.84" y="184" width="361.12" height="32" fill="#F4F4F2"/><text x="283.84" y="200.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Kestrel only (33%)</text><text x="283.84" y="212" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">3 paths; rule does not fire</text><text x="283.84" y="232.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Tern only (18%), with review</text><text x="283.84" y="244" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">30 paths; range −9.7 to −9.3</text><rect x="293.84" y="248" width="361.12" height="32" fill="#F4F4F2"/><text x="283.84" y="264.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Tern only (18%), without review</text><text x="283.84" y="276" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">10 paths; worst −72.1</text><text x="283.84" y="296.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Both fail (22%)</text><text x="283.84" y="308" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">3 paths</text><rect x="293.84" y="312" width="361.12" height="32" fill="#F4F4F2"/><text x="283.84" y="328.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Build now, if both succeed</text><text x="283.84" y="340" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">8 paths; range −104.7 to −72.8</text><text x="283.84" y="360.5" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="12.3" fill="#0A0A0A" text-anchor="end">Build after readouts, if both succeed</text><text x="283.84" y="372" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.6" fill="#9A9A98" text-anchor="end">8 paths; range −86.8 to −82.3</text><line x1="527.71" y1="88" x2="527.71" y2="376" stroke="#0A0A0A" stroke-width="1"/><path d="M 527.71 95 H 532.49 Q 536.49 95 536.49 99 V 109 Q 536.49 113 532.49 113 H 527.71 Z" fill="#0A8A84"/><line x1="531.42" y1="104" x2="541.55" y2="104" stroke="#6A6A68" stroke-width="0.9"/><line x1="531.42" y1="101.5" x2="531.42" y2="106.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="541.55" y1="101.5" x2="541.55" y2="106.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="533.95" y1="104" x2="539.02" y2="104" stroke="#0A0A0A" stroke-width="1.6"/><line x1="533.95" y1="100.5" x2="533.95" y2="107.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="539.02" y1="100.5" x2="539.02" y2="107.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="550.55" y="108" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">+$3.8M</text><path d="M 527.71 127 H 527.71 Q 527.25 127 527.25 127.46 V 144.54 Q 527.25 145 527.71 145 H 527.71 Z" fill="#F4F4F2" stroke="#C7C7C4" stroke-width="1"/><line x1="520.33" y1="136" x2="534.16" y2="136" stroke="#6A6A68" stroke-width="0.9"/><line x1="520.33" y1="133.5" x2="520.33" y2="138.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="534.16" y1="133.5" x2="534.16" y2="138.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="523.79" y1="136" x2="530.7" y2="136" stroke="#0A0A0A" stroke-width="1.6"/><line x1="523.79" y1="132.5" x2="523.79" y2="139.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="530.7" y1="132.5" x2="530.7" y2="139.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="543.16" y="140" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#6A6A68">-$0.2M</text><text x="590.48" y="140" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.8" fill="#9A9A98">n.s.</text><path d="M 527.71 159 H 612.9 Q 616.9 159 616.9 163 V 173 Q 616.9 177 612.9 177 H 527.71 Z" fill="#0A8A84"/><line x1="598.19" y1="168" x2="635.61" y2="168" stroke="#6A6A68" stroke-width="0.9"/><line x1="598.19" y1="165.5" x2="598.19" y2="170.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="635.61" y1="165.5" x2="635.61" y2="170.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="607.55" y1="168" x2="626.26" y2="168" stroke="#0A0A0A" stroke-width="1.6"/><line x1="607.55" y1="164.5" x2="607.55" y2="171.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="626.26" y1="164.5" x2="626.26" y2="171.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="644.61" y="172" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">+$38.7M</text><path d="M 527.71 191 H 511.52 Q 507.52 191 507.52 195 V 205 Q 507.52 209 511.52 209 H 527.71 Z" fill="#E5243B"/><line x1="507.2" y1="200" x2="507.84" y2="200" stroke="#6A6A68" stroke-width="0.9"/><line x1="507.2" y1="197.5" x2="507.2" y2="202.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="507.84" y1="197.5" x2="507.84" y2="202.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="507.36" y1="200" x2="507.68" y2="200" stroke="#0A0A0A" stroke-width="1.6"/><line x1="507.36" y1="196.5" x2="507.36" y2="203.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="507.68" y1="196.5" x2="507.68" y2="203.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="536.71" y="204" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$8.8M</text><path d="M 527.71 223 H 510.05 Q 506.05 223 506.05 227 V 237 Q 506.05 241 510.05 241 H 527.71 Z" fill="#E5243B"/><line x1="505.95" y1="232" x2="506.14" y2="232" stroke="#6A6A68" stroke-width="0.9"/><line x1="505.95" y1="229.5" x2="505.95" y2="234.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="506.14" y1="229.5" x2="506.14" y2="234.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="506" y1="232" x2="506.09" y2="232" stroke="#0A0A0A" stroke-width="1.6"/><line x1="506" y1="228.5" x2="506" y2="235.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="506.09" y1="228.5" x2="506.09" y2="235.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="536.71" y="236" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$9.4M</text><path d="M 527.71 255 H 458.73 Q 454.73 255 454.73 259 V 269 Q 454.73 273 458.73 273 H 527.71 Z" fill="#E5243B"/><line x1="427.31" y1="264" x2="482.15" y2="264" stroke="#6A6A68" stroke-width="0.9"/><line x1="427.31" y1="261.5" x2="427.31" y2="266.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="482.15" y1="261.5" x2="482.15" y2="266.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="441.02" y1="264" x2="468.44" y2="264" stroke="#0A0A0A" stroke-width="1.6"/><line x1="441.02" y1="260.5" x2="441.02" y2="267.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="468.44" y1="260.5" x2="468.44" y2="267.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="536.71" y="268" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$31.7M</text><path d="M 527.71 287 H 510.09 Q 506.09 287 506.09 291 V 301 Q 506.09 305 510.09 305 H 527.71 Z" fill="#E5243B"/><text x="536.71" y="300" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$9.4M</text><path d="M 527.71 319 H 331.47 Q 327.47 319 327.47 323 V 333 Q 327.47 337 331.47 337 H 527.71 Z" fill="#E5243B"/><line x1="313.18" y1="328" x2="341.75" y2="328" stroke="#6A6A68" stroke-width="0.9"/><line x1="313.18" y1="325.5" x2="313.18" y2="330.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="341.75" y1="325.5" x2="341.75" y2="330.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="320.32" y1="328" x2="334.61" y2="328" stroke="#0A0A0A" stroke-width="1.6"/><line x1="320.32" y1="324.5" x2="320.32" y2="331.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="334.61" y1="324.5" x2="334.61" y2="331.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="536.71" y="332" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$86.9M</text><path d="M 527.71 351 H 337.46 Q 333.46 351 333.46 355 V 365 Q 333.46 369 337.46 369 H 527.71 Z" fill="#E5243B"/><line x1="330.69" y1="360" x2="336.22" y2="360" stroke="#6A6A68" stroke-width="0.9"/><line x1="330.69" y1="357.5" x2="330.69" y2="362.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="336.22" y1="357.5" x2="336.22" y2="362.5" stroke="#6A6A68" stroke-width="0.9"/><line x1="332.08" y1="360" x2="334.84" y2="360" stroke="#0A0A0A" stroke-width="1.6"/><line x1="332.08" y1="356.5" x2="332.08" y2="363.5" stroke="#0A0A0A" stroke-width="1.6"/><line x1="334.84" y1="356.5" x2="334.84" y2="363.5" stroke="#0A0A0A" stroke-width="1.6"/><text x="536.71" y="364" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="11.2" fill="#0A0A0A" font-weight="500">-$84.3M</text><line x1="293.84" y1="376.5" x2="654.96" y2="376.5" stroke="#C7C7C4" stroke-width="1"/><line x1="297.28" y1="376.5" x2="297.28" y2="380" stroke="#C7C7C4" stroke-width="1"/><text x="297.28" y="391" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="9.8" fill="#6A6A68" text-anchor="middle">-100</text><line x1="412.49" y1="376.5" x2="412.49" y2="380" stroke="#C7C7C4" stroke-width="1"/><text x="412.49" y="391" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="9.8" fill="#6A6A68" text-anchor="middle">-50</text><line x1="527.71" y1="376.5" x2="527.71" y2="380" stroke="#C7C7C4" stroke-width="1"/><text x="527.71" y="391" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="9.8" fill="#6A6A68" text-anchor="middle">0</text><line x1="642.92" y1="376.5" x2="642.92" y2="380" stroke="#C7C7C4" stroke-width="1"/><text x="642.92" y="391" font-family="'JetBrains Mono', 'SF Mono', ui-monospace, monospace" font-size="9.8" fill="#6A6A68" text-anchor="middle">50</text><text x="527.71" y="85" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="9.8" fill="#6A6A68" text-anchor="middle">wait</text><text x="474.4" y="406" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif" font-size="10.6" fill="#6A6A68" text-anchor="middle">eNPV vs wait ($M)</text></svg>
+<figcaption>Options against waiting</figcaption></figure></div>
+
+
+
+</section>
+<div class="phase band"><span>2 · What each option costs and protects against</span></div>
+<section class="appx prose">
+
+<p>eNPV is in $M, at 9% WACC through end-2032, at the year-1 value per batch.</p>
+<table>
+<tr><th>Option</th><th>vs wait, overall</th><th>vs wait, if both succeed</th><th>Tern short at launch, if both succeed</th><th>Tern files late, if both succeed</th><th>Kestrel short at launch</th></tr>
+<tr><td>Wait</td><td>—</td><td>—</td><td>26/37</td><td>13/37 (2–3 months)</td><td>0/37</td></tr>
+<tr><td><strong>Reserve now + review at Kestrel readout</strong></td><td><strong>+3.8 ± 1.1</strong></td><td><strong>+38.7 ± 4.1</strong></td><td><strong>0/37</strong></td><td>14/37 (1–3 months)</td><td>0/37</td></tr>
+<tr><td>Reserve now, no review</td><td>−0.2 ± 1.5 (Tern only on 10 paths)</td><td>+38.7 ± 4.1</td><td>0/37</td><td>14/37</td><td>0/37</td></tr>
+<tr><td>Build after readouts</td><td>−23.0 (3 paths, turn 6)</td><td>−84.3 ± 0.6; range −86.8 to −82.3 (8 paths)</td><td>6/8</td><td>—</td><td>0</td></tr>
+<tr><td>Build now</td><td>−105.8 (3 paths, turn 6)</td><td>−86.9 ± 3.1; range −104.7 to −72.8 (8 paths)</td><td>6/8</td><td>—</td><td>0</td></tr>
+</table>
+<p><strong>What a Tern shortfall costs.</strong> When both succeed and we wait, Tern loses demand on 37 of 37 paths: on average 10.7 batches, worth $50.9M PV (range 5.9–20.3 batches, $27.8M–95.9M), over 5 to 10 months just after launch. With the reservation Tern loses no demand on any of the 37.</p>
+<p><strong>Kestrel.</strong> Under wait, Kestrel runs slightly short later in its life on 4 of 37 both-succeed paths (0.5 to 3.7 batches, never in its first six months). With the reservation, 0 of 37.</p>
+
+
+
+</section>
+<div class="phase band"><span>2 · Sensitivities</span></div>
+<section class="appx prose">
+
+<p>On the same paired paths, with the review rule:</p>
+<table>
+<tr><th>Case</th><th>Reserve now + review vs wait, overall</th><th>If both succeed</th></tr>
+<tr><td>Base</td><td>+$3.8M ± $1.1M (+$1.6M to +$6.0M)</td><td>+$38.7M ± $4.1M</td></tr>
+<tr><td>Value per batch at the peak rate</td><td>+$25.0M ± $2.8M (+$19.3M to +$30.7M)</td><td>+$117.3M ± $10.5M, negative on 1 of 37</td></tr>
+<tr><td>Kestrel PoS 0.50 (the user's own estimate)</td><td>+$1.6M ± $0.9M (−$0.2M to +$3.4M): roughly break-even, narrowly fails the test</td><td>+$38.7M ± $4.1M</td></tr>
+</table>
+<p>At the peak rate, the Tern-only loss without review would be −$51.5M on average (worst −$157.0M over 10 paths). With review it stays at −$9.4M. When both succeed, the build options stay negative even at the peak rate: −$88.7M and −$85.0M over 8 paths.</p>
+<p><strong>Still on 3 paths from turn 6, indicative only, without the review rule:</strong></p>
+<ul>
+<li>No second CMO contract: reserve-for-both +$16.3M, reserve-for-Tern-only −$72.5M. Deferred at the user's direction, because the Tern-only structure is off the table without a written contract.</li>
+<li>Literal allocation rule: +$8.8M.</li>
+<li>A $5M walk-away: about +$1.0M.</li>
+<li>Even capex phasing: $0.95M worse.</li>
+<li>The 2-month Kestrel floor: no change.</li>
+</ul>
+
+
+
+</section>
+<div class="phase band"><span>2 · Cross-check against the 96-seed wait ensemble: resolved</span></div>
+<section class="appx prose">
+
+<ul>
+<li><strong>Replays match exactly.</strong> Ensemble members 20, 96 and 6 were replayed with their exact seeds, both unforced and forced to both-succeed. The two versions match each other byte for byte and reproduce the ensemble's late-filing months (2, 2, 0) and lost Tern demand (92, 59, 91 tenths).</li>
+<li><strong>The eNPV offset is harmless.</strong> eNPV differs by a constant factor of 1.0072 = 1.09^(1/12), a one-month discounting-offset convention that cancels in every comparison.</li>
+<li><strong>The late-filing gap is sampling chance.</strong> Among the ensemble's 20 both-succeed members, 2 filed late (2 months each); our paths show 13 of 37. Fisher exact two-sided p = 0.059: chance, not a model or forcing error.</li>
+<li><strong>Pooled late filing:</strong> 15 of 57 (0.26, range 0.17–0.39).</li>
+<li><strong>Pooled Tern short at launch:</strong> 40 of 57 (0.70), which is 0.19 overall (0.155–0.217), in line with our 0.19.</li>
+<li><strong>Scope:</strong> the other turn-7 checks agreed (eNPV, P(Tern short), P(Kestrel short), Tern demand lost). The late-filing figures remain the least precise in this report. The ensemble covers only the wait option.</li>
+</ul>
+
+
+
+</section>
+<div class="phase band"><span>2 · What would change the answer</span></div>
+<section class="appx prose">
+
+<ul>
+<li><strong>Kestrel's odds.</strong> At PoS 0.50, which is the user's own estimate, the result is roughly break-even: +$1.6M ± $0.9M.</li>
+<li><strong>The value per batch.</strong> At the peak rate the case is strong: +$25.0M.</li>
+<li><strong>Legal or regulatory reversing.</strong> Either reassignment of the slot or filing Tern on our own line after a Kestrel failure. The review rule depends on the latter.</li>
+<li><strong>Whether a second CMO contract really exists.</strong> It separates reserve-for-both from reserve-for-Tern-only.</li>
+<li><strong>A backup Tern qualification on our own line when both succeed.</strong> This would address the remaining downside (3 of 37 paths). Not modelled, at the user's direction.</li>
+</ul>
+
+
+
+</section>
+<div class="phase band"><span>2 · Caveats</span></div>
+<section class="appx prose">
+
+<ul>
+<li><strong>Horizon.</strong> The model ends in 2032, so value earned after 2032 is not counted; the build options are understated as a result.</li>
+<li><strong>Validation cost, and a correction.</strong> Revision 3 said the Tern-only cost was understated by about $1M because own-line PPQ is charged at $0.15M/batch rather than regulatory's $0.5M/batch. That overstated the gap. The Tern-only difference against waiting is all CMO fee plus forfeit (cost −$9.40M, Tern revenue +$0.00M). Under both wait and review, the own line is Tern's only filed site. So a higher own-line PPQ cost falls on both options and largely cancels. The $0.5M/batch applies to qualifying a backup site as well, which is not modelled. The ExCo wording's &quot;$9–11M&quot; is a conservative bound on the measured $8.8M–9.7M.</li>
+<li><strong>Small samples.</strong> The Kestrel-only and both-fail worlds rest on 3 paths each. Their spread is under $0.1M, because the cost there is fee and forfeit.</li>
+<li><strong>Unverified inputs.</strong> Two remain without paperwork: the second contract and +5%/yr marketed growth. Reassignment of the slot is now confirmed by legal, per the user.</li>
+<li><strong>Kestrel's share-loss penalty.</strong> The 15% penalty never triggered.</li>
+</ul>
+
+
+
+</section>
+<div class="phase band"><span>3 · Why a spreadsheet cannot produce this</span></div>
+<section class="appx prose">
+
+<p>The reservation's value exists only in the joint outcome where both succeed. There it depends on a race between Tern's readout date and two other timelines: the CMO's qualification lead time, and Kestrel's six-month stock build on the same own line. The review rule works because Kestrel reads out nine months before Tern. It turns a commitment whose worst case depended on that race into one whose worst case is a known fee plus forfeit. Both effects come from month-by-month allocation under drawn dates, not from any per-asset expected value.</p>
+<details class="fold"><summary>The model (click to expand)</summary>
+<div class="fold-body"><p>The model is monthly, from 1 October 2026 to end-2032, with capacity counted in tenths of a batch. It includes the own line, the reserved CMO slot, a second CMO contract if both succeed, a possible second line, the readout draws, the regulatory clock including PAS, and the patient-first planner. It consists of 23 JSON documents from <code>gen_models.py</code> plus forced-outcome copies in <code>scenarios/</code>. Each option differs from waiting in one or two parameters. The recommended option is <code>arm_cmo_exit</code> (<code>cmo_now</code> = 1, <code>exit_at_k</code> = 1). Its rule <code>cmo_exit_k</code> fires once at Kestrel's readout if Kestrel failed. It releases the CMO slot and CMO PPQ, returns Tern to own-line PPQ and filing, and charges the forfeit.</p>
+</div></details>
+
+
+
+</section>
+<div class="phase band"><span>4 · The model</span></div>
+<section class="appx prose">
+
+<p>The model is data: a document in the engine's closed vocabulary, checked by a validator before it runs, with no code in it. What follows is computed from <code>arm_cmo_exit.rdj.json</code>, the recommended option, so it describes the model that produced the numbers above.</p>
+<table>
+<tr><th>What</th><th>In this model</th></tr>
+<tr><td>Horizon and tick</td><td><code>tspan = 75</code>, <code>dt = 1</code></td></tr>
+<tr><td>Places</td><td>48: 4 are pools a transition holds and returns (<code>cmo</code>, <code>cmo2</code>, <code>line</code>, <code>line2</code>); 3 carry a cost or reward into the ledger (<code>cash</code>, <code>k_sold</code>, <code>t_sold</code>)</td></tr>
+<tr><td>Transitions</td><td>31: 14 take time (cycle time &gt; 0), 13 can fail (success probability &lt; 1), <strong>12 have a rate that reads the state</strong> (<code>cmo2_fee</code>, <code>cmo_fee</code>, <code>k_clock</code>, <code>k_demand</code>, <code>l2_capex_even</code>, <code>l2_capex_y1</code> +6)</td></tr>
+<tr><td>Decision rules</td><td><strong>27</strong>, 26 firing once and 1 every tick; 18 decide on the live state, 1 draw a random input</td></tr>
+<tr><td>Parameters</td><td>58, every one a named value an arm can change</td></tr>
+</table>
+<h4 class="head3">The elements in the language of the business</h4>
+<p>The table the study was framed in (BRIEF.md), signed off before the model was built: each slot in the operator's words, and the formal element it became.</p>
+<p>Time origin t = 0 is 1 October 2026; one tick = one month; horizon t = 75 (end 2032). All money $M, all capacity batches (the model counts in tenths of a batch internally so fractional monthly rates are exact to 0.1 batch).</p>
+<table>
+<tr><th>Slot</th><th>Value (source: user)</th><th>Object-model target</th></tr>
+<tr><td><strong>Scarce resource</strong></td><td>In-house line, effective 12.8 batches/month (nominal 16; ~13 after changeovers and shutdowns; trailing 12 months 12.8). Reusable: a batch occupies the line for its month and gives it back</td><td>plain place <code>line</code>, <code>init = 128</code> (tenths), held <code>conserved</code>, 10 units per batch, <code>cycletime = 1</code></td></tr>
+<tr><td><strong>Second resource (option 1)</strong></td><td>CMO slot, up to 4 batches/month, usable 12–15 months after signing (CMO says 12, experience says 15)</td><td>place <code>cmo</code> (40 tenths) created at <code>sign + U(12,15)</code> by a rule; <code>conserved</code> like the line</td></tr>
+<tr><td><strong>Third resource (option 2)</strong></td><td>Second in-house line, commercial-ready 30–36 months after approval (earliest ~Q2 2029). 12 batches/month effective (turn 4)</td><td>place <code>line2</code> (120 tenths) created at <code>approve + U(30,36)</code></td></tr>
+<tr><td><strong>Background load</strong></td><td>Marketed products ~9 batches/month today, +5%/yr (S&amp;OP estimate — soft), never bumped</td><td>transition <code>mkt</code>, integer monthly count from the cumulative curve <code>9·1.05^(t/12)/0.97</code> (grossed up for rejects), taken off the line first</td></tr>
+<tr><td><strong>Rejects</strong></td><td>~3% of batches rejected</td><td><code>prob_of_success = 0.97</code> on every batch transition</td></tr>
+<tr><td><strong>Readouts</strong></td><td>Kestrel PoS 0.60 (portfolio committee; user thinks generous → test 0.50), readout ~March 2027 slipping 0–2 months; Tern PoS 0.45, readout ~Dec 2027 ± 3 months (event-driven). Independent</td><td>params drawn once at t = 0 by rules (<code>Bernoulli</code>, <code>Uniform</code>) so every arm sees the same readout outcomes and dates per seed</td></tr>
+<tr><td><strong>Regulatory clock</strong></td><td>Readout → +3 months BLA filing → +12 months standard review (no priority review) → +1 month launch. Filed fill site must have 3 PPQ batches before filing; otherwise the site is added by PAS (~6 months) after approval and cannot ship until approved</td><td>rules keyed on the drawn readout time; per-asset per-site &quot;approved to ship&quot; flags</td></tr>
+<tr><td><strong>Kestrel's filed site</strong></td><td>Own line, PPQ planned Q1 2027</td><td>Kestrel may ship from <code>line</code> from launch; from <code>cmo</code>/<code>line2</code> only after a PAS</td></tr>
+<tr><td><strong>Tern's filed site</strong></td><td>None locked in. Without the CMO, Tern's 3 PPQ batches run on the own line between readout and filing, competing for the same batches as Kestrel's stock build</td><td>transition <code>tern_ppq_own</code> (3 batches, priority below Kestrel); filing waits until PPQ is done</td></tr>
+<tr><td><strong>Launch stock</strong></td><td>Six months of forward demand on the shelf at launch: Kestrel ≈12 batches, Tern ≈9–10, built in the six months before launch</td><td>stock target = 6 × demand(month + 6), production starts 6 months before launch</td></tr>
+<tr><td><strong>Demand (batches/month)</strong></td><td>Kestrel 1 at launch → 3 at month 12 (linear) → 4.5 at peak ~year 3 (±30%). Tern 1 → 2.5 at month 12 → 4 at peak ~year 3 (less certain)</td><td><code>min(1 + a/6, 3 + (a−12)/16, 4.5)</code> and <code>min(1 + a/8, 2.5 + (a−12)/16, 4)</code>, a = months since launch</td></tr>
+<tr><td><strong>Contention rule</strong></td><td>Marketed first, then Kestrel, then Tern, on every line; Tern PPQ on the own line competes with Kestrel (turn 3)</td><td>a <code>planner</code> rule at the end of each month allocates next month's free capacity in tiers — Kestrel, Tern PPQ, Tern stock, (Kestrel buffer top-up when <code>k_first = 0</code>) — each tier filled own line → line 2 → CMO (cheapest first). Turn 5 correction, base case <code>k_first = 0</code>: &quot;the priority was about supplying patients&quot; — Kestrel's launch build and each month's demand first, then Tern's PPQ and stock, then Kestrel's buffer top-up; the literal rule (<code>k_first = 1</code>, Kestrel's full six-month buffer before any Tern batch) is shown as a sensitivity. Guardrail in both: Kestrel never below 2 months of forward stock (<code>k_floor = 2</code>; checked against <code>k_floor = 0</code>)</td></tr>
+<tr><td><strong>Shortfall cost</strong></td><td>Kestrel: short in first six months ⇒ 15% of peak share lost for good (competitor launches 6–9 months after our approval). Tern: shortfall is lost sales only. Unmet monthly demand is lost, not backlogged (turn 4: no delayed variant)</td><td>rule sets <code>k_share = 0.85</code> once if any Kestrel demand goes unmet with a &lt; 6; unmet orders drain to a <code>*_lost</code> tally</td></tr>
+<tr><td><strong>Value of a batch sold</strong></td><td>Kestrel peak $1.2B/yr, first 12 months $250M; Tern peak $0.9B/yr, first 12 months $150M; margin 85%. Base case: year-1 rate ($10.9M/batch Kestrel, $7.4M Tern, before margin); upside sensitivity: peak rate ($22.2M, $18.8M) — turn 4: &quot;if the recommendation only holds at the peak rate, I need to know that&quot;</td><td><code>reward</code> per tenth-batch shipped on <code>k_sold</code>/<code>t_sold</code></td></tr>
+<tr><td><strong>Costs</strong></td><td>CMO: $5M/yr paid annually in advance, 3-year minimum, +$0.4M per batch filled; terminate on 12 months' notice forfeiting that year's fee (walk-away after a failed readout: $10M base = two annual fees, $5M sensitivity = the number quoted in the room, turn 4). In-house: $0.15M/batch. Second line: $120M capex (Class 4, $100–140M), phased 20/50/30 over three years from approval (evenly spread as a sensitivity, turn 4), $10M/yr fixed once operating</td><td><code>cost</code> on a deep <code>cash</code> pool drawn by fee/capex/batch transitions</td></tr>
+<tr><td><strong>Reassigning the CMO slot</strong></td><td>Term sheet reserves capacity, not a product — the user's reading, not confirmed. If Tern fails, Kestrel can move in via PAS (CMO won't be ready before Kestrel files)</td><td>tested both ways: <code>arm_cmo</code> (reassign allowed) and <code>arm_cmo_tern_only</code></td></tr>
+<tr><td><strong>Second CMO contract</strong></td><td>Turn 5: if both assets succeed, sign a second contract the same week on the same terms ($5M/yr, 3-year minimum, $0.4M/batch, 12–15 months to ready) — the user's estimate, no term sheet. Assumed not to open before mid-2028 like the first</td><td>place <code>cmo2</code> (40 tenths), signed at max(Tern readout, t = 20) to start the next month, ready after its own <code>U(12,15)</code> draw; both assets reach it by PAS. <code>second_cmo = 0</code> sensitivity</td></tr>
+<tr><td><strong>Horizon and tick</strong></td><td>Through end-2032, monthly</td><td><code>meta.tspan = 75.0</code>, <code>meta.dt = 1.0</code></td></tr>
+<tr><td><strong>Headline metrics</strong></td><td>eNPV at 9% WACC ($M); P(supply-constrained launch) per asset</td><td><code>enpv --annual=0.09 --periods-per-year=12</code>; <code>final:k_short</code>, <code>final:t_short</code> (0/1 per path; turn 6: odds-weighted over forced-world paths, see Analysis plan)</td></tr>
+</table>
+<h4 class="head3">Every element</h4>
+<p>The reviewer's table: each place, transition and rule in the formal vocabulary, with what it reads and what it writes. It is folded in the HTML version and left out of print, where its 106 rows would outweigh the report.</p>
+<details class="fold screen-only"><summary>The full element table (106 rows)</summary>
+<div class="fold-body"><table>
+<tr><th>Element</th><th>Kind</th><th>Formal role</th><th>Reads</th><th>Writes / emits</th></tr>
+<tr><td><code>cash</code></td><td>place</td><td>init 1.0e12; input to <code>k_base_own</code> (consumed); input to <code>k_base_l2</code> (consumed); input to <code>k_base_cmo</code> (consumed); input to <code>k_base_cmo2</code> (consumed); input to <code>t_make_own</code> (consumed); input to <code>t_make_l2</code> (consumed); input to <code>t_make_cmo</code> (consumed); input to <code>t_make_cmo2</code> (consumed); input to <code>k_buf_own</code> (consumed); input to <code>k_buf_l2</code> (consumed); input to <code>k_buf_cmo</code> (consumed); input to <code>k_buf_cmo2</code> (consumed); input to <code>t_ppq_own</code> (consumed); input to <code>cmo_fee</code> (consumed); input to <code>cmo_fee_y2</code> (consumed); input to <code>cmo2_fee</code> (consumed); input to <code>l2_capex_y1</code> (consumed); input to <code>l2_capex_y2</code> (consumed); input to <code>l2_capex_y3</code> (consumed); input to <code>l2_capex_even</code> (consumed); input to <code>l2_fixed</code> (consumed)</td><td>—</td><td>cost 0.001/unit</td></tr>
+<tr><td><code>line</code></td><td>place</td><td>init 128; input to <code>mkt</code> (held and returned); input to <code>k_base_own</code> (held and returned); input to <code>t_make_own</code> (held and returned); input to <code>k_buf_own</code> (held and returned); input to <code>t_ppq_own</code> (held and returned)</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo</code></td><td>place</td><td>input to <code>k_base_cmo</code> (held and returned); input to <code>t_make_cmo</code> (held and returned); input to <code>k_buf_cmo</code> (held and returned)</td><td>—</td><td>—</td></tr>
+<tr><td><code>line2</code></td><td>place</td><td>input to <code>k_base_l2</code> (held and returned); input to <code>t_make_l2</code> (held and returned); input to <code>k_buf_l2</code> (held and returned)</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2</code></td><td>place</td><td>input to <code>k_base_cmo2</code> (held and returned); input to <code>t_make_cmo2</code> (held and returned); input to <code>k_buf_cmo2</code> (held and returned)</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2_active</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2_ready</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_cmo2_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_cmo2_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_short_any</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>mkt_done</code></td><td>place</td><td>output of <code>mkt</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_stock</code></td><td>place</td><td>output of <code>k_base_own</code> (emitted); output of <code>k_base_l2</code> (emitted); output of <code>k_base_cmo</code> (emitted); output of <code>k_base_cmo2</code> (emitted); output of <code>k_buf_own</code> (emitted); output of <code>k_buf_l2</code> (emitted); output of <code>k_buf_cmo</code> (emitted); output of <code>k_buf_cmo2</code> (emitted); input to <code>k_ship</code> (consumed)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_stock</code></td><td>place</td><td>output of <code>t_make_own</code> (emitted); output of <code>t_make_l2</code> (emitted); output of <code>t_make_cmo</code> (emitted); output of <code>t_make_cmo2</code> (emitted); input to <code>t_ship</code> (consumed)</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_orders</code></td><td>place</td><td>output of <code>k_demand</code> (emitted); input to <code>k_ship</code> (consumed); input to <code>k_lose</code> (consumed)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_orders</code></td><td>place</td><td>output of <code>t_demand</code> (emitted); input to <code>t_ship</code> (consumed); input to <code>t_lose</code> (consumed)</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_sold</code></td><td>place</td><td>output of <code>k_ship</code> (emitted)</td><td>—</td><td>reward 0.9239/unit</td></tr>
+<tr><td><code>t_sold</code></td><td>place</td><td>output of <code>t_ship</code> (emitted)</td><td>—</td><td>reward 0.6296/unit</td></tr>
+<tr><td><code>k_lost</code></td><td>place</td><td>output of <code>k_lose</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_lost</code></td><td>place</td><td>output of <code>t_lose</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_pre</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_launched</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_age</code></td><td>place</td><td>output of <code>k_clock</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_pre</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_launched</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_age</code></td><td>place</td><td>output of <code>t_clock</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_ppq_done</code></td><td>place</td><td>output of <code>t_ppq_own</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_filed</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_file_delay</code></td><td>place</td><td>output of <code>t_delay_clock</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_cmo_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_cmo_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_l2_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_l2_ok</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo_active</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo_ppq</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>l2_active</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>l2_ready</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_short</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_short</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>k_success</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>t_success</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>own_used</code></td><td>place</td><td>output of <code>mkt</code> (emitted); output of <code>k_base_own</code> (emitted); output of <code>t_make_own</code> (emitted); output of <code>k_buf_own</code> (emitted); output of <code>t_ppq_own</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo_used</code></td><td>place</td><td>output of <code>k_base_cmo</code> (emitted); output of <code>t_make_cmo</code> (emitted); output of <code>k_buf_cmo</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>l2_used</code></td><td>place</td><td>output of <code>k_base_l2</code> (emitted); output of <code>t_make_l2</code> (emitted); output of <code>k_buf_l2</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>own_free</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo_free</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>l2_free</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2_free</code></td><td>place</td><td>state or tally, set by rules</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2_used</code></td><td>place</td><td>output of <code>k_base_cmo2</code> (emitted); output of <code>t_make_cmo2</code> (emitted); output of <code>k_buf_cmo2</code> (emitted)</td><td>—</td><td>—</td></tr>
+<tr><td><code>mkt</code></td><td>transition</td><td>rate time-dependent, cycle 1, success 1</td><td>—</td><td><code>mkt_done</code>, <code>own_used</code></td></tr>
+<tr><td><code>k_base_own</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>own_used</code></td></tr>
+<tr><td><code>k_base_l2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>l2_used</code></td></tr>
+<tr><td><code>k_base_cmo</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>cmo_used</code></td></tr>
+<tr><td><code>k_base_cmo2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>cmo2_used</code></td></tr>
+<tr><td><code>t_make_own</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>t_stock</code>, <code>own_used</code></td></tr>
+<tr><td><code>t_make_l2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>t_stock</code>, <code>l2_used</code></td></tr>
+<tr><td><code>t_make_cmo</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>t_stock</code>, <code>cmo_used</code></td></tr>
+<tr><td><code>t_make_cmo2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>t_stock</code>, <code>cmo2_used</code></td></tr>
+<tr><td><code>k_buf_own</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>own_used</code></td></tr>
+<tr><td><code>k_buf_l2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>l2_used</code></td></tr>
+<tr><td><code>k_buf_cmo</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>cmo_used</code></td></tr>
+<tr><td><code>k_buf_cmo2</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>k_stock</code>, <code>cmo2_used</code></td></tr>
+<tr><td><code>t_ppq_own</code></td><td>transition</td><td>rate parametric, cycle 1, success 0.97</td><td>—</td><td><code>t_ppq_done</code>, <code>own_used</code></td></tr>
+<tr><td><code>k_clock</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>k_launched</code></td><td><code>k_age</code></td></tr>
+<tr><td><code>k_demand</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>k_age</code>, <code>k_launched</code></td><td><code>k_orders</code></td></tr>
+<tr><td><code>k_ship</code></td><td>transition</td><td>rate constant 1000, cycle 0, success 1</td><td>—</td><td><code>k_sold</code></td></tr>
+<tr><td><code>k_lose</code></td><td>transition</td><td>rate constant 1000, cycle 0, success 1</td><td>—</td><td><code>k_lost</code></td></tr>
+<tr><td><code>t_clock</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>t_launched</code></td><td><code>t_age</code></td></tr>
+<tr><td><code>t_demand</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>t_age</code>, <code>t_launched</code></td><td><code>t_orders</code></td></tr>
+<tr><td><code>t_ship</code></td><td>transition</td><td>rate constant 1000, cycle 0, success 1</td><td>—</td><td><code>t_sold</code></td></tr>
+<tr><td><code>t_lose</code></td><td>transition</td><td>rate constant 1000, cycle 0, success 1</td><td>—</td><td><code>t_lost</code></td></tr>
+<tr><td><code>t_delay_clock</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>t_filed</code></td><td><code>t_file_delay</code></td></tr>
+<tr><td><code>cmo_fee</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>cmo_active</code></td><td>—</td></tr>
+<tr><td><code>cmo_fee_y2</code></td><td>transition</td><td>rate time-dependent, cycle 0, success 1</td><td>—</td><td>—</td></tr>
+<tr><td><code>cmo2_fee</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>cmo2_active</code></td><td>—</td></tr>
+<tr><td><code>l2_capex_y1</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>l2_active</code></td><td>—</td></tr>
+<tr><td><code>l2_capex_y2</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>l2_active</code></td><td>—</td></tr>
+<tr><td><code>l2_capex_y3</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>l2_active</code></td><td>—</td></tr>
+<tr><td><code>l2_capex_even</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>l2_active</code></td><td>—</td></tr>
+<tr><td><code>l2_fixed</code></td><td>transition</td><td>rate state-dependent, cycle 0, success 1</td><td><code>l2_ready</code></td><td>—</td></tr>
+<tr><td><code>draws</code></td><td>rule</td><td>fires once when its guard holds</td><td>—</td><td><code>build_lead</code>, <code>cmo2_lead</code>, <code>cmo_lead</code>, <code>k_ok</code>, <code>k_slip</code>, <code>k_success</code> +3</td></tr>
+<tr><td><code>k_stock_build</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_ok</code>, <code>k_slip</code></td><td><code>k_pre</code></td></tr>
+<tr><td><code>k_launch</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_ok</code>, <code>k_slip</code></td><td><code>k_launched</code></td></tr>
+<tr><td><code>t_file</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_now</code>, <code>cmo_ppq</code>, <code>t_filed</code>, <code>t_ok</code>, <code>t_ppq_done</code>, <code>t_shift</code></td><td><code>t_file_t</code>, <code>t_filed</code></td></tr>
+<tr><td><code>t_stock_build</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>t_file_t</code>, <code>t_filed</code></td><td><code>t_cmo_ok</code>, <code>t_pre</code></td></tr>
+<tr><td><code>t_launch</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>t_file_t</code>, <code>t_filed</code></td><td><code>t_launched</code></td></tr>
+<tr><td><code>cmo_sign_now</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_now</code></td><td><code>cmo_active</code>, <code>cmo_start</code></td></tr>
+<tr><td><code>cmo_exit_k</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_now</code>, <code>exit_at_k</code>, <code>k_ok</code>, <code>k_slip</code></td><td><code>cmo</code>, <code>cmo_active</code>, <code>cmo_exited</code>, <code>cmo_now</code>, <code>cmo_ppq</code></td></tr>
+<tr><td><code>cmo_sign_wait</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_active</code>, <code>cmo_now</code>, <code>k_ok</code>, <code>t_ok</code>, <code>wait_cmo</code></td><td><code>cmo_active</code>, <code>cmo_resigned</code>, <code>cmo_start</code></td></tr>
+<tr><td><code>cmo_ready</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_active</code>, <code>cmo_lead</code>, <code>cmo_resigned</code>, <code>cmo_start</code></td><td><code>cmo</code>, <code>cmo_ppq</code>, <code>cmo_ready_t</code></td></tr>
+<tr><td><code>cmo_ready_resigned</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_active</code>, <code>cmo_lead</code>, <code>cmo_resigned</code>, <code>cmo_start</code></td><td><code>cmo</code>, <code>cmo_ppq</code>, <code>cmo_ready_t</code></td></tr>
+<tr><td><code>cmo_terminate</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_active</code>, <code>cmo_now</code>, <code>cmo_reassign</code>, <code>k_ok</code>, <code>t_ok</code>, <code>t_shift</code></td><td><code>cmo</code>, <code>cmo_active</code>, <code>cmo_ppq</code></td></tr>
+<tr><td><code>k_cmo_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_lead</code>, <code>cmo_now</code>, <code>cmo_ppq</code>, <code>cmo_ready_t</code>, <code>cmo_reassign</code>, <code>cmo_resigned</code> +2</td><td><code>k_cmo_ok</code></td></tr>
+<tr><td><code>t_cmo_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo_now</code>, <code>cmo_ppq</code>, <code>cmo_ready_t</code>, <code>t_file_t</code>, <code>t_filed</code></td><td><code>t_cmo_ok</code></td></tr>
+<tr><td><code>l2_approve_now</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>build_now</code></td><td><code>l2_active</code>, <code>l2_start</code></td></tr>
+<tr><td><code>l2_approve_after</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>build_after</code>, <code>k_ok</code>, <code>t_ok</code>, <code>t_shift</code></td><td><code>l2_active</code>, <code>l2_start</code></td></tr>
+<tr><td><code>l2_ready_r</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>build_lead</code>, <code>l2_active</code>, <code>l2_start</code></td><td><code>l2_ready</code>, <code>l2_ready_t</code>, <code>line2</code></td></tr>
+<tr><td><code>k_l2_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_ok</code>, <code>k_slip</code>, <code>l2_ready</code>, <code>l2_ready_t</code></td><td><code>k_l2_ok</code></td></tr>
+<tr><td><code>t_l2_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>l2_ready</code>, <code>l2_ready_t</code>, <code>t_file_t</code>, <code>t_filed</code></td><td><code>t_l2_ok</code></td></tr>
+<tr><td><code>k_short_launch</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_age</code>, <code>k_lost</code></td><td><code>k_share</code>, <code>k_short</code></td></tr>
+<tr><td><code>t_short_launch</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>t_age</code>, <code>t_lost</code></td><td><code>t_short</code></td></tr>
+<tr><td><code>k_short_ever</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_lost</code></td><td><code>k_short_any</code></td></tr>
+<tr><td><code>cmo2_sign</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>k_ok</code>, <code>second_cmo</code>, <code>t_ok</code>, <code>t_shift</code></td><td><code>cmo2_active</code>, <code>cmo2_start</code></td></tr>
+<tr><td><code>cmo2_ready_r</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo2_active</code>, <code>cmo2_lead</code>, <code>cmo2_start</code></td><td><code>cmo2</code>, <code>cmo2_ready</code>, <code>cmo2_ready_t</code></td></tr>
+<tr><td><code>k_cmo2_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo2_ready</code>, <code>cmo2_ready_t</code>, <code>k_slip</code></td><td><code>k_cmo2_ok</code></td></tr>
+<tr><td><code>t_cmo2_pas</code></td><td>rule</td><td>fires once when its guard holds</td><td><code>cmo2_ready</code>, <code>cmo2_ready_t</code>, <code>t_file_t</code>, <code>t_filed</code></td><td><code>t_cmo2_ok</code></td></tr>
+<tr><td><code>planner</code></td><td>rule</td><td>fires every tick when its guard holds</td><td>—</td><td><code>cmo2_free</code>, <code>cmo_free</code>, <code>l2_free</code>, <code>own_free</code>, <code>pl_free_cmo</code>, <code>pl_free_cmo2</code> +24</td></tr>
+</table>
+</div></details>
+<h4 class="head3">What the option changes</h4>
+<p>The recommended option is the base model with the lines below changed — that diff <em>is</em> the lever. Open it to see it whole.</p>
+
+
+<details class="model"><summary><span class="tk">model</span> <code>arm_cmo_exit.rdj.json</code> against <code>model.rdj.json</code> <span class="mc">48 places · 31 transitions · 78 arcs · 27 rules</span></summary><div class="model-body">
+<div class="mlabel">the whole difference from <code>model.rdj.json</code></div>
+<pre class="block diff">--- model.rdj.json
++++ arm_cmo_exit.rdj.json
+@@ -88,7 +88,7 @@
+   },
+   {
+    &quot;name&quot;: &quot;cmo_now&quot;,
+<del>-   &quot;value&quot;: 0.0</del>
+<ins>+   &quot;value&quot;: 1.0</ins>
+   },
+   {
+    &quot;name&quot;: &quot;cmo_reassign&quot;,
+@@ -128,7 +128,7 @@
+   },
+   {
+    &quot;name&quot;: &quot;exit_at_k&quot;,
+<del>-   &quot;value&quot;: 0.0</del>
+<ins>+   &quot;value&quot;: 1.0</ins>
+   },
+   {
+    &quot;name&quot;: &quot;cmo_exited&quot;,
+</pre>
+</div></details>
+
+</section>
+<div class="phase band"><span>5 · Hero visual: the execution map</span></div>
+<section class="appx prose">
+
+<p>The network of the recommended option after one run (seed 1): places are pools and states, boxes are transitions, and a highlighted place is one that ran dry at some point — where the contention was. Drawn by <code>rdx draw scenarios/arm_cmo_exit__both.rdj.json --exec-map --seed=1</code>.</p>
+<div class="execmap"><figure class="fig">
+
+<!-- Generated by graphviz version 12.2.1 (20241206.2353)
+ -->
+<!-- Title: reactive_network Pages: 1 -->
+<svg width="499pt" height="3471pt"
+ viewBox="0.00 0.00 499.47 3470.87" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 3466.87)">
+<title>reactive_network</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-3466.87 495.47,-3466.87 495.47,4 -4,4"/>
+<!-- cash -->
+<g id="node1" class="node">
+<title>cash</title>
+<ellipse fill="none" stroke="black" cx="35.12" cy="-778.69" rx="18.51" ry="18.51"/>
+<text text-anchor="middle" x="35.12" y="-775.39" font-family="Times,serif" font-size="9.00">cash</text>
+</g>
+<!-- k_base_own -->
+<g id="node50" class="node">
+<title>k_base_own</title>
+<polygon fill="none" stroke="black" points="208.48,-256.69 147.48,-256.69 147.48,-220.69 208.48,-220.69 208.48,-256.69"/>
+<text text-anchor="middle" x="177.98" y="-235.39" font-family="Times,serif" font-size="9.00">k_base_own</text>
+</g>
+<!-- cash&#45;&gt;k_base_own -->
+<g id="edge5" class="edge">
+<title>cash&#45;&gt;k_base_own</title>
+<path fill="none" stroke="black" d="M37.91,-760.06C45.95,-676.97 78.72,-343.34 88.23,-323.19 99.47,-299.37 120.58,-278.84 139.39,-263.98"/>
+<polygon fill="black" stroke="black" points="141.34,-266.89 147.19,-258.06 137.1,-261.32 141.34,-266.89"/>
+<text text-anchor="middle" x="106.98" y="-326.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- k_base_l2 -->
+<g id="node51" class="node">
+<title>k_base_l2</title>
+<polygon fill="none" stroke="black" points="204.98,-418.69 150.98,-418.69 150.98,-382.69 204.98,-382.69 204.98,-418.69"/>
+<text text-anchor="middle" x="177.98" y="-397.39" font-family="Times,serif" font-size="9.00">k_base_l2</text>
+</g>
+<!-- cash&#45;&gt;k_base_l2 -->
+<g id="edge9" class="edge">
+<title>cash&#45;&gt;k_base_l2</title>
+<path fill="none" stroke="black" d="M37.57,-760.16C42.16,-705.63 57.88,-546.94 88.23,-506.19 99.45,-491.12 113.72,-501.13 125.73,-486.69 141.41,-467.83 131.19,-453.7 145.08,-428.43"/>
+<polygon fill="black" stroke="black" points="147.85,-430.6 150.26,-420.28 141.94,-426.84 147.85,-430.6"/>
+<text text-anchor="middle" x="106.98" y="-509.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- k_base_cmo -->
+<g id="node52" class="node">
+<title>k_base_cmo</title>
+<polygon fill="none" stroke="black" points="208.11,-1066.69 147.86,-1066.69 147.86,-1030.69 208.11,-1030.69 208.11,-1066.69"/>
+<text text-anchor="middle" x="177.98" y="-1045.39" font-family="Times,serif" font-size="9.00">k_base_cmo</text>
+</g>
+<!-- cash&#45;&gt;k_base_cmo -->
+<g id="edge13" class="edge">
+<title>cash&#45;&gt;k_base_cmo</title>
+<path fill="none" stroke="black" d="M37.02,-797.42C39.61,-833.16 49.63,-912.14 88.23,-963.69 100.02,-979.43 112.38,-972.74 125.73,-987.19 137.47,-999.89 132.79,-1008.29 143.73,-1021.69 143.89,-1021.87 144.04,-1022.06 144.2,-1022.25"/>
+<polygon fill="black" stroke="black" points="141.44,-1024.43 150.9,-1029.19 146.47,-1019.57 141.44,-1024.43"/>
+<text text-anchor="middle" x="106.98" y="-990.39" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- k_base_cmo2 -->
+<g id="node53" class="node">
+<title>k_base_cmo2</title>
+<polygon fill="none" stroke="black" points="210.36,-1174.69 145.61,-1174.69 145.61,-1138.69 210.36,-1138.69 210.36,-1174.69"/>
+<text text-anchor="middle" x="177.98" y="-1153.39" font-family="Times,serif" font-size="9.00">k_base_cmo2</text>
+</g>
+<!-- cash&#45;&gt;k_base_cmo2 -->
+<g id="edge17" class="edge">
+<title>cash&#45;&gt;k_base_cmo2</title>
+<path fill="none" stroke="black" d="M36.87,-797.57C39.27,-842.31 49.08,-957.44 88.23,-1043.69 99.5,-1068.5 111.43,-1069 125.73,-1092.19 135.44,-1107.92 132.28,-1115.17 143.73,-1129.69 143.88,-1129.87 144.03,-1130.06 144.19,-1130.25"/>
+<polygon fill="black" stroke="black" points="141.4,-1132.4 150.81,-1137.26 146.48,-1127.59 141.4,-1132.4"/>
+<text text-anchor="middle" x="106.98" y="-1095.39" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- t_make_own -->
+<g id="node54" class="node">
+<title>t_make_own</title>
+<polygon fill="none" stroke="black" points="208.86,-364.69 147.11,-364.69 147.11,-328.69 208.86,-328.69 208.86,-364.69"/>
+<text text-anchor="middle" x="177.98" y="-343.39" font-family="Times,serif" font-size="9.00">t_make_own</text>
+</g>
+<!-- cash&#45;&gt;t_make_own -->
+<g id="edge21" class="edge">
+<title>cash&#45;&gt;t_make_own</title>
+<path fill="none" stroke="black" d="M37.07,-760.06C40.46,-700.18 53.64,-513.8 88.23,-466.19 99.27,-450.99 114.12,-461.45 125.73,-446.69 144.54,-422.78 129.2,-405.29 145.19,-374.44"/>
+<polygon fill="black" stroke="black" points="148,-376.57 150.13,-366.2 141.99,-372.98 148,-376.57"/>
+<text text-anchor="middle" x="106.98" y="-469.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- t_make_l2 -->
+<g id="node55" class="node">
+<title>t_make_l2</title>
+<polygon fill="none" stroke="black" points="204.98,-688.69 150.98,-688.69 150.98,-652.69 204.98,-652.69 204.98,-688.69"/>
+<text text-anchor="middle" x="177.98" y="-667.39" font-family="Times,serif" font-size="9.00">t_make_l2</text>
+</g>
+<!-- cash&#45;&gt;t_make_l2 -->
+<g id="edge25" class="edge">
+<title>cash&#45;&gt;t_make_l2</title>
+<path fill="none" stroke="black" d="M51.04,-768.54C69.1,-756.1 100.27,-734.16 125.73,-713.69 134.08,-706.98 135.58,-704.62 143.73,-697.69 144.25,-697.25 144.77,-696.81 145.29,-696.37"/>
+<polygon fill="black" stroke="black" points="147.36,-699.2 152.81,-690.11 142.89,-693.81 147.36,-699.2"/>
+<text text-anchor="middle" x="106.98" y="-744.52" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- t_make_cmo -->
+<g id="node56" class="node">
+<title>t_make_cmo</title>
+<polygon fill="none" stroke="black" points="208.48,-1228.69 147.48,-1228.69 147.48,-1192.69 208.48,-1192.69 208.48,-1228.69"/>
+<text text-anchor="middle" x="177.98" y="-1207.39" font-family="Times,serif" font-size="9.00">t_make_cmo</text>
+</g>
+<!-- cash&#45;&gt;t_make_cmo -->
+<g id="edge29" class="edge">
+<title>cash&#45;&gt;t_make_cmo</title>
+<path fill="none" stroke="black" d="M36.01,-797.4C36.34,-849.11 41.6,-997.42 88.23,-1108.69 89.23,-1111.08 141.94,-1181.81 143.73,-1183.69 143.99,-1183.96 144.26,-1184.23 144.52,-1184.5"/>
+<polygon fill="black" stroke="black" points="141.94,-1186.88 151.63,-1191.17 146.73,-1181.77 141.94,-1186.88"/>
+<text text-anchor="middle" x="106.98" y="-1162.45" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- t_make_cmo2 -->
+<g id="node57" class="node">
+<title>t_make_cmo2</title>
+<polygon fill="none" stroke="black" points="210.73,-1336.69 145.23,-1336.69 145.23,-1300.69 210.73,-1300.69 210.73,-1336.69"/>
+<text text-anchor="middle" x="177.98" y="-1315.39" font-family="Times,serif" font-size="9.00">t_make_cmo2</text>
+</g>
+<!-- cash&#45;&gt;t_make_cmo2 -->
+<g id="edge33" class="edge">
+<title>cash&#45;&gt;t_make_cmo2</title>
+<path fill="none" stroke="black" d="M37.86,-797.23C45.76,-880.71 78.22,-1218.5 88.23,-1238.69 99.28,-1260.94 119.41,-1279.88 137.71,-1293.74"/>
+<polygon fill="black" stroke="black" points="135.41,-1296.39 145.56,-1299.43 139.52,-1290.72 135.41,-1296.39"/>
+<text text-anchor="middle" x="106.98" y="-1286.57" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- k_buf_own -->
+<g id="node58" class="node">
+<title>k_buf_own</title>
+<polygon fill="none" stroke="black" points="206.61,-310.69 149.36,-310.69 149.36,-274.69 206.61,-274.69 206.61,-310.69"/>
+<text text-anchor="middle" x="177.98" y="-289.39" font-family="Times,serif" font-size="9.00">k_buf_own</text>
+</g>
+<!-- cash&#45;&gt;k_buf_own -->
+<g id="edge37" class="edge">
+<title>cash&#45;&gt;k_buf_own</title>
+<path fill="none" stroke="black" d="M36.71,-759.84C38.85,-706.29 48.35,-549.17 88.23,-426.19 104.7,-375.41 109.98,-361.03 143.73,-319.69 143.89,-319.5 144.04,-319.31 144.2,-319.12"/>
+<polygon fill="black" stroke="black" points="146.47,-321.8 150.9,-312.18 141.44,-316.94 146.47,-321.8"/>
+<text text-anchor="middle" x="106.98" y="-429.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- k_buf_l2 -->
+<g id="node59" class="node">
+<title>k_buf_l2</title>
+<polygon fill="none" stroke="black" points="204.98,-472.69 150.98,-472.69 150.98,-436.69 204.98,-436.69 204.98,-472.69"/>
+<text text-anchor="middle" x="177.98" y="-451.39" font-family="Times,serif" font-size="9.00">k_buf_l2</text>
+</g>
+<!-- cash&#45;&gt;k_buf_l2 -->
+<g id="edge41" class="edge">
+<title>cash&#45;&gt;k_buf_l2</title>
+<path fill="none" stroke="black" d="M35.27,-759.91C34.33,-717.3 37.65,-611.91 88.23,-546.19 99.69,-531.3 113.12,-540.61 125.73,-526.69 138.33,-512.78 132.95,-502.12 144.81,-482.51"/>
+<polygon fill="black" stroke="black" points="147.6,-484.63 150.46,-474.42 141.86,-480.62 147.6,-484.63"/>
+<text text-anchor="middle" x="106.98" y="-549.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- k_buf_cmo -->
+<g id="node60" class="node">
+<title>k_buf_cmo</title>
+<polygon fill="none" stroke="black" points="206.23,-1120.69 149.73,-1120.69 149.73,-1084.69 206.23,-1084.69 206.23,-1120.69"/>
+<text text-anchor="middle" x="177.98" y="-1099.39" font-family="Times,serif" font-size="9.00">k_buf_cmo</text>
+</g>
+<!-- cash&#45;&gt;k_buf_cmo -->
+<g id="edge45" class="edge">
+<title>cash&#45;&gt;k_buf_cmo</title>
+<path fill="none" stroke="black" d="M35.83,-797.52C36.12,-838.79 41.92,-938.71 88.23,-1003.69 99.65,-1019.7 113.32,-1011.93 125.73,-1027.19 138.49,-1042.86 132.38,-1054.01 144.91,-1074.98"/>
+<polygon fill="black" stroke="black" points="141.86,-1076.72 150.4,-1082.99 147.64,-1072.76 141.86,-1076.72"/>
+<text text-anchor="middle" x="106.98" y="-1030.39" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- k_buf_cmo2 -->
+<g id="node61" class="node">
+<title>k_buf_cmo2</title>
+<polygon fill="none" stroke="black" points="208.48,-1282.69 147.48,-1282.69 147.48,-1246.69 208.48,-1246.69 208.48,-1282.69"/>
+<text text-anchor="middle" x="177.98" y="-1261.39" font-family="Times,serif" font-size="9.00">k_buf_cmo2</text>
+</g>
+<!-- cash&#45;&gt;k_buf_cmo2 -->
+<g id="edge49" class="edge">
+<title>cash&#45;&gt;k_buf_cmo2</title>
+<path fill="none" stroke="black" d="M37.01,-797.52C40.57,-867.29 55.13,-1110.5 88.23,-1179.69 95.93,-1195.78 130.62,-1225.59 143.73,-1237.69 144.23,-1238.14 144.73,-1238.6 145.24,-1239.06"/>
+<polygon fill="black" stroke="black" points="142.78,-1241.56 152.63,-1245.47 147.37,-1236.27 142.78,-1241.56"/>
+<text text-anchor="middle" x="106.98" y="-1223.64" font-family="Times,serif" font-size="14.00">40.0</text>
+</g>
+<!-- t_ppq_own -->
+<g id="node62" class="node">
+<title>t_ppq_own</title>
+<polygon fill="none" stroke="black" points="206.23,-202.69 149.73,-202.69 149.73,-166.69 206.23,-166.69 206.23,-202.69"/>
+<text text-anchor="middle" x="177.98" y="-181.39" font-family="Times,serif" font-size="9.00">t_ppq_own</text>
+</g>
+<!-- cash&#45;&gt;t_ppq_own -->
+<g id="edge53" class="edge">
+<title>cash&#45;&gt;t_ppq_own</title>
+<path fill="none" stroke="black" d="M37.88,-760C46.64,-667.41 85.16,-261.87 88.23,-256.19 99.94,-234.55 121.21,-217.07 139.99,-204.8"/>
+<polygon fill="black" stroke="black" points="141.6,-207.93 148.24,-199.67 137.9,-201.98 141.6,-207.93"/>
+<text text-anchor="middle" x="106.98" y="-259.39" font-family="Times,serif" font-size="14.00">15.0</text>
+</g>
+<!-- cmo_fee -->
+<g id="node72" class="node">
+<title>cmo_fee</title>
+<polygon fill="none" stroke="black" points="204.98,-850.69 150.98,-850.69 150.98,-814.69 204.98,-814.69 204.98,-850.69"/>
+<text text-anchor="middle" x="177.98" y="-829.39" font-family="Times,serif" font-size="9.00">cmo_fee</text>
+</g>
+<!-- cash&#45;&gt;cmo_fee -->
+<g id="edge71" class="edge">
+<title>cash&#45;&gt;cmo_fee</title>
+<path fill="none" stroke="black" d="M52.55,-784.99C62.81,-788.93 76.29,-794.11 88.23,-798.69 105.26,-805.21 124.12,-812.44 140.06,-818.55"/>
+<polygon fill="black" stroke="black" points="138.57,-821.72 149.16,-822.03 141.07,-815.19 138.57,-821.72"/>
+<text text-anchor="middle" x="106.98" y="-815.9" font-family="Times,serif" font-size="14.00">5000.0</text>
+</g>
+<!-- cmo_fee_y2 -->
+<g id="node73" class="node">
+<title>cmo_fee_y2</title>
+<polygon fill="none" stroke="black" points="207.73,-796.69 148.23,-796.69 148.23,-760.69 207.73,-760.69 207.73,-796.69"/>
+<text text-anchor="middle" x="177.98" y="-775.39" font-family="Times,serif" font-size="9.00">cmo_fee_y2</text>
+</g>
+<!-- cash&#45;&gt;cmo_fee_y2 -->
+<g id="edge72" class="edge">
+<title>cash&#45;&gt;cmo_fee_y2</title>
+<path fill="none" stroke="black" d="M53.96,-778.69C74.62,-778.69 109.32,-778.69 136.61,-778.69"/>
+<polygon fill="black" stroke="black" points="136.27,-782.19 146.27,-778.69 136.27,-775.19 136.27,-782.19"/>
+<text text-anchor="middle" x="106.98" y="-781.89" font-family="Times,serif" font-size="14.00">5000.0</text>
+</g>
+<!-- cmo2_fee -->
+<g id="node74" class="node">
+<title>cmo2_fee</title>
+<polygon fill="none" stroke="black" points="204.98,-634.69 150.98,-634.69 150.98,-598.69 204.98,-598.69 204.98,-634.69"/>
+<text text-anchor="middle" x="177.98" y="-613.39" font-family="Times,serif" font-size="9.00">cmo2_fee</text>
+</g>
+<!-- cash&#45;&gt;cmo2_fee -->
+<g id="edge73" class="edge">
+<title>cash&#45;&gt;cmo2_fee</title>
+<path fill="none" stroke="black" d="M44.23,-762.31C53.52,-744.37 69.87,-715.22 88.23,-693.19 109.4,-667.8 118.56,-665.11 143.73,-643.69 144.25,-643.25 144.76,-642.81 145.29,-642.37"/>
+<polygon fill="black" stroke="black" points="147.36,-645.19 152.81,-636.11 142.89,-639.81 147.36,-645.19"/>
+<text text-anchor="middle" x="106.98" y="-696.39" font-family="Times,serif" font-size="14.00">5000.0</text>
+</g>
+<!-- l2_capex_y1 -->
+<g id="node75" class="node">
+<title>l2_capex_y1</title>
+<polygon fill="none" stroke="black" points="208.48,-580.69 147.48,-580.69 147.48,-544.69 208.48,-544.69 208.48,-580.69"/>
+<text text-anchor="middle" x="177.98" y="-559.39" font-family="Times,serif" font-size="9.00">l2_capex_y1</text>
+</g>
+<!-- cash&#45;&gt;l2_capex_y1 -->
+<g id="edge74" class="edge">
+<title>cash&#45;&gt;l2_capex_y1</title>
+<path fill="none" stroke="black" d="M39.72,-760.42C45.97,-732.18 60.82,-677.11 88.23,-638.19 100.77,-620.39 109.48,-621.16 125.73,-606.69 133.95,-599.37 135.46,-596.94 143.73,-589.69 144.24,-589.24 144.75,-588.79 145.27,-588.35"/>
+<polygon fill="black" stroke="black" points="147.37,-591.16 152.75,-582.03 142.85,-585.81 147.37,-591.16"/>
+<text text-anchor="middle" x="106.98" y="-641.39" font-family="Times,serif" font-size="14.00">2000.0</text>
+</g>
+<!-- l2_capex_y2 -->
+<g id="node76" class="node">
+<title>l2_capex_y2</title>
+<polygon fill="none" stroke="black" points="208.48,-526.69 147.48,-526.69 147.48,-490.69 208.48,-490.69 208.48,-526.69"/>
+<text text-anchor="middle" x="177.98" y="-505.39" font-family="Times,serif" font-size="9.00">l2_capex_y2</text>
+</g>
+<!-- cash&#45;&gt;l2_capex_y2 -->
+<g id="edge75" class="edge">
+<title>cash&#45;&gt;l2_capex_y2</title>
+<path fill="none" stroke="black" d="M36.38,-759.78C37.86,-722.51 46,-638.64 88.23,-586.19 100.01,-571.55 112.14,-579.66 125.73,-566.69 137.26,-555.68 133.38,-547.79 143.73,-535.69 143.98,-535.4 144.23,-535.11 144.48,-534.83"/>
+<polygon fill="black" stroke="black" points="146.75,-537.5 151.35,-527.96 141.8,-532.55 146.75,-537.5"/>
+<text text-anchor="middle" x="106.98" y="-589.39" font-family="Times,serif" font-size="14.00">5000.0</text>
+</g>
+<!-- l2_capex_y3 -->
+<g id="node77" class="node">
+<title>l2_capex_y3</title>
+<polygon fill="none" stroke="black" points="208.48,-1012.69 147.48,-1012.69 147.48,-976.69 208.48,-976.69 208.48,-1012.69"/>
+<text text-anchor="middle" x="177.98" y="-991.39" font-family="Times,serif" font-size="9.00">l2_capex_y3</text>
+</g>
+<!-- cash&#45;&gt;l2_capex_y3 -->
+<g id="edge76" class="edge">
+<title>cash&#45;&gt;l2_capex_y3</title>
+<path fill="none" stroke="black" d="M38.76,-797.06C43.8,-826.58 57.19,-885.14 88.23,-923.69 100.57,-939 110.75,-934.44 125.73,-947.19 134.97,-955.04 135,-959.28 143.73,-967.69 144.11,-968.05 144.49,-968.41 144.87,-968.77"/>
+<polygon fill="black" stroke="black" points="142.38,-971.24 152.17,-975.28 147.04,-966.01 142.38,-971.24"/>
+<text text-anchor="middle" x="106.98" y="-950.39" font-family="Times,serif" font-size="14.00">3000.0</text>
+</g>
+<!-- l2_capex_even -->
+<g id="node78" class="node">
+<title>l2_capex_even</title>
+<polygon fill="none" stroke="black" points="212.23,-958.69 143.73,-958.69 143.73,-922.69 212.23,-922.69 212.23,-958.69"/>
+<text text-anchor="middle" x="177.98" y="-937.39" font-family="Times,serif" font-size="9.00">l2_capex_even</text>
+</g>
+<!-- cash&#45;&gt;l2_capex_even -->
+<g id="edge77" class="edge">
+<title>cash&#45;&gt;l2_capex_even</title>
+<path fill="none" stroke="black" d="M42.16,-796.32C50.16,-817.81 65.92,-854.37 88.23,-879.69 92.43,-884.44 117.09,-901.28 139.35,-916.06"/>
+<polygon fill="black" stroke="black" points="137.14,-918.8 147.42,-921.4 141,-912.96 137.14,-918.8"/>
+<text text-anchor="middle" x="106.98" y="-909.93" font-family="Times,serif" font-size="14.00">3333.0</text>
+</g>
+<!-- l2_fixed -->
+<g id="node79" class="node">
+<title>l2_fixed</title>
+<polygon fill="none" stroke="black" points="204.98,-904.69 150.98,-904.69 150.98,-868.69 204.98,-868.69 204.98,-904.69"/>
+<text text-anchor="middle" x="177.98" y="-883.39" font-family="Times,serif" font-size="9.00">l2_fixed</text>
+</g>
+<!-- cash&#45;&gt;l2_fixed -->
+<g id="edge78" class="edge">
+<title>cash&#45;&gt;l2_fixed</title>
+<path fill="none" stroke="black" d="M47.6,-792.82C57.59,-804.59 72.83,-821.35 88.23,-833.69 104.36,-846.6 123.92,-858.62 140.58,-867.93"/>
+<polygon fill="black" stroke="black" points="138.73,-870.91 149.19,-872.64 142.09,-864.77 138.73,-870.91"/>
+<text text-anchor="middle" x="106.98" y="-862.44" font-family="Times,serif" font-size="14.00">833.0</text>
+</g>
+<!-- line -->
+<g id="node2" class="node">
+<title>line</title>
+<ellipse fill="none" stroke="black" cx="35.12" cy="-209.69" rx="18" ry="18"/>
+<text text-anchor="middle" x="35.12" y="-206.39" font-family="Times,serif" font-size="9.00">line</text>
+</g>
+<!-- mkt -->
+<g id="node49" class="node">
+<title>mkt</title>
+<polygon fill="none" stroke="black" points="204.98,-148.69 150.98,-148.69 150.98,-112.69 204.98,-112.69 204.98,-148.69"/>
+<text text-anchor="middle" x="177.98" y="-127.39" font-family="Times,serif" font-size="9.00">mkt</text>
+</g>
+<!-- line&#45;&gt;mkt -->
+<g id="edge1" class="edge">
+<title>line&#45;&gt;mkt</title>
+<path fill="none" stroke="darkgreen" d="M51.46,-201.08C72.76,-189.13 111.95,-167.16 140.89,-150.93"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="142.32,-154.14 149.33,-146.19 138.9,-148.03 142.32,-154.14"/>
+</g>
+<!-- line&#45;&gt;k_base_own -->
+<g id="edge4" class="edge">
+<title>line&#45;&gt;k_base_own</title>
+<path fill="none" stroke="darkgreen" d="M53.42,-211.71C71.56,-213.99 100.84,-218.12 125.73,-223.69 129.11,-224.44 132.59,-225.29 136.07,-226.2"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="135.04,-229.55 145.61,-228.82 136.9,-222.8 135.04,-229.55"/>
+</g>
+<!-- line&#45;&gt;t_make_own -->
+<g id="edge20" class="edge">
+<title>line&#45;&gt;t_make_own</title>
+<path fill="none" stroke="darkgreen" d="M39.94,-227.46C46.02,-251.55 60.2,-294.34 88.23,-318.69 101.51,-330.22 119.55,-337.01 135.9,-341"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="134.87,-344.36 145.38,-343.03 136.33,-337.52 134.87,-344.36"/>
+</g>
+<!-- line&#45;&gt;k_buf_own -->
+<g id="edge36" class="edge">
+<title>line&#45;&gt;k_buf_own</title>
+<path fill="none" stroke="darkgreen" d="M40.41,-227.2C46.76,-248.88 60.98,-284.89 88.23,-300.69 103.13,-309.32 121.85,-308.93 138.26,-305.74"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="138.77,-309.21 147.69,-303.5 137.16,-302.4 138.77,-309.21"/>
+</g>
+<!-- line&#45;&gt;t_ppq_own -->
+<g id="edge52" class="edge">
+<title>line&#45;&gt;t_ppq_own</title>
+<path fill="none" stroke="darkgreen" d="M52.97,-205.9C63.16,-203.67 76.41,-200.86 88.23,-198.69 104.49,-195.69 122.5,-192.77 138.02,-190.39"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="138.48,-193.86 147.84,-188.9 137.43,-186.94 138.48,-193.86"/>
+</g>
+<!-- cmo -->
+<g id="node3" class="node">
+<title>cmo</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1162.69" rx="18.07" ry="18.07"/>
+<text text-anchor="middle" x="35.12" y="-1159.39" font-family="Times,serif" font-size="9.00">cmo</text>
+</g>
+<!-- cmo&#45;&gt;k_base_cmo -->
+<g id="edge12" class="edge">
+<title>cmo&#45;&gt;k_base_cmo</title>
+<path fill="none" stroke="darkgreen" d="M48.03,-1149.96C58.27,-1139.28 73.66,-1123.86 88.23,-1111.69 97.68,-1103.79 120.52,-1087.6 140.66,-1073.61"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="142.49,-1076.6 148.72,-1068.03 138.51,-1070.85 142.49,-1076.6"/>
+</g>
+<!-- cmo&#45;&gt;t_make_cmo -->
+<g id="edge28" class="edge">
+<title>cmo&#45;&gt;t_make_cmo</title>
+<path fill="none" stroke="darkgreen" d="M52.55,-1168.29C72.99,-1175.25 108.59,-1187.38 136.49,-1196.89"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="135.11,-1200.12 145.71,-1200.03 137.37,-1193.49 135.11,-1200.12"/>
+</g>
+<!-- cmo&#45;&gt;k_buf_cmo -->
+<g id="edge44" class="edge">
+<title>cmo&#45;&gt;k_buf_cmo</title>
+<path fill="none" stroke="darkgreen" d="M53.66,-1163.21C72.52,-1163.06 102.87,-1160.7 125.73,-1148.69 136.03,-1143.28 135.2,-1137.59 143.73,-1129.69 144.23,-1129.23 144.73,-1128.77 145.24,-1128.31"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="147.37,-1131.09 152.62,-1121.89 142.77,-1125.81 147.37,-1131.09"/>
+</g>
+<!-- line2 -->
+<g id="node4" class="node">
+<title>line2</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-395.69" rx="19.38" ry="19.38"/>
+<text text-anchor="middle" x="35.12" y="-392.39" font-family="Times,serif" font-size="9.00">line2</text>
+</g>
+<!-- line2&#45;&gt;k_base_l2 -->
+<g id="edge8" class="edge">
+<title>line2&#45;&gt;k_base_l2</title>
+<path fill="none" stroke="darkgreen" d="M54.01,-390.61C72.13,-386.15 100.94,-380.9 125.73,-384.69 130.4,-385.4 135.22,-386.45 139.96,-387.69"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="138.71,-390.97 149.29,-390.4 140.66,-384.25 138.71,-390.97"/>
+</g>
+<!-- line2&#45;&gt;t_make_l2 -->
+<g id="edge24" class="edge">
+<title>line2&#45;&gt;t_make_l2</title>
+<path fill="none" stroke="darkgreen" d="M37.58,-415.3C41.92,-468.35 56.49,-613 88.23,-646.69 101.34,-660.6 121.61,-666.75 139.47,-669.35"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="138.93,-672.81 149.25,-670.43 139.7,-665.85 138.93,-672.81"/>
+</g>
+<!-- line2&#45;&gt;k_buf_l2 -->
+<g id="edge40" class="edge">
+<title>line2&#45;&gt;k_buf_l2</title>
+<path fill="none" stroke="darkgreen" d="M54.64,-395.29C73.51,-395.62 103.13,-398.2 125.73,-409.69 135.82,-414.81 135.33,-420.11 143.73,-427.69 144.23,-428.14 144.74,-428.59 145.25,-429.04"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="142.81,-431.56 152.68,-435.41 147.37,-426.25 142.81,-431.56"/>
+</g>
+<!-- cmo2 -->
+<g id="node5" class="node">
+<title>cmo2</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1317.69" rx="20.69" ry="20.69"/>
+<text text-anchor="middle" x="35.12" y="-1314.39" font-family="Times,serif" font-size="9.00">cmo2</text>
+</g>
+<!-- cmo2&#45;&gt;k_base_cmo2 -->
+<g id="edge16" class="edge">
+<title>cmo2&#45;&gt;k_base_cmo2</title>
+<path fill="none" stroke="darkgreen" d="M55.79,-1314.62C76.47,-1310.32 108.37,-1300.43 125.73,-1278.69 150.56,-1247.6 125.97,-1224.28 144.97,-1184.91"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="147.88,-1186.88 149.69,-1176.45 141.76,-1183.48 147.88,-1186.88"/>
+</g>
+<!-- cmo2&#45;&gt;t_make_cmo2 -->
+<g id="edge32" class="edge">
+<title>cmo2&#45;&gt;t_make_cmo2</title>
+<path fill="none" stroke="darkgreen" d="M55.27,-1322.72C65.06,-1325.04 77.2,-1327.53 88.23,-1328.69 104.81,-1330.42 109.14,-1330.29 125.73,-1328.69 128.36,-1328.43 131.05,-1328.11 133.76,-1327.73"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="134.05,-1331.23 143.37,-1326.18 132.94,-1324.32 134.05,-1331.23"/>
+</g>
+<!-- cmo2&#45;&gt;k_buf_cmo2 -->
+<g id="edge48" class="edge">
+<title>cmo2&#45;&gt;k_buf_cmo2</title>
+<path fill="none" stroke="darkgreen" d="M56.11,-1317.35C74.8,-1316.41 103.13,-1313.31 125.73,-1303.69 128.2,-1302.63 136.03,-1296.89 144.84,-1290.11"/>
+<polygon fill="darkgreen" stroke="darkgreen" points="146.88,-1292.96 152.63,-1284.06 142.59,-1287.43 146.88,-1292.96"/>
+</g>
+<!-- cmo2_active -->
+<g id="node6" class="node">
+<title>cmo2_active</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1391.69" rx="35.12" ry="35.12"/>
+<text text-anchor="middle" x="35.12" y="-1388.39" font-family="Times,serif" font-size="9.00">cmo2_active</text>
+</g>
+<!-- cmo2_ready -->
+<g id="node7" class="node">
+<title>cmo2_ready</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1479.69" rx="34.68" ry="34.68"/>
+<text text-anchor="middle" x="35.12" y="-1476.39" font-family="Times,serif" font-size="9.00">cmo2_ready</text>
+</g>
+<!-- k_cmo2_ok -->
+<g id="node8" class="node">
+<title>k_cmo2_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1565.69" rx="33.81" ry="33.81"/>
+<text text-anchor="middle" x="35.12" y="-1562.39" font-family="Times,serif" font-size="9.00">k_cmo2_ok</text>
+</g>
+<!-- t_cmo2_ok -->
+<g id="node9" class="node">
+<title>t_cmo2_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1649.69" rx="32.49" ry="32.49"/>
+<text text-anchor="middle" x="35.12" y="-1646.39" font-family="Times,serif" font-size="9.00">t_cmo2_ok</text>
+</g>
+<!-- k_short_any -->
+<g id="node10" class="node">
+<title>k_short_any</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1735.69" rx="35.12" ry="35.12"/>
+<text text-anchor="middle" x="35.12" y="-1732.39" font-family="Times,serif" font-size="9.00">k_short_any</text>
+</g>
+<!-- mkt_done -->
+<g id="node11" class="node">
+<title>mkt_done</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-103.69" rx="29.87" ry="29.87"/>
+<text text-anchor="middle" x="283.04" y="-100.39" font-family="Times,serif" font-size="9.00">mkt_done</text>
+</g>
+<!-- k_stock -->
+<g id="node12" class="node">
+<title>k_stock</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-519.69" rx="25.5" ry="25.5"/>
+<text text-anchor="middle" x="283.04" y="-516.39" font-family="Times,serif" font-size="9.00">k_stock</text>
+</g>
+<!-- k_ship -->
+<g id="node65" class="node">
+<title>k_ship</title>
+<polygon fill="none" stroke="black" points="407.84,-288.69 353.84,-288.69 353.84,-252.69 407.84,-252.69 407.84,-288.69"/>
+<text text-anchor="middle" x="380.84" y="-267.39" font-family="Times,serif" font-size="9.00">k_ship</text>
+</g>
+<!-- k_stock&#45;&gt;k_ship -->
+<g id="edge59" class="edge">
+<title>k_stock&#45;&gt;k_ship</title>
+<path fill="none" stroke="black" d="M302.49,-503.19C307.73,-497.73 313.04,-491.34 316.84,-484.69 351.4,-424.28 368.49,-343.24 375.6,-300.3"/>
+<polygon fill="black" stroke="black" points="379.04,-300.91 377.15,-290.49 372.13,-299.82 379.04,-300.91"/>
+</g>
+<!-- t_stock -->
+<g id="node13" class="node">
+<title>t_stock</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-793.69" rx="24.19" ry="24.19"/>
+<text text-anchor="middle" x="283.04" y="-790.39" font-family="Times,serif" font-size="9.00">t_stock</text>
+</g>
+<!-- t_ship -->
+<g id="node69" class="node">
+<title>t_ship</title>
+<polygon fill="none" stroke="black" points="407.84,-807.69 353.84,-807.69 353.84,-771.69 407.84,-771.69 407.84,-807.69"/>
+<text text-anchor="middle" x="380.84" y="-786.39" font-family="Times,serif" font-size="9.00">t_ship</text>
+</g>
+<!-- t_stock&#45;&gt;t_ship -->
+<g id="edge66" class="edge">
+<title>t_stock&#45;&gt;t_ship</title>
+<path fill="none" stroke="black" d="M307.23,-792.72C317.7,-792.28 330.33,-791.75 342.11,-791.26"/>
+<polygon fill="black" stroke="black" points="342.12,-794.76 351.97,-790.85 341.83,-787.77 342.12,-794.76"/>
+</g>
+<!-- k_orders -->
+<g id="node14" class="node">
+<title>k_orders</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-27.69" rx="27.69" ry="27.69"/>
+<text text-anchor="middle" x="283.04" y="-24.39" font-family="Times,serif" font-size="9.00">k_orders</text>
+</g>
+<!-- k_orders&#45;&gt;k_ship -->
+<g id="edge58" class="edge">
+<title>k_orders&#45;&gt;k_ship</title>
+<path fill="none" stroke="black" d="M303.45,-46.44C308.35,-51.96 313.23,-58.25 316.84,-64.69 349.39,-122.73 367.13,-199.6 374.92,-241.09"/>
+<polygon fill="black" stroke="black" points="371.45,-241.58 376.67,-250.8 378.34,-240.34 371.45,-241.58"/>
+</g>
+<!-- k_lose -->
+<g id="node66" class="node">
+<title>k_lose</title>
+<polygon fill="none" stroke="black" points="407.84,-45.69 353.84,-45.69 353.84,-9.69 407.84,-9.69 407.84,-45.69"/>
+<text text-anchor="middle" x="380.84" y="-24.39" font-family="Times,serif" font-size="9.00">k_lose</text>
+</g>
+<!-- k_orders&#45;&gt;k_lose -->
+<g id="edge61" class="edge">
+<title>k_orders&#45;&gt;k_lose</title>
+<path fill="none" stroke="black" d="M310.98,-27.69C320.63,-27.69 331.7,-27.69 342.09,-27.69"/>
+<polygon fill="black" stroke="black" points="341.92,-31.19 351.92,-27.69 341.92,-24.19 341.92,-31.19"/>
+</g>
+<!-- t_orders -->
+<g id="node15" class="node">
+<title>t_orders</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-724.69" rx="26.37" ry="26.37"/>
+<text text-anchor="middle" x="283.04" y="-721.39" font-family="Times,serif" font-size="9.00">t_orders</text>
+</g>
+<!-- t_orders&#45;&gt;t_ship -->
+<g id="edge65" class="edge">
+<title>t_orders&#45;&gt;t_ship</title>
+<path fill="none" stroke="black" d="M305.3,-739.11C316.75,-746.88 331.17,-756.66 344.27,-765.55"/>
+<polygon fill="black" stroke="black" points="342.02,-768.25 352.26,-770.97 345.95,-762.46 342.02,-768.25"/>
+</g>
+<!-- t_lose -->
+<g id="node70" class="node">
+<title>t_lose</title>
+<polygon fill="none" stroke="black" points="407.84,-742.69 353.84,-742.69 353.84,-706.69 407.84,-706.69 407.84,-742.69"/>
+<text text-anchor="middle" x="380.84" y="-721.39" font-family="Times,serif" font-size="9.00">t_lose</text>
+</g>
+<!-- t_orders&#45;&gt;t_lose -->
+<g id="edge68" class="edge">
+<title>t_orders&#45;&gt;t_lose</title>
+<path fill="none" stroke="black" d="M309.71,-724.69C319.64,-724.69 331.21,-724.69 342.06,-724.69"/>
+<polygon fill="black" stroke="black" points="341.92,-728.19 351.92,-724.69 341.92,-721.19 341.92,-728.19"/>
+</g>
+<!-- k_sold -->
+<g id="node16" class="node">
+<title>k_sold</title>
+<ellipse fill="gold" stroke="black" cx="468.16" cy="-270.69" rx="23.31" ry="23.31"/>
+<text text-anchor="middle" x="468.16" y="-267.39" font-family="Times,serif" font-size="9.00">k_sold</text>
+</g>
+<!-- t_sold -->
+<g id="node17" class="node">
+<title>t_sold</title>
+<ellipse fill="gold" stroke="black" cx="468.16" cy="-789.69" rx="22" ry="22"/>
+<text text-anchor="middle" x="468.16" y="-786.39" font-family="Times,serif" font-size="9.00">t_sold</text>
+</g>
+<!-- k_lost -->
+<g id="node18" class="node">
+<title>k_lost</title>
+<ellipse fill="gold" stroke="black" cx="468.16" cy="-27.69" rx="22" ry="22"/>
+<text text-anchor="middle" x="468.16" y="-24.39" font-family="Times,serif" font-size="9.00">k_lost</text>
+</g>
+<!-- t_lost -->
+<g id="node19" class="node">
+<title>t_lost</title>
+<ellipse fill="gold" stroke="black" cx="468.16" cy="-724.69" rx="20.69" ry="20.69"/>
+<text text-anchor="middle" x="468.16" y="-721.39" font-family="Times,serif" font-size="9.00">t_lost</text>
+</g>
+<!-- k_pre -->
+<g id="node20" class="node">
+<title>k_pre</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1809.69" rx="21.13" ry="21.13"/>
+<text text-anchor="middle" x="35.12" y="-1806.39" font-family="Times,serif" font-size="9.00">k_pre</text>
+</g>
+<!-- k_launched -->
+<g id="node21" class="node">
+<title>k_launched</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-1881.69" rx="32.93" ry="32.93"/>
+<text text-anchor="middle" x="35.12" y="-1878.39" font-family="Times,serif" font-size="9.00">k_launched</text>
+</g>
+<!-- k_age -->
+<g id="node22" class="node">
+<title>k_age</title>
+<ellipse fill="gold" stroke="black" cx="177.98" cy="-1950.69" rx="21.57" ry="21.57"/>
+<text text-anchor="middle" x="177.98" y="-1947.39" font-family="Times,serif" font-size="9.00">k_age</text>
+</g>
+<!-- t_pre -->
+<g id="node23" class="node">
+<title>t_pre</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2006.69" rx="19.82" ry="19.82"/>
+<text text-anchor="middle" x="35.12" y="-2003.39" font-family="Times,serif" font-size="9.00">t_pre</text>
+</g>
+<!-- t_launched -->
+<g id="node24" class="node">
+<title>t_launched</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2075.69" rx="31.62" ry="31.62"/>
+<text text-anchor="middle" x="35.12" y="-2072.39" font-family="Times,serif" font-size="9.00">t_launched</text>
+</g>
+<!-- t_age -->
+<g id="node25" class="node">
+<title>t_age</title>
+<ellipse fill="gold" stroke="black" cx="177.98" cy="-2143.69" rx="20.25" ry="20.25"/>
+<text text-anchor="middle" x="177.98" y="-2140.39" font-family="Times,serif" font-size="9.00">t_age</text>
+</g>
+<!-- t_ppq_done -->
+<g id="node26" class="node">
+<title>t_ppq_done</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-185.69" rx="33.81" ry="33.81"/>
+<text text-anchor="middle" x="283.04" y="-182.39" font-family="Times,serif" font-size="9.00">t_ppq_done</text>
+</g>
+<!-- t_filed -->
+<g id="node27" class="node">
+<title>t_filed</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2201.69" rx="22.44" ry="22.44"/>
+<text text-anchor="middle" x="35.12" y="-2198.39" font-family="Times,serif" font-size="9.00">t_filed</text>
+</g>
+<!-- t_file_delay -->
+<g id="node28" class="node">
+<title>t_file_delay</title>
+<ellipse fill="gold" stroke="black" cx="177.98" cy="-2259.69" rx="33.37" ry="33.37"/>
+<text text-anchor="middle" x="177.98" y="-2256.39" font-family="Times,serif" font-size="9.00">t_file_delay</text>
+</g>
+<!-- k_cmo_ok -->
+<g id="node29" class="node">
+<title>k_cmo_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2326.69" rx="31.18" ry="31.18"/>
+<text text-anchor="middle" x="35.12" y="-2323.39" font-family="Times,serif" font-size="9.00">k_cmo_ok</text>
+</g>
+<!-- t_cmo_ok -->
+<g id="node30" class="node">
+<title>t_cmo_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2405.69" rx="29.87" ry="29.87"/>
+<text text-anchor="middle" x="35.12" y="-2402.39" font-family="Times,serif" font-size="9.00">t_cmo_ok</text>
+</g>
+<!-- k_l2_ok -->
+<g id="node31" class="node">
+<title>k_l2_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2479.69" rx="26.37" ry="26.37"/>
+<text text-anchor="middle" x="35.12" y="-2476.39" font-family="Times,serif" font-size="9.00">k_l2_ok</text>
+</g>
+<!-- t_l2_ok -->
+<g id="node32" class="node">
+<title>t_l2_ok</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2548.69" rx="25.06" ry="25.06"/>
+<text text-anchor="middle" x="35.12" y="-2545.39" font-family="Times,serif" font-size="9.00">t_l2_ok</text>
+</g>
+<!-- cmo_active -->
+<g id="node33" class="node">
+<title>cmo_active</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2624.69" rx="32.49" ry="32.49"/>
+<text text-anchor="middle" x="35.12" y="-2621.39" font-family="Times,serif" font-size="9.00">cmo_active</text>
+</g>
+<!-- cmo_ppq -->
+<g id="node34" class="node">
+<title>cmo_ppq</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2703.69" rx="28.56" ry="28.56"/>
+<text text-anchor="middle" x="35.12" y="-2700.39" font-family="Times,serif" font-size="9.00">cmo_ppq</text>
+</g>
+<!-- l2_active -->
+<g id="node35" class="node">
+<title>l2_active</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2777.69" rx="27.69" ry="27.69"/>
+<text text-anchor="middle" x="35.12" y="-2774.39" font-family="Times,serif" font-size="9.00">l2_active</text>
+</g>
+<!-- l2_ready -->
+<g id="node36" class="node">
+<title>l2_ready</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2850.69" rx="27.25" ry="27.25"/>
+<text text-anchor="middle" x="35.12" y="-2847.39" font-family="Times,serif" font-size="9.00">l2_ready</text>
+</g>
+<!-- k_short -->
+<g id="node37" class="node">
+<title>k_short</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2920.69" rx="25.06" ry="25.06"/>
+<text text-anchor="middle" x="35.12" y="-2917.39" font-family="Times,serif" font-size="9.00">k_short</text>
+</g>
+<!-- t_short -->
+<g id="node38" class="node">
+<title>t_short</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-2987.69" rx="23.75" ry="23.75"/>
+<text text-anchor="middle" x="35.12" y="-2984.39" font-family="Times,serif" font-size="9.00">t_short</text>
+</g>
+<!-- k_success -->
+<g id="node39" class="node">
+<title>k_success</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3059.69" rx="30.31" ry="30.31"/>
+<text text-anchor="middle" x="35.12" y="-3056.39" font-family="Times,serif" font-size="9.00">k_success</text>
+</g>
+<!-- t_success -->
+<g id="node40" class="node">
+<title>t_success</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3136.69" rx="29" ry="29"/>
+<text text-anchor="middle" x="35.12" y="-3133.39" font-family="Times,serif" font-size="9.00">t_success</text>
+</g>
+<!-- own_used -->
+<g id="node41" class="node">
+<title>own_used</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-268.69" rx="30.75" ry="30.75"/>
+<text text-anchor="middle" x="283.04" y="-265.39" font-family="Times,serif" font-size="9.00">own_used</text>
+</g>
+<!-- cmo_used -->
+<g id="node42" class="node">
+<title>cmo_used</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-1102.69" rx="30.31" ry="30.31"/>
+<text text-anchor="middle" x="283.04" y="-1099.39" font-family="Times,serif" font-size="9.00">cmo_used</text>
+</g>
+<!-- l2_used -->
+<g id="node43" class="node">
+<title>l2_used</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-450.69" rx="25.5" ry="25.5"/>
+<text text-anchor="middle" x="283.04" y="-447.39" font-family="Times,serif" font-size="9.00">l2_used</text>
+</g>
+<!-- own_free -->
+<g id="node44" class="node">
+<title>own_free</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3212.69" rx="29" ry="29"/>
+<text text-anchor="middle" x="35.12" y="-3209.39" font-family="Times,serif" font-size="9.00">own_free</text>
+</g>
+<!-- cmo_free -->
+<g id="node45" class="node">
+<title>cmo_free</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3288.69" rx="28.56" ry="28.56"/>
+<text text-anchor="middle" x="35.12" y="-3285.39" font-family="Times,serif" font-size="9.00">cmo_free</text>
+</g>
+<!-- l2_free -->
+<g id="node46" class="node">
+<title>l2_free</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3358.69" rx="23.75" ry="23.75"/>
+<text text-anchor="middle" x="35.12" y="-3355.39" font-family="Times,serif" font-size="9.00">l2_free</text>
+</g>
+<!-- cmo2_free -->
+<g id="node47" class="node">
+<title>cmo2_free</title>
+<ellipse fill="gold" stroke="black" cx="35.12" cy="-3431.69" rx="31.18" ry="31.18"/>
+<text text-anchor="middle" x="35.12" y="-3428.39" font-family="Times,serif" font-size="9.00">cmo2_free</text>
+</g>
+<!-- cmo2_used -->
+<g id="node48" class="node">
+<title>cmo2_used</title>
+<ellipse fill="gold" stroke="black" cx="283.04" cy="-1264.69" rx="32.93" ry="32.93"/>
+<text text-anchor="middle" x="283.04" y="-1261.39" font-family="Times,serif" font-size="9.00">cmo2_used</text>
+</g>
+<!-- mkt&#45;&gt;mkt_done -->
+<g id="edge2" class="edge">
+<title>mkt&#45;&gt;mkt_done</title>
+<path fill="none" stroke="black" d="M205.25,-123.8C216.58,-120.84 230.06,-117.3 242.55,-114.03"/>
+<polygon fill="black" stroke="black" points="243.39,-117.43 252.18,-111.51 241.62,-110.66 243.39,-117.43"/>
+</g>
+<!-- mkt&#45;&gt;own_used -->
+<g id="edge3" class="edge">
+<title>mkt&#45;&gt;own_used</title>
+<path fill="none" stroke="black" d="M204.02,-149.09C206.96,-151.8 209.79,-154.69 212.23,-157.69 234.73,-185.25 229.62,-198.99 249.23,-228.69 251.1,-231.52 253.14,-234.38 255.24,-237.21"/>
+<polygon fill="black" stroke="black" points="252.28,-239.11 261.18,-244.85 257.8,-234.81 252.28,-239.11"/>
+</g>
+<!-- k_base_own&#45;&gt;k_stock -->
+<g id="edge6" class="edge">
+<title>k_base_own&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.53,-257.13C208.08,-259.76 210.4,-262.62 212.23,-265.69 263,-350.35 206.26,-395.82 249.23,-484.69 250.95,-488.24 253.16,-491.68 255.62,-494.93"/>
+<polygon fill="black" stroke="black" points="252.83,-497.06 262.02,-502.34 258.13,-492.49 252.83,-497.06"/>
+</g>
+<!-- k_base_own&#45;&gt;own_used -->
+<g id="edge7" class="edge">
+<title>k_base_own&#45;&gt;own_used</title>
+<path fill="none" stroke="black" d="M208.79,-247.36C219.22,-250.4 231.11,-253.86 242.23,-257.1"/>
+<polygon fill="black" stroke="black" points="240.98,-260.38 251.55,-259.81 242.93,-253.66 240.98,-260.38"/>
+</g>
+<!-- k_base_l2&#45;&gt;k_stock -->
+<g id="edge10" class="edge">
+<title>k_base_l2&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M203.4,-419.01C206.52,-421.77 209.55,-424.7 212.23,-427.69 232.43,-450.15 230.61,-460.91 249.23,-484.69 251.54,-487.64 254.06,-490.63 256.63,-493.56"/>
+<polygon fill="black" stroke="black" points="254.03,-495.91 263.36,-500.95 259.21,-491.2 254.03,-495.91"/>
+</g>
+<!-- k_base_l2&#45;&gt;l2_used -->
+<g id="edge11" class="edge">
+<title>k_base_l2&#45;&gt;l2_used</title>
+<path fill="none" stroke="black" d="M205.25,-413.43C218.66,-419.93 235.08,-427.9 249.3,-434.8"/>
+<polygon fill="black" stroke="black" points="247.77,-437.95 258.29,-439.17 250.83,-431.65 247.77,-437.95"/>
+</g>
+<!-- k_base_cmo&#45;&gt;k_stock -->
+<g id="edge14" class="edge">
+<title>k_base_cmo&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.78,-1030.38C208.28,-1027.72 210.52,-1024.82 212.23,-1021.69 230.02,-989.11 243.66,-726.38 249.23,-689.69 256.31,-643.1 267.02,-589.81 274.26,-555.51"/>
+<polygon fill="black" stroke="black" points="277.6,-556.63 276.26,-546.12 270.76,-555.17 277.6,-556.63"/>
+</g>
+<!-- k_base_cmo&#45;&gt;cmo_used -->
+<g id="edge15" class="edge">
+<title>k_base_cmo&#45;&gt;cmo_used</title>
+<path fill="none" stroke="black" d="M208.51,-1064.16C220.13,-1070.25 233.58,-1077.3 245.78,-1083.69"/>
+<polygon fill="black" stroke="black" points="243.84,-1086.62 254.32,-1088.16 247.09,-1080.42 243.84,-1086.62"/>
+</g>
+<!-- k_base_cmo2&#45;&gt;k_stock -->
+<g id="edge18" class="edge">
+<title>k_base_cmo2&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.8,-1138.4C208.31,-1135.74 210.54,-1132.83 212.23,-1129.69 251.54,-1056.97 224.1,-1027.03 231.23,-944.69 241.04,-831.49 234.44,-802.33 249.23,-689.69 255.37,-642.96 266.29,-589.71 273.84,-555.45"/>
+<polygon fill="black" stroke="black" points="277.17,-556.59 275.93,-546.07 270.34,-555.07 277.17,-556.59"/>
+</g>
+<!-- k_base_cmo2&#45;&gt;cmo2_used -->
+<g id="edge19" class="edge">
+<title>k_base_cmo2&#45;&gt;cmo2_used</title>
+<path fill="none" stroke="black" d="M202.69,-1175.06C205.97,-1177.86 209.25,-1180.78 212.23,-1183.69 227.26,-1198.28 242.61,-1215.75 255.07,-1230.72"/>
+<polygon fill="black" stroke="black" points="252.03,-1232.54 261.08,-1238.04 257.44,-1228.09 252.03,-1232.54"/>
+</g>
+<!-- t_make_own&#45;&gt;t_stock -->
+<g id="edge22" class="edge">
+<title>t_make_own&#45;&gt;t_stock</title>
+<path fill="none" stroke="black" d="M205.82,-364.96C208.32,-367.62 210.55,-370.54 212.23,-373.69 293.67,-525.57 177.15,-603.14 249.23,-759.69 250.98,-763.49 253.34,-767.12 255.99,-770.51"/>
+<polygon fill="black" stroke="black" points="253.17,-772.61 262.46,-777.7 258.37,-767.93 253.17,-772.61"/>
+</g>
+<!-- t_make_own&#45;&gt;own_used -->
+<g id="edge23" class="edge">
+<title>t_make_own&#45;&gt;own_used</title>
+<path fill="none" stroke="black" d="M203.41,-328.2C217.01,-317.9 234.14,-304.94 248.93,-293.74"/>
+<polygon fill="black" stroke="black" points="250.72,-296.78 256.58,-287.95 246.5,-291.2 250.72,-296.78"/>
+</g>
+<!-- t_make_l2&#45;&gt;t_stock -->
+<g id="edge26" class="edge">
+<title>t_make_l2&#45;&gt;t_stock</title>
+<path fill="none" stroke="black" d="M203.51,-688.92C206.61,-691.69 209.61,-694.65 212.23,-697.69 233.23,-721.95 229.74,-734.19 249.23,-759.69 251.65,-762.84 254.32,-766.02 257.08,-769.11"/>
+<polygon fill="black" stroke="black" points="254.45,-771.42 263.84,-776.33 259.56,-766.64 254.45,-771.42"/>
+</g>
+<!-- t_make_l2&#45;&gt;l2_used -->
+<g id="edge27" class="edge">
+<title>t_make_l2&#45;&gt;l2_used</title>
+<path fill="none" stroke="black" d="M205.09,-652.49C207.79,-649.79 210.26,-646.84 212.23,-643.69 250.51,-582.56 215.19,-549.27 249.23,-485.69 251.1,-482.2 253.4,-478.81 255.91,-475.59"/>
+<polygon fill="black" stroke="black" points="258.42,-478.03 262.36,-468.2 253.15,-473.43 258.42,-478.03"/>
+</g>
+<!-- t_make_cmo&#45;&gt;t_stock -->
+<g id="edge30" class="edge">
+<title>t_make_cmo&#45;&gt;t_stock</title>
+<path fill="none" stroke="black" d="M204.15,-1192.39C207.08,-1189.66 209.86,-1186.74 212.23,-1183.69 224.57,-1167.84 225.5,-1161.93 231.23,-1142.69 248.6,-1084.33 269.64,-906.04 278.17,-829.36"/>
+<polygon fill="black" stroke="black" points="281.64,-829.79 279.26,-819.47 274.69,-829.02 281.64,-829.79"/>
+</g>
+<!-- t_make_cmo&#45;&gt;cmo_used -->
+<g id="edge31" class="edge">
+<title>t_make_cmo&#45;&gt;cmo_used</title>
+<path fill="none" stroke="black" d="M208.8,-1220C216.6,-1220.77 224.65,-1219.94 231.23,-1215.69 255.7,-1199.86 268.5,-1169.15 275.13,-1143.73"/>
+<polygon fill="black" stroke="black" points="278.45,-1144.87 277.33,-1134.33 271.64,-1143.27 278.45,-1144.87"/>
+</g>
+<!-- t_make_cmo2&#45;&gt;t_stock -->
+<g id="edge34" class="edge">
+<title>t_make_cmo2&#45;&gt;t_stock</title>
+<path fill="none" stroke="black" d="M205.68,-1300.33C208.21,-1297.68 210.47,-1294.79 212.23,-1291.69 241.66,-1239.73 222.89,-1217.81 231.23,-1158.69 248.31,-1037.62 268.2,-893.9 277.19,-828.82"/>
+<polygon fill="black" stroke="black" points="280.63,-829.49 278.53,-819.1 273.7,-828.53 280.63,-829.49"/>
+</g>
+<!-- t_make_cmo2&#45;&gt;cmo2_used -->
+<g id="edge35" class="edge">
+<title>t_make_cmo2&#45;&gt;cmo2_used</title>
+<path fill="none" stroke="black" d="M211.2,-1311.49C218,-1309.41 225,-1306.83 231.23,-1303.69 237.15,-1300.7 243.06,-1296.99 248.65,-1293.06"/>
+<polygon fill="black" stroke="black" points="250.56,-1296 256.49,-1287.22 246.38,-1290.39 250.56,-1296"/>
+</g>
+<!-- k_buf_own&#45;&gt;k_stock -->
+<g id="edge38" class="edge">
+<title>k_buf_own&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.44,-311.18C208.01,-313.81 210.35,-316.65 212.23,-319.69 251.81,-383.57 214.07,-418.26 249.23,-484.69 251.08,-488.18 253.37,-491.58 255.88,-494.8"/>
+<polygon fill="black" stroke="black" points="253.11,-496.95 262.32,-502.19 258.39,-492.35 253.11,-496.95"/>
+</g>
+<!-- k_buf_own&#45;&gt;own_used -->
+<g id="edge39" class="edge">
+<title>k_buf_own&#45;&gt;own_used</title>
+<path fill="none" stroke="black" d="M206.87,-286.19C217.62,-283.69 230.13,-280.77 241.81,-278.05"/>
+<polygon fill="black" stroke="black" points="242.27,-281.54 251.21,-275.86 240.68,-274.72 242.27,-281.54"/>
+</g>
+<!-- k_buf_l2&#45;&gt;k_stock -->
+<g id="edge42" class="edge">
+<title>k_buf_l2&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M202.63,-473.12C205.93,-475.91 209.21,-478.82 212.23,-481.69 220.9,-489.92 220.27,-495.07 230.23,-501.69 235.44,-505.14 241.38,-508.01 247.34,-510.36"/>
+<polygon fill="black" stroke="black" points="245.9,-513.57 256.49,-513.56 248.21,-506.96 245.9,-513.57"/>
+</g>
+<!-- k_buf_l2&#45;&gt;l2_used -->
+<g id="edge43" class="edge">
+<title>k_buf_l2&#45;&gt;l2_used</title>
+<path fill="none" stroke="black" d="M205.25,-453.67C217.62,-453.19 232.55,-452.61 245.95,-452.09"/>
+<polygon fill="black" stroke="black" points="245.86,-455.59 255.72,-451.71 245.59,-448.6 245.86,-455.59"/>
+</g>
+<!-- k_buf_cmo&#45;&gt;k_stock -->
+<g id="edge46" class="edge">
+<title>k_buf_cmo&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.75,-1084.36C208.26,-1081.71 210.51,-1078.81 212.23,-1075.69 225.76,-1051.19 243.78,-729.97 249.23,-689.69 255.55,-642.99 266.44,-589.73 273.92,-555.46"/>
+<polygon fill="black" stroke="black" points="277.26,-556.6 275.99,-546.08 270.42,-555.09 277.26,-556.6"/>
+</g>
+<!-- k_buf_cmo&#45;&gt;cmo_used -->
+<g id="edge47" class="edge">
+<title>k_buf_cmo&#45;&gt;cmo_used</title>
+<path fill="none" stroke="black" d="M206.6,-1102.69C217.24,-1102.69 229.63,-1102.69 241.26,-1102.69"/>
+<polygon fill="black" stroke="black" points="241.03,-1106.19 251.03,-1102.69 241.03,-1099.19 241.03,-1106.19"/>
+</g>
+<!-- k_buf_cmo2&#45;&gt;k_stock -->
+<g id="edge50" class="edge">
+<title>k_buf_cmo2&#45;&gt;k_stock</title>
+<path fill="none" stroke="black" d="M205.84,-1246.42C208.34,-1243.75 210.55,-1240.84 212.23,-1237.69 256.3,-1154.98 224.52,-1121.16 231.23,-1027.69 242.01,-877.64 230.94,-839 249.23,-689.69 254.96,-642.91 265.98,-589.67 273.66,-555.42"/>
+<polygon fill="black" stroke="black" points="276.98,-556.58 275.79,-546.05 270.16,-555.03 276.98,-556.58"/>
+</g>
+<!-- k_buf_cmo2&#45;&gt;cmo2_used -->
+<g id="edge51" class="edge">
+<title>k_buf_cmo2&#45;&gt;cmo2_used</title>
+<path fill="none" stroke="black" d="M208.79,-1264.69C218.02,-1264.69 228.39,-1264.69 238.35,-1264.69"/>
+<polygon fill="black" stroke="black" points="238.26,-1268.19 248.26,-1264.69 238.26,-1261.19 238.26,-1268.19"/>
+</g>
+<!-- t_ppq_own&#45;&gt;t_ppq_done -->
+<g id="edge54" class="edge">
+<title>t_ppq_own&#45;&gt;t_ppq_done</title>
+<path fill="none" stroke="black" d="M206.6,-184.95C216.15,-185.05 227.1,-185.15 237.64,-185.25"/>
+<polygon fill="black" stroke="black" points="237.29,-188.75 247.33,-185.35 237.36,-181.75 237.29,-188.75"/>
+</g>
+<!-- t_ppq_own&#45;&gt;own_used -->
+<g id="edge55" class="edge">
+<title>t_ppq_own&#45;&gt;own_used</title>
+<path fill="none" stroke="black" d="M201.53,-202.98C205.11,-205.89 208.77,-208.87 212.23,-211.69 224.51,-221.68 237.99,-232.68 249.8,-242.33"/>
+<polygon fill="black" stroke="black" points="247.33,-244.83 257.29,-248.45 251.76,-239.41 247.33,-244.83"/>
+</g>
+<!-- k_clock -->
+<g id="node63" class="node">
+<title>k_clock</title>
+<polygon fill="none" stroke="black" points="62.12,-1968.69 8.12,-1968.69 8.12,-1932.69 62.12,-1932.69 62.12,-1968.69"/>
+<text text-anchor="middle" x="35.12" y="-1947.39" font-family="Times,serif" font-size="9.00">k_clock</text>
+</g>
+<!-- k_clock&#45;&gt;k_age -->
+<g id="edge56" class="edge">
+<title>k_clock&#45;&gt;k_age</title>
+<path fill="none" stroke="black" d="M62.61,-1950.69C85.9,-1950.69 119.86,-1950.69 144.72,-1950.69"/>
+<polygon fill="black" stroke="black" points="144.59,-1954.19 154.59,-1950.69 144.59,-1947.19 144.59,-1954.19"/>
+</g>
+<!-- k_demand -->
+<g id="node64" class="node">
+<title>k_demand</title>
+<polygon fill="none" stroke="black" points="204.98,-45.69 150.98,-45.69 150.98,-9.69 204.98,-9.69 204.98,-45.69"/>
+<text text-anchor="middle" x="177.98" y="-24.39" font-family="Times,serif" font-size="9.00">k_demand</text>
+</g>
+<!-- k_demand&#45;&gt;k_orders -->
+<g id="edge57" class="edge">
+<title>k_demand&#45;&gt;k_orders</title>
+<path fill="none" stroke="black" d="M205.25,-27.69C216.94,-27.69 230.93,-27.69 243.75,-27.69"/>
+<polygon fill="black" stroke="black" points="243.58,-31.19 253.58,-27.69 243.58,-24.19 243.58,-31.19"/>
+</g>
+<!-- k_ship&#45;&gt;k_sold -->
+<g id="edge60" class="edge">
+<title>k_ship&#45;&gt;k_sold</title>
+<path fill="none" stroke="black" d="M407.9,-270.69C415.83,-270.69 424.66,-270.69 433.04,-270.69"/>
+<polygon fill="black" stroke="black" points="432.92,-274.19 442.92,-270.69 432.92,-267.19 432.92,-274.19"/>
+</g>
+<!-- k_lose&#45;&gt;k_lost -->
+<g id="edge62" class="edge">
+<title>k_lose&#45;&gt;k_lost</title>
+<path fill="none" stroke="black" d="M407.9,-27.69C416.26,-27.69 425.62,-27.69 434.39,-27.69"/>
+<polygon fill="black" stroke="black" points="434.32,-31.19 444.32,-27.69 434.32,-24.19 434.32,-31.19"/>
+</g>
+<!-- t_clock -->
+<g id="node67" class="node">
+<title>t_clock</title>
+<polygon fill="none" stroke="black" points="62.12,-2161.69 8.12,-2161.69 8.12,-2125.69 62.12,-2125.69 62.12,-2161.69"/>
+<text text-anchor="middle" x="35.12" y="-2140.39" font-family="Times,serif" font-size="9.00">t_clock</text>
+</g>
+<!-- t_clock&#45;&gt;t_age -->
+<g id="edge63" class="edge">
+<title>t_clock&#45;&gt;t_age</title>
+<path fill="none" stroke="black" d="M62.61,-2143.69C86.31,-2143.69 121.06,-2143.69 146.03,-2143.69"/>
+<polygon fill="black" stroke="black" points="145.89,-2147.19 155.89,-2143.69 145.89,-2140.19 145.89,-2147.19"/>
+</g>
+<!-- t_demand -->
+<g id="node68" class="node">
+<title>t_demand</title>
+<polygon fill="none" stroke="black" points="204.98,-742.69 150.98,-742.69 150.98,-706.69 204.98,-706.69 204.98,-742.69"/>
+<text text-anchor="middle" x="177.98" y="-721.39" font-family="Times,serif" font-size="9.00">t_demand</text>
+</g>
+<!-- t_demand&#45;&gt;t_orders -->
+<g id="edge64" class="edge">
+<title>t_demand&#45;&gt;t_orders</title>
+<path fill="none" stroke="black" d="M205.25,-724.69C217.34,-724.69 231.89,-724.69 245.05,-724.69"/>
+<polygon fill="black" stroke="black" points="244.66,-728.19 254.66,-724.69 244.66,-721.19 244.66,-728.19"/>
+</g>
+<!-- t_ship&#45;&gt;t_sold -->
+<g id="edge67" class="edge">
+<title>t_ship&#45;&gt;t_sold</title>
+<path fill="none" stroke="black" d="M407.9,-789.69C416.26,-789.69 425.62,-789.69 434.39,-789.69"/>
+<polygon fill="black" stroke="black" points="434.32,-793.19 444.32,-789.69 434.32,-786.19 434.32,-793.19"/>
+</g>
+<!-- t_lose&#45;&gt;t_lost -->
+<g id="edge69" class="edge">
+<title>t_lose&#45;&gt;t_lost</title>
+<path fill="none" stroke="black" d="M407.9,-724.69C416.69,-724.69 426.6,-724.69 435.76,-724.69"/>
+<polygon fill="black" stroke="black" points="435.7,-728.19 445.7,-724.69 435.7,-721.19 435.7,-728.19"/>
+</g>
+<!-- t_delay_clock -->
+<g id="node71" class="node">
+<title>t_delay_clock</title>
+<polygon fill="none" stroke="black" points="67.49,-2277.69 2.74,-2277.69 2.74,-2241.69 67.49,-2241.69 67.49,-2277.69"/>
+<text text-anchor="middle" x="35.12" y="-2256.39" font-family="Times,serif" font-size="9.00">t_delay_clock</text>
+</g>
+<!-- t_delay_clock&#45;&gt;t_file_delay -->
+<g id="edge70" class="edge">
+<title>t_delay_clock&#45;&gt;t_file_delay</title>
+<path fill="none" stroke="black" d="M67.73,-2259.69C87.03,-2259.69 111.99,-2259.69 133.18,-2259.69"/>
+<polygon fill="black" stroke="black" points="132.98,-2263.19 142.98,-2259.69 132.98,-2256.19 132.98,-2263.19"/>
+</g>
+</g>
+</svg>
+</figure></div>
+
+
+
+</section>
+<div class="phase band"><span>6 · How the numbers were made</span></div>
+<section class="appx prose">
+
+<ol>
+<li><strong>Frame</strong>: <code>BRIEF.md</code>.</li>
+<li><strong>Author</strong>: <code>gen_models.py</code>. All documents pass validation.</li>
+<li><strong>Diagnose</strong>: <code>DOCTOR.md</code>. <code>arm_cmo_exit</code> diagnoses 7 · 1 · 1, identical to <code>arm_cmo</code>.</li>
+<li><strong>Report</strong>: single-seed <code>rdx run</code> paths, every one <code>ok</code>, plus 6 ensemble-seed replays. The command, output excerpt and exit code for each are in <code>capture_log.md</code>, turns 6–9. The figure is <code>figures/options_vs_wait.json</code>, rendered by <code>agent/scripts/chartkit.jl</code>.</li>
+</ol>
+<p>The headline numbers come from:</p>
+<pre class="block">(cd agent/studies/launch_supply &amp;&amp; python3 exit_review.py)            # recommended rule, base case
+(cd agent/studies/launch_supply &amp;&amp; python3 exit_review.py --peak)     # peak value per batch
+(cd agent/studies/launch_supply &amp;&amp; python3 exit_review.py --pk=0.5)   # Kestrel PoS 0.50
+(cd agent/studies/launch_supply &amp;&amp; python3 paired_both.py)            # both-succeed detail, build options
+(cd agent/studies/launch_supply &amp;&amp; python3 ens_check.py)              # ensemble cross-check</pre>
+<p>Each path is determined by (document, seed), and the verbatim outputs are in <code>runs/</code> and <code>runs_ens/</code>.</p>
+<h4 class="head3">Provenance</h4>
+<table>
+<tr><th></th><th></th></tr>
+<tr><td>Repository commit</td><td><code>c319de4</code></td></tr>
+<tr><td>Study last changed</td><td><code>c319de4 2026-09-25</code></td></tr>
+<tr><td>Report generated</td><td>2026-09-25, by <code>agent/scripts/render_report.jl</code></td></tr>
+<tr><td>Engine</td><td>ReactiveDynamics.jl 0.3.0</td></tr>
+<tr><td><code>agent/studies/launch_supply/model.rdj.json</code></td><td>sha256 <code>be3d9e138037…</code></td></tr>
+<tr><td><code>agent/studies/launch_supply/arm_cmo_exit.rdj.json</code></td><td>sha256 <code>e938410eba08…</code></td></tr>
+</table>
+<p><strong>The replay rule.</strong> A run is determined by its document and its seed: the same pair gives the same output, bit for bit, on any machine. To check a number, run the document named above with the seed in the table below and compare against the stored run.</p>
+<p>208 stored single-seed runs, each the verbatim JSON output of one <code>rdx run</code>:</p>
+<table>
+<tr><th>Document</th><th>Paths</th><th>Scenario: seeds</th></tr>
+<tr><td><code>arm_build_after</code></td><td>11</td><td>both: 1–8 · konly: 1 · neither: 1 · tonly: 1</td></tr>
+<tr><td><code>arm_build_now</code></td><td>11</td><td>both: 1–8 · konly: 1 · neither: 1 · tonly: 1</td></tr>
+<tr><td><code>arm_cmo</code></td><td>53</td><td>both: 1–37 · konly: 1–3 · neither: 1–3 · tonly: 1–10</td></tr>
+<tr><td><code>arm_cmo_exit</code></td><td>33</td><td>both: 1 · konly: 1 · neither: 1 · tonly: 1–30</td></tr>
+<tr><td><code>arm_cmo_literal</code></td><td>4</td><td>both: 1–3 · konly: 1</td></tr>
+<tr><td><code>arm_cmo_no2</code></td><td>3</td><td>both: 1–3</td></tr>
+<tr><td><code>arm_cmo_tern_only</code></td><td>6</td><td>both: 1–3 · konly: 1 · neither: 1 · tonly: 1</td></tr>
+<tr><td><code>arm_cmo_tern_only_literal</code></td><td>4</td><td>both: 1–3 · konly: 1</td></tr>
+<tr><td><code>arm_cmo_tern_only_no2</code></td><td>3</td><td>both: 1–3</td></tr>
+<tr><td><code>model</code></td><td>73</td><td>both: 1–37 · konly: 1–3 · neither: 1–3 · tonly: 1–30</td></tr>
+<tr><td><code>model_literal</code></td><td>4</td><td>both: 1–3 · konly: 1</td></tr>
+<tr><td><code>model_no2</code></td><td>3</td><td>both: 1–3</td></tr>
+</table>
+<p>Plus 6 stored run file(s) outside the naming convention.</p>
+<p><strong>Regenerate this report</strong> from the study as it stands:</p>
+<pre class="block">julia --project=. agent/scripts/render_report.jl agent/studies/launch_supply --arm=arm_cmo_exit.rdj.json --exec-map=figures/exec_map_reserve_review_both_s1.svg --exec-map-from=scenarios/arm_cmo_exit__both.rdj.json</pre>
+
+
+
+</section>
+
+
+<footer class="foot"><p>Generated by <code>agent/scripts/render_report.jl</code> from the files of the study; edit the study, not this page, and regenerate. The template is the one in <code>agent/skills/rd-report/SKILL.md</code>.</p>
+</footer>
+</main>
+<!-- generated by agent/scripts/render_session.jl from agent/studies/launch_supply/FINDINGS.md -->
+</body></html>

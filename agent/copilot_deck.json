@@ -7,54 +7,39 @@
       "layout": "title",
       "kicker": "ReactiveDynamics.jl — the agentic layer",
       "title": "ReactiveDynamics.jl Modeling Copilot",
-      "subtitle": "From a capacity-constrained business decision to a checked, reproducible model and a number you can defend, in a conversation, without anyone writing code.",
+      "subtitle": "From a business decision that depends on how an operation behaves to a checked, reproducible model and a number you can defend, in a conversation, without anyone writing code.",
       "notes": "Open with the value: a reusable capability, not a one-off model. The case at the end is a real blind-captured session."
     },
     {
       "kicker": "The problem",
-      "title": "Capacity decisions need a model, and a model needs a modeler",
-      "text": "- A launch reservation, a bid under a staffing ceiling, a portfolio competing for the same people: the answer depends on **who waits when the line is full**.\n- A spreadsheet cannot represent a queue. Contention is an interaction between rows, and a spreadsheet's rows are independent by construction.\n- So these questions go to a specialist, take weeks, and come back as a workbook the decision-maker has to take on faith.\n- Most never get a model at all.",
+      "title": "Decisions about how an operation behaves need a model, and a model needs a modeler",
+      "text": "- A launch reservation, a bid under a staffing ceiling, a pipeline whose funding follows its results, a backlog that feeds back into demand: the answer depends on **how the operation behaves over time**.\n- A spreadsheet cannot represent that. Contention, delay and feedback are interactions between rows over time, and a spreadsheet's rows are independent by construction.\n- So these questions go to a specialist, take weeks, and come back as a workbook the decision-maker has to take on faith.\n- Most never get a model at all.",
       "notes": "The bottleneck is not arithmetic, it is getting the question and the operation right."
     },
     {
       "kicker": "The value",
-      "title": "More decisions get a real model, and the owner stays in the loop",
-      "stats": [
-        {
-          "value": "0",
-          "label": "lines of code you write",
-          "note": "the model is a checked document authored in conversation"
-        },
-        {
-          "value": "4",
-          "label": "gated phases",
-          "note": "frame, build, try to break it, report"
-        },
-        {
-          "value": "9",
-          "label": "plausibility checks",
-          "note": "a failure blocks the headline number"
-        },
-        {
-          "value": "1",
-          "label": "seed replays it",
-          "note": "same model, same seed, same answer"
-        }
-      ],
-      "text": "The interview runs in business language with the person who owns the decision. Every assumption lands in a brief they signed, including which inputs were their own estimates. The next question about the same operation starts from the same model."
+      "title": "More decisions get a real model, the owner stays in the loop, the answer travels",
+      "text": "- **A model for the cost of a conversation.** The threshold for a real model drops from \"worth a specialist's quarter\" to \"worth an hour\".\n- **The owner stays in the loop.** The interview runs in business language with the person who owns the decision. Every assumption lands in a brief they signed, including which inputs were their own estimates.\n- **The answer travels.** A study ends in a generated report the modeler can forward: the answer, the model, the evidence and the provenance, laid out to one template.\n- **It compounds.** The next question about the same operation starts from the same model.",
+      "notes": "No count stats on purpose: the value is what changes for the decision owner, not how many checks there are."
+    },
+    {
+      "kicker": "The reach",
+      "title": "What it can model — and what the copilot checks today",
+      "text": "| Pattern | Example | Copilot today |\n|---|---|---|\n| **Contention** | two launches on one fill line | authored and checked end to end |\n| **Lead times, clocks** | tech transfer, a build, a review | authored and checked |\n| **Feedback** | backlog throttles intake; share lost after a stock-out | authored and run (12 state-dependent rates in the case); loop checks next (W25) |\n| **Mid-course decisions** | review a contract at a readout | authored and run; the case turned on one |\n| **Lifecycles** | projects moving through phases | authored and run |\n| **Coupled models** | supply feeding commercial; several sites | in the engine (AlgebraicAgents); not yet through the copilot (W25) |",
+      "notes": "The engine is a general process simulator. The interview's qualifying test and the nine checks were written for contention, the pattern of the first four studies; widening them is W25, not a claim."
     },
     {
       "kicker": "How it works",
       "title": "Four steps, and the third may stop the rest",
       "figure": "agent/figures/promise.svg",
-      "text": "| Step | You get | Gate |\n|---|---|---|\n| **Frame** | a signed brief | something must bind |\n| **Author** | a checked model per option | validator silent |\n| **Diagnose** | a health report | red check blocks |\n| **Report** | estimate, mechanism, evidence | every number has a seed |"
+      "text": "| Step | You get | Gate |\n|---|---|---|\n| **Frame** | a signed brief | the question needs a model |\n| **Author** | a checked model per option | validator silent |\n| **Diagnose** | a health report | red check blocks |\n| **Report** | estimate, mechanism, evidence | every number has a seed |"
     },
     {
       "kicker": "The unique value",
       "title": "The model is data, not code, so it can be checked before it runs",
       "columns": [
         "**Static checks.** A pure validator reads the model document and returns every problem with its exact path. A malformed model produces diagnostics, not a plausible wrong number. The language model proposes and a deterministic checker disposes, and the loop repeats until the checker is silent.\n\n**Nothing generated is executed.** No `eval`, no generated scripts. Custom logic is one declared file.",
-        "**The IR.** The model is a closed, eval-free document: places that hold resources, transitions that hold them over time and sometimes fail, rates, costs, the arm deltas. It is diffable, serializable and replayable from `(model, seed)`.\n\n**Checked again, for meaning.** Nine plausibility checks ask whether the scarce thing actually binds and whether the horizon cuts off the payoff.\n\n**Guarded in CI.** The schema reference is generated from the engine, and a known-answer test re-derives a published result on every change."
+        "**The IR.** The model is a closed, eval-free document: places that hold resources, transitions that hold them over time and sometimes fail, rates that read the live state, rules that decide mid-course, costs, the arm deltas. It is diffable, serializable and replayable from `(model, seed)`.\n\n**Checked again, for meaning.** Nine plausibility checks ask whether the model does what the business does: a bottleneck that never binds, a step that never fires, a horizon that cuts off the payoff.\n\n**Guarded in CI.** The schema reference is generated from the engine, and a known-answer test re-derives a published result on every change."
       ],
       "notes": "Contrast with a code-writing assistant: code crashes or returns something, and something is the dangerous case."
     },
@@ -102,6 +87,15 @@
       "text": "- **+$3.8M ± $1.1M** against waiting, odds-weighted; +$25M at peak-year batch value.\n- **+$39M if both succeed** (27%): Tern short at launch on 26 of 37 paths under wait, 0 of 37 reserved.\n- **A bounded $9–11M cost** in every other outcome.\n- **Building is $73–105M worse** even when both succeed.\n- The operator's prior, a Tern-only reservation, leaves Kestrel short on every both-succeed path."
     },
     {
+      "kicker": "The case · What gets shared",
+      "title": "The study ships as a generated report, not a folder",
+      "columns": [
+        "**Six parts, one template, every study:**\n\n1. The answer and the decision rule\n2. The evidence, sensitivities and caveats\n3. Why a spreadsheet cannot produce it\n4. The model: elements in the operator's words, and the diff that *is* the option\n5. The execution map\n6. How we got it: commands, commit, the seeds",
+        "**Generated, never edited.** `render_report.jl` builds it from the study's own files, so it cannot disagree with the numbers.\n\n**Self-contained.** One HTML file with a PDF beside it; every figure embedded, nothing to open in the repository.\n\n**Checkable.** It names the commit, hashes both model documents, and lists all 208 stored runs by document and seed: any number can be replayed.\n\n`agent/studies/launch_supply/REPORT.pdf`, 18 pages."
+      ],
+      "notes": "This answers 'what does the modeler send to ExCo'. The report opens with a strip showing each of the six slots as present or missing."
+    },
+    {
       "kicker": "The moment worth watching",
       "title": "The model made the tail visible, and the owner supplied the option",
       "turns": [
@@ -124,12 +118,12 @@
     {
       "kicker": "Honest about it",
       "title": "What we are not claiming",
-      "text": "- **The case is simulated.** Two role-playing agents; the operator was cooperative. It demonstrates the workflow, not anyone's supply plan.\n- **Paired paths, not ensembles.** The run budget ruled ensembles out, and every figure says what it rests on.\n- **The interview left soft inputs untested:** demand ±30%, marketed growth and readout correlation. The published facts audit leads with them.\n- **The planned components are planned.** MCP, subagents, the hook and the plugin follow endorsement."
+      "text": "- **The case is simulated.** Two role-playing agents; the operator was cooperative. It demonstrates the workflow, not anyone's supply plan.\n- **Paired paths, not ensembles.** The run budget ruled ensembles out, and every figure says what it rests on.\n- **The interview left soft inputs untested:** demand ±30%, marketed growth and readout correlation. The published facts audit leads with them.\n- **Contention is checked end to end; feedback and coupling are not yet.** They run in the engine, and the case used feedback and a mid-course rule, but the checks do not test loops and coupled models do not go through the copilot (W25).\n- **The planned components are planned.** MCP, subagents, the hook and the plugin follow endorsement."
     },
     {
       "kicker": "The ask",
       "title": "Endorse the capability; we build the reach",
-      "text": "| Next | What it adds | Tracker |\n|---|---|---|\n| MCP server `rd` | the six operations as tools in any MCP host, no terminal | W8 |\n| Subagents | an isolated author and a critic that audits the prose against the numbers | W9 |\n| Validate hook | every model edit validated automatically | W10 |\n| Study card | a one-page shareable summary | W11 |\n| Plugin | one-step install and slash commands | W12 |\n\nThe full argument, with the transcript and its evidence, is `agent/copilot.html`."
+      "text": "| Next | What it adds | Tracker |\n|---|---|---|\n| MCP server `rd` | the six operations as tools in any MCP host, no terminal | W8 |\n| Subagents | an isolated author and a critic that audits the prose against the numbers | W9 |\n| Validate hook | every model edit validated automatically | W10 |\n| Study card | a one-page summary over the generated report | W11 |\n| Beyond contention | checks for feedback; coupled models as documents | W25 |\n| Plugin | one-step install and slash commands | W12 |\n\nThe full argument, with the transcript and its evidence, is `agent/copilot.html`."
     }
   ]
 }

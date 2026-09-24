@@ -94,7 +94,7 @@ num(x) = x isa Real ? (isinteger(x) && abs(x) < 1.0e12 ? string(Int(x)) : string
 # A rate is read by kind, because the kind is the modeling claim: a constant is an assumption, a
 # time-dependent rate is a schedule, a rate that reads a place is FEEDBACK — the state steers the flow.
 rate_kind(r) = r isa Real ? "constant $(num(r))" : let a = refs(r)
-    haskey(a, "place") ? "state-dependent" : haskey(a, "time") ? "time-dependent" : "parametric"
+        haskey(a, "place") ? "state-dependent" : haskey(a, "time") ? "time-dependent" : "parametric"
 end
 
 # An arc names a place, creates a structured token, or selects live tokens by predicate (ADR 0008).
