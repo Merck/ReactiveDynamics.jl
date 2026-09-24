@@ -127,6 +127,14 @@
    "value": 0.0
   },
   {
+   "name": "exit_at_k",
+   "value": 0.0
+  },
+  {
+   "name": "cmo_exited",
+   "value": 0.0
+  },
+  {
    "name": "pl_free_own",
    "value": 0.0
   },
@@ -1201,16 +1209,37 @@
           "args": [
            {
             "node": "call",
-            "op": ">",
+            "op": "||",
             "args": [
              {
-              "node": "ref",
-              "kind": "param",
-              "name": "cmo_now"
+              "node": "call",
+              "op": ">",
+              "args": [
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_now"
+               },
+               {
+                "node": "const",
+                "value": 0.5
+               }
+              ]
              },
              {
-              "node": "const",
-              "value": 0.5
+              "node": "call",
+              "op": ">",
+              "args": [
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_exited"
+               },
+               {
+                "node": "const",
+                "value": 0.5
+               }
+              ]
              }
             ]
            },
@@ -1261,16 +1290,37 @@
         "args": [
          {
           "node": "call",
-          "op": ">",
+          "op": "||",
           "args": [
            {
-            "node": "ref",
-            "kind": "param",
-            "name": "cmo_now"
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
            },
            {
-            "node": "const",
-            "value": 0.5
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_exited"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
            }
           ]
          },
@@ -1295,36 +1345,15 @@
         "args": [
          {
           "node": "call",
-          "op": "!",
+          "op": "&&",
           "args": [
            {
             "node": "call",
-            "op": "&&",
+            "op": "!",
             "args": [
              {
               "node": "call",
-              "op": "!",
-              "args": [
-               {
-                "node": "call",
-                "op": ">",
-                "args": [
-                 {
-                  "node": "ref",
-                  "kind": "param",
-                  "name": "t_ok"
-                 },
-                 {
-                  "node": "const",
-                  "value": 0.5
-                 }
-                ]
-               }
-              ]
-             },
-             {
-              "node": "call",
-              "op": "||",
+              "op": "&&",
               "args": [
                {
                 "node": "call",
@@ -1337,7 +1366,7 @@
                    {
                     "node": "ref",
                     "kind": "param",
-                    "name": "cmo_reassign"
+                    "name": "t_ok"
                    },
                    {
                     "node": "const",
@@ -1349,24 +1378,72 @@
                },
                {
                 "node": "call",
-                "op": "!",
+                "op": "||",
                 "args": [
                  {
                   "node": "call",
-                  "op": ">",
+                  "op": "!",
                   "args": [
                    {
-                    "node": "ref",
-                    "kind": "param",
-                    "name": "k_ok"
-                   },
+                    "node": "call",
+                    "op": ">",
+                    "args": [
+                     {
+                      "node": "ref",
+                      "kind": "param",
+                      "name": "cmo_reassign"
+                     },
+                     {
+                      "node": "const",
+                      "value": 0.5
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "node": "call",
+                  "op": "!",
+                  "args": [
                    {
-                    "node": "const",
-                    "value": 0.5
+                    "node": "call",
+                    "op": ">",
+                    "args": [
+                     {
+                      "node": "ref",
+                      "kind": "param",
+                      "name": "k_ok"
+                     },
+                     {
+                      "node": "const",
+                      "value": 0.5
+                     }
+                    ]
                    }
                   ]
                  }
                 ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "!",
+            "args": [
+             {
+              "node": "call",
+              "op": ">",
+              "args": [
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_exited"
+               },
+               {
+                "node": "const",
+                "value": 0.5
                }
               ]
              }
@@ -3399,6 +3476,159 @@
         "value": {
          "node": "const",
          "value": 2.0
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_exit_k",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_now"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "exit_at_k"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "!",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "k_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "const",
+          "value": 5.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "k_slip"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo_active",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo_ppq",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_now",
+        "value": {
+         "node": "const",
+         "value": 0.0
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_exited",
+        "value": {
+         "node": "const",
+         "value": 1.0
         }
        }
       ]

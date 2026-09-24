@@ -558,3 +558,106 @@ python3 agent/studies/launch_supply/paired_both.py --pk=0.5   (excerpt)
  arm_cmo  P(late) 0.160  mean months late 0.395  [both 14/37, konly 0/3, tonly 1/3, neither 0/3]
 exit 0
 ```
+
+### turn 8
+
+User request (summary, not numbers): Kestrel reads out in March 2027, nine months before Tern. Model the rule "reserve the CMO now; if Kestrel fails, move Tern's PPQ in-house, file Tern on our own line, give the CMO notice and pay the forfeit; if Kestrel succeeds, Tern stays at the CMO". His guess: this cuts the Tern-only loss to roughly the both-fail cost and removes the $72M tail. Backup qualification (from regulatory, via the user): both sites can be listed if both have PPQ data, about $0.5M/batch all-in, about $1.5M for 3; only relevant when Kestrel has failed; not to be modelled separately unless cheap. Budget: spend it on the Tern-only world under the exit rule; the no-second-contract sensitivity waits. He will not quote late-filing numbers until the mismatch with the 96-seed baseline is resolved.
+
+Relayed by the coordinator (from the 96-member wait ensemble, root seed 2609): 20 both-succeed members; among them t_file_delay > 0 on 2 of 20 (2 months each) and t_short > 0 on 14 of 20; members 20 / 96 / 6 had enpv 1526.7 / 1444.8 / 1529.5, t_file_delay 2 / 2 / 0, t_lost 92 / 59 / 91. Compute rules: no `ensemble`/`effect`, single-seed runs in batches of 8 or fewer, about 80 runs.
+
+Protocol note: `ens_check.py` was rewritten this turn as a self-contained script (an earlier, uncommitted draft of the same check was overwritten); its output below is the one of record.
+
+Late-filing mismatch. Ensemble member k is seeded `hash((2609, k))`; members 20, 96 and 6 were replayed on the unforced model and on the forced both-succeed copy (6 runs, one at a time, foreground):
+
+```
+julia --project=. agent/scripts/rdx.jl run agent/studies/launch_supply/model.rdj.json --seed=3689622802375696111 --trace=... > runs_ens/model__natural__m20.json      exit 0
+julia --project=. agent/scripts/rdx.jl run agent/studies/launch_supply/scenarios/model__both.rdj.json --seed=3689622802375696111 --trace=... > runs_ens/model__both__m20.json   exit 0
+(same for member 96, seed 8272771591343840987, and member 6, seed 4787811836286466114; all exit 0)
+```
+
+```
+python3 agent/studies/launch_supply/ens_check.py
+member 20: forced == unforced True; our run delay 2 t_lost 92 (ensemble 2 / 92); our eNPV 1515.8 vs ensemble 1526.7 -> ratio 1.00721 (1.09^(1/12) = 1.00721)
+member 96: forced == unforced True; our run delay 2 t_lost 59 (ensemble 2 / 59); our eNPV 1434.4 vs ensemble 1444.8 -> ratio 1.00724 (1.09^(1/12) = 1.00721)
+member 6: forced == unforced True; our run delay 0 t_lost 91 (ensemble 0 / 91); our eNPV 1518.5 vs ensemble 1529.5 -> ratio 1.00723 (1.09^(1/12) = 1.00721)
+wait, both succeed: late filing ours 13/37, ensemble 2/20; Fisher exact two-sided p = 0.059
+pooled 15/57 = 0.263 (95% Wilson 0.166-0.390)
+Tern short at launch, wait, both succeed: ours 26/37, ensemble 14/20, pooled 40/57 = 0.702 (95% Wilson 0.573-0.805); x 0.27 = 0.189 (0.155-0.217)
+reserve now, both succeed: late filing 14/37 = 0.378 (95% Wilson 0.241-0.539); no ensemble exists for this option
+exit 0
+```
+
+Reading: forcing reproduces the ensemble member exactly (same late-filing months, same lost Tern demand); the eNPV differs by the constant factor 1.09^(1/12), a one-month discounting-offset convention that cancels in every comparison. The 2/20 vs 13/37 late-filing gap is at the edge of chance (Fisher two-sided p = 0.059), not a model error; pooled 15/57.
+
+Exit rule. `gen_models.py` edits: params `exit_at_k` and `cmo_exited` (both 0 by default); the year-2 CMO fee is charged as the forfeit when `cmo_exited`; new rule `cmo_exit_k` (fires once at Kestrel readout if `cmo_now` and `exit_at_k` and Kestrel failed: CMO capacity, reservation and CMO PPQ set to 0, `cmo_now` 0, `cmo_exited` 1, which returns the arm to the wait posture: Tern PPQ in-house, Tern filed on own-line PPQ); new arm `arm_cmo_exit.rdj.json` (`cmo_now` 1, `exit_at_k` 1).
+
+```
+python3 agent/studies/launch_supply/gen_models.py
+wrote 23 documents + 48 scenario copies
+exit 0
+julia --project=. agent/scripts/rdx.jl validate agent/studies/launch_supply/arm_cmo_exit.rdj.json
+ok, 0 findings
+exit 0
+```
+
+Regeneration check (the edit must not move any stored run): `arm_cmo` both s1 and `model` tonly s2 were re-run from the regenerated documents and compared byte for byte against the stored `runs/arm_cmo__both__s1.json` and `runs/model__tonly__s2.json`: identical, both exit 0.
+
+Runs this turn via `run_scenarios.sh` (foreground, batches of 8 or fewer, every line `exit 0`): `arm_cmo_exit` both s1, konly s1, neither s1, tonly s1-30; `model` tonly s4-30; `arm_cmo` tonly s4-10. With the 6 ensemble replays and the 2 regeneration checks, 75 runs this turn. All 79 turn-relevant run files parse.
+
+```
+python3 agent/studies/launch_supply/exit_review.py [ | --peak | --pk=0.5]
+$ exit_review.py 
+inertness check, arm_cmo_exit vs arm_cmo on the same seed (must be 0): [('both', 's1', 0.0), ('konly', 's1', 0.0), ('neither', 's1', 0.0)]
+
+TERN-ONLY WORLD (Kestrel fails, Tern succeeds), paired against wait
+ arm_cmo_exit  vs wait: mean -9.40 se 0.02 n 30; min -9.66 max -9.25; paths below -20: 0/30 | Tern files late 0/30 (wait 0/30); Tern demand lost on 0/30
+ arm_cmo       vs wait: mean -31.67 se 5.95 n 10; min -72.09 max -18.32; paths below -20: 4/10 | Tern files late 4/10 (wait 0/10); Tern demand lost on 0/10
+  arm_cmo_exit decomposition: cost diff mean -9.40 (min -9.66, max -9.25); Tern revenue diff mean +0.00 (min +0.00 max +0.00)
+
+WEIGHTED 'reserve now, review at Kestrel readout' vs wait, odds {'both': 0.27, 'konly': 0.33, 'tonly': 0.18, 'neither': 0.22}
+  both +38.71 (se 4.06, n 37, from arm_cmo) | konly -8.76 (se 0.07, n 3, from arm_cmo) | tonly -9.40 (se 0.02, n 30, from arm_cmo_exit) | neither -9.38 (se 0.00, n 3, from arm_cmo)
+  weighted delta +3.81, se 1.10; -2se +1.62, +2se +6.00
+  loss given each non-both world (mean): {'konly': -8.76, 'tonly': -9.4, 'neither': -9.38}
+  P(Tern short at launch): wait 0.270 x 26/37 = 0.190 (Wilson 0.146-0.223); reserve 0.270 x 0/37; Tern-only world short: wait 0/30, review 0/30
+exit 0
+$ exit_review.py --peak
+inertness check, arm_cmo_exit vs arm_cmo on the same seed (must be 0): [('both', 's1', 0.0), ('konly', 's1', 0.0), ('neither', 's1', 0.0)]
+
+TERN-ONLY WORLD (Kestrel fails, Tern succeeds), paired against wait
+ arm_cmo_exit  vs wait: mean -9.40 se 0.02 n 30; min -9.66 max -9.25; paths below -20: 0/30 | Tern files late 0/30 (wait 0/30); Tern demand lost on 0/30
+ arm_cmo       vs wait: mean -51.52 se 15.43 n 10; min -156.99 max -18.32; paths below -20: 4/10 | Tern files late 4/10 (wait 0/10); Tern demand lost on 0/10
+  arm_cmo_exit decomposition: cost diff mean -9.40 (min -9.66, max -9.25); Tern revenue diff mean +0.00 (min +0.00 max +0.00)
+
+WEIGHTED 'reserve now, review at Kestrel readout' vs wait, odds {'both': 0.27, 'konly': 0.33, 'tonly': 0.18, 'neither': 0.22}
+  both +117.25 (se 10.51, n 37, from arm_cmo) | konly -8.76 (se 0.07, n 3, from arm_cmo) | tonly -9.40 (se 0.02, n 30, from arm_cmo_exit) | neither -9.38 (se 0.00, n 3, from arm_cmo)
+  weighted delta +25.01, se 2.84; -2se +19.34, +2se +30.69
+  loss given each non-both world (mean): {'konly': -8.76, 'tonly': -9.4, 'neither': -9.38}
+  P(Tern short at launch): wait 0.270 x 26/37 = 0.190 (Wilson 0.146-0.223); reserve 0.270 x 0/37; Tern-only world short: wait 0/30, review 0/30
+exit 0
+$ exit_review.py --pk=0.5
+inertness check, arm_cmo_exit vs arm_cmo on the same seed (must be 0): [('both', 's1', 0.0), ('konly', 's1', 0.0), ('neither', 's1', 0.0)]
+
+TERN-ONLY WORLD (Kestrel fails, Tern succeeds), paired against wait
+ arm_cmo_exit  vs wait: mean -9.40 se 0.02 n 30; min -9.66 max -9.25; paths below -20: 0/30 | Tern files late 0/30 (wait 0/30); Tern demand lost on 0/30
+ arm_cmo       vs wait: mean -31.67 se 5.95 n 10; min -72.09 max -18.32; paths below -20: 4/10 | Tern files late 4/10 (wait 0/10); Tern demand lost on 0/10
+  arm_cmo_exit decomposition: cost diff mean -9.40 (min -9.66, max -9.25); Tern revenue diff mean +0.00 (min +0.00 max +0.00)
+
+WEIGHTED 'reserve now, review at Kestrel readout' vs wait, odds {'both': 0.225, 'konly': 0.275, 'tonly': 0.225, 'neither': 0.275}
+  both +38.71 (se 4.06, n 37, from arm_cmo) | konly -8.76 (se 0.07, n 3, from arm_cmo) | tonly -9.40 (se 0.02, n 30, from arm_cmo_exit) | neither -9.38 (se 0.00, n 3, from arm_cmo)
+  weighted delta +1.61, se 0.91; -2se -0.22, +2se +3.44
+  loss given each non-both world (mean): {'konly': -8.76, 'tonly': -9.4, 'neither': -9.38}
+  P(Tern short at launch): wait 0.225 x 26/37 = 0.158 (Wilson 0.122-0.186); reserve 0.225 x 0/37; Tern-only world short: wait 0/30, review 0/30
+exit 0
+```
+
+Diagnose for the new arm, with the flags used for every other arm (a first unflagged `rdx diagnose arm_cmo_exit.rdj.json` returned exit 1, 4 pass · 4 warn · 1 fail, the extra warns being the missing `--expect-binds`/`--expect-reusable` and a `bounded_pools` warn on the default tally; superseded by the flagged run below). `arm_cmo` was re-diagnosed alongside because DOCTOR's table still carried the turn-4 cost:
+
+```
+rdx diagnose <arm> --seed=1 --expect-binds=own_free --expect-reusable=line,cmo,line2 --tally=k_sold,t_sold,k_lost,t_lost,own_used,cmo_used,l2_used,mkt_done,k_age,t_age,t_file_delay,k_orders,t_orders
+arm_cmo_exit exit 1
+7 1 1 ['transitions_fire', 'horizon_sufficient'] {'reward': 1703.7, 'cost': 98.07, 'net': 1605.63}
+arm_cmo exit 1
+7 1 1 ['transitions_fire', 'horizon_sufficient'] {'reward': 1703.7, 'cost': 98.07, 'net': 1605.63}
+```
+
+Runs this turn, final count: 75 simulation runs plus 3 diagnose runs = 78.

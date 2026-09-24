@@ -16,7 +16,8 @@ Every study arm: **7 pass · 1 warn · 1 fail** (`transitions_fire` fail, `horiz
 | Document | Verdict | Ledger (seed 1, undiscounted $M) |
 |---|---|---|
 | model (wait) | 7 · 1 · 1 | reward 1704.0, cost 87.87 |
-| arm_cmo | 7 · 1 · 1 | reward 1704.0, cost 97.98 |
+| arm_cmo | 7 · 1 · 1 | reward 1704.0, cost 98.07 (re-diagnosed turn 8; 97.98 was the turn-4 value, before the turn-5 fee timing fix) |
+| arm_cmo_exit (turn 8) | 7 · 1 · 1 | reward 1704.0, cost 98.07 (identical to arm_cmo on seed 1: Kestrel succeeds, so the exit rule does not fire) |
 | arm_cmo_tern_only | 7 · 1 · 1 | reward 1704.0, cost 98.08 |
 | arm_cmo_walk5 | 7 · 1 · 1 | reward 1704.0, cost 97.98 |
 | arm_build_now | 6 · 2 · 1 | reward 1704.0, cost 212.7 |

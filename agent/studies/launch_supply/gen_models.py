@@ -105,6 +105,9 @@ def base_params():
         "second_cmo": 1.0,    # 1 = if both succeed, sign a second CMO contract on the same terms (turn 5)
         "walk2": 1.0,         # 1 = walking away after failure costs two annual fees ($10M), 0 = one ($5M)
         "capex_even": 0.0,    # 1 = spread the $120M evenly over 36 months instead of 20/50/30
+        "exit_at_k": 0.0,     # turn 7: 1 = if Kestrel fails, drop the reserved slot at Kestrel's readout, move
+                              #     Tern's PPQ in-house and file Tern on the own line (forfeit as walk2)
+        "cmo_exited": 0.0,    # state: set by cmo_exit_k
     }
 
 def build(overrides, name):
@@ -239,11 +242,11 @@ def build(overrides, name):
     # CMO fees ($5M = 5000 units, annually in advance while the contract is live)
     anniv = AND(ge(T, P("cmo_start")), eq(mul(12.0, fl(div(sub(T, P("cmo_start")), 12.0))), sub(T, P("cmo_start"))))
     doomed = AND(NOT(on(P("t_ok"))), OR(NOT(on(P("cmo_reassign"))), NOT(on(P("k_ok")))))
-    y2_now = AND(on(P("cmo_now")), eq(T, 14.0))
+    y2_now = AND(OR(on(P("cmo_now")), on(P("cmo_exited"))), eq(T, 14.0))
     tr("cmo_fee", ind(AND(on(S("cmo_active")), anniv, NOT(y2_now))))
     arc("cmo_fee", "cash", "lhs", 5000)
     # year-2 fee on the reserved slot: paid unless the slot is doomed AND walk-away costs one fee
-    tr("cmo_fee_y2", ind(AND(y2_now, OR(NOT(doomed), on(P("walk2"))))))
+    tr("cmo_fee_y2", ind(AND(y2_now, OR(AND(NOT(doomed), NOT(on(P("cmo_exited")))), on(P("walk2"))))))
     arc("cmo_fee_y2", "cash", "lhs", 5000)
     # second contract, same terms; never terminated (it is only signed when both assets succeed)
     anniv2 = AND(ge(T, P("cmo2_start")), eq(mul(12.0, fl(div(sub(T, P("cmo2_start")), 12.0))), sub(T, P("cmo2_start"))))
@@ -294,6 +297,11 @@ def build(overrides, name):
         # (rules act at the END of a tick, so a contract or build starting in month m is decided in
         # month m-1: its first fee / capex month is then charged in month m itself)
         rule("cmo_sign_now", AND(on(P("cmo_now")), ge(T, 1.0)), [setm("cmo_active", 1.0), setp(cmo_start=2.0)]),
+        # turn 7: review at Kestrel's readout. If Kestrel failed, give notice on the reserved slot and
+        # fall back to the wait posture (cmo_now = 0): Tern's PPQ in-house, filed on the own line, and
+        # the mid-2028 opening taken later exactly as under wait if Tern succeeds
+        rule("cmo_exit_k", AND(on(P("cmo_now")), on(P("exit_at_k")), NOT(on(P("k_ok"))), ge(T, K_READ)),
+             [setm("cmo_active", 0.0), setm("cmo", 0.0), setm("cmo_ppq", 0.0), setp(cmo_now=0.0), setp(cmo_exited=1.0)]),
         # ... or wait and take the mid-2028 opening if either readout succeeded (both readouts are
         # in by t = 17). A Tern-only reservation terminated after Tern fails takes it for Kestrel.
         rule("cmo_sign_wait", AND(on(P("wait_cmo")), ge(T, 20.0),
@@ -359,6 +367,7 @@ ARMS = {
     "model.rdj.json": {},                                                   # wait
     "arm_cmo.rdj.json": {"cmo_now": 1.0},                                   # reserve now, usable by both
     "arm_cmo_tern_only.rdj.json": {"cmo_now": 1.0, "cmo_reassign": 0.0},    # reserve now for Tern
+    "arm_cmo_exit.rdj.json": {"cmo_now": 1.0, "exit_at_k": 1.0},            # reserve now, review at Kestrel's readout (turn 7)
     "arm_build_now.rdj.json": {"build_now": 1.0},
     "arm_build_after.rdj.json": {"build_after": 1.0},
     # sensitivities
@@ -388,7 +397,7 @@ ARMS = {
 WORLDS = {"both": (1.0, 1.0), "konly": (1.0, 0.0), "tonly": (0.0, 1.0), "neither": (0.0, 0.0)}
 SCEN_ARMS = ["model", "arm_cmo", "arm_cmo_tern_only", "arm_build_now", "arm_build_after",
              "model_literal", "arm_cmo_literal", "arm_cmo_tern_only_literal",
-             "model_no2", "arm_cmo_no2", "arm_cmo_tern_only_no2"]
+             "model_no2", "arm_cmo_no2", "arm_cmo_tern_only_no2", "arm_cmo_exit"]
 
 if __name__ == "__main__":
     for name, ov in ARMS.items():

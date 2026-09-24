@@ -52,6 +52,7 @@ All arms are the same network and differ only in `params` (diff any arm against 
 
 - `model` — **wait**: nothing signed now; if either readout succeeds, sign the CMO's mid-2028 opening (t = 21), qualify it (12–15 months) and add it to each approved asset by PAS. Tern PPQs on the own line.
 - `arm_cmo` — **reserve the CMO now for both** (sign by 30 Nov 2026, t = 2); Tern files with the CMO as its site; Kestrel may use the slot via PAS; if both fail the slot is terminated (walk-away $10M).
+- `arm_cmo_exit` (turn 8) — **reserve now, review at Kestrel's readout**: as `arm_cmo`, but if Kestrel fails (readout March 2027) Tern's PPQ moves in-house, Tern files on our own line, the CMO is given notice and the $10M forfeit is paid; if Kestrel succeeds nothing changes. The user's rule, stated turn 8.
 - `arm_cmo_tern_only` — **reserve now for Tern, add a slot later**: the reserved slot carries Tern only; Kestrel gets the second contract if both succeed, or the mid-2028 opening if Tern fails and Kestrel succeeds.
 - `arm_build_now` — approve the second line at ExCo (t = 2); both assets reach it by PAS.
 - `arm_build_after` — wait, and approve the build after Tern's readout if both succeed.
