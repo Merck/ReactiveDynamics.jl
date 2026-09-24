@@ -1,0 +1,135 @@
+{
+  "title": "ReactiveDynamics.jl Modeling Copilot",
+  "brand": "ReactiveDynamics.jl — the agentic layer",
+  "footer": "ReactiveDynamics.jl Modeling Copilot",
+  "slides": [
+    {
+      "layout": "title",
+      "kicker": "ReactiveDynamics.jl — the agentic layer",
+      "title": "ReactiveDynamics.jl Modeling Copilot",
+      "subtitle": "From a capacity-constrained business decision to a checked, reproducible model and a number you can defend, in a conversation, without anyone writing code.",
+      "notes": "Open with the value: a reusable capability, not a one-off model. The case at the end is a real blind-captured session."
+    },
+    {
+      "kicker": "The problem",
+      "title": "Capacity decisions need a model, and a model needs a modeler",
+      "text": "- A launch reservation, a bid under a staffing ceiling, a portfolio competing for the same people: the answer depends on **who waits when the line is full**.\n- A spreadsheet cannot represent a queue. Contention is an interaction between rows, and a spreadsheet's rows are independent by construction.\n- So these questions go to a specialist, take weeks, and come back as a workbook the decision-maker has to take on faith.\n- Most never get a model at all.",
+      "notes": "The bottleneck is not arithmetic, it is getting the question and the operation right."
+    },
+    {
+      "kicker": "The value",
+      "title": "More decisions get a real model, and the owner stays in the loop",
+      "stats": [
+        {
+          "value": "0",
+          "label": "lines of code you write",
+          "note": "the model is a checked document authored in conversation"
+        },
+        {
+          "value": "4",
+          "label": "gated phases",
+          "note": "frame, build, try to break it, report"
+        },
+        {
+          "value": "9",
+          "label": "plausibility checks",
+          "note": "a failure blocks the headline number"
+        },
+        {
+          "value": "1",
+          "label": "seed replays it",
+          "note": "same model, same seed, same answer"
+        }
+      ],
+      "text": "The interview runs in business language with the person who owns the decision. Every assumption lands in a brief they signed, including which inputs were their own estimates. The next question about the same operation starts from the same model."
+    },
+    {
+      "kicker": "How it works",
+      "title": "Four steps, and the third may stop the rest",
+      "figure": "agent/figures/promise.svg",
+      "text": "| Step | You get | Gate |\n|---|---|---|\n| **Frame** | a signed brief | something must bind |\n| **Author** | a checked model per option | validator silent |\n| **Diagnose** | a health report | red check blocks |\n| **Report** | estimate, mechanism, evidence | every number has a seed |"
+    },
+    {
+      "kicker": "The unique value",
+      "title": "The model is data, not code, so it can be checked before it runs",
+      "columns": [
+        "**Static checks.** A pure validator reads the model document and returns every problem with its exact path. A malformed model produces diagnostics, not a plausible wrong number. The language model proposes and a deterministic checker disposes, and the loop repeats until the checker is silent.\n\n**Nothing generated is executed.** No `eval`, no generated scripts. Custom logic is one declared file.",
+        "**The IR.** The model is a closed, eval-free document: places that hold resources, transitions that hold them over time and sometimes fail, rates, costs, the arm deltas. It is diffable, serializable and replayable from `(model, seed)`.\n\n**Checked again, for meaning.** Nine plausibility checks ask whether the scarce thing actually binds and whether the horizon cuts off the payoff.\n\n**Guarded in CI.** The schema reference is generated from the engine, and a known-answer test re-derives a published result on every change."
+      ],
+      "notes": "Contrast with a code-writing assistant: code crashes or returns something, and something is the dangerous case."
+    },
+    {
+      "kicker": "What it is made of",
+      "title": "A thin layer over an engine that checks everything",
+      "figure": "agent/figures/architecture.svg",
+      "notes": "Solid: shipped. Outlined: planned after endorsement (MCP W8, subagents W9, hook W10, plugin W12), adding reach, isolation and enforcement, not capability. No real MCP calls exist yet; these are drawn so the design is visible."
+    },
+    {
+      "layout": "section",
+      "kicker": "A real session",
+      "title": "Launch supply: do we pay for capacity before the readouts?",
+      "subtitle": "Blind-captured: two agents that cannot see each other's reasoning. The operator wrote its facts down before the first message. The company is invented, and the numbers are measurements."
+    },
+    {
+      "kicker": "The case · Frame",
+      "title": "Two Phase-3 biologics, one fill-finish line, a CMO offer that expires 30 November",
+      "turns": [
+        {
+          "role": "user",
+          "text": "Two Phase-3 biologics are coming. […] We have one sterile fill-finish line in-house, and most of it is already taken by our marketed products. It can probably carry one launch but not two. […] Our CFO says we shouldn't pay for capacity on an asset that has less than even odds."
+        },
+        {
+          "role": "assistant",
+          "text": "**The CMO slot works for Tern's filing, but only just.** If you sign by 30 November, PPQ is done somewhere between late 2027 and early 2028. […] So the CMO can be Tern's filed site with no PAS, but only if the CMO runs on time and Tern doesn't read out early.",
+          "call": "python3 -c '<in-house headroom: 12.8 batches/mo minus marketed 9/mo growing 5%/yr>'"
+        }
+      ],
+      "notes": "The operator's sheet flagged the validation rule as the thing people forget. The interview recovered it in turn 2."
+    },
+    {
+      "kicker": "The case · Author + Diagnose",
+      "title": "One model, an arm per option, calibrated to the operator's own figures",
+      "columns": [
+        "- `gen_models.py` writes one network; the arms differ only in parameters.\n- `rdx validate`: 0 errors on every document.\n- Calibration: Kestrel first-year revenue **$250.0M** against the operator's ~$250M, and **54** batches/yr at peak against 54.\n- `rdx diagnose`: the own line binds (128 of 128 tenths used), and the design-dead branches are explained in `DOCTOR.md`.",
+        "- Options compared on **paired paths**: the same seed gives every option the same readout dates and lead times.\n- Readout outcomes are forced per path and weighted by the stated odds (0.27 / 0.33 / 0.18 / 0.22).\n- No option-level ensembles were run: a 96-seed ensemble took 53 minutes (W24). One wait ensemble served as a cross-check, and replays of three of its members matched exactly."
+      ]
+    },
+    {
+      "kicker": "The case · Report",
+      "title": "Reserve now, review at Kestrel's readout, don't build",
+      "figure": "agent/studies/launch_supply/figures/options_vs_wait.svg",
+      "notes": "Build now is $73–105M worse even when both succeed. The Tern-only reservation, the operator's prior, leaves Kestrel short on every both-succeed path.",
+      "text": "- **+$3.8M ± $1.1M** against waiting, odds-weighted; +$25M at peak-year batch value.\n- **+$39M if both succeed** (27%): Tern short at launch on 26 of 37 paths under wait, 0 of 37 reserved.\n- **A bounded $9–11M cost** in every other outcome.\n- **Building is $73–105M worse** even when both succeed.\n- The operator's prior, a Tern-only reservation, leaves Kestrel short on every both-succeed path."
+    },
+    {
+      "kicker": "The moment worth watching",
+      "title": "The model made the tail visible, and the owner supplied the option",
+      "turns": [
+        {
+          "role": "assistant",
+          "text": "In the other outcomes the reservation costs money: Tern only, 0.18 chance, **−$18.6M to −$72.1M**. […] That is why the expected value nets to about zero."
+        },
+        {
+          "role": "user",
+          "text": "Kestrel reads out in March 2027, nine months before Tern. […] I'd move Tern's PPQ in-house, file Tern on our own line, and give the CMO notice. That means eating the $5–10M. So the reservation isn't a fixed bet on Tern; it's something we decide to keep or drop at Kestrel's readout."
+        },
+        {
+          "role": "assistant",
+          "text": "**Your guess holds: under the review rule, the Tern-only outcome costs $9.4M against waiting, and the $72M tail is gone.**",
+          "call": "python3 exit_review.py → weighted delta +3.81, se 1.10 (30 Tern-only paths)"
+        }
+      ],
+      "notes": "From roughly break-even to +3.8 ± 1.1. The retraction was made out loud."
+    },
+    {
+      "kicker": "Honest about it",
+      "title": "What we are not claiming",
+      "text": "- **The case is simulated.** Two role-playing agents; the operator was cooperative. It demonstrates the workflow, not anyone's supply plan.\n- **Paired paths, not ensembles.** The run budget ruled ensembles out, and every figure says what it rests on.\n- **The interview left soft inputs untested:** demand ±30%, marketed growth and readout correlation. The published facts audit leads with them.\n- **The planned components are planned.** MCP, subagents, the hook and the plugin follow endorsement."
+    },
+    {
+      "kicker": "The ask",
+      "title": "Endorse the capability; we build the reach",
+      "text": "| Next | What it adds | Tracker |\n|---|---|---|\n| MCP server `rd` | the six operations as tools in any MCP host, no terminal | W8 |\n| Subagents | an isolated author and a critic that audits the prose against the numbers | W9 |\n| Validate hook | every model edit validated automatically | W10 |\n| Study card | a one-page shareable summary | W11 |\n| Plugin | one-step install and slash commands | W12 |\n\nThe full argument, with the transcript and its evidence, is `agent/copilot.html`."
+    }
+  ]
+}

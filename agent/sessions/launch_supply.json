@@ -169,11 +169,8 @@
           "exit": 0
         }
       ],
-      "figures": [
-        {
-          "svg": "agent/studies/launch_supply/figures/exec_map_wait_both_s1.svg",
-          "caption": "Execution map of the wait option, both readouts succeed, seed 1: where the own line’s capacity went."
-        }
+      "files": [
+        "agent/studies/launch_supply/figures/exec_map_wait_both_s1.svg (execution map, wait option, both succeed, seed 1)"
       ]
     },
     {
