@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 #
-# figures.jl — the structural diagrams on the overview and pitch pages.
+# figures.jl — the structural diagrams on the overview, pitch and copilot pages.
 #
 #   julia --project=. agent/figures.jl
 #
@@ -277,9 +277,141 @@ function surface_svg()
     return CK.shell(join(parts), yeng + 58 + 8; title = title, subtitle = subtitle)
 end
 
+# ── figure 4: what the copilot is made of ─────────────────────────────────────────────────────────
+
+# component family · what it is for, in one clause · its members · status, with the tracker id. The
+# division is the charter's §5: skills carry procedure, subagents buy context isolation, MCP buys reach
+# and a persistent session, hooks buy enforcement a prompt cannot. Only the first ships today, and the
+# figure has to say so in the same breath as it draws the rest.
+const COMPONENTS = [
+    (
+        "Skills", "the procedure: what to ask, what to check",
+        ["rd-study  (orchestrator)", "rd-frame · rd-author", "rd-doctor · rd-report"], "SHIPPED", true,
+    ),
+    (
+        "Subagents", "isolated context for the heavy lifting",
+        ["rd-modeler  authors the model", "rd-critic  audits the prose", "rd-calibrator  (phase 2)"],
+        "PLANNED · W9", false,
+    ),
+    (
+        "MCP server rd", "reach beyond Bash, a warm Julia session",
+        ["rd_validate · rd_simulate", "rd_ensemble · rd_diagnose", "rd_treatment_effect · rd_draw", "+ the spec as resources"],
+        "PLANNED · W8", false,
+    ),
+    (
+        "Hook + commands", "enforcement no prompt can promise",
+        ["validate on each *.rdj.json", "/rd:study · /rd:frame · …", "plugin + marketplace"],
+        "PLANNED · W10, W12", false,
+    ),
+]
+
+function architecture_svg()
+    title = "ReactiveDynamics.jl Modeling Copilot — what it is made of"
+    subtitle = "A thin layer of procedure over an engine that checks everything. The shipped path is the portable one; the planned pieces add reach, isolation and enforcement, not capability."
+    head = CK.head_height(title, subtitle)
+    parts = [CK.head_block(title, subtitle)]
+
+    # the person and the host they talk through
+    y = head + 16.0
+    push!(parts, CK.rect(PAD, y, W - 2PAD, 40; fill = "#FAF8F3", stroke = CK.HAIR, sw = 1.0))
+    push!(parts, CK.txt(PAD + 16, y + 17, "You — an analyst, a strategy lead, a VP"; size = 11.2, weight = 600))
+    push!(
+        parts, CK.txt(
+            PAD + 16, y + 31, "in plain business language: the decision, what is scarce, how long things take";
+            size = 8.9, fill = CK.GREY
+        )
+    )
+    push!(
+        parts, CK.txt(
+            W - PAD - 16, y + 17, "Claude Code today · Desktop / any MCP host next";
+            size = 8.6, family = CK.MONO, fill = CK.ACCENT_D, anchor = "end"
+        )
+    )
+
+    # the plugin: four component families side by side
+    yp = y + 40 + 24
+    push!(parts, arrow_d(W / 2, y + 43, yp))
+    gap = 10.0
+    colw = (W - 2PAD - 3gap) / 4
+    ph = 132.0
+    push!(parts, CK.txt(PAD, yp - 6, "THE COPILOT"; size = 8.4, family = CK.MONO, fill = CK.GREY_LT))
+    for (i, (name, role, members, status, shipped)) in enumerate(COMPONENTS)
+        x = PAD + (i - 1) * (colw + gap)
+        push!(
+            parts, CK.rect(
+                x, yp, colw, ph; fill = shipped ? "#F7FBFB" : CK.PAPER,
+                stroke = shipped ? CK.ACCENT : CK.HAIR, sw = shipped ? 1.4 : 1.0
+            )
+        )
+        push!(parts, CK.txt(x + 11, yp + 20, name; size = 11.0, weight = 600))
+        for (j, l) in enumerate(CK.wrap_lines(role, colw - 22, 8.6; maxlines = 2))
+            push!(parts, CK.txt(x + 11, yp + 35 + 10.5 * (j - 1), l; size = 8.6, fill = CK.GREY))
+        end
+        for (j, l) in enumerate(members)
+            push!(parts, CK.txt(x + 11, yp + 68 + 12.5 * (j - 1), l; size = 8.0, family = CK.MONO, fill = CK.INK))
+        end
+        push!(parts, chip(x + 11, yp + ph - 22, status; shipped = shipped))
+    end
+
+    # knowledge the components read at the moment of need
+    yk = yp + ph + 10
+    push!(parts, CK.rect(PAD, yk, W - 2PAD, 30; fill = CK.INSET))
+    push!(parts, CK.txt(PAD + 12, yk + 19, "Knowledge"; size = 9.4, weight = 600))
+    push!(
+        parts, CK.txt(
+            PAD + 82, yk + 19,
+            "normative spec + ADRs, cited by section · schema reference GENERATED from the engine, drift-gated in CI";
+            size = 8.7, fill = CK.GREY
+        )
+    )
+
+    # one process boundary, then the engine
+    ycli = yk + 30 + 24
+    push!(parts, arrow_d(W / 2, yk + 33, ycli))
+    clix, cliw = PAD + 28, W - 2PAD - 56
+    push!(parts, CK.rect(clix, ycli, cliw, 46; fill = "#F7FBFB", stroke = CK.ACCENT, sw = 1.4))
+    push!(parts, CK.txt(clix + 14, ycli + 19, "rdx"; size = 11.4, family = CK.MONO, weight = 600, fill = CK.ACCENT_D))
+    push!(
+        parts, CK.txt(
+            clix + 48, ycli + 19, "validate · run · diagnose · ensemble · effect · draw";
+            size = 9.4, family = CK.MONO
+        )
+    )
+    push!(
+        parts, CK.txt(
+            clix + 14, ycli + 35, "one CLI under every path above · JSON out · exit 0 ok / 1 findings / 2 error";
+            size = 8.8, fill = CK.GREY
+        )
+    )
+    push!(parts, chip(clix + cliw - CK.tw("SHIPPED", 8.4; mono = true) - 26, ycli + 10, "SHIPPED"; shipped = true))
+
+    yeng = ycli + 46 + 22
+    push!(parts, arrow_d(W / 2, ycli + 49, yeng))
+    push!(parts, CK.rect(PAD, yeng, W - 2PAD, 58; fill = CK.INK))
+    push!(parts, CK.txt(PAD + 16, yeng + 23, "ReactiveDynamics.jl"; size = 11.6, weight = 600, fill = "#F4F4F2"))
+    push!(
+        parts, CK.txt(
+            PAD + 16, yeng + 41,
+            "model = eval-free JSON document · pure validate → diagnostics with paths · (model, seed) fixes a run";
+            size = 9.0, fill = "#C7C7C4"
+        )
+    )
+    push!(
+        parts, CK.txt(
+            W - PAD - 16, yeng + 23, "on AlgebraicAgents.jl";
+            size = 8.6, family = CK.MONO, fill = CK.ACCENT_LT, anchor = "end"
+        )
+    )
+
+    return CK.shell(join(parts), yeng + 58 + 8; title = title, subtitle = subtitle)
+end
+
 # ── build ─────────────────────────────────────────────────────────────────────────────────────────
 
-for (name, svg) in ("pipeline" => pipeline_svg(), "promise" => promise_svg(), "surface" => surface_svg())
+for (name, svg) in (
+        "pipeline" => pipeline_svg(), "promise" => promise_svg(), "surface" => surface_svg(),
+        "architecture" => architecture_svg(),
+    )
     path = joinpath(FIGDIR, name * ".svg")
     write(path, svg)
     println("figures: wrote $(relpath(path, dirname(HERE))) — $(round(sizeof(svg) / 1024, digits = 1)) KiB")

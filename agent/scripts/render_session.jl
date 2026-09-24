@@ -30,7 +30,13 @@
 #                  "text": "<markdown-ish>",          # see the grammar note below
 #                  "phase": "FRAME"|…,                # optional; starts a new phase band
 #                  "stats": [ … ],                    # optional; a callout row above the text
-#                  "tools": [ { "cmd": …, "out": … } ],  # terminal text: line breaks are preserved
+#                  "tools": [ { "cmd": …, "out": …,     # terminal text: line breaks are preserved
+#                               "exit": 0|1|2,         #   optional; rendered as an ok/findings/error badge
+#                               "json": … } ],         #   optional; a result excerpt, shown as a code block
+#                  "models": [ { "file": "<a .rdj.json>",  # the formalized model, as an expander: counts in
+#                                "label": …,              #   the summary, the net drawing, then the document
+#                                "svg": "<net .svg>",     #   itself — read at render time, never pasted — or,
+#                                "base": "<a .rdj.json>" } ],  # given `base`, only its diff against that arm
 #                  "open": true,                      # optional; leave the tool block expanded
 #                  "files": [ "path (written)", … ],
 #                  "figures": [ { "svg": …, "caption": … } ],
@@ -322,15 +328,70 @@ function tools_html(tools, files, expanded = false)
     label = n == 0 ? "files written" : "$n command$(n == 1 ? "" : "s")"
     println(io, "<details class=\"tools\"", expanded ? " open" : "", "><summary><span class=\"tk\">run</span> $label</summary>")
     for t in tools
-        println(io, "<div class=\"cmd\"><span class=\"p\">\$</span> ", esc(get(t, "cmd", "")), "</div>")
+        code = get(t, "exit", nothing)
+        badge = code === nothing ? "" :
+            " <span class=\"exit x$(Int(code))\">exit $(Int(code)) · $(get(EXIT_LABEL, Int(code), "?"))</span>"
+        println(io, "<div class=\"cmd\"><span class=\"p\">\$</span> ", esc(get(t, "cmd", "")), badge, "</div>")
         out = get(t, "out", "")
         isempty(out) || println(io, "<div class=\"res\">→ ", esc(out), "</div>")
+        js = get(t, "json", "")
+        isempty(js) || println(io, "<pre class=\"block json\">", esc(js isa AbstractString ? js : JSON.json(js, 2)), "</pre>")
     end
     isempty(files) || println(
         io, "<div class=\"files\">",
         join(("<span>" * esc(f) * "</span>" for f in files), ""), "</div>"
     )
     println(io, "</details>")
+    return String(take!(io))
+end
+
+const EXIT_LABEL = Dict(0 => "ok", 1 => "findings", 2 => "error")
+
+# The formalized model, as an expander. The point of showing it is that it is DATA: a reader who opens
+# it sees a document with a counted shape, not a program. So the summary carries the counts, the body
+# the net drawing and then the document itself, read from disk at render time for the same reason the
+# appendix imports FINDINGS — a pasted copy is a copy that can disagree with the one that ran. An arm is
+# shown as its diff against `base`, because the size of that diff IS the claim: one lever, a few lines.
+function models_html(models)
+    isempty(models) && return ""
+    io = IOBuffer()
+    for m in models
+        f = string(get(m, "file", ""))
+        isfile(f) || (println(io, "<div class=\"missing\">model not found: $(esc(f))</div>"); continue)
+        d = JSON.parsefile(f)
+        n(k) = length(get(d, k, []))
+        counts = join(
+            (
+                "$(n(k)) $(n(k) == 1 ? chop(k) : k)" for k in ("places", "transitions", "arcs", "rules")
+                    if n(k) > 0
+            ), " · "
+        )
+        label = string(get(m, "label", basename(f)))
+        base = string(get(m, "base", ""))
+        println(
+            io, "<details class=\"model\"><summary><span class=\"tk\">model</span> ", inline(label),
+            " <span class=\"mc\">", esc(counts), "</span></summary><div class=\"model-body\">"
+        )
+        svg = string(get(m, "svg", ""))
+        isempty(svg) || println(io, figure_html(svg))
+        if !isempty(base) && isfile(base)
+            diff = read(ignorestatus(`diff -u -L $(basename(base)) -L $(basename(f)) $base $f`), String)
+            lines = split(diff, '\n')
+            body = join(
+                (
+                    startswith(l, "+") && !startswith(l, "+++") ? "<ins>$(esc(l))</ins>" :
+                        startswith(l, "-") && !startswith(l, "---") ? "<del>$(esc(l))</del>" : esc(l)
+                    for l in lines
+                ), "\n"
+            )
+            println(io, "<div class=\"mlabel\">the whole difference from <code>", esc(basename(base)), "</code></div>")
+            println(io, "<pre class=\"block diff\">", body, "</pre>")
+        else
+            println(io, "<div class=\"mlabel\"><code>", esc(f), "</code> — the complete document, as it ran</div>")
+            println(io, "<pre class=\"block json model-src\">", esc(rstrip(read(f, String))), "</pre>")
+        end
+        println(io, "</div></details>")
+    end
     return String(take!(io))
 end
 
@@ -593,6 +654,25 @@ details.tools[open] summary::before { content: "▾ "; }
 .cmd { font-family: var(--mono); font-size: .79rem; line-height: 1.6; margin-top: .6rem; white-space: pre-wrap; overflow-wrap: break-word; }
 .cmd .p { color: var(--accent); font-weight: 600; margin-right: .35rem; }
 .res { font-family: var(--mono); font-size: .79rem; color: var(--grey); padding-left: 1rem; white-space: pre-wrap; overflow-wrap: break-word; }
+.exit { font-size: .68rem; letter-spacing: .04em; padding: .04rem .32rem; border-radius: 2px; margin-left: .45rem; white-space: nowrap; }
+.exit.x0 { color: var(--accent-d); background: #E8F3F2; border: 1px solid #BFDEDB; }
+.exit.x1 { color: var(--amber); background: #FBF5EA; border: 1px solid #E4D2B0; }
+.exit.x2 { color: var(--rose); background: #FDF3F4; border: 1px solid #F3C2C8; }
+pre.block.json { font-size: .74rem; max-height: 22rem; margin: .45rem 0 .2rem 1rem; }
+details.model { margin: 1rem 0 .2rem; border: 1px solid var(--accent); border-radius: 2px; background: #F7FBFB; }
+details.model > summary {
+  cursor: pointer; list-style: none; padding: .55rem .85rem; font-size: .86rem; font-weight: 600; color: var(--ink);
+}
+details.model > summary::-webkit-details-marker { display: none; }
+details.model > summary::before { content: "▸ "; color: var(--accent); font-weight: 400; }
+details.model[open] > summary::before { content: "▾ "; }
+details.model .mc { font-family: var(--mono); font-size: .74rem; font-weight: 400; color: var(--grey); margin-left: .5rem; }
+.model-body { padding: .2rem .9rem .9rem; background: var(--paper); border-top: 1px solid #BFDEDB; }
+.mlabel { font-size: .78rem; color: var(--grey); margin: .7rem 0 .35rem; }
+pre.block.model-src { max-height: 28rem; font-size: .72rem; }
+pre.block.diff { font-size: .74rem; max-height: 28rem; }
+pre.block.diff ins { text-decoration: none; color: var(--accent-d); background: #E8F3F2; }
+pre.block.diff del { text-decoration: none; color: var(--rose); background: #FDF3F4; }
 .files { margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .35rem; }
 .files span {
   font-family: var(--mono); font-size: .72rem; color: var(--amber);
@@ -631,9 +711,12 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   .sub, .meta, .meta b { color: #444; } .brand { color: var(--accent-d); } .brand b { color: #000; }
   /* force every collapsible open on paper: the `display` pair covers engines that hide the children
      themselves, `::details-content` the ones (Chrome 131+) that hide the slot instead. */
-  details.tools, details.fold { display: block; }
-  details.tools > *:not(summary), details.fold > *:not(summary) { display: block !important; }
-  details.tools::details-content, details.fold::details-content {
+  details.tools, details.fold, details.model { display: block; }
+  details.tools > *:not(summary), details.fold > *:not(summary), details.model > *:not(summary) { display: block !important; }
+  /* …except a model's full source: on paper it would be pages of JSON nobody reads there. The drawing
+     and an arm's diff stay, and the summary line says where the document lives. */
+  pre.block.model-src, pre.block.json { max-height: none; } pre.block.model-src { display: none; }
+  details.tools::details-content, details.fold::details-content, details.model::details-content {
     content-visibility: visible !important; block-size: auto !important;
   }
   /* Keep the short things whole. An assistant turn with its commands expanded is routinely taller than
@@ -711,6 +794,7 @@ function render(doc, jsonpath)
         println(io, stats_html(get(turn, "stats", [])))
         println(io, body_html(node_text(turn)))
         println(io, figures_html(get(turn, "figures", []), string(get(turn, "figure", ""))))
+        println(io, models_html(get(turn, "models", [])))
         println(
             io, tools_html(
                 get(turn, "tools", []), get(turn, "files", []), get(turn, "open", false) == true
@@ -750,4 +834,6 @@ function main(argv)
     return 0
 end
 
-exit(main(ARGS))
+# Run as a script, render; included (as `render_deck.jl` does, for the grammar and the figure inliner),
+# define and stay quiet.
+abspath(PROGRAM_FILE) == (@__FILE__) && exit(main(ARGS))

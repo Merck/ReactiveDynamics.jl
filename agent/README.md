@@ -8,7 +8,7 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 
 **Evaluating rather than building? Open [`overview.html`](overview.html).** One self-contained page: what the layer does and why the gate in the middle is the differentiator, how it is built (skills, subagents, MCP, the hook, the knowledge tiers), the integration surface, how to drive it from Claude Code today — and then the engagement-scale `portfolio_bid` study as the demonstration, with the briefing it produced attached in full. Regenerate with `julia --project=. agent/scripts/render_session.jl agent/overview.json`.
 
-**[`pitch.html`](pitch.html)** is the five-minute version of the same argument, for a technical executive rather than an implementer — titled *Value modeling copilot*, and led by the process rather than the numbers: the four phases and what the interview actually asks, why *the model is data, not code* is the whole case, what a spreadsheet and a code-writing assistant each cannot do, then the engagement as an explicitly framed illustration and four of the session's eleven exchanges as an excerpt — no CLI table, no knowledge tiers, no ADR citations. Both pages quote the same study, so a number that changes in `studies/portfolio_bid/` changes in both — grep before editing either.
+**[`pitch_old.html`](pitch_old.html)** (formerly `pitch.html`, superseded by the *Modeling Copilot* page) is the five-minute version of the same argument, for a technical executive rather than an implementer — titled *Value modeling copilot*, and led by the process rather than the numbers: the four phases and what the interview actually asks, why *the model is data, not code* is the whole case, what a spreadsheet and a code-writing assistant each cannot do, then the engagement as an explicitly framed illustration and four of the session's eleven exchanges as an excerpt — no CLI table, no knowledge tiers, no ADR citations. Both pages quote the same study, so a number that changes in `studies/portfolio_bid/` changes in both — grep before editing either.
 
 ## Layout
 
@@ -18,15 +18,16 @@ Why it lives in-repo rather than in a separate plugin repository: the skills' re
 | `scripts/diagnose.jl` | the plausibility checks (`rdx diagnose`), the part that carries modeling judgement |
 | `scripts/gen_reference.jl` | regenerates `reference/model_schema.md` from the loaded module; `--check` is the drift gate |
 | `scripts/acceptance.jl` | the known-answer test — drives the published shadow price through the JSON path |
-| `scripts/render_session.jl` | renders a page document — authored sections, a captured transcript, or both — as one self-contained HTML file |
+| `scripts/render_session.jl` | renders a page document — authored sections, a captured transcript, or both — as one self-contained HTML file; tool calls carry exit badges and result excerpts, and a turn's `models` render as collapsible expanders (an arm as a diff against its baseline) |
+| `scripts/render_deck.jl` | renders a slide deck (1280×720 sheets, one per printed page) over the same block grammar, figure inliner and stat row |
 | `scripts/chartkit.jl` | data-driven SVG charts (bars with error bars, paired dots, waterfall, traced ceiling) — no plotting dep, so a study's figures build anywhere the CLI runs |
 | `skills/` | the skills themselves (`rd-study` orchestrator + one per phase) |
 | `reference/` | generated extracts of the authoring schema — never hand-edited |
 | `studies/` | worked studies; `marginal_scientist/` is the known-answer acceptance test, `portfolio_bid/` the one at engagement scale |
 | `sessions/` | captured end-to-end sessions — what the workflow is like to *use*, not just what it produces |
 | `overview.json` → `overview.html` | the capability overview page: authored sections, then the `portfolio_bid` transcript imported as its demo |
-| `pitch.json` → `pitch.html` | the five-minute version: the process, the mechanism, the alternatives, the case as an illustration, an excerpt of the session, and the non-claims |
-| `figures.jl` → `figures/` | the three structural diagrams on those pages (phase pipeline, the same sequence in plain language, integration surface), generated from tables that cite the charter's tracker ids |
+| `pitch_old.json` → `pitch_old.html` | the superseded five-minute version: the process, the mechanism, the alternatives, the case as an illustration, an excerpt of the session, and the non-claims |
+| `figures.jl` → `figures/` | the four structural diagrams on those pages (phase pipeline, the same sequence in plain language, integration surface, the copilot's component architecture), generated from tables that cite the charter's tracker ids |
 
 ## The skills
 
