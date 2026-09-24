@@ -1,0 +1,6507 @@
+{
+ "rd_format": "reactive-dynamics-model",
+ "version": 1.0,
+ "meta": {
+  "tspan": 75.0,
+  "dt": 1.0
+ },
+ "params": [
+  {
+   "name": "p_k",
+   "value": 0.6
+  },
+  {
+   "name": "p_t",
+   "value": 0.45
+  },
+  {
+   "name": "k_ok",
+   "value": 0.0
+  },
+  {
+   "name": "t_ok",
+   "value": 0.0
+  },
+  {
+   "name": "k_slip",
+   "value": 0.0
+  },
+  {
+   "name": "t_shift",
+   "value": 0.0
+  },
+  {
+   "name": "cmo_lead",
+   "value": 12.0
+  },
+  {
+   "name": "build_lead",
+   "value": 30.0
+  },
+  {
+   "name": "t_file_t",
+   "value": 999.0
+  },
+  {
+   "name": "cmo_start",
+   "value": 999.0
+  },
+  {
+   "name": "cmo_resigned",
+   "value": 0.0
+  },
+  {
+   "name": "cmo_ready_t",
+   "value": 999.0
+  },
+  {
+   "name": "l2_start",
+   "value": 999.0
+  },
+  {
+   "name": "l2_ready_t",
+   "value": 999.0
+  },
+  {
+   "name": "k_share",
+   "value": 1.0
+  },
+  {
+   "name": "k_val",
+   "value": 0.923913043478261
+  },
+  {
+   "name": "t_val",
+   "value": 0.6296296296296295
+  },
+  {
+   "name": "cmo_now",
+   "value": 0.0
+  },
+  {
+   "name": "cmo_reassign",
+   "value": 1.0
+  },
+  {
+   "name": "wait_cmo",
+   "value": 1.0
+  },
+  {
+   "name": "build_now",
+   "value": 0.0
+  },
+  {
+   "name": "build_after",
+   "value": 1.0
+  },
+  {
+   "name": "k_first",
+   "value": 1.0
+  },
+  {
+   "name": "walk2",
+   "value": 1.0
+  },
+  {
+   "name": "capex_even",
+   "value": 0.0
+  },
+  {
+   "name": "pl_free_own",
+   "value": 0.0
+  },
+  {
+   "name": "pl_k_gap",
+   "value": 0.0
+  },
+  {
+   "name": "pl_t_gap",
+   "value": 0.0
+  },
+  {
+   "name": "pl_k_base",
+   "value": 0.0
+  },
+  {
+   "name": "pl_k_buf",
+   "value": 0.0
+  },
+  {
+   "name": "pl_ppq_need",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_base_own",
+   "value": 0.0
+  },
+  {
+   "name": "pl_rem_k_base",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_base_l2",
+   "value": 0.0
+  },
+  {
+   "name": "pl_free_l2",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_base_cmo",
+   "value": 0.0
+  },
+  {
+   "name": "pl_free_cmo",
+   "value": 0.0
+  },
+  {
+   "name": "r_ppq",
+   "value": 0.0
+  },
+  {
+   "name": "r_t_make_own",
+   "value": 0.0
+  },
+  {
+   "name": "pl_rem_t_make",
+   "value": 0.0
+  },
+  {
+   "name": "r_t_make_l2",
+   "value": 0.0
+  },
+  {
+   "name": "r_t_make_cmo",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_buf_own",
+   "value": 0.0
+  },
+  {
+   "name": "pl_rem_k_buf",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_buf_l2",
+   "value": 0.0
+  },
+  {
+   "name": "r_k_buf_cmo",
+   "value": 0.0
+  }
+ ],
+ "places": [
+  {
+   "name": "cash",
+   "init": 1000000000000.0,
+   "cost": 0.001
+  },
+  {
+   "name": "line",
+   "init": 128.0
+  },
+  {
+   "name": "cmo"
+  },
+  {
+   "name": "line2"
+  },
+  {
+   "name": "mkt_done"
+  },
+  {
+   "name": "k_stock"
+  },
+  {
+   "name": "t_stock"
+  },
+  {
+   "name": "k_orders"
+  },
+  {
+   "name": "t_orders"
+  },
+  {
+   "name": "k_sold",
+   "reward": 0.923913043478261
+  },
+  {
+   "name": "t_sold",
+   "reward": 0.6296296296296295
+  },
+  {
+   "name": "k_lost"
+  },
+  {
+   "name": "t_lost"
+  },
+  {
+   "name": "k_pre"
+  },
+  {
+   "name": "k_launched"
+  },
+  {
+   "name": "k_age"
+  },
+  {
+   "name": "t_pre"
+  },
+  {
+   "name": "t_launched"
+  },
+  {
+   "name": "t_age"
+  },
+  {
+   "name": "t_ppq_done"
+  },
+  {
+   "name": "t_filed"
+  },
+  {
+   "name": "t_file_delay"
+  },
+  {
+   "name": "k_cmo_ok"
+  },
+  {
+   "name": "t_cmo_ok"
+  },
+  {
+   "name": "k_l2_ok"
+  },
+  {
+   "name": "t_l2_ok"
+  },
+  {
+   "name": "cmo_active"
+  },
+  {
+   "name": "cmo_ppq"
+  },
+  {
+   "name": "l2_active"
+  },
+  {
+   "name": "l2_ready"
+  },
+  {
+   "name": "k_short"
+  },
+  {
+   "name": "t_short"
+  },
+  {
+   "name": "k_success"
+  },
+  {
+   "name": "t_success"
+  },
+  {
+   "name": "own_used"
+  },
+  {
+   "name": "cmo_used"
+  },
+  {
+   "name": "l2_used"
+  },
+  {
+   "name": "own_free"
+  },
+  {
+   "name": "cmo_free"
+  },
+  {
+   "name": "l2_free"
+  }
+ ],
+ "transitions": [
+  {
+   "id": "mkt",
+   "name": "mkt",
+   "rate": {
+    "node": "call",
+    "op": "-",
+    "args": [
+     {
+      "node": "call",
+      "op": "floor",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "const",
+          "value": 22820.215525186475
+         },
+         {
+          "node": "call",
+          "op": "-",
+          "args": [
+           {
+            "node": "call",
+            "op": "exp",
+            "args": [
+             {
+              "node": "call",
+              "op": "*",
+              "args": [
+               {
+                "node": "const",
+                "value": 0.004065847014119338
+               },
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "timeref"
+                 },
+                 {
+                  "node": "const",
+                  "value": 1.0
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 1.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "floor",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "const",
+          "value": 22820.215525186475
+         },
+         {
+          "node": "call",
+          "op": "-",
+          "args": [
+           {
+            "node": "call",
+            "op": "exp",
+            "args": [
+             {
+              "node": "call",
+              "op": "*",
+              "args": [
+               {
+                "node": "const",
+                "value": 0.004065847014119338
+               },
+               {
+                "node": "timeref"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 1.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 1.0,
+   "priority": 10000.0
+  },
+  {
+   "id": "k_base_own",
+   "name": "k_base_own",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_base_own"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 100.0
+  },
+  {
+   "id": "k_base_l2",
+   "name": "k_base_l2",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_base_l2"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 100.0
+  },
+  {
+   "id": "k_base_cmo",
+   "name": "k_base_cmo",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_base_cmo"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 100.0
+  },
+  {
+   "id": "t_make_own",
+   "name": "t_make_own",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_t_make_own"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 1.0
+  },
+  {
+   "id": "t_make_l2",
+   "name": "t_make_l2",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_t_make_l2"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 1.0
+  },
+  {
+   "id": "t_make_cmo",
+   "name": "t_make_cmo",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_t_make_cmo"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 1.0
+  },
+  {
+   "id": "k_buf_own",
+   "name": "k_buf_own",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_buf_own"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 0.5
+  },
+  {
+   "id": "k_buf_l2",
+   "name": "k_buf_l2",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_buf_l2"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 0.5
+  },
+  {
+   "id": "k_buf_cmo",
+   "name": "k_buf_cmo",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_k_buf_cmo"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 0.5
+  },
+  {
+   "id": "t_ppq_own",
+   "name": "t_ppq_own",
+   "rate": {
+    "node": "ref",
+    "kind": "param",
+    "name": "r_ppq"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 1.0,
+   "prob_of_success": 0.97,
+   "priority": 1.0
+  },
+  {
+   "id": "k_clock",
+   "name": "k_clock",
+   "rate": {
+    "node": "ref",
+    "kind": "place",
+    "name": "k_launched"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "k_demand",
+   "name": "k_demand",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "ref",
+      "kind": "place",
+      "name": "k_launched"
+     },
+     {
+      "node": "call",
+      "op": "floor",
+      "args": [
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "call",
+            "op": "*",
+            "args": [
+             {
+              "node": "const",
+              "value": 10.0
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "k_share"
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "min",
+            "args": [
+             {
+              "node": "call",
+              "op": "min",
+              "args": [
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "const",
+                  "value": 1.0
+                 },
+                 {
+                  "node": "call",
+                  "op": "/",
+                  "args": [
+                   {
+                    "node": "ref",
+                    "kind": "place",
+                    "name": "k_age"
+                   },
+                   {
+                    "node": "const",
+                    "value": 6.0
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "const",
+                  "value": 3.0
+                 },
+                 {
+                  "node": "call",
+                  "op": "/",
+                  "args": [
+                   {
+                    "node": "call",
+                    "op": "-",
+                    "args": [
+                     {
+                      "node": "ref",
+                      "kind": "place",
+                      "name": "k_age"
+                     },
+                     {
+                      "node": "const",
+                      "value": 12.0
+                     }
+                    ]
+                   },
+                   {
+                    "node": "const",
+                    "value": 16.0
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 4.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "k_ship",
+   "name": "k_ship",
+   "rate": 1000.0,
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 10.0
+  },
+  {
+   "id": "k_lose",
+   "name": "k_lose",
+   "rate": 1000.0,
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 0.0
+  },
+  {
+   "id": "t_clock",
+   "name": "t_clock",
+   "rate": {
+    "node": "ref",
+    "kind": "place",
+    "name": "t_launched"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "t_demand",
+   "name": "t_demand",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "ref",
+      "kind": "place",
+      "name": "t_launched"
+     },
+     {
+      "node": "call",
+      "op": "floor",
+      "args": [
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "call",
+            "op": "*",
+            "args": [
+             {
+              "node": "const",
+              "value": 10.0
+             },
+             {
+              "node": "const",
+              "value": 1.0
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "min",
+            "args": [
+             {
+              "node": "call",
+              "op": "min",
+              "args": [
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "const",
+                  "value": 1.0
+                 },
+                 {
+                  "node": "call",
+                  "op": "/",
+                  "args": [
+                   {
+                    "node": "ref",
+                    "kind": "place",
+                    "name": "t_age"
+                   },
+                   {
+                    "node": "const",
+                    "value": 8.0
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "const",
+                  "value": 2.5
+                 },
+                 {
+                  "node": "call",
+                  "op": "/",
+                  "args": [
+                   {
+                    "node": "call",
+                    "op": "-",
+                    "args": [
+                     {
+                      "node": "ref",
+                      "kind": "place",
+                      "name": "t_age"
+                     },
+                     {
+                      "node": "const",
+                      "value": 12.0
+                     }
+                    ]
+                   },
+                   {
+                    "node": "const",
+                    "value": 16.0
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 4.0
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "t_ship",
+   "name": "t_ship",
+   "rate": 1000.0,
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 10.0
+  },
+  {
+   "id": "t_lose",
+   "name": "t_lose",
+   "rate": 1000.0,
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 0.0
+  },
+  {
+   "id": "t_delay_clock",
+   "name": "t_delay_clock",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "t_ok"
+       },
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "const",
+          "value": 1.0
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "timeref"
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "call",
+              "op": "+",
+              "args": [
+               {
+                "node": "const",
+                "value": 14.0
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "t_shift"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 3.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "-",
+      "args": [
+       {
+        "node": "const",
+        "value": 1.0
+       },
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "t_filed"
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "cmo_fee",
+   "name": "cmo_fee",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "const",
+      "value": 1.0
+     },
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "cmo_active"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "&&",
+          "args": [
+           {
+            "node": "call",
+            "op": ">=",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_start"
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "==",
+            "args": [
+             {
+              "node": "call",
+              "op": "*",
+              "args": [
+               {
+                "node": "const",
+                "value": 12.0
+               },
+               {
+                "node": "call",
+                "op": "floor",
+                "args": [
+                 {
+                  "node": "call",
+                  "op": "/",
+                  "args": [
+                   {
+                    "node": "call",
+                    "op": "-",
+                    "args": [
+                     {
+                      "node": "timeref"
+                     },
+                     {
+                      "node": "ref",
+                      "kind": "param",
+                      "name": "cmo_start"
+                     }
+                    ]
+                   },
+                   {
+                    "node": "const",
+                    "value": 12.0
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "node": "call",
+              "op": "-",
+              "args": [
+               {
+                "node": "timeref"
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_start"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "!",
+        "args": [
+         {
+          "node": "call",
+          "op": "&&",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "==",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "const",
+              "value": 14.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "cmo_fee_y2",
+   "name": "cmo_fee_y2",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "const",
+      "value": 1.0
+     },
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_now"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "==",
+          "args": [
+           {
+            "node": "timeref"
+           },
+           {
+            "node": "const",
+            "value": 14.0
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "||",
+        "args": [
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": "&&",
+            "args": [
+             {
+              "node": "call",
+              "op": "!",
+              "args": [
+               {
+                "node": "call",
+                "op": ">",
+                "args": [
+                 {
+                  "node": "ref",
+                  "kind": "param",
+                  "name": "t_ok"
+                 },
+                 {
+                  "node": "const",
+                  "value": 0.5
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "node": "call",
+              "op": "||",
+              "args": [
+               {
+                "node": "call",
+                "op": "!",
+                "args": [
+                 {
+                  "node": "call",
+                  "op": ">",
+                  "args": [
+                   {
+                    "node": "ref",
+                    "kind": "param",
+                    "name": "cmo_reassign"
+                   },
+                   {
+                    "node": "const",
+                    "value": 0.5
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "node": "call",
+                "op": "!",
+                "args": [
+                 {
+                  "node": "call",
+                  "op": ">",
+                  "args": [
+                   {
+                    "node": "ref",
+                    "kind": "param",
+                    "name": "k_ok"
+                   },
+                   {
+                    "node": "const",
+                    "value": 0.5
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "walk2"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "l2_capex_y1",
+   "name": "l2_capex_y1",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_active"
+         },
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "const",
+            "value": 1.0
+           },
+           {
+            "node": "call",
+            "op": ">=",
+            "args": [
+             {
+              "node": "call",
+              "op": "-",
+              "args": [
+               {
+                "node": "timeref"
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "l2_start"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 0.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "-",
+        "args": [
+         {
+          "node": "const",
+          "value": 1.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "capex_even"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "const",
+        "value": 1.0
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 0.0
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "<",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 12.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "l2_capex_y2",
+   "name": "l2_capex_y2",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_active"
+         },
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "const",
+            "value": 1.0
+           },
+           {
+            "node": "call",
+            "op": ">=",
+            "args": [
+             {
+              "node": "call",
+              "op": "-",
+              "args": [
+               {
+                "node": "timeref"
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "l2_start"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 0.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "-",
+        "args": [
+         {
+          "node": "const",
+          "value": 1.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "capex_even"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "const",
+        "value": 1.0
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 12.0
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "<",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 24.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "l2_capex_y3",
+   "name": "l2_capex_y3",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_active"
+         },
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "const",
+            "value": 1.0
+           },
+           {
+            "node": "call",
+            "op": ">=",
+            "args": [
+             {
+              "node": "call",
+              "op": "-",
+              "args": [
+               {
+                "node": "timeref"
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "l2_start"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 0.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "-",
+        "args": [
+         {
+          "node": "const",
+          "value": 1.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "capex_even"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "const",
+        "value": 1.0
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 24.0
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "<",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 36.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "l2_capex_even",
+   "name": "l2_capex_even",
+   "rate": {
+    "node": "call",
+    "op": "*",
+    "args": [
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "call",
+        "op": "*",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_active"
+         },
+         {
+          "node": "call",
+          "op": "*",
+          "args": [
+           {
+            "node": "const",
+            "value": 1.0
+           },
+           {
+            "node": "call",
+            "op": ">=",
+            "args": [
+             {
+              "node": "call",
+              "op": "-",
+              "args": [
+               {
+                "node": "timeref"
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "l2_start"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 0.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "capex_even"
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "*",
+      "args": [
+       {
+        "node": "const",
+        "value": 1.0
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 0.0
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "<",
+          "args": [
+           {
+            "node": "call",
+            "op": "-",
+            "args": [
+             {
+              "node": "timeref"
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "l2_start"
+             }
+            ]
+           },
+           {
+            "node": "const",
+            "value": 36.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  },
+  {
+   "id": "l2_fixed",
+   "name": "l2_fixed",
+   "rate": {
+    "node": "ref",
+    "kind": "place",
+    "name": "l2_ready"
+   },
+   "rate_mode": "deterministic",
+   "cycletime": 0.0,
+   "prob_of_success": 1.0,
+   "priority": 1.0
+  }
+ ],
+ "arcs": [
+  {
+   "transition": "mkt",
+   "place": "line",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "mkt",
+   "place": "mkt_done",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "mkt",
+   "place": "own_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_own",
+   "place": "line",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_base_own",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "k_base_own",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_own",
+   "place": "own_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_l2",
+   "place": "line2",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_base_l2",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "k_base_l2",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_l2",
+   "place": "l2_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_cmo",
+   "place": "cmo",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_base_cmo",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 40.0
+  },
+  {
+   "transition": "k_base_cmo",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_base_cmo",
+   "place": "cmo_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_own",
+   "place": "line",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "t_make_own",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "t_make_own",
+   "place": "t_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_own",
+   "place": "own_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_l2",
+   "place": "line2",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "t_make_l2",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "t_make_l2",
+   "place": "t_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_l2",
+   "place": "l2_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_cmo",
+   "place": "cmo",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "t_make_cmo",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 40.0
+  },
+  {
+   "transition": "t_make_cmo",
+   "place": "t_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_make_cmo",
+   "place": "cmo_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_own",
+   "place": "line",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_buf_own",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "k_buf_own",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_own",
+   "place": "own_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_l2",
+   "place": "line2",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_buf_l2",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "k_buf_l2",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_l2",
+   "place": "l2_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_cmo",
+   "place": "cmo",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "k_buf_cmo",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 40.0
+  },
+  {
+   "transition": "k_buf_cmo",
+   "place": "k_stock",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_buf_cmo",
+   "place": "cmo_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_ppq_own",
+   "place": "line",
+   "side": "lhs",
+   "multiplicity": 1.0,
+   "modality": {
+    "allocation": "upfront",
+    "return": "conserved",
+    "blocking": "block"
+   }
+  },
+  {
+   "transition": "t_ppq_own",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 15.0
+  },
+  {
+   "transition": "t_ppq_own",
+   "place": "t_ppq_done",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_ppq_own",
+   "place": "own_used",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_clock",
+   "place": "k_age",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_demand",
+   "place": "k_orders",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_ship",
+   "place": "k_orders",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_ship",
+   "place": "k_stock",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_ship",
+   "place": "k_sold",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_lose",
+   "place": "k_orders",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "k_lose",
+   "place": "k_lost",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_clock",
+   "place": "t_age",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_demand",
+   "place": "t_orders",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_ship",
+   "place": "t_orders",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_ship",
+   "place": "t_stock",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_ship",
+   "place": "t_sold",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_lose",
+   "place": "t_orders",
+   "side": "lhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_lose",
+   "place": "t_lost",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "t_delay_clock",
+   "place": "t_file_delay",
+   "side": "rhs",
+   "multiplicity": 1.0
+  },
+  {
+   "transition": "cmo_fee",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 5000.0
+  },
+  {
+   "transition": "cmo_fee_y2",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 5000.0
+  },
+  {
+   "transition": "l2_capex_y1",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 2000.0
+  },
+  {
+   "transition": "l2_capex_y2",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 5000.0
+  },
+  {
+   "transition": "l2_capex_y3",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 3000.0
+  },
+  {
+   "transition": "l2_capex_even",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 3333.0
+  },
+  {
+   "transition": "l2_fixed",
+   "place": "cash",
+   "side": "lhs",
+   "multiplicity": 833.0
+  }
+ ],
+ "rules": [
+  {
+   "id": "draws",
+   "guard": {
+    "node": "call",
+    "op": ">=",
+    "args": [
+     {
+      "node": "timeref"
+     },
+     {
+      "node": "const",
+      "value": 0.0
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "k_ok",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "const",
+           "value": 1.0
+          },
+          {
+           "node": "sample",
+           "dist": "Bernoulli",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "p_k"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "t_ok",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "const",
+           "value": 1.0
+          },
+          {
+           "node": "sample",
+           "dist": "Bernoulli",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "p_t"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "k_slip",
+        "value": {
+         "node": "call",
+         "op": "floor",
+         "args": [
+          {
+           "node": "sample",
+           "dist": "Uniform",
+           "args": [
+            {
+             "node": "const",
+             "value": 0.0
+            },
+            {
+             "node": "const",
+             "value": 3.0
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "t_shift",
+        "value": {
+         "node": "call",
+         "op": "floor",
+         "args": [
+          {
+           "node": "sample",
+           "dist": "Uniform",
+           "args": [
+            {
+             "node": "const",
+             "value": -3.0
+            },
+            {
+             "node": "const",
+             "value": 4.0
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_lead",
+        "value": {
+         "node": "call",
+         "op": "floor",
+         "args": [
+          {
+           "node": "sample",
+           "dist": "Uniform",
+           "args": [
+            {
+             "node": "const",
+             "value": 12.0
+            },
+            {
+             "node": "const",
+             "value": 16.0
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "build_lead",
+        "value": {
+         "node": "call",
+         "op": "floor",
+         "args": [
+          {
+           "node": "sample",
+           "dist": "Uniform",
+           "args": [
+            {
+             "node": "const",
+             "value": 30.0
+            },
+            {
+             "node": "const",
+             "value": 37.0
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_marking",
+      "name": "k_success",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "k_ok"
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "t_success",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "t_ok"
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "k_stock_build",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "k_ok"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "const",
+          "value": 15.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "k_slip"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "k_pre",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "k_launch",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "k_ok"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "const",
+          "value": 21.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "k_slip"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "k_launched",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_file",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "t_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "timeref"
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "call",
+              "op": "+",
+              "args": [
+               {
+                "node": "const",
+                "value": 14.0
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "t_shift"
+               }
+              ]
+             },
+             {
+              "node": "const",
+              "value": 3.0
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "!",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "t_filed"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "||",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_now"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "cmo_ppq"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">=",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "t_ppq_done"
+           },
+           {
+            "node": "const",
+            "value": 30.0
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_filed",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "t_file_t",
+        "value": {
+         "node": "timeref"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_stock_build",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "t_filed"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "t_file_t"
+         },
+         {
+          "node": "const",
+          "value": 7.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_pre",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "t_cmo_ok",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "cmo_now"
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_launch",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "t_filed"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "t_file_t"
+         },
+         {
+          "node": "const",
+          "value": 13.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_launched",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_sign_now",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "cmo_now"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "const",
+        "value": 1.0
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo_active",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_start",
+        "value": {
+         "node": "const",
+         "value": 2.0
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_sign_wait",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "wait_cmo"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">=",
+        "args": [
+         {
+          "node": "timeref"
+         },
+         {
+          "node": "const",
+          "value": 20.0
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "||",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "||",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "k_ok"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "t_ok"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": "&&",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "!",
+            "args": [
+             {
+              "node": "call",
+              "op": ">",
+              "args": [
+               {
+                "node": "ref",
+                "kind": "place",
+                "name": "cmo_active"
+               },
+               {
+                "node": "const",
+                "value": 0.5
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "k_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo_active",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_start",
+        "value": {
+         "node": "const",
+         "value": 21.0
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_resigned",
+        "value": {
+         "node": "const",
+         "value": 1.0
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_ready",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "cmo_active"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "!",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_resigned"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "cmo_start"
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "cmo_lead"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo",
+      "value": {
+       "node": "const",
+       "value": 40.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo_ppq",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_ready_t",
+        "value": {
+         "node": "timeref"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_ready_resigned",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "cmo_active"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "cmo_resigned"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "cmo_start"
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "cmo_lead"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo",
+      "value": {
+       "node": "const",
+       "value": 40.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo_ppq",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "cmo_ready_t",
+        "value": {
+         "node": "timeref"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "cmo_terminate",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_now"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "cmo_active"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">=",
+        "args": [
+         {
+          "node": "timeref"
+         },
+         {
+          "node": "call",
+          "op": "+",
+          "args": [
+           {
+            "node": "const",
+            "value": 14.0
+           },
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "t_shift"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "!",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "t_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "||",
+        "args": [
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_reassign"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "k_ok"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "cmo_active",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo_ppq",
+      "value": {
+       "node": "const",
+       "value": 0.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "k_cmo_pas",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "k_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "cmo_ppq"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": "||",
+        "args": [
+         {
+          "node": "call",
+          "op": "||",
+          "args": [
+           {
+            "node": "call",
+            "op": "!",
+            "args": [
+             {
+              "node": "call",
+              "op": ">",
+              "args": [
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_now"
+               },
+               {
+                "node": "const",
+                "value": 0.5
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_reassign"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_resigned"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "max",
+          "args": [
+           {
+            "node": "call",
+            "op": "max",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_ready_t"
+             },
+             {
+              "node": "call",
+              "op": "+",
+              "args": [
+               {
+                "node": "call",
+                "op": "+",
+                "args": [
+                 {
+                  "node": "const",
+                  "value": 5.0
+                 },
+                 {
+                  "node": "ref",
+                  "kind": "param",
+                  "name": "k_slip"
+                 }
+                ]
+               },
+               {
+                "node": "ref",
+                "kind": "param",
+                "name": "cmo_lead"
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "const",
+              "value": 20.0
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "k_slip"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 6.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "k_cmo_ok",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_cmo_pas",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": "!",
+          "args": [
+           {
+            "node": "call",
+            "op": ">",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "cmo_now"
+             },
+             {
+              "node": "const",
+              "value": 0.5
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "place",
+            "name": "cmo_ppq"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "t_filed"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "max",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "cmo_ready_t"
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "t_file_t"
+             },
+             {
+              "node": "const",
+              "value": 12.0
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 6.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_cmo_ok",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "l2_approve_now",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "param",
+        "name": "build_now"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "const",
+        "value": 1.0
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "l2_active",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "l2_start",
+        "value": {
+         "node": "const",
+         "value": 2.0
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "l2_approve_after",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": "&&",
+        "args": [
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "build_after"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         },
+         {
+          "node": "call",
+          "op": ">",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "k_ok"
+           },
+           {
+            "node": "const",
+            "value": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "t_ok"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "const",
+          "value": 14.0
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "t_shift"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "l2_active",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "l2_start",
+        "value": {
+         "node": "call",
+         "op": "+",
+         "args": [
+          {
+           "node": "timeref"
+          },
+          {
+           "node": "const",
+           "value": 1.0
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "l2_ready_r",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "l2_active"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "l2_start"
+         },
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "build_lead"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "line2",
+      "value": {
+       "node": "const",
+       "value": 120.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "l2_ready",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "l2_ready_t",
+        "value": {
+         "node": "timeref"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "k_l2_pas",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "param",
+          "name": "k_ok"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_ready"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "max",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "l2_ready_t"
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "const",
+              "value": 20.0
+             },
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "k_slip"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 6.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "k_l2_ok",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_l2_pas",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": "&&",
+      "args": [
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "t_filed"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       },
+       {
+        "node": "call",
+        "op": ">",
+        "args": [
+         {
+          "node": "ref",
+          "kind": "place",
+          "name": "l2_ready"
+         },
+         {
+          "node": "const",
+          "value": 0.5
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": ">=",
+      "args": [
+       {
+        "node": "timeref"
+       },
+       {
+        "node": "call",
+        "op": "+",
+        "args": [
+         {
+          "node": "call",
+          "op": "max",
+          "args": [
+           {
+            "node": "ref",
+            "kind": "param",
+            "name": "l2_ready_t"
+           },
+           {
+            "node": "call",
+            "op": "+",
+            "args": [
+             {
+              "node": "ref",
+              "kind": "param",
+              "name": "t_file_t"
+             },
+             {
+              "node": "const",
+              "value": 12.0
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "node": "const",
+          "value": 6.0
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_l2_ok",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "k_short_launch",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "k_lost"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "<",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "k_age"
+       },
+       {
+        "node": "const",
+        "value": 6.5
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "k_short",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "k_share",
+        "value": {
+         "node": "const",
+         "value": 0.85
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "t_short_launch",
+   "guard": {
+    "node": "call",
+    "op": "&&",
+    "args": [
+     {
+      "node": "call",
+      "op": ">",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "t_lost"
+       },
+       {
+        "node": "const",
+        "value": 0.5
+       }
+      ]
+     },
+     {
+      "node": "call",
+      "op": "<",
+      "args": [
+       {
+        "node": "ref",
+        "kind": "place",
+        "name": "t_age"
+       },
+       {
+        "node": "const",
+        "value": 6.5
+       }
+      ]
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_marking",
+      "name": "t_short",
+      "value": {
+       "node": "const",
+       "value": 1.0
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "once"
+  },
+  {
+   "id": "planner",
+   "guard": {
+    "node": "call",
+    "op": ">=",
+    "args": [
+     {
+      "node": "timeref"
+     },
+     {
+      "node": "const",
+      "value": 0.0
+     }
+    ]
+   },
+   "action": {
+    "verb": "seq",
+    "stmts": [
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_own",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "line"
+            },
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "call",
+               "op": "floor",
+               "args": [
+                {
+                 "node": "call",
+                 "op": "*",
+                 "args": [
+                  {
+                   "node": "const",
+                   "value": 22820.215525186475
+                  },
+                  {
+                   "node": "call",
+                   "op": "-",
+                   "args": [
+                    {
+                     "node": "call",
+                     "op": "exp",
+                     "args": [
+                      {
+                       "node": "call",
+                       "op": "*",
+                       "args": [
+                        {
+                         "node": "const",
+                         "value": 0.004065847014119338
+                        },
+                        {
+                         "node": "call",
+                         "op": "+",
+                         "args": [
+                          {
+                           "node": "call",
+                           "op": "+",
+                           "args": [
+                            {
+                             "node": "timeref"
+                            },
+                            {
+                             "node": "const",
+                             "value": 1.0
+                            }
+                           ]
+                          },
+                          {
+                           "node": "const",
+                           "value": 1.0
+                          }
+                         ]
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "node": "const",
+                     "value": 1.0
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "node": "call",
+               "op": "floor",
+               "args": [
+                {
+                 "node": "call",
+                 "op": "*",
+                 "args": [
+                  {
+                   "node": "const",
+                   "value": 22820.215525186475
+                  },
+                  {
+                   "node": "call",
+                   "op": "-",
+                   "args": [
+                    {
+                     "node": "call",
+                     "op": "exp",
+                     "args": [
+                      {
+                       "node": "call",
+                       "op": "*",
+                       "args": [
+                        {
+                         "node": "const",
+                         "value": 0.004065847014119338
+                        },
+                        {
+                         "node": "call",
+                         "op": "+",
+                         "args": [
+                          {
+                           "node": "timeref"
+                          },
+                          {
+                           "node": "const",
+                           "value": 1.0
+                          }
+                         ]
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "node": "const",
+                     "value": 1.0
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_k_gap",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "ceil",
+           "args": [
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "call",
+                 "op": "*",
+                 "args": [
+                  {
+                   "node": "const",
+                   "value": 60.0
+                  },
+                  {
+                   "node": "ref",
+                   "kind": "param",
+                   "name": "k_share"
+                  }
+                 ]
+                },
+                {
+                 "node": "call",
+                 "op": "min",
+                 "args": [
+                  {
+                   "node": "call",
+                   "op": "min",
+                   "args": [
+                    {
+                     "node": "call",
+                     "op": "+",
+                     "args": [
+                      {
+                       "node": "const",
+                       "value": 1.0
+                      },
+                      {
+                       "node": "call",
+                       "op": "/",
+                       "args": [
+                        {
+                         "node": "call",
+                         "op": "+",
+                         "args": [
+                          {
+                           "node": "ref",
+                           "kind": "place",
+                           "name": "k_age"
+                          },
+                          {
+                           "node": "const",
+                           "value": 6.0
+                          }
+                         ]
+                        },
+                        {
+                         "node": "const",
+                         "value": 6.0
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "node": "call",
+                     "op": "+",
+                     "args": [
+                      {
+                       "node": "const",
+                       "value": 3.0
+                      },
+                      {
+                       "node": "call",
+                       "op": "/",
+                       "args": [
+                        {
+                         "node": "call",
+                         "op": "-",
+                         "args": [
+                          {
+                           "node": "call",
+                           "op": "+",
+                           "args": [
+                            {
+                             "node": "ref",
+                             "kind": "place",
+                             "name": "k_age"
+                            },
+                            {
+                             "node": "const",
+                             "value": 6.0
+                            }
+                           ]
+                          },
+                          {
+                           "node": "const",
+                           "value": 12.0
+                          }
+                         ]
+                        },
+                        {
+                         "node": "const",
+                         "value": 16.0
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "node": "const",
+                   "value": 4.5
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "node": "ref",
+               "kind": "place",
+               "name": "k_stock"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_t_gap",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "ceil",
+           "args": [
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "const",
+                 "value": 60.0
+                },
+                {
+                 "node": "call",
+                 "op": "min",
+                 "args": [
+                  {
+                   "node": "call",
+                   "op": "min",
+                   "args": [
+                    {
+                     "node": "call",
+                     "op": "+",
+                     "args": [
+                      {
+                       "node": "const",
+                       "value": 1.0
+                      },
+                      {
+                       "node": "call",
+                       "op": "/",
+                       "args": [
+                        {
+                         "node": "call",
+                         "op": "+",
+                         "args": [
+                          {
+                           "node": "ref",
+                           "kind": "place",
+                           "name": "t_age"
+                          },
+                          {
+                           "node": "const",
+                           "value": 6.0
+                          }
+                         ]
+                        },
+                        {
+                         "node": "const",
+                         "value": 8.0
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    {
+                     "node": "call",
+                     "op": "+",
+                     "args": [
+                      {
+                       "node": "const",
+                       "value": 2.5
+                      },
+                      {
+                       "node": "call",
+                       "op": "/",
+                       "args": [
+                        {
+                         "node": "call",
+                         "op": "-",
+                         "args": [
+                          {
+                           "node": "call",
+                           "op": "+",
+                           "args": [
+                            {
+                             "node": "ref",
+                             "kind": "place",
+                             "name": "t_age"
+                            },
+                            {
+                             "node": "const",
+                             "value": 6.0
+                            }
+                           ]
+                          },
+                          {
+                           "node": "const",
+                           "value": 12.0
+                          }
+                         ]
+                        },
+                        {
+                         "node": "const",
+                         "value": 16.0
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "node": "const",
+                   "value": 4.0
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "node": "ref",
+               "kind": "place",
+               "name": "t_stock"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_k_base",
+        "value": {
+         "node": "call",
+         "op": "+",
+         "args": [
+          {
+           "node": "call",
+           "op": "*",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "k_first"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_gap"
+            }
+           ]
+          },
+          {
+           "node": "call",
+           "op": "*",
+           "args": [
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "const",
+               "value": 1.0
+              },
+              {
+               "node": "ref",
+               "kind": "param",
+               "name": "k_first"
+              }
+             ]
+            },
+            {
+             "node": "call",
+             "op": "+",
+             "args": [
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "call",
+                 "op": "-",
+                 "args": [
+                  {
+                   "node": "const",
+                   "value": 1.0
+                  },
+                  {
+                   "node": "ref",
+                   "kind": "place",
+                   "name": "k_launched"
+                  }
+                 ]
+                },
+                {
+                 "node": "ref",
+                 "kind": "param",
+                 "name": "pl_k_gap"
+                }
+               ]
+              },
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "ref",
+                 "kind": "place",
+                 "name": "k_launched"
+                },
+                {
+                 "node": "call",
+                 "op": "min",
+                 "args": [
+                  {
+                   "node": "ref",
+                   "kind": "param",
+                   "name": "pl_k_gap"
+                  },
+                  {
+                   "node": "call",
+                   "op": "ceil",
+                   "args": [
+                    {
+                     "node": "call",
+                     "op": "*",
+                     "args": [
+                      {
+                       "node": "call",
+                       "op": "*",
+                       "args": [
+                        {
+                         "node": "const",
+                         "value": 10.0
+                        },
+                        {
+                         "node": "ref",
+                         "kind": "param",
+                         "name": "k_share"
+                        }
+                       ]
+                      },
+                      {
+                       "node": "call",
+                       "op": "min",
+                       "args": [
+                        {
+                         "node": "call",
+                         "op": "min",
+                         "args": [
+                          {
+                           "node": "call",
+                           "op": "+",
+                           "args": [
+                            {
+                             "node": "const",
+                             "value": 1.0
+                            },
+                            {
+                             "node": "call",
+                             "op": "/",
+                             "args": [
+                              {
+                               "node": "ref",
+                               "kind": "place",
+                               "name": "k_age"
+                              },
+                              {
+                               "node": "const",
+                               "value": 6.0
+                              }
+                             ]
+                            }
+                           ]
+                          },
+                          {
+                           "node": "call",
+                           "op": "+",
+                           "args": [
+                            {
+                             "node": "const",
+                             "value": 3.0
+                            },
+                            {
+                             "node": "call",
+                             "op": "/",
+                             "args": [
+                              {
+                               "node": "call",
+                               "op": "-",
+                               "args": [
+                                {
+                                 "node": "ref",
+                                 "kind": "place",
+                                 "name": "k_age"
+                                },
+                                {
+                                 "node": "const",
+                                 "value": 12.0
+                                }
+                               ]
+                              },
+                              {
+                               "node": "const",
+                               "value": 16.0
+                              }
+                             ]
+                            }
+                           ]
+                          }
+                         ]
+                        },
+                        {
+                         "node": "const",
+                         "value": 4.5
+                        }
+                       ]
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_k_buf",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_gap"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_base"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_ppq_need",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "call",
+           "op": "*",
+           "args": [
+            {
+             "node": "call",
+             "op": "*",
+             "args": [
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "call",
+                 "op": "-",
+                 "args": [
+                  {
+                   "node": "const",
+                   "value": 1.0
+                  },
+                  {
+                   "node": "ref",
+                   "kind": "param",
+                   "name": "cmo_now"
+                  }
+                 ]
+                },
+                {
+                 "node": "ref",
+                 "kind": "param",
+                 "name": "t_ok"
+                }
+               ]
+              },
+              {
+               "node": "call",
+               "op": "*",
+               "args": [
+                {
+                 "node": "const",
+                 "value": 1.0
+                },
+                {
+                 "node": "call",
+                 "op": ">=",
+                 "args": [
+                  {
+                   "node": "call",
+                   "op": "+",
+                   "args": [
+                    {
+                     "node": "timeref"
+                    },
+                    {
+                     "node": "const",
+                     "value": 1.0
+                    }
+                   ]
+                  },
+                  {
+                   "node": "call",
+                   "op": "+",
+                   "args": [
+                    {
+                     "node": "const",
+                     "value": 14.0
+                    },
+                    {
+                     "node": "ref",
+                     "kind": "param",
+                     "name": "t_shift"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "const",
+               "value": 1.0
+              },
+              {
+               "node": "ref",
+               "kind": "place",
+               "name": "t_filed"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "node": "call",
+           "op": "max",
+           "args": [
+            {
+             "node": "const",
+             "value": 0.0
+            },
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "const",
+               "value": 30.0
+              },
+              {
+               "node": "ref",
+               "kind": "place",
+               "name": "t_ppq_done"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_base_own",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_pre"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_own",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_base",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_base_l2",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_l2_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "line2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_l2",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "line2"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_base",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_base_cmo",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_cmo_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_cmo",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "cmo"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_base",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_base"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_base_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_ppq",
+        "value": {
+         "node": "call",
+         "op": "min",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "param",
+           "name": "pl_ppq_need"
+          },
+          {
+           "node": "ref",
+           "kind": "param",
+           "name": "pl_free_own"
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_own",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_ppq"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_t_make_own",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "call",
+           "op": "*",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "place",
+             "name": "t_pre"
+            },
+            {
+             "node": "call",
+             "op": "-",
+             "args": [
+              {
+               "node": "const",
+               "value": 1.0
+              },
+              {
+               "node": "ref",
+               "kind": "param",
+               "name": "cmo_now"
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_t_gap"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_own",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_t_make",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_t_gap"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_t_make_l2",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "t_l2_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_t_make"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_l2",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_l2"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_t_make",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_t_make"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_t_make_cmo",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "t_cmo_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_t_make"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_cmo",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_cmo"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_t_make",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_t_make"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_t_make_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_buf_own",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_pre"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_own",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_own"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_buf",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_own"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_buf_l2",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_l2_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_l2",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_l2"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_buf",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_l2"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "r_k_buf_cmo",
+        "value": {
+         "node": "call",
+         "op": "*",
+         "args": [
+          {
+           "node": "ref",
+           "kind": "place",
+           "name": "k_cmo_ok"
+          },
+          {
+           "node": "call",
+           "op": "min",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_free_cmo",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_free_cmo"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_params",
+      "assigns": [
+       {
+        "name": "pl_rem_k_buf",
+        "value": {
+         "node": "call",
+         "op": "max",
+         "args": [
+          {
+           "node": "const",
+           "value": 0.0
+          },
+          {
+           "node": "call",
+           "op": "-",
+           "args": [
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "pl_rem_k_buf"
+            },
+            {
+             "node": "ref",
+             "kind": "param",
+             "name": "r_k_buf_cmo"
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "verb": "set_marking",
+      "name": "own_free",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "pl_free_own"
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "l2_free",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "pl_free_l2"
+      },
+      "mode": "set"
+     },
+     {
+      "verb": "set_marking",
+      "name": "cmo_free",
+      "value": {
+       "node": "ref",
+       "kind": "param",
+       "name": "pl_free_cmo"
+      },
+      "mode": "set"
+     }
+    ]
+   },
+   "fire_mode": "every_tick"
+  }
+ ]
+}
