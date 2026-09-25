@@ -295,7 +295,7 @@ const COMPONENTS = [
     ),
     (
         "MCP server rd", "reach beyond Bash, a warm Julia session",
-        ["rd_validate · rd_simulate", "rd_ensemble · rd_diagnose", "rd_treatment_effect · rd_draw", "+ the spec as resources"],
+        ["rd_validate · rd_run", "rd_ensemble · rd_diagnose", "rd_effect · rd_draw", "+ the spec as resources"],
         "PLANNED · W8", false,
     ),
     (
@@ -307,7 +307,7 @@ const COMPONENTS = [
 
 function architecture_svg()
     title = "ReactiveDynamics.jl Modeling Copilot — what it is made of"
-    subtitle = "A thin layer of procedure over an engine that checks everything. The shipped path is the portable one; the planned pieces add reach, isolation and enforcement, not capability."
+    subtitle = "A thin layer of procedure over an engine that checks everything. The shipped path is the portable one; the planned pieces add trust (a critic, a validate hook) and reach (MCP, plugin)."
     head = CK.head_height(title, subtitle)
     parts = [CK.head_block(title, subtitle)]
 
