@@ -1,0 +1,1314 @@
+<svg width="814pt" height="2055pt"
+ viewBox="0.00 0.00 814.09 2054.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 2040.4)">
+<title>net</title>
+<polygon fill="white" stroke="none" points="-14.4,14.4 -14.4,-2040.4 799.69,-2040.4 799.69,14.4 -14.4,14.4"/>
+<g id="clust1" class="cluster">
+<title>cluster_pools</title>
+<path fill="white" stroke="#0a8a84" d="M206.89,-762C206.89,-762 284.39,-762 284.39,-762 290.39,-762 296.39,-768 296.39,-774 296.39,-774 296.39,-902 296.39,-902 296.39,-908 290.39,-914 284.39,-914 284.39,-914 206.89,-914 206.89,-914 200.89,-914 194.89,-908 194.89,-902 194.89,-902 194.89,-774 194.89,-774 194.89,-768 200.89,-762 206.89,-762"/>
+<text text-anchor="start" x="202.89" y="-899.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Capacity pools</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_make</title>
+<path fill="white" stroke="#9a9a98" d="M385.51,-730C385.51,-730 455.03,-730 455.03,-730 461.03,-730 467.03,-736 467.03,-742 467.03,-742 467.03,-1180 467.03,-1180 467.03,-1186 461.03,-1192 455.03,-1192 455.03,-1192 385.51,-1192 385.51,-1192 379.51,-1192 373.51,-1186 373.51,-1180 373.51,-1180 373.51,-742 373.51,-742 373.51,-736 379.51,-730 385.51,-730"/>
+<text text-anchor="start" x="381.51" y="-1177.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Fill batches</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_stock</title>
+<path fill="white" stroke="#0a8a84" d="M216.38,-1484C216.38,-1484 570.29,-1484 570.29,-1484 576.29,-1484 582.29,-1490 582.29,-1496 582.29,-1496 582.29,-1748 582.29,-1748 582.29,-1754 576.29,-1760 570.29,-1760 570.29,-1760 216.39,-1760 216.39,-1760 210.38,-1760 204.38,-1754 204.38,-1748 204.38,-1748 204.38,-1496 204.38,-1496 204.38,-1490 210.38,-1484 216.38,-1484"/>
+<text text-anchor="start" x="212.38" y="-1745.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Stock and line usage</text>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_orders</title>
+<path fill="white" stroke="#0a8a84" d="M512.77,-1768C512.77,-1768 564.29,-1768 564.29,-1768 570.29,-1768 576.29,-1774 576.29,-1780 576.29,-1780 576.29,-1846 576.29,-1846 576.29,-1852 570.29,-1858 564.29,-1858 564.29,-1858 512.77,-1858 512.77,-1858 506.77,-1858 500.77,-1852 500.77,-1846 500.77,-1846 500.77,-1780 500.77,-1780 500.77,-1774 506.77,-1768 512.77,-1768"/>
+<text text-anchor="start" x="508.77" y="-1843.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Orders</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_ship</title>
+<path fill="white" stroke="#9a9a98" d="M394.51,-1866C394.51,-1866 661.29,-1866 661.29,-1866 667.29,-1866 673.29,-1872 673.29,-1878 673.29,-1878 673.29,-2006 673.29,-2006 673.29,-2012 667.29,-2018 661.29,-2018 661.29,-2018 394.51,-2018 394.51,-2018 388.51,-2018 382.51,-2012 382.51,-2006 382.51,-2006 382.51,-1878 382.51,-1878 382.51,-1872 388.51,-1866 394.51,-1866"/>
+<text text-anchor="start" x="390.51" y="-2003.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Demand: ship or lose</text>
+</g>
+<g id="clust6" class="cluster">
+<title>cluster_value</title>
+<path fill="white" stroke="#0a8a84" d="M706.29,-1866C706.29,-1866 773.29,-1866 773.29,-1866 779.29,-1866 785.29,-1872 785.29,-1878 785.29,-1878 785.29,-2006 785.29,-2006 785.29,-2012 779.29,-2018 773.29,-2018 773.29,-2018 706.29,-2018 706.29,-2018 700.29,-2018 694.29,-2012 694.29,-2006 694.29,-2006 694.29,-1878 694.29,-1878 694.29,-1872 700.29,-1866 706.29,-1866"/>
+<text text-anchor="start" x="702.29" y="-2003.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Sold and lost</text>
+</g>
+<g id="clust7" class="cluster">
+<title>cluster_cash</title>
+<path fill="white" stroke="#0a8a84" d="M222.14,-1156C222.14,-1156 268.14,-1156 268.14,-1156 274.14,-1156 280.14,-1162 280.14,-1168 280.14,-1168 280.14,-1203 280.14,-1203 280.14,-1209 274.14,-1215 268.14,-1215 268.14,-1215 222.14,-1215 222.14,-1215 216.14,-1215 210.14,-1209 210.14,-1203 210.14,-1203 210.14,-1168 210.14,-1168 210.14,-1162 216.14,-1156 222.14,-1156"/>
+<text text-anchor="start" x="218.14" y="-1200.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Cash</text>
+</g>
+<g id="clust8" class="cluster">
+<title>cluster_fees</title>
+<path fill="white" stroke="#9a9a98" d="M379.77,-1200C379.77,-1200 461.77,-1200 461.77,-1200 467.77,-1200 473.77,-1206 473.77,-1212 473.77,-1212 473.77,-1464 473.77,-1464 473.77,-1470 467.77,-1476 461.77,-1476 461.77,-1476 379.77,-1476 379.77,-1476 373.77,-1476 367.77,-1470 367.77,-1464 367.77,-1464 367.77,-1212 367.77,-1212 367.77,-1206 373.77,-1200 379.77,-1200"/>
+<text text-anchor="start" x="375.77" y="-1461.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Fees and capex</text>
+</g>
+<g id="clust9" class="cluster">
+<title>cluster_clocks</title>
+<path fill="white" stroke="#9a9a98" d="M35,-1832C35,-1832 116.52,-1832 116.52,-1832 122.52,-1832 128.52,-1838 128.52,-1844 128.52,-1844 128.52,-1941 128.52,-1941 128.52,-1947 122.52,-1953 116.52,-1953 116.52,-1953 35,-1953 35,-1953 29,-1953 23,-1947 23,-1941 23,-1941 23,-1844 23,-1844 23,-1838 29,-1832 35,-1832"/>
+<text text-anchor="start" x="31" y="-1938.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Clocks</text>
+</g>
+<g id="clust10" class="cluster">
+<title>cluster_ages</title>
+<path fill="white" stroke="#0a8a84" d="M202.02,-1832C202.02,-1832 289.27,-1832 289.27,-1832 295.27,-1832 301.27,-1838 301.27,-1844 301.27,-1844 301.27,-1941 301.27,-1941 301.27,-1947 295.27,-1953 289.27,-1953 289.27,-1953 202.02,-1953 202.02,-1953 196.02,-1953 190.02,-1947 190.02,-1941 190.02,-1941 190.02,-1844 190.02,-1844 190.02,-1838 196.02,-1832 202.02,-1832"/>
+<text text-anchor="start" x="198.02" y="-1938.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Ages and delays</text>
+</g>
+<g id="clust11" class="cluster">
+<title>cluster_state</title>
+<path fill="white" stroke="#0a8a84" d="M176.52,-44C176.52,-44 314.77,-44 314.77,-44 320.77,-44 326.77,-50 326.77,-56 326.77,-56 326.77,-742 326.77,-742 326.77,-748 320.77,-754 314.77,-754 314.77,-754 176.52,-754 176.52,-754 170.52,-754 164.52,-748 164.52,-742 164.52,-742 164.52,-56 164.52,-56 164.52,-50 170.52,-44 176.52,-44"/>
+<text text-anchor="start" x="172.52" y="-739.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Regulatory, contract state</text>
+</g>
+<g id="clust12" class="cluster">
+<title>cluster_r_draws</title>
+<path fill="white" stroke="#b5740a" stroke-dasharray="5,2" d="M37.13,-514C37.13,-514 115.38,-514 115.38,-514 121.38,-514 127.38,-520 127.38,-526 127.38,-526 127.38,-561 127.38,-561 127.38,-567 121.38,-573 115.38,-573 115.38,-573 37.13,-573 37.13,-573 31.13,-573 25.13,-567 25.13,-561 25.13,-561 25.13,-526 25.13,-526 25.13,-520 31.13,-514 37.13,-514"/>
+<text text-anchor="start" x="33.13" y="-558.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Readout draws</text>
+</g>
+<g id="clust13" class="cluster">
+<title>cluster_r_reg</title>
+<path fill="white" stroke="#b5740a" stroke-dasharray="5,2" d="M22.51,-137C22.51,-137 130.01,-137 130.01,-137 136.01,-137 142.01,-143 142.01,-149 142.01,-149 142.01,-494 142.01,-494 142.01,-500 136.01,-506 130.01,-506 130.01,-506 22.51,-506 22.51,-506 16.51,-506 10.51,-500 10.51,-494 10.51,-494 10.51,-149 10.51,-149 10.51,-143 16.51,-137 22.51,-137"/>
+<text text-anchor="start" x="18.51" y="-491.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Regulatory calendar</text>
+</g>
+<g id="clust14" class="cluster">
+<title>cluster_r_contract</title>
+<path fill="white" stroke="#b5740a" stroke-dasharray="5,2" d="M20,-581C20,-581 131.52,-581 131.52,-581 137.52,-581 143.52,-587 143.52,-593 143.52,-593 143.52,-938 143.52,-938 143.52,-944 137.52,-950 131.52,-950 131.52,-950 20,-950 20,-950 14,-950 8,-944 8,-938 8,-938 8,-593 8,-593 8,-587 14,-581 20,-581"/>
+<text text-anchor="start" x="16" y="-935.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Contract decisions</text>
+</g>
+<g id="clust15" class="cluster">
+<title>cluster_r_short</title>
+<path fill="white" stroke="#b5740a" stroke-dasharray="5,2" d="M32,-8C32,-8 119.52,-8 119.52,-8 125.52,-8 131.52,-14 131.52,-20 131.52,-20 131.52,-117 131.52,-117 131.52,-123 125.52,-129 119.52,-129 119.52,-129 32,-129 32,-129 26,-129 20,-123 20,-117 20,-117 20,-20 20,-20 20,-14 26,-8 32,-8"/>
+<text text-anchor="start" x="28" y="-114.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Shortfall flags</text>
+</g>
+<g id="clust16" class="cluster">
+<title>cluster_r_plan</title>
+<path fill="white" stroke="#b5740a" stroke-dasharray="5,2" d="M34.13,-1593C34.13,-1593 118.38,-1593 118.38,-1593 124.38,-1593 130.38,-1599 130.38,-1605 130.38,-1605 130.38,-1640 130.38,-1640 130.38,-1646 124.38,-1652 118.38,-1652 118.38,-1652 34.13,-1652 34.13,-1652 28.13,-1652 22.13,-1646 22.13,-1640 22.13,-1640 22.13,-1605 22.13,-1605 22.13,-1599 28.13,-1593 34.13,-1593"/>
+<text text-anchor="start" x="30.13" y="-1637.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#0a0a0a">Monthly planner</text>
+</g>
+<g id="node1" class="node">
+<title>n_cmo</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-853.8C264.94,-853.8 225.34,-853.8 225.34,-853.8 221.74,-853.8 218.14,-850.2 218.14,-846.6 218.14,-846.6 218.14,-839.4 218.14,-839.4 218.14,-835.8 221.74,-832.2 225.34,-832.2 225.34,-832.2 264.94,-832.2 264.94,-832.2 268.55,-832.2 272.14,-835.8 272.14,-839.4 272.14,-839.4 272.14,-846.6 272.14,-846.6 272.14,-850.2 268.55,-853.8 264.94,-853.8"/>
+<text text-anchor="start" x="236.14" y="-839.88" font-family="Menlo" font-size="10.00">cmo</text>
+</g>
+<g id="node5" class="node">
+<title>n_k_base_cmo</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-1070.16 384.51,-1070.16 384.51,-1047.84 456.03,-1047.84 456.03,-1070.16"/>
+<text text-anchor="start" x="390.27" y="-1059.5" font-family="Menlo" font-size="10.00">k_base_cmo</text>
+<text text-anchor="start" x="391.02" y="-1051.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 100</text>
+</g>
+<g id="edge12" class="edge">
+<title>n_cmo&#45;&gt;n_k_base_cmo</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.33,-845.52C288.5,-847.71 309.39,-851.74 326.77,-859 342.13,-865.41 349.54,-865.54 357.77,-880 375.83,-911.73 344.72,-1015.48 367.51,-1044 370.51,-1047.75 374.38,-1050.6 378.67,-1052.76"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="377.73,-1054.27 383.02,-1054.61 379.1,-1051.05 377.73,-1054.27"/>
+</g>
+<g id="node9" class="node">
+<title>n_k_buf_cmo</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="454.15,-1039.16 386.38,-1039.16 386.38,-1016.84 454.15,-1016.84 454.15,-1039.16"/>
+<text text-anchor="start" x="393.27" y="-1028.5" font-family="Menlo" font-size="10.00">k_buf_cmo</text>
+<text text-anchor="start" x="392.14" y="-1020.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 0.5</text>
+</g>
+<g id="edge44" class="edge">
+<title>n_cmo&#45;&gt;n_k_buf_cmo</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.18,-839.97C298.04,-838.57 336.78,-841.11 357.77,-865 379.53,-889.76 346.86,-987.31 367.51,-1013 370.84,-1017.14 375.24,-1020.18 380.07,-1022.41"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="379.33,-1024 384.63,-1024.17 380.6,-1020.74 379.33,-1024"/>
+</g>
+<g id="node14" class="node">
+<title>n_t_make_cmo</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-1008.16 384.51,-1008.16 384.51,-985.84 456.03,-985.84 456.03,-1008.16"/>
+<text text-anchor="start" x="390.27" y="-997.5" font-family="Menlo" font-size="10.00">t_make_cmo</text>
+<text text-anchor="start" x="395.52" y="-989.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 1</text>
+</g>
+<g id="edge28" class="edge">
+<title>n_cmo&#45;&gt;n_t_make_cmo</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.62,-835.9C298.08,-830.85 335.82,-828.29 357.77,-850 378.68,-870.68 348.99,-959.15 367.51,-982 370.43,-985.6 374.15,-988.36 378.26,-990.49"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="377.53,-992.08 382.81,-992.46 378.92,-988.87 377.53,-992.08"/>
+</g>
+<g id="node2" class="node">
+<title>n_cmo2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-884.8C264.94,-884.8 225.34,-884.8 225.34,-884.8 221.74,-884.8 218.14,-881.2 218.14,-877.6 218.14,-877.6 218.14,-870.4 218.14,-870.4 218.14,-866.8 221.74,-863.2 225.34,-863.2 225.34,-863.2 264.94,-863.2 264.94,-863.2 268.55,-863.2 272.14,-866.8 272.14,-870.4 272.14,-870.4 272.14,-877.6 272.14,-877.6 272.14,-881.2 268.55,-884.8 264.94,-884.8"/>
+<text text-anchor="start" x="233.14" y="-870.88" font-family="Menlo" font-size="10.00">cmo2</text>
+</g>
+<g id="node6" class="node">
+<title>n_k_base_cmo2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="459.03,-1163.16 381.51,-1163.16 381.51,-1140.84 459.03,-1140.84 459.03,-1163.16"/>
+<text text-anchor="start" x="387.27" y="-1152.5" font-family="Menlo" font-size="10.00">k_base_cmo2</text>
+<text text-anchor="start" x="391.02" y="-1144.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 100</text>
+</g>
+<g id="edge16" class="edge">
+<title>n_cmo2&#45;&gt;n_k_base_cmo2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.57,-882.5C302.27,-892.63 347.69,-910.08 357.77,-925 370.97,-944.54 352.92,-1118.48 367.51,-1137 369.83,-1139.94 372.69,-1142.33 375.86,-1144.27"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="374.62,-1145.59 379.86,-1146.33 376.22,-1142.48 374.62,-1145.59"/>
+</g>
+<g id="node10" class="node">
+<title>n_k_buf_cmo2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-1132.16 384.51,-1132.16 384.51,-1109.84 456.03,-1109.84 456.03,-1132.16"/>
+<text text-anchor="start" x="390.27" y="-1121.5" font-family="Menlo" font-size="10.00">k_buf_cmo2</text>
+<text text-anchor="start" x="392.14" y="-1113.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 0.5</text>
+</g>
+<g id="edge48" class="edge">
+<title>n_cmo2&#45;&gt;n_k_buf_cmo2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.43,-878.92C302.01,-885.03 347.3,-896.35 357.77,-910 384.31,-944.6 340.46,-1071.8 367.51,-1106 370.49,-1109.77 374.35,-1112.63 378.63,-1114.79"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="377.69,-1116.29 382.98,-1116.64 379.06,-1113.07 377.69,-1116.29"/>
+</g>
+<g id="node15" class="node">
+<title>n_t_make_cmo2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="459.03,-1101.16 381.51,-1101.16 381.51,-1078.84 459.03,-1078.84 459.03,-1101.16"/>
+<text text-anchor="start" x="387.27" y="-1090.5" font-family="Menlo" font-size="10.00">t_make_cmo2</text>
+<text text-anchor="start" x="395.52" y="-1082.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 1</text>
+</g>
+<g id="edge32" class="edge">
+<title>n_cmo2&#45;&gt;n_t_make_cmo2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.21,-870.66C298.09,-868.97 336.85,-871.12 357.77,-895 384.17,-925.13 342.59,-1043.64 367.51,-1075 369.84,-1077.93 372.71,-1080.31 375.89,-1082.25"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="374.65,-1083.58 379.89,-1084.3 376.25,-1080.46 374.65,-1083.58"/>
+</g>
+<g id="node3" class="node">
+<title>n_line</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.7,-792.16C264.7,-792.16 225.58,-792.16 225.58,-792.16 221.86,-792.16 218.14,-788.44 218.14,-784.72 218.14,-784.72 218.14,-777.28 218.14,-777.28 218.14,-773.56 221.86,-769.84 225.58,-769.84 225.58,-769.84 264.7,-769.84 264.7,-769.84 268.43,-769.84 272.14,-773.56 272.14,-777.28 272.14,-777.28 272.14,-784.72 272.14,-784.72 272.14,-788.44 268.43,-792.16 264.7,-792.16"/>
+<text text-anchor="start" x="233.14" y="-781.5" font-family="Menlo" font-size="10.00">line</text>
+<text text-anchor="start" x="227.52" y="-773.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">starts 128</text>
+</g>
+<g id="node8" class="node">
+<title>n_k_base_own</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-853.16 384.51,-853.16 384.51,-830.84 456.03,-830.84 456.03,-853.16"/>
+<text text-anchor="start" x="390.27" y="-842.5" font-family="Menlo" font-size="10.00">k_base_own</text>
+<text text-anchor="start" x="391.02" y="-834.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 100</text>
+</g>
+<g id="edge4" class="edge">
+<title>n_line&#45;&gt;n_k_base_own</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.32,-770.43C297.19,-762.29 334.18,-755.41 357.77,-775 375.86,-790.02 351.71,-809.59 367.51,-827 370.58,-830.38 374.36,-833.02 378.47,-835.07"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="377.7,-836.65 382.99,-836.99 379.07,-833.43 377.7,-836.65"/>
+</g>
+<g id="node12" class="node">
+<title>n_k_buf_own</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="454.15,-884.16 386.38,-884.16 386.38,-861.84 454.15,-861.84 454.15,-884.16"/>
+<text text-anchor="start" x="393.27" y="-873.5" font-family="Menlo" font-size="10.00">k_buf_own</text>
+<text text-anchor="start" x="392.14" y="-865.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 0.5</text>
+</g>
+<g id="edge36" class="edge">
+<title>n_line&#45;&gt;n_k_buf_own</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.52,-776.75C297.9,-774.28 335.58,-775.17 357.77,-797 377.34,-816.26 349.33,-837.42 367.51,-858 370.98,-861.93 375.42,-864.86 380.22,-867.04"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="379.44,-868.61 384.73,-868.77 380.7,-865.34 379.44,-868.61"/>
+</g>
+<g id="node13" class="node">
+<title>n_mkt</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="447.27,-760.16 393.27,-760.16 393.27,-737.84 447.27,-737.84 447.27,-760.16"/>
+<text text-anchor="start" x="411.27" y="-749.5" font-family="Menlo" font-size="10.00">mkt</text>
+<text text-anchor="start" x="401.14" y="-741.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 10000</text>
+</g>
+<g id="edge1" class="edge">
+<title>n_line&#45;&gt;n_mkt</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.28,-777.69C289.21,-774.46 310.98,-768.16 326.77,-756 333.41,-750.88 329.44,-744.07 336.77,-740 351.92,-731.6 371.04,-733.08 387.06,-737.01"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="386.2,-738.59 391.49,-738.2 387.11,-735.21 386.2,-738.59"/>
+</g>
+<g id="node17" class="node">
+<title>n_t_make_own</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-791.16 384.51,-791.16 384.51,-768.84 456.03,-768.84 456.03,-791.16"/>
+<text text-anchor="start" x="390.27" y="-780.5" font-family="Menlo" font-size="10.00">t_make_own</text>
+<text text-anchor="start" x="395.52" y="-772.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 1</text>
+</g>
+<g id="edge20" class="edge">
+<title>n_line&#45;&gt;n_t_make_own</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.34,-776.56C288.89,-772.9 310.2,-766.54 326.77,-756 332.34,-752.45 330.73,-747.67 336.77,-745 345.31,-741.22 349.86,-740.05 357.77,-745 366.15,-750.24 359.95,-758.63 367.51,-765 370.73,-767.71 374.42,-769.94 378.31,-771.76"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="377.58,-773.35 382.87,-773.63 378.91,-770.11 377.58,-773.35"/>
+</g>
+<g id="node18" class="node">
+<title>n_t_ppq_own</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="453.03,-822.16 387.51,-822.16 387.51,-799.84 453.03,-799.84 453.03,-822.16"/>
+<text text-anchor="start" x="393.27" y="-811.5" font-family="Menlo" font-size="10.00">t_ppq_own</text>
+<text text-anchor="start" x="395.52" y="-803.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 1</text>
+</g>
+<g id="edge52" class="edge">
+<title>n_line&#45;&gt;n_t_ppq_own</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.5,-771.52C301.18,-761.98 344.69,-749.99 357.77,-760 370.93,-770.07 355.89,-784.18 367.51,-796 371.41,-799.97 376.29,-802.91 381.49,-805.07"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="380.64,-806.63 385.94,-806.67 381.83,-803.33 380.64,-806.63"/>
+</g>
+<g id="node4" class="node">
+<title>n_line2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-822.8C264.94,-822.8 225.34,-822.8 225.34,-822.8 221.74,-822.8 218.14,-819.2 218.14,-815.6 218.14,-815.6 218.14,-808.4 218.14,-808.4 218.14,-804.8 221.74,-801.2 225.34,-801.2 225.34,-801.2 264.94,-801.2 264.94,-801.2 268.55,-801.2 272.14,-804.8 272.14,-808.4 272.14,-808.4 272.14,-815.6 272.14,-815.6 272.14,-819.2 268.55,-822.8 264.94,-822.8"/>
+<text text-anchor="start" x="230.14" y="-808.88" font-family="Menlo" font-size="10.00">line2</text>
+</g>
+<g id="node7" class="node">
+<title>n_k_base_l2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="455.28,-977.16 385.26,-977.16 385.26,-954.84 455.28,-954.84 455.28,-977.16"/>
+<text text-anchor="start" x="393.27" y="-966.5" font-family="Menlo" font-size="10.00">k_base_l2</text>
+<text text-anchor="start" x="391.02" y="-958.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 100</text>
+</g>
+<g id="edge8" class="edge">
+<title>n_line2&#45;&gt;n_k_base_l2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.21,-809.22C298.1,-808.07 336.85,-810.97 357.77,-835 374.75,-854.51 351.12,-930.99 367.51,-951 370.64,-954.82 374.67,-957.7 379.11,-959.87"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="378.35,-961.45 383.64,-961.73 379.68,-958.21 378.35,-961.45"/>
+</g>
+<g id="node11" class="node">
+<title>n_k_buf_l2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="454.15,-946.16 386.38,-946.16 386.38,-923.84 454.15,-923.84 454.15,-946.16"/>
+<text text-anchor="start" x="396.27" y="-935.5" font-family="Menlo" font-size="10.00">k_buf_l2</text>
+<text text-anchor="start" x="392.14" y="-927.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 0.5</text>
+</g>
+<g id="edge40" class="edge">
+<title>n_line2&#45;&gt;n_k_buf_l2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.55,-805.29C297.95,-800.57 335.65,-798.44 357.77,-820 373.76,-835.58 353.25,-902.82 367.51,-920 370.9,-924.09 375.34,-927.1 380.18,-929.31"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="379.46,-930.91 384.75,-931.07 380.72,-927.64 379.46,-930.91"/>
+</g>
+<g id="node16" class="node">
+<title>n_t_make_l2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="453.03,-915.16 387.51,-915.16 387.51,-892.84 453.03,-892.84 453.03,-915.16"/>
+<text text-anchor="start" x="393.27" y="-904.5" font-family="Menlo" font-size="10.00">t_make_l2</text>
+<text text-anchor="start" x="395.52" y="-896.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">p 0.97 · prio 1</text>
+</g>
+<g id="edge24" class="edge">
+<title>n_line2&#45;&gt;n_t_make_l2</title>
+<path fill="none" stroke="#0a8a84" stroke-width="0.9" d="M272.59,-806.19C301.59,-800.52 345.63,-794.18 357.77,-805 371.8,-817.5 355.37,-874.65 367.51,-889 371.19,-893.35 376.06,-896.48 381.33,-898.73"/>
+<polygon fill="#0a8a84" stroke="#0a8a84" stroke-width="0.9" points="380.6,-900.32 385.89,-900.37 381.78,-897.03 380.6,-900.32"/>
+</g>
+<g id="node22" class="node">
+<title>n_cmo_used</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M561.09,-1699.8C561.09,-1699.8 515.97,-1699.8 515.97,-1699.8 512.37,-1699.8 508.77,-1696.2 508.77,-1692.6 508.77,-1692.6 508.77,-1685.4 508.77,-1685.4 508.77,-1681.8 512.37,-1678.2 515.97,-1678.2 515.97,-1678.2 561.09,-1678.2 561.09,-1678.2 564.69,-1678.2 568.29,-1681.8 568.29,-1685.4 568.29,-1685.4 568.29,-1692.6 568.29,-1692.6 568.29,-1696.2 564.69,-1699.8 561.09,-1699.8"/>
+<text text-anchor="start" x="514.53" y="-1685.88" font-family="Menlo" font-size="10.00">cmo_used</text>
+</g>
+<g id="edge15" class="edge">
+<title>n_k_base_cmo&#45;&gt;n_cmo_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.44,-1064.5C462.71,-1066.68 468.81,-1069.74 473.77,-1074 482.67,-1081.65 482.11,-1086.57 484.77,-1098 492.02,-1129.12 482.88,-1646.52 500.77,-1673 501.66,-1674.31 502.68,-1675.52 503.8,-1676.62"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.5,-1677.83 507.5,-1679.58 504.68,-1675.09 502.5,-1677.83"/>
+</g>
+<g id="node23" class="node">
+<title>n_k_stock</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M558.33,-1668.8C558.33,-1668.8 518.73,-1668.8 518.73,-1668.8 515.13,-1668.8 511.53,-1665.2 511.53,-1661.6 511.53,-1661.6 511.53,-1654.4 511.53,-1654.4 511.53,-1650.8 515.13,-1647.2 518.73,-1647.2 518.73,-1647.2 558.33,-1647.2 558.33,-1647.2 561.93,-1647.2 565.53,-1650.8 565.53,-1654.4 565.53,-1654.4 565.53,-1661.6 565.53,-1661.6 565.53,-1665.2 561.93,-1668.8 558.33,-1668.8"/>
+<text text-anchor="start" x="517.53" y="-1654.88" font-family="Menlo" font-size="10.00">k_stock</text>
+</g>
+<g id="edge14" class="edge">
+<title>n_k_base_cmo&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.33,-1055.81C466.94,-1056.77 477.65,-1060.03 484.77,-1068 527.27,-1115.59 465.06,-1589.13 500.77,-1642 502.22,-1644.14 504.02,-1646 506.04,-1647.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.81,-1648.9 509.95,-1650.18 506.74,-1645.97 504.81,-1648.9"/>
+</g>
+<g id="node20" class="node">
+<title>n_cmo2_used</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M564.09,-1730.8C564.09,-1730.8 512.97,-1730.8 512.97,-1730.8 509.37,-1730.8 505.77,-1727.2 505.77,-1723.6 505.77,-1723.6 505.77,-1716.4 505.77,-1716.4 505.77,-1712.8 509.37,-1709.2 512.97,-1709.2 512.97,-1709.2 564.09,-1709.2 564.09,-1709.2 567.69,-1709.2 571.29,-1712.8 571.29,-1716.4 571.29,-1716.4 571.29,-1723.6 571.29,-1723.6 571.29,-1727.2 567.69,-1730.8 564.09,-1730.8"/>
+<text text-anchor="start" x="511.53" y="-1716.88" font-family="Menlo" font-size="10.00">cmo2_used</text>
+</g>
+<g id="edge19" class="edge">
+<title>n_k_base_cmo2&#45;&gt;n_cmo2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M441.1,-1163.61C452.83,-1171.65 466.73,-1183.5 473.77,-1198 486.07,-1223.32 484.72,-1680.87 500.77,-1704 500.94,-1704.24 501.11,-1704.48 501.29,-1704.72"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="499.9,-1705.8 504.64,-1708.18 502.42,-1703.37 499.9,-1705.8"/>
+</g>
+<g id="edge18" class="edge">
+<title>n_k_base_cmo2&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M441.07,-1163.63C452.78,-1171.68 466.67,-1183.53 473.77,-1198 495.54,-1242.37 472.44,-1601.5 500.77,-1642 502.25,-1644.12 504.08,-1645.96 506.11,-1647.55"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.91,-1648.86 510.05,-1650.12 506.82,-1645.92 504.91,-1648.86"/>
+</g>
+<g id="edge10" class="edge">
+<title>n_k_base_l2&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M455.62,-971.22C462.17,-973.42 468.59,-976.55 473.77,-981 482.67,-988.65 482.12,-993.57 484.77,-1005 492.75,-1039.49 481,-1612.64 500.77,-1642 502.21,-1644.14 504.01,-1646 506.03,-1647.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1648.9 509.94,-1650.19 506.73,-1645.98 504.8,-1648.9"/>
+</g>
+<g id="node25" class="node">
+<title>n_l2_used</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M558.33,-1606.8C558.33,-1606.8 518.73,-1606.8 518.73,-1606.8 515.13,-1606.8 511.53,-1603.2 511.53,-1599.6 511.53,-1599.6 511.53,-1592.4 511.53,-1592.4 511.53,-1588.8 515.13,-1585.2 518.73,-1585.2 518.73,-1585.2 558.33,-1585.2 558.33,-1585.2 561.93,-1585.2 565.53,-1588.8 565.53,-1592.4 565.53,-1592.4 565.53,-1599.6 565.53,-1599.6 565.53,-1603.2 561.93,-1606.8 558.33,-1606.8"/>
+<text text-anchor="start" x="517.53" y="-1592.88" font-family="Menlo" font-size="10.00">l2_used</text>
+</g>
+<g id="edge11" class="edge">
+<title>n_k_base_l2&#45;&gt;n_l2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M455.68,-962.75C466.5,-963.63 477.51,-966.86 484.77,-975 507.15,-1000.09 481.97,-1552.12 500.77,-1580 502.21,-1582.14 504.01,-1584 506.03,-1585.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.81,-1586.9 509.95,-1588.19 506.73,-1583.98 504.81,-1586.9"/>
+</g>
+<g id="edge6" class="edge">
+<title>n_k_base_own&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.29,-846.5C462.8,-848.76 469.02,-852.09 473.77,-857 487.78,-871.49 482.09,-881.02 484.77,-901 490.24,-941.81 477.83,-1607.81 500.77,-1642 502.21,-1644.15 504,-1646.01 506.02,-1647.62"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.79,-1648.9 509.93,-1650.2 506.72,-1645.98 504.79,-1648.9"/>
+</g>
+<g id="node28" class="node">
+<title>n_own_used</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M561.09,-1575.8C561.09,-1575.8 515.97,-1575.8 515.97,-1575.8 512.37,-1575.8 508.77,-1572.2 508.77,-1568.6 508.77,-1568.6 508.77,-1561.4 508.77,-1561.4 508.77,-1557.8 512.37,-1554.2 515.97,-1554.2 515.97,-1554.2 561.09,-1554.2 561.09,-1554.2 564.69,-1554.2 568.29,-1557.8 568.29,-1561.4 568.29,-1561.4 568.29,-1568.6 568.29,-1568.6 568.29,-1572.2 564.69,-1575.8 561.09,-1575.8"/>
+<text text-anchor="start" x="514.53" y="-1561.88" font-family="Menlo" font-size="10.00">own_used</text>
+</g>
+<g id="edge7" class="edge">
+<title>n_k_base_own&#45;&gt;n_own_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.36,-838.79C466.97,-839.75 477.67,-843.01 484.77,-851 510.53,-880 479.14,-1516.8 500.77,-1549 501.65,-1550.31 502.67,-1551.52 503.79,-1552.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.49,-1553.83 507.49,-1555.58 504.67,-1551.1 502.49,-1553.83"/>
+</g>
+<g id="edge47" class="edge">
+<title>n_k_buf_cmo&#45;&gt;n_cmo_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.48,-1031.79C461.66,-1034.04 468.63,-1037.55 473.77,-1043 489.09,-1059.23 482.01,-1069.85 484.77,-1092 488.77,-1124.04 482.7,-1646.24 500.77,-1673 501.66,-1674.31 502.68,-1675.52 503.8,-1676.62"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.5,-1677.83 507.5,-1679.58 504.68,-1675.09 502.5,-1677.83"/>
+</g>
+<g id="edge46" class="edge">
+<title>n_k_buf_cmo&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.35,-1024.65C465.6,-1025.37 477.21,-1028.52 484.77,-1037 507.15,-1062.09 481.97,-1614.12 500.77,-1642 502.21,-1644.14 504.01,-1646 506.03,-1647.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.81,-1648.9 509.95,-1650.19 506.73,-1645.98 504.81,-1648.9"/>
+</g>
+<g id="edge51" class="edge">
+<title>n_k_buf_cmo2&#45;&gt;n_cmo2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.27,-1124.53C463.02,-1126.83 469.36,-1130.43 473.77,-1136 493.39,-1160.76 482.83,-1678 500.77,-1704 500.94,-1704.24 501.11,-1704.48 501.29,-1704.72"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="499.9,-1705.8 504.63,-1708.19 502.42,-1703.37 499.9,-1705.8"/>
+</g>
+<g id="edge50" class="edge">
+<title>n_k_buf_cmo2&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.29,-1124.83C462.96,-1127.12 469.25,-1130.63 473.77,-1136 503.14,-1170.87 481.42,-1192.53 484.77,-1238 486.42,-1260.4 488.09,-1623.46 500.77,-1642 502.23,-1644.13 504.04,-1645.98 506.06,-1647.59"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.85,-1648.88 509.99,-1650.16 506.77,-1645.96 504.85,-1648.88"/>
+</g>
+<g id="edge42" class="edge">
+<title>n_k_buf_l2&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.48,-938.79C461.66,-941.04 468.63,-944.55 473.77,-950 489.09,-966.23 482.03,-976.85 484.77,-999 489.15,-1034.46 480.81,-1612.36 500.77,-1642 502.21,-1644.14 504.01,-1646 506.03,-1647.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1648.9 509.94,-1650.19 506.73,-1645.98 504.8,-1648.9"/>
+</g>
+<g id="edge43" class="edge">
+<title>n_k_buf_l2&#45;&gt;n_l2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.36,-931.64C465.6,-932.37 477.22,-935.52 484.77,-944 508.28,-970.39 481.03,-1550.68 500.77,-1580 502.21,-1582.14 504.01,-1584 506.03,-1585.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1586.9 509.94,-1588.19 506.73,-1583.98 504.8,-1586.9"/>
+</g>
+<g id="edge38" class="edge">
+<title>n_k_buf_own&#45;&gt;n_k_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.55,-876.39C461.82,-878.65 468.81,-882.27 473.77,-888 497.55,-915.46 481.89,-932.78 484.77,-969 487.74,-1006.28 479.9,-1610.97 500.77,-1642 502.21,-1644.14 504.01,-1646 506.03,-1647.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1648.9 509.94,-1650.19 506.73,-1645.98 504.8,-1648.9"/>
+</g>
+<g id="edge39" class="edge">
+<title>n_k_buf_own&#45;&gt;n_own_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M454.37,-869.64C465.61,-870.36 477.22,-873.51 484.77,-882 509.41,-909.7 480.08,-1518.24 500.77,-1549 501.65,-1550.31 502.67,-1551.52 503.79,-1552.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.49,-1553.83 507.49,-1555.58 504.67,-1551.09 502.49,-1553.83"/>
+</g>
+<g id="node26" class="node">
+<title>n_mkt_done</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M561.09,-1513.8C561.09,-1513.8 515.97,-1513.8 515.97,-1513.8 512.37,-1513.8 508.77,-1510.2 508.77,-1506.6 508.77,-1506.6 508.77,-1499.4 508.77,-1499.4 508.77,-1495.8 512.37,-1492.2 515.97,-1492.2 515.97,-1492.2 561.09,-1492.2 561.09,-1492.2 564.69,-1492.2 568.29,-1495.8 568.29,-1499.4 568.29,-1499.4 568.29,-1506.6 568.29,-1506.6 568.29,-1510.2 564.69,-1513.8 561.09,-1513.8"/>
+<text text-anchor="start" x="514.53" y="-1499.88" font-family="Menlo" font-size="10.00">mkt_done</text>
+</g>
+<g id="edge2" class="edge">
+<title>n_mkt&#45;&gt;n_mkt_done</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M447.64,-745.65C460.65,-745.55 475.51,-748.06 484.77,-758 536.03,-812.98 537.72,-1379.66 537.58,-1485.89"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="535.83,-1485.58 537.57,-1490.59 539.33,-1485.59 535.83,-1485.58"/>
+</g>
+<g id="edge3" class="edge">
+<title>n_mkt&#45;&gt;n_own_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M447.66,-752.04C456.74,-754.18 466.46,-757.82 473.77,-764 482.43,-771.31 482.15,-775.98 484.77,-787 494.57,-828.19 477.19,-1513.83 500.77,-1549 501.65,-1550.32 502.67,-1551.52 503.79,-1552.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.48,-1553.83 507.48,-1555.59 504.67,-1551.1 502.48,-1553.83"/>
+</g>
+<g id="edge31" class="edge">
+<title>n_t_make_cmo&#45;&gt;n_cmo_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.4,-1001.4C462.9,-1003.67 469.1,-1007.03 473.77,-1012 489.35,-1028.58 482.02,-1039.41 484.77,-1062 488.88,-1095.71 481.79,-1644.85 500.77,-1673 501.66,-1674.31 502.67,-1675.52 503.79,-1676.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.49,-1677.83 507.49,-1679.58 504.68,-1675.09 502.49,-1677.83"/>
+</g>
+<g id="node30" class="node">
+<title>n_t_stock</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M558.33,-1637.8C558.33,-1637.8 518.73,-1637.8 518.73,-1637.8 515.13,-1637.8 511.53,-1634.2 511.53,-1630.6 511.53,-1630.6 511.53,-1623.4 511.53,-1623.4 511.53,-1619.8 515.13,-1616.2 518.73,-1616.2 518.73,-1616.2 558.33,-1616.2 558.33,-1616.2 561.93,-1616.2 565.53,-1619.8 565.53,-1623.4 565.53,-1623.4 565.53,-1630.6 565.53,-1630.6 565.53,-1634.2 561.93,-1637.8 558.33,-1637.8"/>
+<text text-anchor="start" x="517.53" y="-1623.88" font-family="Menlo" font-size="10.00">t_stock</text>
+</g>
+<g id="edge30" class="edge">
+<title>n_t_make_cmo&#45;&gt;n_t_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.34,-993.8C466.95,-994.76 477.66,-998.02 484.77,-1006 507.15,-1031.09 481.97,-1583.12 500.77,-1611 502.21,-1613.14 504.01,-1615 506.03,-1616.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.81,-1617.9 509.95,-1619.19 506.73,-1614.98 504.81,-1617.9"/>
+</g>
+<g id="edge35" class="edge">
+<title>n_t_make_cmo2&#45;&gt;n_cmo2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M459.33,-1094.86C464.87,-1097.14 469.98,-1100.39 473.77,-1105 510.88,-1150.13 481.33,-1177.67 484.77,-1236 486.3,-1261.97 486.14,-1682.49 500.77,-1704 500.94,-1704.24 501.11,-1704.49 501.28,-1704.72"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="499.89,-1705.79 504.6,-1708.2 502.42,-1703.38 499.89,-1705.79"/>
+</g>
+<g id="edge34" class="edge">
+<title>n_t_make_cmo2&#45;&gt;n_t_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M459.3,-1087.16C468.9,-1088.44 478.31,-1091.79 484.77,-1099 522.75,-1141.39 468.83,-1563.89 500.77,-1611 502.22,-1613.14 504.02,-1614.99 506.04,-1616.6"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.82,-1617.89 509.96,-1619.18 506.75,-1614.97 504.82,-1617.89"/>
+</g>
+<g id="edge27" class="edge">
+<title>n_t_make_l2&#45;&gt;n_l2_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M453.43,-901.13C464.98,-901.92 477.05,-905.18 484.77,-914 509.16,-941.84 480.11,-1549.29 500.77,-1580 502.21,-1582.14 504.01,-1584 506.03,-1585.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1586.9 509.94,-1588.19 506.73,-1583.98 504.8,-1586.9"/>
+</g>
+<g id="edge26" class="edge">
+<title>n_t_make_l2&#45;&gt;n_t_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M453.49,-908.45C460.79,-910.68 468.06,-914.02 473.77,-919 482.92,-926.98 482.13,-932.15 484.77,-944 492.83,-980.18 480.08,-1580.24 500.77,-1611 502.21,-1613.14 504.01,-1615 506.03,-1616.61"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1617.9 509.94,-1619.19 506.73,-1614.98 504.8,-1617.9"/>
+</g>
+<g id="edge23" class="edge">
+<title>n_t_make_own&#45;&gt;n_own_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.37,-776.78C466.97,-777.74 477.68,-781 484.77,-789 512.79,-820.6 477.25,-1513.92 500.77,-1549 501.65,-1550.32 502.67,-1551.52 503.79,-1552.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.48,-1553.83 507.48,-1555.59 504.67,-1551.1 502.48,-1553.83"/>
+</g>
+<g id="edge22" class="edge">
+<title>n_t_make_own&#45;&gt;n_t_stock</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M456.47,-784C463.04,-786.29 469.25,-789.76 473.77,-795 498.35,-823.52 481.91,-841.46 484.77,-879 487.86,-919.56 478.1,-1577.22 500.77,-1611 502.21,-1613.15 504.01,-1615.01 506.02,-1616.62"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.8,-1617.9 509.93,-1619.2 506.72,-1614.98 504.8,-1617.9"/>
+</g>
+<g id="edge55" class="edge">
+<title>n_t_ppq_own&#45;&gt;n_own_used</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M453.38,-815.58C460.68,-817.81 467.98,-821.11 473.77,-826 482.43,-833.31 482.14,-837.98 484.77,-849 493.81,-886.83 479.08,-1516.71 500.77,-1549 501.65,-1550.31 502.67,-1551.52 503.79,-1552.63"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="502.49,-1553.83 507.48,-1555.59 504.67,-1551.1 502.49,-1553.83"/>
+</g>
+<g id="node29" class="node">
+<title>n_t_ppq_done</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M567.09,-1544.8C567.09,-1544.8 509.97,-1544.8 509.97,-1544.8 506.37,-1544.8 502.77,-1541.2 502.77,-1537.6 502.77,-1537.6 502.77,-1530.4 502.77,-1530.4 502.77,-1526.8 506.37,-1523.2 509.97,-1523.2 509.97,-1523.2 567.09,-1523.2 567.09,-1523.2 570.69,-1523.2 574.29,-1526.8 574.29,-1530.4 574.29,-1530.4 574.29,-1537.6 574.29,-1537.6 574.29,-1541.2 570.69,-1544.8 567.09,-1544.8"/>
+<text text-anchor="start" x="508.53" y="-1530.88" font-family="Menlo" font-size="10.00">t_ppq_done</text>
+</g>
+<g id="edge54" class="edge">
+<title>n_t_ppq_own&#45;&gt;n_t_ppq_done</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M453.43,-808.13C464.99,-808.91 477.05,-812.18 484.77,-821 510.27,-850.15 479.17,-1485.85 500.77,-1518 500.85,-1518.12 500.93,-1518.23 501.01,-1518.34"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="499.62,-1519.42 504.28,-1521.93 502.2,-1517.06 499.62,-1519.42"/>
+</g>
+<g id="node19" class="node">
+<title>n_cmo2_free</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-1606.8C270.7,-1606.8 219.58,-1606.8 219.58,-1606.8 215.98,-1606.8 212.38,-1603.2 212.38,-1599.6 212.38,-1599.6 212.38,-1592.4 212.38,-1592.4 212.38,-1588.8 215.98,-1585.2 219.58,-1585.2 219.58,-1585.2 270.7,-1585.2 270.7,-1585.2 274.31,-1585.2 277.9,-1588.8 277.9,-1592.4 277.9,-1592.4 277.9,-1599.6 277.9,-1599.6 277.9,-1603.2 274.31,-1606.8 270.7,-1606.8"/>
+<text text-anchor="start" x="218.14" y="-1592.88" font-family="Menlo" font-size="10.00">cmo2_free</text>
+</g>
+<g id="node21" class="node">
+<title>n_cmo_free</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M267.7,-1575.8C267.7,-1575.8 222.58,-1575.8 222.58,-1575.8 218.98,-1575.8 215.38,-1572.2 215.38,-1568.6 215.38,-1568.6 215.38,-1561.4 215.38,-1561.4 215.38,-1557.8 218.98,-1554.2 222.58,-1554.2 222.58,-1554.2 267.7,-1554.2 267.7,-1554.2 271.31,-1554.2 274.9,-1557.8 274.9,-1561.4 274.9,-1561.4 274.9,-1568.6 274.9,-1568.6 274.9,-1572.2 271.31,-1575.8 267.7,-1575.8"/>
+<text text-anchor="start" x="221.14" y="-1561.88" font-family="Menlo" font-size="10.00">cmo_free</text>
+</g>
+<g id="node35" class="node">
+<title>n_k_ship</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="665.29,-1927.16 611.29,-1927.16 611.29,-1904.84 665.29,-1904.84 665.29,-1927.16"/>
+<text text-anchor="start" x="620.29" y="-1916.5" font-family="Menlo" font-size="10.00">k_ship</text>
+<text text-anchor="start" x="625.91" y="-1908.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 10</text>
+</g>
+<g id="edge59" class="edge">
+<title>n_k_stock&#45;&gt;n_k_ship</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M565.9,-1662.89C572.13,-1665.26 578.16,-1668.78 582.29,-1674 612.69,-1712.38 585.31,-1848.06 610.88,-1898.9"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="609.36,-1899.77 613.39,-1903.21 612.39,-1898.01 609.36,-1899.77"/>
+</g>
+<g id="node24" class="node">
+<title>n_l2_free</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-1668.8C264.94,-1668.8 225.34,-1668.8 225.34,-1668.8 221.74,-1668.8 218.14,-1665.2 218.14,-1661.6 218.14,-1661.6 218.14,-1654.4 218.14,-1654.4 218.14,-1650.8 221.74,-1647.2 225.34,-1647.2 225.34,-1647.2 264.94,-1647.2 264.94,-1647.2 268.55,-1647.2 272.14,-1650.8 272.14,-1654.4 272.14,-1654.4 272.14,-1661.6 272.14,-1661.6 272.14,-1665.2 268.55,-1668.8 264.94,-1668.8"/>
+<text text-anchor="start" x="224.14" y="-1654.88" font-family="Menlo" font-size="10.00">l2_free</text>
+</g>
+<g id="node27" class="node">
+<title>n_own_free</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M267.7,-1637.8C267.7,-1637.8 222.58,-1637.8 222.58,-1637.8 218.98,-1637.8 215.38,-1634.2 215.38,-1630.6 215.38,-1630.6 215.38,-1623.4 215.38,-1623.4 215.38,-1619.8 218.98,-1616.2 222.58,-1616.2 222.58,-1616.2 267.7,-1616.2 267.7,-1616.2 271.31,-1616.2 274.9,-1619.8 274.9,-1623.4 274.9,-1623.4 274.9,-1630.6 274.9,-1630.6 274.9,-1634.2 271.31,-1637.8 267.7,-1637.8"/>
+<text text-anchor="start" x="221.14" y="-1623.88" font-family="Menlo" font-size="10.00">own_free</text>
+</g>
+<g id="node38" class="node">
+<title>n_t_ship</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="665.29,-1896.16 611.29,-1896.16 611.29,-1873.84 665.29,-1873.84 665.29,-1896.16"/>
+<text text-anchor="start" x="620.29" y="-1885.5" font-family="Menlo" font-size="10.00">t_ship</text>
+<text text-anchor="start" x="625.91" y="-1877.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 10</text>
+</g>
+<g id="edge66" class="edge">
+<title>n_t_stock&#45;&gt;n_t_ship</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M566.01,-1632.34C572.09,-1634.7 578.01,-1638.11 582.29,-1643 612,-1677 629.93,-1817.54 635.45,-1867.38"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="633.69,-1867.39 635.97,-1872.17 637.17,-1867.01 633.69,-1867.39"/>
+</g>
+<g id="node31" class="node">
+<title>n_k_orders</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M561.09,-1828.8C561.09,-1828.8 515.97,-1828.8 515.97,-1828.8 512.37,-1828.8 508.77,-1825.2 508.77,-1821.6 508.77,-1821.6 508.77,-1814.4 508.77,-1814.4 508.77,-1810.8 512.37,-1807.2 515.97,-1807.2 515.97,-1807.2 561.09,-1807.2 561.09,-1807.2 564.69,-1807.2 568.29,-1810.8 568.29,-1814.4 568.29,-1814.4 568.29,-1821.6 568.29,-1821.6 568.29,-1825.2 564.69,-1828.8 561.09,-1828.8"/>
+<text text-anchor="start" x="514.53" y="-1814.88" font-family="Menlo" font-size="10.00">k_orders</text>
+</g>
+<g id="node34" class="node">
+<title>n_k_lose</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="665.29,-1989.16 611.29,-1989.16 611.29,-1966.84 665.29,-1966.84 665.29,-1989.16"/>
+<text text-anchor="start" x="620.29" y="-1978.5" font-family="Menlo" font-size="10.00">k_lose</text>
+<text text-anchor="start" x="628.16" y="-1970.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 0</text>
+</g>
+<g id="edge61" class="edge">
+<title>n_k_orders&#45;&gt;n_k_lose</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M542.58,-1829.11C549.98,-1854.4 571.01,-1917.26 610.86,-1961.9"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="609.43,-1962.94 614.11,-1965.44 612.01,-1960.57 609.43,-1962.94"/>
+</g>
+<g id="edge58" class="edge">
+<title>n_k_orders&#45;&gt;n_k_ship</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M547.35,-1829.26C558.95,-1845.42 582.06,-1875.64 611.17,-1900.51"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="609.89,-1901.72 614.85,-1903.58 612.13,-1899.03 609.89,-1901.72"/>
+</g>
+<g id="node32" class="node">
+<title>n_t_orders</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M561.09,-1797.8C561.09,-1797.8 515.97,-1797.8 515.97,-1797.8 512.37,-1797.8 508.77,-1794.2 508.77,-1790.6 508.77,-1790.6 508.77,-1783.4 508.77,-1783.4 508.77,-1779.8 512.37,-1776.2 515.97,-1776.2 515.97,-1776.2 561.09,-1776.2 561.09,-1776.2 564.69,-1776.2 568.29,-1779.8 568.29,-1783.4 568.29,-1783.4 568.29,-1790.6 568.29,-1790.6 568.29,-1794.2 564.69,-1797.8 561.09,-1797.8"/>
+<text text-anchor="start" x="514.53" y="-1783.88" font-family="Menlo" font-size="10.00">t_orders</text>
+</g>
+<g id="node37" class="node">
+<title>n_t_lose</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="665.29,-1958.16 611.29,-1958.16 611.29,-1935.84 665.29,-1935.84 665.29,-1958.16"/>
+<text text-anchor="start" x="620.29" y="-1947.5" font-family="Menlo" font-size="10.00">t_lose</text>
+<text text-anchor="start" x="628.16" y="-1939.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 0</text>
+</g>
+<g id="edge68" class="edge">
+<title>n_t_orders&#45;&gt;n_t_lose</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M568.67,-1793.44C573.8,-1795.73 578.64,-1798.82 582.29,-1803 619.62,-1845.83 579.32,-1882.18 611.14,-1930.69"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="609.59,-1931.53 613.89,-1934.61 612.45,-1929.52 609.59,-1931.53"/>
+</g>
+<g id="edge65" class="edge">
+<title>n_t_orders&#45;&gt;n_t_ship</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M568.78,-1795.33C573.55,-1797.41 578.25,-1799.94 582.29,-1803 604.96,-1820.16 621.34,-1849.5 630.06,-1868.04"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="628.29,-1868.36 631.96,-1872.18 631.47,-1866.91 628.29,-1868.36"/>
+</g>
+<g id="node33" class="node">
+<title>n_k_demand</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="450.03,-1927.16 390.51,-1927.16 390.51,-1904.84 450.03,-1904.84 450.03,-1927.16"/>
+<text text-anchor="start" x="396.27" y="-1916.5" font-family="Menlo" font-size="10.00">k_demand</text>
+<text text-anchor="start" x="410.14" y="-1908.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge57" class="edge">
+<title>n_k_demand&#45;&gt;n_k_orders</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M450.51,-1911.16C458.51,-1908.93 466.87,-1905.69 473.77,-1901 498.96,-1883.87 518.51,-1853.58 528.99,-1834.71"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="530.46,-1835.68 531.3,-1830.45 527.38,-1834.01 530.46,-1835.68"/>
+</g>
+<g id="node39" class="node">
+<title>n_k_lost</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M759.09,-1988.8C759.09,-1988.8 719.49,-1988.8 719.49,-1988.8 715.89,-1988.8 712.29,-1985.2 712.29,-1981.6 712.29,-1981.6 712.29,-1974.4 712.29,-1974.4 712.29,-1970.8 715.89,-1967.2 719.49,-1967.2 719.49,-1967.2 759.09,-1967.2 759.09,-1967.2 762.69,-1967.2 766.29,-1970.8 766.29,-1974.4 766.29,-1974.4 766.29,-1981.6 766.29,-1981.6 766.29,-1985.2 762.69,-1988.8 759.09,-1988.8"/>
+<text text-anchor="start" x="721.29" y="-1974.88" font-family="Menlo" font-size="10.00">k_lost</text>
+</g>
+<g id="edge62" class="edge">
+<title>n_k_lose&#45;&gt;n_k_lost</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M665.56,-1978C677.87,-1978 692.65,-1978 705.67,-1978"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="705.53,-1979.75 710.53,-1978 705.53,-1976.25 705.53,-1979.75"/>
+</g>
+<g id="node40" class="node">
+<title>n_k_sold</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M759.09,-1926.8C759.09,-1926.8 719.49,-1926.8 719.49,-1926.8 715.89,-1926.8 712.29,-1923.2 712.29,-1919.6 712.29,-1919.6 712.29,-1912.4 712.29,-1912.4 712.29,-1908.8 715.89,-1905.2 719.49,-1905.2 719.49,-1905.2 759.09,-1905.2 759.09,-1905.2 762.69,-1905.2 766.29,-1908.8 766.29,-1912.4 766.29,-1912.4 766.29,-1919.6 766.29,-1919.6 766.29,-1923.2 762.69,-1926.8 759.09,-1926.8"/>
+<text text-anchor="start" x="721.29" y="-1912.88" font-family="Menlo" font-size="10.00">k_sold</text>
+</g>
+<g id="edge60" class="edge">
+<title>n_k_ship&#45;&gt;n_k_sold</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M665.56,-1916C677.87,-1916 692.65,-1916 705.67,-1916"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="705.53,-1917.75 710.53,-1916 705.53,-1914.25 705.53,-1917.75"/>
+</g>
+<g id="node36" class="node">
+<title>n_t_demand</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="450.03,-1896.16 390.51,-1896.16 390.51,-1873.84 450.03,-1873.84 450.03,-1896.16"/>
+<text text-anchor="start" x="396.27" y="-1885.5" font-family="Menlo" font-size="10.00">t_demand</text>
+<text text-anchor="start" x="410.14" y="-1877.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge64" class="edge">
+<title>n_t_demand&#45;&gt;n_t_orders</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M450.32,-1881.6C458.69,-1879.41 467.29,-1875.84 473.77,-1870 497.63,-1848.52 478.38,-1826.01 500.77,-1803 501.61,-1802.14 502.5,-1801.32 503.43,-1800.55"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="504.24,-1802.12 507.3,-1797.79 502.21,-1799.27 504.24,-1802.12"/>
+</g>
+<g id="node41" class="node">
+<title>n_t_lost</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M759.09,-1957.8C759.09,-1957.8 719.49,-1957.8 719.49,-1957.8 715.89,-1957.8 712.29,-1954.2 712.29,-1950.6 712.29,-1950.6 712.29,-1943.4 712.29,-1943.4 712.29,-1939.8 715.89,-1936.2 719.49,-1936.2 719.49,-1936.2 759.09,-1936.2 759.09,-1936.2 762.69,-1936.2 766.29,-1939.8 766.29,-1943.4 766.29,-1943.4 766.29,-1950.6 766.29,-1950.6 766.29,-1954.2 762.69,-1957.8 759.09,-1957.8"/>
+<text text-anchor="start" x="721.29" y="-1943.88" font-family="Menlo" font-size="10.00">t_lost</text>
+</g>
+<g id="edge69" class="edge">
+<title>n_t_lose&#45;&gt;n_t_lost</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M665.56,-1947C677.87,-1947 692.65,-1947 705.67,-1947"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="705.53,-1948.75 710.53,-1947 705.53,-1945.25 705.53,-1948.75"/>
+</g>
+<g id="node42" class="node">
+<title>n_t_sold</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M759.09,-1895.8C759.09,-1895.8 719.49,-1895.8 719.49,-1895.8 715.89,-1895.8 712.29,-1892.2 712.29,-1888.6 712.29,-1888.6 712.29,-1881.4 712.29,-1881.4 712.29,-1877.8 715.89,-1874.2 719.49,-1874.2 719.49,-1874.2 759.09,-1874.2 759.09,-1874.2 762.69,-1874.2 766.29,-1877.8 766.29,-1881.4 766.29,-1881.4 766.29,-1888.6 766.29,-1888.6 766.29,-1892.2 762.69,-1895.8 759.09,-1895.8"/>
+<text text-anchor="start" x="721.29" y="-1881.88" font-family="Menlo" font-size="10.00">t_sold</text>
+</g>
+<g id="edge67" class="edge">
+<title>n_t_ship&#45;&gt;n_t_sold</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M665.56,-1885C677.87,-1885 692.65,-1885 705.67,-1885"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="705.53,-1886.75 710.53,-1885 705.53,-1883.25 705.53,-1886.75"/>
+</g>
+<g id="node43" class="node">
+<title>n_cash</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-1185.8C264.94,-1185.8 225.34,-1185.8 225.34,-1185.8 221.74,-1185.8 218.14,-1182.2 218.14,-1178.6 218.14,-1178.6 218.14,-1171.4 218.14,-1171.4 218.14,-1167.8 221.74,-1164.2 225.34,-1164.2 225.34,-1164.2 264.94,-1164.2 264.94,-1164.2 268.55,-1164.2 272.14,-1167.8 272.14,-1171.4 272.14,-1171.4 272.14,-1178.6 272.14,-1178.6 272.14,-1182.2 268.55,-1185.8 264.94,-1185.8"/>
+<text text-anchor="start" x="233.14" y="-1171.88" font-family="Menlo" font-size="10.00">cash</text>
+</g>
+<g id="edge13" class="edge">
+<title>n_cash&#45;&gt;n_k_base_cmo</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M272.46,-1169.59C301.83,-1163.02 346.68,-1151.15 357.77,-1138 376.32,-1116.01 348.54,-1095.63 367.51,-1074 370.52,-1070.57 374.27,-1067.9 378.35,-1065.82"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="378.95,-1067.47 382.86,-1063.89 377.57,-1064.26 378.95,-1067.47"/>
+<text text-anchor="middle" x="347.27" y="-1151.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge17" class="edge">
+<title>n_cash&#45;&gt;n_k_base_cmo2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M260.37,-1186.07C282.06,-1201.5 324.4,-1225.89 357.77,-1210 363.97,-1207.05 362.76,-1202.96 367.51,-1198 377.79,-1187.25 390.23,-1176.14 400.33,-1167.54"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="401.35,-1168.97 404.05,-1164.4 399.1,-1166.29 401.35,-1168.97"/>
+<text text-anchor="middle" x="347.27" y="-1216.28" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge9" class="edge">
+<title>n_cash&#45;&gt;n_k_base_l2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M255.14,-1163.8C270.59,-1144.99 303.7,-1106.42 336.77,-1079.25 345.3,-1072.24 351.9,-1075.34 357.77,-1066 378,-1033.8 342.97,-1010.05 367.51,-981 370.69,-977.23 374.76,-974.38 379.22,-972.22"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="379.8,-973.88 383.76,-970.37 378.47,-970.64 379.8,-973.88"/>
+<text text-anchor="middle" x="347.27" y="-1080.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge5" class="edge">
+<title>n_cash&#45;&gt;n_k_base_own</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M249.03,-1163.81C257.63,-1132.21 285.75,-1040.87 336.77,-983.25 344.09,-974.99 352.03,-979.43 357.77,-970 370.88,-948.47 351.52,-876.48 367.51,-857 370.45,-853.42 374.19,-850.66 378.3,-848.55"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="378.97,-850.17 382.86,-846.58 377.58,-846.95 378.97,-850.17"/>
+<text text-anchor="middle" x="347.27" y="-984.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge45" class="edge">
+<title>n_cash&#45;&gt;n_k_buf_cmo</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M267.76,-1163.83C299.4,-1147.38 354.91,-1118.15 357.77,-1114 375.85,-1087.78 346.69,-1067.1 367.51,-1043 370.94,-1039.03 375.35,-1036.08 380.14,-1033.89"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="380.61,-1035.59 384.65,-1032.15 379.35,-1032.32 380.61,-1035.59"/>
+<text text-anchor="middle" x="347.27" y="-1127.91" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge49" class="edge">
+<title>n_cash&#45;&gt;n_k_buf_cmo2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M269.94,-1186.29C294.72,-1196.21 333.27,-1206.19 357.77,-1186 375.24,-1171.6 352.23,-1152.71 367.51,-1136 370.59,-1132.63 374.38,-1130 378.49,-1127.95"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="379.09,-1129.59 383.01,-1126.03 377.73,-1126.37 379.09,-1129.59"/>
+<text text-anchor="middle" x="347.27" y="-1197.18" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge41" class="edge">
+<title>n_cash&#45;&gt;n_k_buf_l2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M252.75,-1163.7C266.34,-1141.12 299.33,-1089.64 336.77,-1055.25 344.9,-1047.78 351.94,-1051.37 357.77,-1042 379.5,-1007.09 341.11,-981.52 367.51,-950 370.92,-945.93 375.36,-942.92 380.22,-940.71"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="380.75,-942.38 384.79,-938.96 379.49,-939.12 380.75,-942.38"/>
+<text text-anchor="middle" x="347.27" y="-1056.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge37" class="edge">
+<title>n_cash&#45;&gt;n_k_buf_own</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M249.84,-1164C259.9,-1135.33 290.21,-1057.07 336.77,-1007.25 344.31,-999.19 352,-1003.41 357.77,-994 370.13,-973.83 352.45,-906.24 367.51,-888 370.89,-883.9 375.32,-880.89 380.16,-878.67"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="380.7,-880.34 384.73,-876.91 379.44,-877.08 380.7,-880.34"/>
+<text text-anchor="middle" x="347.27" y="-1008.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge29" class="edge">
+<title>n_cash&#45;&gt;n_t_make_cmo</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M259.31,-1163.84C276.65,-1149.33 308.28,-1123.43 336.77,-1103.25 345.78,-1096.87 351.85,-1099.31 357.77,-1090 376.51,-1060.51 344.83,-1038.57 367.51,-1012 370.52,-1008.48 374.3,-1005.76 378.44,-1003.66"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="379.1,-1005.28 383.01,-1001.7 377.73,-1002.06 379.1,-1005.28"/>
+<text text-anchor="middle" x="347.27" y="-1104.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge33" class="edge">
+<title>n_cash&#45;&gt;n_t_make_cmo2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M272.38,-1180.01C297.65,-1183.19 335.26,-1183.34 357.77,-1162 376.42,-1144.32 350.39,-1124.17 367.51,-1105 369.81,-1102.43 372.52,-1100.28 375.47,-1098.5"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="376.15,-1100.12 379.81,-1096.28 374.56,-1097 376.15,-1100.12"/>
+<text text-anchor="middle" x="347.27" y="-1175.73" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">40</text>
+</g>
+<g id="edge25" class="edge">
+<title>n_cash&#45;&gt;n_t_make_l2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M251.09,-1163.75C262.89,-1137.89 294.85,-1073.19 336.77,-1031.25 344.57,-1023.45 351.97,-1027.39 357.77,-1018 369.38,-999.19 353.38,-936 367.51,-919 371.15,-914.61 376,-911.47 381.26,-909.22"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="381.71,-910.91 385.82,-907.57 380.53,-907.62 381.71,-910.91"/>
+<text text-anchor="middle" x="347.27" y="-1032.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge21" class="edge">
+<title>n_cash&#45;&gt;n_t_make_own</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M249.66,-1163.74C269.23,-1101.12 363.95,-798.46 367.51,-795 370.69,-791.9 374.47,-789.44 378.52,-787.48"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="378.98,-789.19 382.91,-785.64 377.63,-785.96 378.98,-789.19"/>
+<text text-anchor="middle" x="347.27" y="-879.98" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="edge53" class="edge">
+<title>n_cash&#45;&gt;n_t_ppq_own</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M248.32,-1163.89C255.48,-1129.8 281.1,-1024.97 336.77,-959.25 343.9,-950.83 352.05,-955.44 357.77,-946 371.63,-923.11 350.59,-846.72 367.51,-826 371.12,-821.58 375.94,-818.42 381.2,-816.16"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="381.65,-817.86 385.75,-814.52 380.46,-814.57 381.65,-817.86"/>
+<text text-anchor="middle" x="347.27" y="-960.45" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">15</text>
+</g>
+<g id="node44" class="node">
+<title>n_cmo2_fee</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="450.03,-1261.16 390.51,-1261.16 390.51,-1238.84 450.03,-1238.84 450.03,-1261.16"/>
+<text text-anchor="start" x="396.27" y="-1250.5" font-family="Menlo" font-size="10.00">cmo2_fee</text>
+<text text-anchor="start" x="410.14" y="-1242.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge73" class="edge">
+<title>n_cash&#45;&gt;n_cmo2_fee</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M256.94,-1186.13C272.79,-1201.69 304.07,-1229.44 336.77,-1242 351.58,-1247.69 368.94,-1249.96 383.9,-1250.7"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="383.73,-1252.45 388.79,-1250.88 383.85,-1248.95 383.73,-1252.45"/>
+<text text-anchor="middle" x="347.27" y="-1248.68" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">5000</text>
+</g>
+<g id="node45" class="node">
+<title>n_cmo_fee</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="447.27,-1230.16 393.27,-1230.16 393.27,-1207.84 447.27,-1207.84 447.27,-1230.16"/>
+<text text-anchor="start" x="399.27" y="-1219.5" font-family="Menlo" font-size="10.00">cmo_fee</text>
+<text text-anchor="start" x="410.14" y="-1211.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge71" class="edge">
+<title>n_cash&#45;&gt;n_cmo_fee</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M260.17,-1186.2C277.14,-1198.97 307.15,-1219.11 336.77,-1227 352.97,-1231.32 371.52,-1230.05 386.92,-1227.38"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="386.95,-1229.16 391.53,-1226.51 386.3,-1225.72 386.95,-1229.16"/>
+<text text-anchor="middle" x="347.27" y="-1230.96" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">5000</text>
+</g>
+<g id="node46" class="node">
+<title>n_cmo_fee_y2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="456.03,-1447.16 384.51,-1447.16 384.51,-1424.84 456.03,-1424.84 456.03,-1447.16"/>
+<text text-anchor="start" x="390.27" y="-1436.5" font-family="Menlo" font-size="10.00">cmo_fee_y2</text>
+<text text-anchor="start" x="410.14" y="-1428.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge72" class="edge">
+<title>n_cash&#45;&gt;n_cmo_fee_y2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M248.61,-1186.09C256.61,-1220.18 284.37,-1325.41 336.77,-1396 347.27,-1410.14 351.91,-1412.83 367.51,-1421 370.94,-1422.79 374.61,-1424.4 378.35,-1425.83"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="377.69,-1427.46 382.99,-1427.48 378.87,-1424.16 377.69,-1427.46"/>
+<text text-anchor="middle" x="347.27" y="-1416.64" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">5000</text>
+</g>
+<g id="node47" class="node">
+<title>n_l2_capex_even</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="465.03,-1416.16 375.51,-1416.16 375.51,-1393.84 465.03,-1393.84 465.03,-1416.16"/>
+<text text-anchor="start" x="381.27" y="-1405.5" font-family="Menlo" font-size="10.00">l2_capex_even</text>
+<text text-anchor="start" x="410.14" y="-1397.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge77" class="edge">
+<title>n_cash&#45;&gt;n_l2_capex_even</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M249.55,-1186.23C259.32,-1217.17 289.77,-1305.25 336.77,-1365 347.66,-1378.84 351.91,-1381.83 367.51,-1390 368.11,-1390.31 368.72,-1390.62 369.33,-1390.93"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="368.5,-1392.47 373.78,-1392.94 369.95,-1389.28 368.5,-1392.47"/>
+<text text-anchor="middle" x="347.27" y="-1385.6" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">3333</text>
+</g>
+<g id="node48" class="node">
+<title>n_l2_capex_y1</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="459.03,-1385.16 381.51,-1385.16 381.51,-1362.84 459.03,-1362.84 459.03,-1385.16"/>
+<text text-anchor="start" x="387.27" y="-1374.5" font-family="Menlo" font-size="10.00">l2_capex_y1</text>
+<text text-anchor="start" x="410.14" y="-1366.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge74" class="edge">
+<title>n_cash&#45;&gt;n_l2_capex_y1</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M250.98,-1186.05C263.01,-1212.82 296.26,-1282.6 336.77,-1332 348.3,-1346.06 351.56,-1350.26 367.51,-1359 370.04,-1360.39 372.72,-1361.66 375.46,-1362.82"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="374.61,-1364.37 379.91,-1364.56 375.89,-1361.11 374.61,-1364.37"/>
+<text text-anchor="middle" x="347.27" y="-1354.05" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">2000</text>
+</g>
+<g id="node49" class="node">
+<title>n_l2_capex_y2</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="459.03,-1354.16 381.51,-1354.16 381.51,-1331.84 459.03,-1331.84 459.03,-1354.16"/>
+<text text-anchor="start" x="387.27" y="-1343.5" font-family="Menlo" font-size="10.00">l2_capex_y2</text>
+<text text-anchor="start" x="410.14" y="-1335.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge75" class="edge">
+<title>n_cash&#45;&gt;n_l2_capex_y2</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M250.95,-1186.09C264.36,-1215.5 305.34,-1295.44 367.51,-1328 370.07,-1329.34 372.76,-1330.58 375.52,-1331.71"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="374.69,-1333.27 379.99,-1333.42 375.94,-1330 374.69,-1333.27"/>
+<text text-anchor="middle" x="347.27" y="-1321.21" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">5000</text>
+</g>
+<g id="node50" class="node">
+<title>n_l2_capex_y3</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="459.03,-1323.16 381.51,-1323.16 381.51,-1300.84 459.03,-1300.84 459.03,-1323.16"/>
+<text text-anchor="start" x="387.27" y="-1312.5" font-family="Menlo" font-size="10.00">l2_capex_y3</text>
+<text text-anchor="start" x="410.14" y="-1304.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge76" class="edge">
+<title>n_cash&#45;&gt;n_l2_capex_y3</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M252.9,-1186.19C268.99,-1211.6 312.34,-1273.29 367.51,-1297 370.06,-1298.1 372.72,-1299.14 375.42,-1300.13"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="374.43,-1301.64 379.72,-1301.63 375.58,-1298.33 374.43,-1301.64"/>
+<text text-anchor="middle" x="347.27" y="-1292.13" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">3000</text>
+</g>
+<g id="node51" class="node">
+<title>n_l2_fixed</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="450.03,-1292.16 390.51,-1292.16 390.51,-1269.84 450.03,-1269.84 450.03,-1292.16"/>
+<text text-anchor="start" x="396.27" y="-1281.5" font-family="Menlo" font-size="10.00">l2_fixed</text>
+<text text-anchor="start" x="410.14" y="-1273.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="edge78" class="edge">
+<title>n_cash&#45;&gt;n_l2_fixed</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M254.93,-1186.08C269.82,-1204.12 301.83,-1239.73 336.77,-1259 351.32,-1267.03 368.95,-1272.24 384.17,-1275.57"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="383.51,-1277.22 388.76,-1276.52 384.22,-1273.79 383.51,-1277.22"/>
+<text text-anchor="middle" x="347.27" y="-1268.74" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6a6a68">833</text>
+</g>
+<g id="node52" class="node">
+<title>n_k_clock</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="102.76,-1924.16 48.76,-1924.16 48.76,-1901.84 102.76,-1901.84 102.76,-1924.16"/>
+<text text-anchor="start" x="54.76" y="-1913.5" font-family="Menlo" font-size="10.00">k_clock</text>
+<text text-anchor="start" x="65.63" y="-1905.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="node55" class="node">
+<title>n_k_age</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-1923.8C264.94,-1923.8 225.34,-1923.8 225.34,-1923.8 221.74,-1923.8 218.14,-1920.2 218.14,-1916.6 218.14,-1916.6 218.14,-1909.4 218.14,-1909.4 218.14,-1905.8 221.74,-1902.2 225.34,-1902.2 225.34,-1902.2 264.94,-1902.2 264.94,-1902.2 268.55,-1902.2 272.14,-1905.8 272.14,-1909.4 272.14,-1909.4 272.14,-1916.6 272.14,-1916.6 272.14,-1920.2 268.55,-1923.8 264.94,-1923.8"/>
+<text text-anchor="start" x="230.14" y="-1909.88" font-family="Menlo" font-size="10.00">k_age</text>
+</g>
+<g id="edge56" class="edge">
+<title>n_k_clock&#45;&gt;n_k_age</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M102.91,-1913C132.31,-1913 180.06,-1913 211.78,-1913"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="211.54,-1914.75 216.54,-1913 211.54,-1911.25 211.54,-1914.75"/>
+</g>
+<g id="node53" class="node">
+<title>n_t_clock</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="102.76,-1893.16 48.76,-1893.16 48.76,-1870.84 102.76,-1870.84 102.76,-1893.16"/>
+<text text-anchor="start" x="54.76" y="-1882.5" font-family="Menlo" font-size="10.00">t_clock</text>
+<text text-anchor="start" x="65.63" y="-1874.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="node56" class="node">
+<title>n_t_age</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-1892.8C264.94,-1892.8 225.34,-1892.8 225.34,-1892.8 221.74,-1892.8 218.14,-1889.2 218.14,-1885.6 218.14,-1885.6 218.14,-1878.4 218.14,-1878.4 218.14,-1874.8 221.74,-1871.2 225.34,-1871.2 225.34,-1871.2 264.94,-1871.2 264.94,-1871.2 268.55,-1871.2 272.14,-1874.8 272.14,-1878.4 272.14,-1878.4 272.14,-1885.6 272.14,-1885.6 272.14,-1889.2 268.55,-1892.8 264.94,-1892.8"/>
+<text text-anchor="start" x="230.14" y="-1878.88" font-family="Menlo" font-size="10.00">t_age</text>
+</g>
+<g id="edge63" class="edge">
+<title>n_t_clock&#45;&gt;n_t_age</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M102.91,-1882C132.31,-1882 180.06,-1882 211.78,-1882"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="211.54,-1883.75 216.54,-1882 211.54,-1880.25 211.54,-1883.75"/>
+</g>
+<g id="node54" class="node">
+<title>n_t_delay_clock</title>
+<polygon fill="#f4f4f2" stroke="#c7c7c4" stroke-width="1.1" points="120.52,-1862.16 31,-1862.16 31,-1839.84 120.52,-1839.84 120.52,-1862.16"/>
+<text text-anchor="start" x="36.76" y="-1851.5" font-family="Menlo" font-size="10.00">t_delay_clock</text>
+<text text-anchor="start" x="65.63" y="-1843.4" font-family="Helvetica,sans-Serif" font-size="8.00" fill="#6a6a68">prio 1</text>
+</g>
+<g id="node57" class="node">
+<title>n_t_file_delay</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M279.7,-1861.8C279.7,-1861.8 210.58,-1861.8 210.58,-1861.8 206.98,-1861.8 203.38,-1858.2 203.38,-1854.6 203.38,-1854.6 203.38,-1847.4 203.38,-1847.4 203.38,-1843.8 206.98,-1840.2 210.58,-1840.2 210.58,-1840.2 279.7,-1840.2 279.7,-1840.2 283.31,-1840.2 286.9,-1843.8 286.9,-1847.4 286.9,-1847.4 286.9,-1854.6 286.9,-1854.6 286.9,-1858.2 283.31,-1861.8 279.7,-1861.8"/>
+<text text-anchor="start" x="209.14" y="-1847.88" font-family="Menlo" font-size="10.00">t_file_delay</text>
+</g>
+<g id="edge70" class="edge">
+<title>n_t_delay_clock&#45;&gt;n_t_file_delay</title>
+<path fill="none" stroke="#0a0a0a" stroke-width="0.9" d="M120.74,-1851C144.12,-1851 172.89,-1851 196.77,-1851"/>
+<polygon fill="#0a0a0a" stroke="#0a0a0a" stroke-width="0.9" points="196.69,-1852.75 201.69,-1851 196.69,-1849.25 196.69,-1852.75"/>
+</g>
+<g id="node58" class="node">
+<title>n_cmo2_active</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M276.7,-693.8C276.7,-693.8 213.58,-693.8 213.58,-693.8 209.98,-693.8 206.38,-690.2 206.38,-686.6 206.38,-686.6 206.38,-679.4 206.38,-679.4 206.38,-675.8 209.98,-672.2 213.58,-672.2 213.58,-672.2 276.7,-672.2 276.7,-672.2 280.31,-672.2 283.9,-675.8 283.9,-679.4 283.9,-679.4 283.9,-686.6 283.9,-686.6 283.9,-690.2 280.31,-693.8 276.7,-693.8"/>
+<text text-anchor="start" x="212.14" y="-679.88" font-family="Menlo" font-size="10.00">cmo2_active</text>
+</g>
+<g id="node59" class="node">
+<title>n_cmo2_ready</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M273.7,-724.8C273.7,-724.8 216.58,-724.8 216.58,-724.8 212.98,-724.8 209.38,-721.2 209.38,-717.6 209.38,-717.6 209.38,-710.4 209.38,-710.4 209.38,-706.8 212.98,-703.2 216.58,-703.2 216.58,-703.2 273.7,-703.2 273.7,-703.2 277.31,-703.2 280.9,-706.8 280.9,-710.4 280.9,-710.4 280.9,-717.6 280.9,-717.6 280.9,-721.2 277.31,-724.8 273.7,-724.8"/>
+<text text-anchor="start" x="215.14" y="-710.88" font-family="Menlo" font-size="10.00">cmo2_ready</text>
+</g>
+<g id="node60" class="node">
+<title>n_cmo_active</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M273.7,-600.8C273.7,-600.8 216.58,-600.8 216.58,-600.8 212.98,-600.8 209.38,-597.2 209.38,-593.6 209.38,-593.6 209.38,-586.4 209.38,-586.4 209.38,-582.8 212.98,-579.2 216.58,-579.2 216.58,-579.2 273.7,-579.2 273.7,-579.2 277.31,-579.2 280.9,-582.8 280.9,-586.4 280.9,-586.4 280.9,-593.6 280.9,-593.6 280.9,-597.2 277.31,-600.8 273.7,-600.8"/>
+<text text-anchor="start" x="215.14" y="-586.88" font-family="Menlo" font-size="10.00">cmo_active</text>
+</g>
+<g id="node61" class="node">
+<title>n_cmo_ppq</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-662.8C264.94,-662.8 225.34,-662.8 225.34,-662.8 221.74,-662.8 218.14,-659.2 218.14,-655.6 218.14,-655.6 218.14,-648.4 218.14,-648.4 218.14,-644.8 221.74,-641.2 225.34,-641.2 225.34,-641.2 264.94,-641.2 264.94,-641.2 268.55,-641.2 272.14,-644.8 272.14,-648.4 272.14,-648.4 272.14,-655.6 272.14,-655.6 272.14,-659.2 268.55,-662.8 264.94,-662.8"/>
+<text text-anchor="start" x="224.14" y="-648.88" font-family="Menlo" font-size="10.00">cmo_ppq</text>
+</g>
+<g id="node62" class="node">
+<title>n_k_cmo2_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-476.8C270.7,-476.8 219.59,-476.8 219.59,-476.8 215.98,-476.8 212.38,-473.2 212.38,-469.6 212.38,-469.6 212.38,-462.4 212.38,-462.4 212.38,-458.8 215.98,-455.2 219.59,-455.2 219.59,-455.2 270.7,-455.2 270.7,-455.2 274.3,-455.2 277.9,-458.8 277.9,-462.4 277.9,-462.4 277.9,-469.6 277.9,-469.6 277.9,-473.2 274.3,-476.8 270.7,-476.8"/>
+<text text-anchor="start" x="218.14" y="-462.88" font-family="Menlo" font-size="10.00">k_cmo2_ok</text>
+</g>
+<g id="node63" class="node">
+<title>n_k_cmo_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M267.7,-445.8C267.7,-445.8 222.59,-445.8 222.59,-445.8 218.98,-445.8 215.38,-442.2 215.38,-438.6 215.38,-438.6 215.38,-431.4 215.38,-431.4 215.38,-427.8 218.98,-424.2 222.59,-424.2 222.59,-424.2 267.7,-424.2 267.7,-424.2 271.3,-424.2 274.9,-427.8 274.9,-431.4 274.9,-431.4 274.9,-438.6 274.9,-438.6 274.9,-442.2 271.3,-445.8 267.7,-445.8"/>
+<text text-anchor="start" x="221.14" y="-431.88" font-family="Menlo" font-size="10.00">k_cmo_ok</text>
+</g>
+<g id="node64" class="node">
+<title>n_k_l2_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-414.8C264.94,-414.8 225.34,-414.8 225.34,-414.8 221.74,-414.8 218.14,-411.2 218.14,-407.6 218.14,-407.6 218.14,-400.4 218.14,-400.4 218.14,-396.8 221.74,-393.2 225.34,-393.2 225.34,-393.2 264.94,-393.2 264.94,-393.2 268.54,-393.2 272.14,-396.8 272.14,-400.4 272.14,-400.4 272.14,-407.6 272.14,-407.6 272.14,-411.2 268.54,-414.8 264.94,-414.8"/>
+<text text-anchor="start" x="224.14" y="-400.88" font-family="Menlo" font-size="10.00">k_l2_ok</text>
+</g>
+<g id="node65" class="node">
+<title>n_k_launched</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M273.7,-383.8C273.7,-383.8 216.59,-383.8 216.59,-383.8 212.98,-383.8 209.38,-380.2 209.38,-376.6 209.38,-376.6 209.38,-369.4 209.38,-369.4 209.38,-365.8 212.98,-362.2 216.59,-362.2 216.59,-362.2 273.7,-362.2 273.7,-362.2 277.3,-362.2 280.9,-365.8 280.9,-369.4 280.9,-369.4 280.9,-376.6 280.9,-376.6 280.9,-380.2 277.3,-383.8 273.7,-383.8"/>
+<text text-anchor="start" x="215.14" y="-369.88" font-family="Menlo" font-size="10.00">k_launched</text>
+</g>
+<g id="node66" class="node">
+<title>n_k_pre</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-352.8C264.94,-352.8 225.34,-352.8 225.34,-352.8 221.74,-352.8 218.14,-349.2 218.14,-345.6 218.14,-345.6 218.14,-338.4 218.14,-338.4 218.14,-334.8 221.74,-331.2 225.34,-331.2 225.34,-331.2 264.94,-331.2 264.94,-331.2 268.54,-331.2 272.14,-334.8 272.14,-338.4 272.14,-338.4 272.14,-345.6 272.14,-345.6 272.14,-349.2 268.54,-352.8 264.94,-352.8"/>
+<text text-anchor="start" x="230.14" y="-338.88" font-family="Menlo" font-size="10.00">k_pre</text>
+</g>
+<g id="node67" class="node">
+<title>n_k_short</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-104.8C264.94,-104.8 225.34,-104.8 225.34,-104.8 221.74,-104.8 218.14,-101.2 218.14,-97.6 218.14,-97.6 218.14,-90.4 218.14,-90.4 218.14,-86.8 221.74,-83.2 225.34,-83.2 225.34,-83.2 264.94,-83.2 264.94,-83.2 268.54,-83.2 272.14,-86.8 272.14,-90.4 272.14,-90.4 272.14,-97.6 272.14,-97.6 272.14,-101.2 268.54,-104.8 264.94,-104.8"/>
+<text text-anchor="start" x="224.14" y="-90.88" font-family="Menlo" font-size="10.00">k_short</text>
+</g>
+<g id="node68" class="node">
+<title>n_k_short_any</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M276.7,-135.8C276.7,-135.8 213.59,-135.8 213.59,-135.8 209.98,-135.8 206.38,-132.2 206.38,-128.6 206.38,-128.6 206.38,-121.4 206.38,-121.4 206.38,-117.8 209.98,-114.2 213.59,-114.2 213.59,-114.2 276.7,-114.2 276.7,-114.2 280.3,-114.2 283.9,-117.8 283.9,-121.4 283.9,-121.4 283.9,-128.6 283.9,-128.6 283.9,-132.2 280.3,-135.8 276.7,-135.8"/>
+<text text-anchor="start" x="212.14" y="-121.88" font-family="Menlo" font-size="10.00">k_short_any</text>
+</g>
+<g id="node69" class="node">
+<title>n_k_success</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-507.8C270.7,-507.8 219.59,-507.8 219.59,-507.8 215.98,-507.8 212.38,-504.2 212.38,-500.6 212.38,-500.6 212.38,-493.4 212.38,-493.4 212.38,-489.8 215.98,-486.2 219.59,-486.2 219.59,-486.2 270.7,-486.2 270.7,-486.2 274.3,-486.2 277.9,-489.8 277.9,-493.4 277.9,-493.4 277.9,-500.6 277.9,-500.6 277.9,-504.2 274.3,-507.8 270.7,-507.8"/>
+<text text-anchor="start" x="218.14" y="-493.88" font-family="Menlo" font-size="10.00">k_success</text>
+</g>
+<g id="node70" class="node">
+<title>n_l2_active</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-569.8C270.7,-569.8 219.58,-569.8 219.58,-569.8 215.98,-569.8 212.38,-566.2 212.38,-562.6 212.38,-562.6 212.38,-555.4 212.38,-555.4 212.38,-551.8 215.98,-548.2 219.58,-548.2 219.58,-548.2 270.7,-548.2 270.7,-548.2 274.31,-548.2 277.9,-551.8 277.9,-555.4 277.9,-555.4 277.9,-562.6 277.9,-562.6 277.9,-566.2 274.31,-569.8 270.7,-569.8"/>
+<text text-anchor="start" x="218.14" y="-555.88" font-family="Menlo" font-size="10.00">l2_active</text>
+</g>
+<g id="node71" class="node">
+<title>n_l2_ready</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M267.7,-631.8C267.7,-631.8 222.58,-631.8 222.58,-631.8 218.98,-631.8 215.38,-628.2 215.38,-624.6 215.38,-624.6 215.38,-617.4 215.38,-617.4 215.38,-613.8 218.98,-610.2 222.58,-610.2 222.58,-610.2 267.7,-610.2 267.7,-610.2 271.31,-610.2 274.9,-613.8 274.9,-617.4 274.9,-617.4 274.9,-624.6 274.9,-624.6 274.9,-628.2 271.31,-631.8 267.7,-631.8"/>
+<text text-anchor="start" x="221.14" y="-617.88" font-family="Menlo" font-size="10.00">l2_ready</text>
+</g>
+<g id="node72" class="node">
+<title>n_t_cmo2_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-321.8C270.7,-321.8 219.59,-321.8 219.59,-321.8 215.98,-321.8 212.38,-318.2 212.38,-314.6 212.38,-314.6 212.38,-307.4 212.38,-307.4 212.38,-303.8 215.98,-300.2 219.59,-300.2 219.59,-300.2 270.7,-300.2 270.7,-300.2 274.3,-300.2 277.9,-303.8 277.9,-307.4 277.9,-307.4 277.9,-314.6 277.9,-314.6 277.9,-318.2 274.3,-321.8 270.7,-321.8"/>
+<text text-anchor="start" x="218.14" y="-307.88" font-family="Menlo" font-size="10.00">t_cmo2_ok</text>
+</g>
+<g id="node73" class="node">
+<title>n_t_cmo_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M267.7,-228.8C267.7,-228.8 222.59,-228.8 222.59,-228.8 218.98,-228.8 215.38,-225.2 215.38,-221.6 215.38,-221.6 215.38,-214.4 215.38,-214.4 215.38,-210.8 218.98,-207.2 222.59,-207.2 222.59,-207.2 267.7,-207.2 267.7,-207.2 271.3,-207.2 274.9,-210.8 274.9,-214.4 274.9,-214.4 274.9,-221.6 274.9,-221.6 274.9,-225.2 271.3,-228.8 267.7,-228.8"/>
+<text text-anchor="start" x="221.14" y="-214.88" font-family="Menlo" font-size="10.00">t_cmo_ok</text>
+</g>
+<g id="node74" class="node">
+<title>n_t_filed</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-290.8C264.94,-290.8 225.34,-290.8 225.34,-290.8 221.74,-290.8 218.14,-287.2 218.14,-283.6 218.14,-283.6 218.14,-276.4 218.14,-276.4 218.14,-272.8 221.74,-269.2 225.34,-269.2 225.34,-269.2 264.94,-269.2 264.94,-269.2 268.54,-269.2 272.14,-272.8 272.14,-276.4 272.14,-276.4 272.14,-283.6 272.14,-283.6 272.14,-287.2 268.54,-290.8 264.94,-290.8"/>
+<text text-anchor="start" x="224.14" y="-276.88" font-family="Menlo" font-size="10.00">t_filed</text>
+</g>
+<g id="node75" class="node">
+<title>n_t_l2_ok</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-259.8C264.94,-259.8 225.34,-259.8 225.34,-259.8 221.74,-259.8 218.14,-256.2 218.14,-252.6 218.14,-252.6 218.14,-245.4 218.14,-245.4 218.14,-241.8 221.74,-238.2 225.34,-238.2 225.34,-238.2 264.94,-238.2 264.94,-238.2 268.54,-238.2 272.14,-241.8 272.14,-245.4 272.14,-245.4 272.14,-252.6 272.14,-252.6 272.14,-256.2 268.54,-259.8 264.94,-259.8"/>
+<text text-anchor="start" x="224.14" y="-245.88" font-family="Menlo" font-size="10.00">t_l2_ok</text>
+</g>
+<g id="node76" class="node">
+<title>n_t_launched</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M273.7,-166.8C273.7,-166.8 216.59,-166.8 216.59,-166.8 212.98,-166.8 209.38,-163.2 209.38,-159.6 209.38,-159.6 209.38,-152.4 209.38,-152.4 209.38,-148.8 212.98,-145.2 216.59,-145.2 216.59,-145.2 273.7,-145.2 273.7,-145.2 277.3,-145.2 280.9,-148.8 280.9,-152.4 280.9,-152.4 280.9,-159.6 280.9,-159.6 280.9,-163.2 277.3,-166.8 273.7,-166.8"/>
+<text text-anchor="start" x="215.14" y="-152.88" font-family="Menlo" font-size="10.00">t_launched</text>
+</g>
+<g id="node77" class="node">
+<title>n_t_pre</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-197.8C264.94,-197.8 225.34,-197.8 225.34,-197.8 221.74,-197.8 218.14,-194.2 218.14,-190.6 218.14,-190.6 218.14,-183.4 218.14,-183.4 218.14,-179.8 221.74,-176.2 225.34,-176.2 225.34,-176.2 264.94,-176.2 264.94,-176.2 268.54,-176.2 272.14,-179.8 272.14,-183.4 272.14,-183.4 272.14,-190.6 272.14,-190.6 272.14,-194.2 268.54,-197.8 264.94,-197.8"/>
+<text text-anchor="start" x="230.14" y="-183.88" font-family="Menlo" font-size="10.00">t_pre</text>
+</g>
+<g id="node78" class="node">
+<title>n_t_short</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M264.94,-73.8C264.94,-73.8 225.34,-73.8 225.34,-73.8 221.74,-73.8 218.14,-70.2 218.14,-66.6 218.14,-66.6 218.14,-59.4 218.14,-59.4 218.14,-55.8 221.74,-52.2 225.34,-52.2 225.34,-52.2 264.94,-52.2 264.94,-52.2 268.54,-52.2 272.14,-55.8 272.14,-59.4 272.14,-59.4 272.14,-66.6 272.14,-66.6 272.14,-70.2 268.54,-73.8 264.94,-73.8"/>
+<text text-anchor="start" x="224.14" y="-59.88" font-family="Menlo" font-size="10.00">t_short</text>
+</g>
+<g id="node79" class="node">
+<title>n_t_success</title>
+<path fill="none" stroke="#0a8a84" stroke-width="1.1" d="M270.7,-538.8C270.7,-538.8 219.58,-538.8 219.58,-538.8 215.98,-538.8 212.38,-535.2 212.38,-531.6 212.38,-531.6 212.38,-524.4 212.38,-524.4 212.38,-520.8 215.98,-517.2 219.58,-517.2 219.58,-517.2 270.7,-517.2 270.7,-517.2 274.31,-517.2 277.9,-520.8 277.9,-524.4 277.9,-524.4 277.9,-531.6 277.9,-531.6 277.9,-535.2 274.31,-538.8 270.7,-538.8"/>
+<text text-anchor="start" x="218.14" y="-524.88" font-family="Menlo" font-size="10.00">t_success</text>
+</g>
+<g id="node80" class="node">
+<title>n_draws</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="99.16,-543.8 48.76,-543.8 48.76,-522.2 102.76,-522.2 102.76,-540.2 99.16,-543.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="99.16,-543.8 99.16,-540.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="102.76,-540.2 99.16,-540.2"/>
+<text text-anchor="start" x="60.76" y="-529.88" font-family="Menlo" font-size="10.00">draws</text>
+</g>
+<g id="edge94" class="edge">
+<title>n_draws&#45;&gt;n_k_success</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M103.22,-526.78C120.62,-522.74 143.89,-517.42 164.52,-513 178.03,-510.1 192.86,-507.08 206.03,-504.45"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="206.05,-506.23 210.61,-503.54 205.37,-502.8 206.05,-506.23"/>
+</g>
+<g id="edge95" class="edge">
+<title>n_draws&#45;&gt;n_t_success</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.91,-532.22C130.58,-531.39 174.52,-530.08 206.04,-529.14"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.86,-530.89 210.81,-529 205.76,-527.4 205.86,-530.89"/>
+</g>
+<g id="node81" class="node">
+<title>n_k_cmo2_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="107.92,-476.8 40,-476.8 40,-455.2 111.52,-455.2 111.52,-473.2 107.92,-476.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="107.92,-476.8 107.92,-473.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="111.52,-473.2 107.92,-473.2"/>
+<text text-anchor="start" x="45.76" y="-462.88" font-family="Menlo" font-size="10.00">k_cmo2_pas</text>
+</g>
+<g id="edge96" class="edge">
+<title>n_k_cmo2_pas&#45;&gt;n_k_cmo2_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.85,-466C139.3,-466 177.43,-466 205.7,-466"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.57,-467.75 210.57,-466 205.57,-464.25 205.57,-467.75"/>
+</g>
+<g id="node82" class="node">
+<title>n_k_cmo_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="104.92,-445.8 43,-445.8 43,-424.2 108.52,-424.2 108.52,-442.2 104.92,-445.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="104.92,-445.8 104.92,-442.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="108.52,-442.2 104.92,-442.2"/>
+<text text-anchor="start" x="48.76" y="-431.88" font-family="Menlo" font-size="10.00">k_cmo_pas</text>
+</g>
+<g id="edge97" class="edge">
+<title>n_k_cmo_pas&#45;&gt;n_k_cmo_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M108.64,-435C137.24,-435 179.16,-435 208.78,-435"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="208.55,-436.75 213.55,-435 208.55,-433.25 208.55,-436.75"/>
+</g>
+<g id="node83" class="node">
+<title>n_k_l2_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="101.92,-414.8 46,-414.8 46,-393.2 105.52,-393.2 105.52,-411.2 101.92,-414.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="101.92,-414.8 101.92,-411.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="105.52,-411.2 101.92,-411.2"/>
+<text text-anchor="start" x="51.76" y="-400.88" font-family="Menlo" font-size="10.00">k_l2_pas</text>
+</g>
+<g id="edge98" class="edge">
+<title>n_k_l2_pas&#45;&gt;n_k_l2_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M105.92,-404C135.39,-404 180.83,-404 211.49,-404"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.44,-405.75 216.44,-404 211.44,-402.25 211.44,-405.75"/>
+</g>
+<g id="node84" class="node">
+<title>n_k_launch</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="101.92,-383.8 46,-383.8 46,-362.2 105.52,-362.2 105.52,-380.2 101.92,-383.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="101.92,-383.8 101.92,-380.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="105.52,-380.2 101.92,-380.2"/>
+<text text-anchor="start" x="51.76" y="-369.88" font-family="Menlo" font-size="10.00">k_launch</text>
+</g>
+<g id="edge99" class="edge">
+<title>n_k_launch&#45;&gt;n_k_launched</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M105.92,-373C132.67,-373 172.61,-373 202.68,-373"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="202.58,-374.75 207.58,-373 202.58,-371.25 202.58,-374.75"/>
+</g>
+<g id="node85" class="node">
+<title>n_k_stock_build</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="116.92,-352.8 31,-352.8 31,-331.2 120.52,-331.2 120.52,-349.2 116.92,-352.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="116.92,-352.8 116.92,-349.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="120.52,-349.2 116.92,-349.2"/>
+<text text-anchor="start" x="36.76" y="-338.88" font-family="Menlo" font-size="10.00">k_stock_build</text>
+</g>
+<g id="edge102" class="edge">
+<title>n_k_stock_build&#45;&gt;n_k_pre</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.74,-342C149.13,-342 185.47,-342 211.34,-342"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.32,-343.75 216.32,-342 211.32,-340.25 211.32,-343.75"/>
+</g>
+<g id="node86" class="node">
+<title>n_t_cmo2_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="107.92,-321.8 40,-321.8 40,-300.2 111.52,-300.2 111.52,-318.2 107.92,-321.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="107.92,-321.8 107.92,-318.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="111.52,-318.2 107.92,-318.2"/>
+<text text-anchor="start" x="45.76" y="-307.88" font-family="Menlo" font-size="10.00">t_cmo2_pas</text>
+</g>
+<g id="edge111" class="edge">
+<title>n_t_cmo2_pas&#45;&gt;n_t_cmo2_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.85,-311C139.3,-311 177.43,-311 205.7,-311"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.57,-312.75 210.57,-311 205.57,-309.25 205.57,-312.75"/>
+</g>
+<g id="node87" class="node">
+<title>n_t_cmo_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="104.92,-228.8 43,-228.8 43,-207.2 108.52,-207.2 108.52,-225.2 104.92,-228.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="104.92,-228.8 104.92,-225.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="108.52,-225.2 104.92,-225.2"/>
+<text text-anchor="start" x="48.76" y="-214.88" font-family="Menlo" font-size="10.00">t_cmo_pas</text>
+</g>
+<g id="edge112" class="edge">
+<title>n_t_cmo_pas&#45;&gt;n_t_cmo_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M108.64,-218C137.24,-218 179.16,-218 208.78,-218"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="208.55,-219.75 213.55,-218 208.55,-216.25 208.55,-219.75"/>
+</g>
+<g id="node88" class="node">
+<title>n_t_file</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="99.16,-290.8 48.76,-290.8 48.76,-269.2 102.76,-269.2 102.76,-287.2 99.16,-290.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="99.16,-290.8 99.16,-287.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="102.76,-287.2 99.16,-287.2"/>
+<text text-anchor="start" x="57.76" y="-276.88" font-family="Menlo" font-size="10.00">t_file</text>
+</g>
+<g id="edge113" class="edge">
+<title>n_t_file&#45;&gt;n_t_filed</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.91,-280C132.31,-280 180.06,-280 211.78,-280"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.54,-281.75 216.54,-280 211.54,-278.25 211.54,-281.75"/>
+</g>
+<g id="node89" class="node">
+<title>n_t_l2_pas</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="101.92,-259.8 46,-259.8 46,-238.2 105.52,-238.2 105.52,-256.2 101.92,-259.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="101.92,-259.8 101.92,-256.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="105.52,-256.2 101.92,-256.2"/>
+<text text-anchor="start" x="51.76" y="-245.88" font-family="Menlo" font-size="10.00">t_l2_pas</text>
+</g>
+<g id="edge114" class="edge">
+<title>n_t_l2_pas&#45;&gt;n_t_l2_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M105.92,-249C135.39,-249 180.83,-249 211.49,-249"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.44,-250.75 216.44,-249 211.44,-247.25 211.44,-250.75"/>
+</g>
+<g id="node90" class="node">
+<title>n_t_launch</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="101.92,-166.8 46,-166.8 46,-145.2 105.52,-145.2 105.52,-163.2 101.92,-166.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="101.92,-166.8 101.92,-163.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="105.52,-163.2 101.92,-163.2"/>
+<text text-anchor="start" x="51.76" y="-152.88" font-family="Menlo" font-size="10.00">t_launch</text>
+</g>
+<g id="edge115" class="edge">
+<title>n_t_launch&#45;&gt;n_t_launched</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M105.92,-156C132.67,-156 172.61,-156 202.68,-156"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="202.58,-157.75 207.58,-156 202.58,-154.25 202.58,-157.75"/>
+</g>
+<g id="node91" class="node">
+<title>n_t_stock_build</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="116.92,-197.8 31,-197.8 31,-176.2 120.52,-176.2 120.52,-194.2 116.92,-197.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="116.92,-197.8 116.92,-194.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="120.52,-194.2 116.92,-194.2"/>
+<text text-anchor="start" x="36.76" y="-183.88" font-family="Menlo" font-size="10.00">t_stock_build</text>
+</g>
+<g id="edge117" class="edge">
+<title>n_t_stock_build&#45;&gt;n_t_cmo_ok</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.74,-195.14C148.27,-200.24 183.26,-206.72 208.95,-211.48"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="208.36,-213.15 213.6,-212.34 209,-209.71 208.36,-213.15"/>
+</g>
+<g id="edge118" class="edge">
+<title>n_t_stock_build&#45;&gt;n_t_pre</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.74,-187C149.13,-187 185.47,-187 211.34,-187"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.32,-188.75 216.32,-187 211.32,-185.25 211.32,-188.75"/>
+</g>
+<g id="node92" class="node">
+<title>n_cmo2_ready_r</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="113.92,-920.8 34,-920.8 34,-899.2 117.52,-899.2 117.52,-917.2 113.92,-920.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="113.92,-920.8 113.92,-917.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="117.52,-917.2 113.92,-917.2"/>
+<text text-anchor="start" x="39.76" y="-906.88" font-family="Menlo" font-size="10.00">cmo2_ready_r</text>
+</g>
+<g id="edge79" class="edge">
+<title>n_cmo2_ready_r&#45;&gt;n_cmo2</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M117.72,-905.94C129.65,-904.43 142.66,-902.47 154.52,-900 173.73,-896 194.83,-889.97 211.72,-884.72"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="212.2,-886.4 216.45,-883.23 211.15,-883.06 212.2,-886.4"/>
+</g>
+<g id="edge80" class="edge">
+<title>n_cmo2_ready_r&#45;&gt;n_cmo2_ready</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M118.01,-906.29C127.17,-903.87 136.29,-900.04 143.52,-894 152.84,-886.22 151.48,-880.75 154.52,-869 160.61,-845.45 151.41,-780.49 164.52,-760 173.87,-745.39 189.63,-734.89 204.67,-727.65"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.11,-729.37 208.93,-725.7 203.65,-726.19 205.11,-729.37"/>
+</g>
+<g id="node93" class="node">
+<title>n_cmo2_sign</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="104.92,-858.8 43,-858.8 43,-837.2 108.52,-837.2 108.52,-855.2 104.92,-858.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="104.92,-858.8 104.92,-855.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="108.52,-855.2 104.92,-855.2"/>
+<text text-anchor="start" x="48.76" y="-844.88" font-family="Menlo" font-size="10.00">cmo2_sign</text>
+</g>
+<g id="edge81" class="edge">
+<title>n_cmo2_sign&#45;&gt;n_cmo2_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M108.91,-847.61C126.35,-845.42 146.03,-839.2 154.52,-823 167.35,-798.51 146.16,-719.67 164.52,-699 173.45,-688.95 186.79,-684.16 200,-682.12"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="199.95,-683.89 204.69,-681.53 199.51,-680.42 199.95,-683.89"/>
+</g>
+<g id="node94" class="node">
+<title>n_cmo_exit_k</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="107.92,-796.8 40,-796.8 40,-775.2 111.52,-775.2 111.52,-793.2 107.92,-796.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="107.92,-796.8 107.92,-793.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="111.52,-793.2 107.92,-793.2"/>
+<text text-anchor="start" x="45.76" y="-782.88" font-family="Menlo" font-size="10.00">cmo_exit_k</text>
+</g>
+<g id="edge82" class="edge">
+<title>n_cmo_exit_k&#45;&gt;n_cmo</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.68,-790.04C122.46,-792.39 133.99,-796.11 143.52,-802 155.86,-809.63 152.04,-819.6 164.52,-827 178.63,-835.37 196.37,-839.44 211.52,-841.38"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.32,-843.12 216.48,-841.94 211.71,-839.64 211.32,-843.12"/>
+</g>
+<g id="edge83" class="edge">
+<title>n_cmo_exit_k&#45;&gt;n_cmo_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.7,-785.36C123.39,-783.34 135.48,-778.96 143.52,-770 149.66,-763.16 158.26,-612.72 164.52,-606 174.36,-595.44 189.06,-590.76 203.17,-588.96"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="203,-590.73 207.8,-588.49 202.65,-587.25 203,-590.73"/>
+</g>
+<g id="edge84" class="edge">
+<title>n_cmo_exit_k&#45;&gt;n_cmo_ppq</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M112,-791C127.09,-791.08 143.7,-788.08 154.52,-777 171.51,-759.6 148.26,-686.09 164.52,-668 176.19,-655.02 195.19,-650.85 211.71,-650.01"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.35,-651.77 216.3,-649.87 211.25,-648.27 211.35,-651.77"/>
+</g>
+<g id="node95" class="node">
+<title>n_cmo_ready</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="104.92,-889.8 43,-889.8 43,-868.2 108.52,-868.2 108.52,-886.2 104.92,-889.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="104.92,-889.8 104.92,-886.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="108.52,-886.2 104.92,-886.2"/>
+<text text-anchor="start" x="48.76" y="-875.88" font-family="Menlo" font-size="10.00">cmo_ready</text>
+</g>
+<g id="edge85" class="edge">
+<title>n_cmo_ready&#45;&gt;n_cmo</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M108.76,-879.52C123.35,-878.62 140.47,-875.9 154.52,-869 160.16,-866.23 158.98,-861.97 164.52,-859 178.88,-851.31 196.49,-847.3 211.49,-845.22"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.65,-846.96 216.39,-844.61 211.22,-843.49 211.65,-846.96"/>
+</g>
+<g id="edge86" class="edge">
+<title>n_cmo_ready&#45;&gt;n_cmo_ppq</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M108.81,-878.68C121.31,-876.87 134.72,-872.55 143.52,-863 165.16,-839.52 150.79,-823.71 154.52,-792 156.13,-778.27 155.34,-678.33 164.52,-668 176.2,-654.86 195.39,-650.72 212.01,-649.94"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.67,-651.7 216.63,-649.82 211.59,-648.2 211.67,-651.7"/>
+</g>
+<g id="node96" class="node">
+<title>n_cmo_ready_resigned</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="131.92,-827.8 16,-827.8 16,-806.2 135.52,-806.2 135.52,-824.2 131.92,-827.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="131.92,-827.8 131.92,-824.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="135.52,-824.2 131.92,-824.2"/>
+<text text-anchor="start" x="21.76" y="-813.88" font-family="Menlo" font-size="10.00">cmo_ready_resigned</text>
+</g>
+<g id="edge87" class="edge">
+<title>n_cmo_ready_resigned&#45;&gt;n_cmo</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M135.77,-826.17C161.3,-830.13 190.2,-834.62 211.72,-837.96"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.32,-839.67 216.53,-838.71 211.86,-836.21 211.32,-839.67"/>
+</g>
+<g id="edge88" class="edge">
+<title>n_cmo_ready_resigned&#45;&gt;n_cmo_ppq</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M135.47,-805.8C138.29,-804.38 140.99,-802.79 143.52,-801 150.87,-795.8 151.6,-792.51 154.52,-784 162.91,-759.52 147.28,-687.29 164.52,-668 176.23,-654.89 195.43,-650.76 212.03,-649.96"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.7,-651.72 216.65,-649.85 211.61,-648.22 211.7,-651.72"/>
+</g>
+<g id="node97" class="node">
+<title>n_cmo_sign_now</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="113.92,-703.8 34,-703.8 34,-682.2 117.52,-682.2 117.52,-700.2 113.92,-703.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="113.92,-703.8 113.92,-700.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="117.52,-700.2 113.92,-700.2"/>
+<text text-anchor="start" x="39.76" y="-689.88" font-family="Menlo" font-size="10.00">cmo_sign_now</text>
+</g>
+<g id="edge89" class="edge">
+<title>n_cmo_sign_now&#45;&gt;n_cmo_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M117.88,-690.11C127.26,-687.69 136.52,-683.65 143.52,-677 155.45,-665.67 152.38,-617.1 164.52,-606 174.9,-596.51 189.27,-591.99 202.96,-590"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="203.07,-591.75 207.83,-589.42 202.65,-588.27 203.07,-591.75"/>
+</g>
+<g id="node98" class="node">
+<title>n_cmo_sign_wait</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="116.92,-672.8 31,-672.8 31,-651.2 120.52,-651.2 120.52,-669.2 116.92,-672.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="116.92,-672.8 116.92,-669.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="120.52,-669.2 116.92,-669.2"/>
+<text text-anchor="start" x="36.76" y="-658.88" font-family="Menlo" font-size="10.00">cmo_sign_wait</text>
+</g>
+<g id="edge90" class="edge">
+<title>n_cmo_sign_wait&#45;&gt;n_cmo_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.85,-657.05C128.96,-654.64 136.94,-651.12 143.52,-646 159.37,-633.67 148.45,-618.04 164.52,-606 175.48,-597.79 189.59,-593.51 202.87,-591.35"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="202.85,-593.12 207.56,-590.7 202.36,-589.66 202.85,-593.12"/>
+</g>
+<g id="node99" class="node">
+<title>n_cmo_terminate</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="116.92,-765.8 31,-765.8 31,-744.2 120.52,-744.2 120.52,-762.2 116.92,-765.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="116.92,-765.8 116.92,-762.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="120.52,-762.2 116.92,-762.2"/>
+<text text-anchor="start" x="36.76" y="-751.88" font-family="Menlo" font-size="10.00">cmo_terminate</text>
+</g>
+<g id="edge91" class="edge">
+<title>n_cmo_terminate&#45;&gt;n_cmo</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.68,-759.11C128.99,-761.57 137.09,-765.32 143.52,-771 163.44,-788.6 144.28,-809.77 164.52,-827 177.41,-837.97 195.72,-842.17 211.54,-843.54"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.22,-845.27 216.33,-843.85 211.45,-841.78 211.22,-845.27"/>
+</g>
+<g id="edge92" class="edge">
+<title>n_cmo_terminate&#45;&gt;n_cmo_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.93,-752.06C129.43,-749.55 137.53,-745.48 143.52,-739 153.67,-728.01 154.16,-616.8 164.52,-606 174.34,-595.76 188.73,-591.1 202.6,-589.21"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="202.77,-590.95 207.55,-588.68 202.4,-587.47 202.77,-590.95"/>
+</g>
+<g id="edge93" class="edge">
+<title>n_cmo_terminate&#45;&gt;n_cmo_ppq</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M120.83,-752.63C134.07,-749.5 147.04,-743.43 154.52,-732 170.29,-707.91 144.61,-688.79 164.52,-668 176.49,-655.5 195.28,-651.31 211.6,-650.33"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.65,-652.08 216.58,-650.15 211.52,-648.58 211.65,-652.08"/>
+</g>
+<g id="node100" class="node">
+<title>n_l2_approve_after</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="125.92,-641.8 22,-641.8 22,-620.2 129.52,-620.2 129.52,-638.2 125.92,-641.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="125.92,-641.8 125.92,-638.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="129.52,-638.2 125.92,-638.2"/>
+<text text-anchor="start" x="27.76" y="-627.88" font-family="Menlo" font-size="10.00">l2_approve_after</text>
+</g>
+<g id="edge103" class="edge">
+<title>n_l2_approve_after&#45;&gt;n_l2_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M129.77,-622.88C134.69,-620.81 139.38,-618.22 143.52,-615 159.37,-602.67 148.45,-587.04 164.52,-575 176.37,-566.12 191.89,-561.84 206.09,-559.87"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.96,-561.65 210.72,-559.32 205.55,-558.17 205.96,-561.65"/>
+</g>
+<g id="node101" class="node">
+<title>n_l2_approve_now</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="119.92,-610.8 28,-610.8 28,-589.2 123.52,-589.2 123.52,-607.2 119.92,-610.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="119.92,-610.8 119.92,-607.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="123.52,-607.2 119.92,-607.2"/>
+<text text-anchor="start" x="33.76" y="-596.88" font-family="Menlo" font-size="10.00">l2_approve_now</text>
+</g>
+<g id="edge104" class="edge">
+<title>n_l2_approve_now&#45;&gt;n_l2_active</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M104.81,-588.73C119.18,-583.31 137.08,-577.12 153.52,-573 170.57,-568.72 189.78,-565.53 206.11,-563.28"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="205.91,-565.08 210.63,-562.68 205.44,-561.61 205.91,-565.08"/>
+</g>
+<g id="node102" class="node">
+<title>n_l2_ready_r</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="107.92,-734.8 40,-734.8 40,-713.2 111.52,-713.2 111.52,-731.2 107.92,-734.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="107.92,-734.8 107.92,-731.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="111.52,-731.2 107.92,-731.2"/>
+<text text-anchor="start" x="45.76" y="-720.88" font-family="Menlo" font-size="10.00">l2_ready_r</text>
+</g>
+<g id="edge106" class="edge">
+<title>n_l2_ready_r&#45;&gt;n_line2</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.68,-725.89C122.96,-728.08 134.79,-732.24 143.52,-740 163.7,-757.93 143.91,-779.57 164.52,-797 177.42,-807.91 195.73,-811.88 211.54,-813.03"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.25,-814.77 216.33,-813.28 211.43,-811.27 211.25,-814.77"/>
+</g>
+<g id="edge105" class="edge">
+<title>n_l2_ready_r&#45;&gt;n_l2_ready</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M111.98,-722.43C123.28,-720.27 135.05,-716.04 143.52,-708 167.39,-685.35 140.24,-659.21 164.52,-637 176.46,-626.08 193.7,-621.73 209.08,-620.26"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="208.88,-622.03 213.74,-619.92 208.62,-618.54 208.88,-622.03"/>
+</g>
+<g id="node103" class="node">
+<title>n_k_short_ever</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="113.92,-99.8 34,-99.8 34,-78.2 117.52,-78.2 117.52,-96.2 113.92,-99.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="113.92,-99.8 113.92,-96.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="117.52,-96.2 113.92,-96.2"/>
+<text text-anchor="start" x="39.76" y="-85.88" font-family="Menlo" font-size="10.00">k_short_ever</text>
+</g>
+<g id="edge100" class="edge">
+<title>n_k_short_ever&#45;&gt;n_k_short_any</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M117.79,-98.58C132.51,-101.96 149.24,-105.72 164.52,-109 176.03,-111.47 188.49,-114.03 200.07,-116.35"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="199.45,-118.01 204.7,-117.28 200.14,-114.58 199.45,-118.01"/>
+</g>
+<g id="node104" class="node">
+<title>n_k_short_launch</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="119.92,-68.8 28,-68.8 28,-47.2 123.52,-47.2 123.52,-65.2 119.92,-68.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="119.92,-68.8 119.92,-65.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="123.52,-65.2 119.92,-65.2"/>
+<text text-anchor="start" x="33.76" y="-54.88" font-family="Menlo" font-size="10.00">k_short_launch</text>
+</g>
+<g id="edge101" class="edge">
+<title>n_k_short_launch&#45;&gt;n_k_short</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M123.62,-68.91C136.83,-71.93 151.23,-75.15 164.52,-78 180.08,-81.34 197.4,-84.84 211.9,-87.72"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.35,-89.39 216.59,-88.64 212.03,-85.96 211.35,-89.39"/>
+</g>
+<g id="node105" class="node">
+<title>n_t_short_launch</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="119.92,-37.8 28,-37.8 28,-16.2 123.52,-16.2 123.52,-34.2 119.92,-37.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="119.92,-37.8 119.92,-34.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="123.52,-34.2 119.92,-34.2"/>
+<text text-anchor="start" x="33.76" y="-23.88" font-family="Menlo" font-size="10.00">t_short_launch</text>
+</g>
+<g id="edge116" class="edge">
+<title>n_t_short_launch&#45;&gt;n_t_short</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M123.83,-37.12C151.82,-43.14 186.62,-50.63 211.58,-56"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.12,-57.69 216.37,-57.03 211.85,-54.26 211.12,-57.69"/>
+</g>
+<g id="node106" class="node">
+<title>n_planner</title>
+<polygon fill="#fbf6ec" stroke="#b5740a" stroke-width="1.1" points="99.16,-1622.8 48.76,-1622.8 48.76,-1601.2 102.76,-1601.2 102.76,-1619.2 99.16,-1622.8"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="99.16,-1622.8 99.16,-1619.2"/>
+<polyline fill="none" stroke="#b5740a" stroke-width="1.1" points="102.76,-1619.2 99.16,-1619.2"/>
+<text text-anchor="start" x="54.76" y="-1608.88" font-family="Menlo" font-size="10.00">planner</text>
+</g>
+<g id="edge107" class="edge">
+<title>n_planner&#45;&gt;n_cmo2_free</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.91,-1609.5C130.58,-1606.86 174.52,-1602.66 206.04,-1599.64"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="206,-1601.4 210.81,-1599.19 205.67,-1597.92 206,-1601.4"/>
+</g>
+<g id="edge108" class="edge">
+<title>n_planner&#45;&gt;n_cmo_free</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.95,-1601.65C120.23,-1595.1 143.49,-1586.8 164.52,-1581 178.9,-1577.04 195,-1573.62 208.93,-1570.97"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="209.23,-1572.69 213.83,-1570.05 208.59,-1569.25 209.23,-1572.69"/>
+</g>
+<g id="edge109" class="edge">
+<title>n_planner&#45;&gt;n_l2_free</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.98,-1621.97C120.28,-1628.3 143.53,-1636.33 164.52,-1642 179.88,-1646.15 197.18,-1649.75 211.72,-1652.48"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="211.19,-1654.16 216.42,-1653.35 211.82,-1650.72 211.19,-1654.16"/>
+</g>
+<g id="edge110" class="edge">
+<title>n_planner&#45;&gt;n_own_free</title>
+<path fill="none" stroke="#b5740a" stroke-width="0.9" stroke-dasharray="5,2" d="M102.91,-1614.34C131.45,-1616.9 177.27,-1621.01 208.95,-1623.85"/>
+<polygon fill="#b5740a" stroke="#b5740a" stroke-width="0.9" points="208.59,-1625.57 213.73,-1624.27 208.9,-1622.08 208.59,-1625.57"/>
+</g>
+</g>
+</svg>

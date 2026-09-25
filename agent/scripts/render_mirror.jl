@@ -12,6 +12,8 @@
 #   figures/model_map.svg the model at the level a reader can hold: every place, transition and rule
 #                         falls in exactly one named group, and the arrows are the model's own arcs,
 #                         aggregated, plus the rules' writes and the rates that read the live state
+#   figures/model_net.svg the same model with every element drawn, inside the same groups: the
+#                         engine's `network_graph` extraction, styled, plus the rules from the document
 #
 # Two refusals make it honest rather than illustrative. A quote that is not a substring of that
 # operator turn in the session transcript is an error, so a mirror cannot put words in the operator's
@@ -32,6 +34,8 @@
 # so MIRROR.md is imported into a page section with `"file"` and renders there unchanged.
 
 using JSON
+using ReactiveDynamics
+const RD = ReactiveDynamics
 
 include(joinpath(@__DIR__, "chartkit.jl"))
 const MK = ChartKit
@@ -254,6 +258,77 @@ function model_map(m::Model, groups)
     return String(take!(io)), (length(m.places), length(m.trans), length(m.rules))
 end
 
+# ── the full net: every place, transition and rule, laid out inside the same groups ───────────────
+#
+# The structure is the engine's own Layer A extraction (`network_graph`, src/visualize.jl): the
+# places, the transitions and every arc with its multiplicity and modality, read off the built model.
+# Only the styling is ours. `draw_network` renders the same extraction unstyled and without the rules,
+# which carry the model's calendar and decisions, so they are added here from the document.
+
+function net_map(ng, m::Model, groups)
+    po = assign(groups, "places", [string(p.name) for p in ng.places])
+    to = assign(groups, "transitions", [string(t.name) for t in ng.transitions])
+    ro = assign(groups, "rules", collect(keys(m.rules)))
+    owner = merge(po, to, ro)
+    node(id) = "\"n_$(id)\""
+
+    function tlabel(id)
+        t = m.trans[id]
+        bits = String[]
+        ps = get(t, "prob_of_success", 1.0)
+        ps isa Real && ps != 1.0 && push!(bits, "p " * fmt(ps))
+        get(t, "cycletime", 0) in (0, 1) || push!(bits, fmt(t["cycletime"]) * " mo")
+        haskey(t, "priority") && push!(bits, "prio " * fmt(t["priority"]))
+        sub = isempty(bits) ? "" : "<BR/><FONT POINT-SIZE=\"8\" COLOR=\"$(MK.GREY)\">$(join(bits, " · "))</FONT>"
+        return "<<FONT FACE=\"Menlo\" POINT-SIZE=\"10\">$(dotesc(id))</FONT>$sub>"
+    end
+    function plabel(id)
+        p = m.places[id]
+        init = get(p, "init", 0)
+        sub = init isa Real && init != 0 && abs(init) < 1.0e9 ? "<BR/><FONT POINT-SIZE=\"8\" COLOR=\"$(MK.GREY)\">starts $(fmt(init))</FONT>" : ""
+        return "<<FONT FACE=\"Menlo\" POINT-SIZE=\"10\">$(dotesc(id))</FONT>$sub>"
+    end
+
+    io = IOBuffer()
+    println(io, "digraph net {")
+    println(io, "  graph [rankdir=LR, nodesep=0.12, ranksep=0.5, fontname=\"Helvetica\", bgcolor=\"white\", pad=0.2, newrank=true];")
+    println(io, "  node [fontname=\"Helvetica\", margin=\"0.08,0.03\", penwidth=1.1, height=0.3];")
+    println(io, "  edge [arrowsize=0.5, penwidth=0.9, fontname=\"Helvetica\", fontsize=9, fontcolor=\"$(MK.GREY)\"];")
+    for g in groups
+        ids = sort([id for (id, o) in owner if o == g["id"]])
+        isempty(ids) && continue
+        frame = g["kind"] == "places" ? MK.ACCENT : g["kind"] == "transitions" ? MK.GREY_LT : MK.AMBER
+        println(io, "  subgraph \"cluster_$(g["id"])\" {")
+        println(io, "    label=<<B><FONT POINT-SIZE=\"12\">$(dotesc(g["label"]))</FONT></B>>; labeljust=l; style=\"rounded$(g["kind"] == "rules" ? ",dashed" : "")\"; color=\"$frame\"; fontcolor=\"$(MK.INK)\";")
+        for id in ids
+            if g["kind"] == "places"
+                println(io, "    $(node(id)) [shape=box, style=\"rounded\", color=\"$(MK.ACCENT)\", label=$(plabel(id))];")
+            elseif g["kind"] == "transitions"
+                println(io, "    $(node(id)) [shape=box, style=\"filled\", fillcolor=\"$(MK.INSET)\", color=\"$(MK.HAIR)\", label=$(tlabel(id))];")
+            else
+                println(io, "    $(node(id)) [shape=note, style=\"filled\", fillcolor=\"#FBF6EC\", color=\"$(MK.AMBER)\", label=<<FONT FACE=\"Menlo\" POINT-SIZE=\"10\">$(dotesc(id))</FONT>>];")
+            end
+        end
+        println(io, "  }")
+    end
+    seen = Set{Tuple{String, String}}()
+    for a in ng.arcs
+        f, t = string(a.from), string(a.to)
+        (f, t) in seen && continue
+        push!(seen, (f, t))
+        conserved = :conserved in a.modality
+        lbl = a.multiplicity == 1.0 ? "" : ", label=\"$(fmt(a.multiplicity))\""
+        println(io, "  $(node(f)) -> $(node(t)) [color=\"$(conserved ? MK.ACCENT : MK.INK)\"$lbl];")
+    end
+    for (id, r) in sort(collect(m.rules); by = first)
+        for p in sort(collect(writes(r["action"], "place")))
+            haskey(po, p) && println(io, "  $(node(id)) -> $(node(p)) [style=dashed, color=\"$(MK.AMBER)\"];")
+        end
+    end
+    println(io, "}")
+    return String(take!(io))
+end
+
 function run_dot(src, out)
     svg = read(pipeline(IOBuffer(src), `dot -Tsvg`), String)
     svg = replace(svg, r"<\?xml.*?\?>\s*"s => "", r"<!DOCTYPE.*?>\s*"s => "", r"<!--.*?-->\s*"s => "")
@@ -276,6 +351,10 @@ function mirror_main(args)
     svgf = joinpath(study, "figures", "model_map.svg")
     src, (np, nt, nr) = model_map(m, spec["groups"])
     run_dot(src, svgf)
+    netf = joinpath(study, "figures", "model_net.svg")
+    modelf = joinpath(study, spec["model"])
+    ng = RD.network_graph(RD.from_json_model(read(modelf, String); seed = 1))
+    run_dot(net_map(ng, m, spec["groups"]), netf)
 
     io = IOBuffer()
     println(io, spec["intro"], "\n")
@@ -283,6 +362,12 @@ function mirror_main(args)
         io, "!figure ", svgf, " | ", spec["caption"], " Generated from `", spec["model"], "`: all ", np, " places, ", nt,
         " transitions and ", nr, " rules, each in exactly one box. Solid arrows are the model's arcs (the number is how many), dotted arrows are rates that read the live state, dashed arrows are rules setting a marking, or a parameter that a rate reads.\n"
     )
+    println(io, "+++~ The same model, every element: ", np, " places, ", nt, " transitions and ", nr, " rules\n")
+    println(
+        io, "!figure ", netf, " | Every place (teal outline), transition (grey) and rule (amber note) of `", spec["model"],
+        "`, inside the boxes of the map above. The places, transitions and arcs are the engine's own extraction (`network_graph`); a teal arc is a resource the transition returns when it completes (`conserved`), a black arc is consumed or produced, and the number is the multiplicity. A transition's second line is its success probability, duration when longer than a month, and priority. Dashed arrows are rules setting a marking.\n"
+    )
+    println(io, "+++\n")
     nopen = get(spec, "open", length(spec["rows"]))
     for (i, r) in enumerate(spec["rows"])
         check_quote(turns, r["turn"], r["quote"])
@@ -297,7 +382,7 @@ function mirror_main(args)
     println(io, "*Generated by `julia --project=. agent/scripts/render_mirror.jl ", specf, "`. Every quote is checked verbatim against the transcript, and every element is printed from the model document.*")
     mdf = joinpath(study, "MIRROR.md")
     write(mdf, String(take!(io)))
-    println("render_mirror: wrote $mdf ($(length(spec["rows"])) quotes, all verbatim) and $svgf")
+    println("render_mirror: wrote $mdf ($(length(spec["rows"])) quotes, all verbatim), $svgf and $netf")
     return 0
 end
 
