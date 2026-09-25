@@ -120,7 +120,7 @@ end
 # evaluating the layer needs and exactly what a reader evaluating the OFFER does not. Same four steps,
 # same refusal branch, stated in the language of the decision instead of the language of the tool.
 const PROMISE = [
-    ("Describe the decision", "A conversation, not a specification: the choice, what drives it, how the parts interact over time."),
+    ("Describe the decision", "A conversation: the choice, what drives it, how the parts interact. If arithmetic answers it, we stop here."),
     ("We build your operation", "A running model of how it behaves — shared capacity, delays, feedback, decisions taken mid-course, cash."),
     ("We try to break it", "Nine checks ask whether the model does what you said the business does. A failure blocks the answer."),
     ("A number you can defend", "A central estimate with the evidence behind it — and a seed that reproduces it exactly."),
@@ -170,7 +170,7 @@ function promise_svg()
     )
     push!(
         parts, CK.txt(
-            bx + 14, ybr + 34, "A spreadsheet is the right tool for some questions, and we say so when it is.";
+            bx + 14, ybr + 34, "It names the check that failed and what it means: fix the model, or revisit the brief.";
             size = 9.2, fill = CK.GREY
         )
     )
