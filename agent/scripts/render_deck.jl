@@ -23,6 +23,8 @@
 #                   "text": "<the page grammar>",
 #                   "columns": [ "<grammar>", … ],        # side-by-side bodies instead of `text`
 #                   "figure": "<path to an .svg>", "caption": …,   # with `text`: text left, figure right
+#                   "scroll": true,         # a figure too tall for the sheet scrolls inside it at full
+#                                           # width (the PDF, one page per slide, shows its top)
 #                   "turns": [ { "role": "user"|"assistant", "text": …, "call": "<one tool line>" } ],
 #                   "notes": "<speaker notes — kept in the HTML as a comment, never shown>" } ] }
 
@@ -55,6 +57,10 @@ body { margin: 0; background: #1A1A1A; font-family: var(--display); color: var(-
 .slide figure.fig { margin: 0; }
 .slide figure.fig svg { width: 100%; height: auto; max-height: 480px; display: block; }
 .slide .content.solo-fig figure.fig svg { max-height: 530px; }
+.slide .content.scroll-fig > .col.prose { flex: 0.62; font-size: 17px; }
+.slide .content > .col.fig.scroll { flex: 1.6; justify-content: flex-start; min-height: 0; }
+.slide .col.fig.scroll .scrollbox { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--hair); padding: 6px 10px; }
+.slide .col.fig.scroll figure.fig svg { max-height: none; }
 .slide figcaption, .slide .caption { font-size: 14px; color: var(--grey); margin-top: 8px; line-height: 1.4; }
 .slide .foot { position: absolute; left: 72px; right: 72px; bottom: 24px; display: flex; justify-content: space-between; font-size: 12px; color: var(--grey-lt); font-family: var(--mono); letter-spacing: .04em; }
 .slide .foot b { color: var(--ink); font-family: var(--display); letter-spacing: 0; }
@@ -163,12 +169,14 @@ function slide_html(s, n, total, footer)
     fig = string(get(s, "figure", ""))
     turns = get(s, "turns", [])
     cap = string(get(s, "caption", ""))
+    scroll = get(s, "scroll", false) === true
     figcol = isempty(fig) ? "" :
-        "<div class=\"col fig\">" * figure_html(fig) *
+        "<div class=\"col fig$(scroll ? " scroll" : "")\">" *
+        (scroll ? "<div class=\"scrollbox\">" * figure_html(fig) * "</div>" : figure_html(fig)) *
         (isempty(cap) ? "" : "<div class=\"caption\">" * inline(cap) * "</div>") * "</div>"
 
     solo = !isempty(fig) && isempty(text) && isempty(cols) && isempty(turns)
-    println(io, "<div class=\"content", solo ? " solo-fig" : "", "\">")
+    println(io, "<div class=\"content", solo ? " solo-fig" : scroll ? " scroll-fig" : "", "\">")
     if !isempty(cols)
         for c in cols
             println(io, "<div class=\"col prose\">", body_html(string(c)), "</div>")
