@@ -406,11 +406,166 @@ function architecture_svg()
     return CK.shell(join(parts), yeng + 58 + 8; title = title, subtitle = subtitle)
 end
 
+# ── figure 5: who does what, and what passes between them ─────────────────────────────────────────
+
+# phase · skill · its job, in one clause · the file it leaves · the rdx verbs it calls · its gate. The
+# architecture figure says what the copilot is made of; this one says how the parts hand work to each
+# other, which is the question an engineer asks next.
+const ROLES = [
+    (
+        "FRAME", "rd-frame", "interviews the owner; does the qualifying arithmetic",
+        "BRIEF.md", "no rdx: plain arithmetic", "something binds, or stop here",
+    ),
+    (
+        "AUTHOR", "rd-author", "writes one JSON model per option, calibrates it",
+        "model.rdj.json + arm_*", "validate · run", "zero validate errors; each arm differs only in its lever",
+    ),
+    (
+        "DIAGNOSE", "rd-doctor", "tries to break the model before anyone trusts it",
+        "DOCTOR.md", "diagnose", "nine checks pass, or each failure explained",
+    ),
+    (
+        "REPORT", "rd-report", "measures the options against each other",
+        "FINDINGS.md → REPORT.html", "effect · ensemble · draw", "every number carries a spread and a seed",
+    ),
+]
+
+# the planned pieces, each attached to the phase it serves: (phase, name, what it does, W-id)
+const ATTACH = [
+    ("AUTHOR", "rd-modeler", "a subagent: runs write → validate → repair in its own context, hands back only the model", "W9"),
+    ("AUTHOR", "validate hook", "re-checks every *.rdj.json write; no prompt can skip it", "W10"),
+    ("REPORT", "rd-critic", "a subagent with fresh context: the model against the brief, the prose against the numbers", "W9"),
+]
+
+function roles_svg()
+    title = "Inside the copilot: who does what, and what passes between them"
+    subtitle = "One orchestrator, four phase skills that each leave a file, and one CLI underneath. Work passes between the phases only as files on disk, which is what makes each one re-runnable and auditable."
+    head = CK.head_height(title, subtitle)
+    parts = [CK.head_block(title, subtitle)]
+
+    # the orchestrator, and the door a user comes in through
+    y = head + 16.0
+    push!(parts, CK.rect(PAD, y, W - 2PAD, 44; fill = "#F7FBFB", stroke = CK.ACCENT, sw = 1.4))
+    push!(parts, CK.txt(PAD + 14, y + 18, "rd-study"; size = 11.4, family = CK.MONO, weight = 600, fill = CK.ACCENT_D))
+    push!(parts, CK.txt(PAD + 86, y + 18, "the orchestrator"; size = 11.0, weight = 600))
+    push!(
+        parts, CK.txt(
+            PAD + 14, y + 34,
+            "reads the study directory, resumes at the phase it implies, enforces every gate, never skips a phase";
+            size = 8.8, fill = CK.GREY
+        )
+    )
+    cw = CK.tw("/rd:study command · W12", 8.4; mono = true) + 12
+    push!(parts, chip(W - PAD - 12 - cw, y + 8, "/rd:study command · W12"))
+
+    # the four phase skills
+    gap = 12.0
+    colw = (W - 2PAD - 3gap) / 4
+    yc = y + 44 + 26
+    ch = 152.0
+    for i in 1:4
+        push!(parts, arrow_d(PAD + (i - 0.5) * (colw + gap) - gap / 2, y + 47, yc))
+    end
+    for (i, (phase, skill, job, writes, calls, gate)) in enumerate(ROLES)
+        x = PAD + (i - 1) * (colw + gap)
+        push!(parts, CK.rect(x, yc, colw, ch; fill = CK.PAPER, stroke = CK.HAIR, sw = 1.0))
+        push!(parts, CK.rect(x, yc, colw, 2.5; fill = i == 4 ? CK.INK : CK.ACCENT))
+        push!(parts, CK.txt(x + 11, yc + 20, phase; size = 11.6, weight = 600))
+        push!(parts, CK.txt(x + colw - 11, yc + 19, skill; size = 8.6, family = CK.MONO, fill = CK.ACCENT_D, anchor = "end"))
+        for (j, l) in enumerate(CK.wrap_lines(job, colw - 22, 8.8; maxlines = 2))
+            push!(parts, CK.txt(x + 11, yc + 36 + 10.5 * (j - 1), l; size = 8.8, fill = CK.INK))
+        end
+        rows = (("writes", writes, CK.AMBER, true), ("calls", calls, CK.ACCENT_D, true), ("gate", gate, CK.GREY, false))
+        yy = yc + 68
+        for (lab, val, col, mono) in rows
+            push!(parts, CK.txt(x + 11, yy, uppercase(lab); size = 7.4, family = CK.MONO, fill = CK.GREY_LT))
+            for (j, l) in enumerate(CK.wrap_lines(val, colw - 22, mono ? 9.6 : 8.4; maxlines = 2))
+                push!(parts, CK.txt(x + 11, yy + 11 + 10.2 * (j - 1), l; size = 8.4, family = mono ? CK.MONO : CK.SANS, fill = col))
+            end
+            yy += lab == "gate" ? 0 : 27
+        end
+        i == 4 || push!(parts, arrow_r(x + colw + 1, x + colw + gap - 1, yc + 26))
+    end
+
+    # the one backward edge: a failed check returns the work to AUTHOR, never forward to REPORT
+    xa = PAD + (colw + gap) + colw / 2
+    xd = PAD + 2 * (colw + gap) + colw / 2
+    yl = yc + ch + 16
+    push!(
+        parts, "<path d=\"M $xd $(yc + ch) L $xd $yl L $xa $yl L $xa $(yc + ch + 6)\" fill=\"none\" stroke=\"$(CK.ROSE)\" stroke-width=\"1.4\"/>" *
+            "<path d=\"M $(xa - 4) $(yc + ch + 7) L $xa $(yc + ch + 1) L $(xa + 4) $(yc + ch + 7) Z\" fill=\"$(CK.ROSE)\"/>"
+    )
+    push!(
+        parts, CK.txt(
+            (xa + xd) / 2, yl + 12, "a failed check sends the model back to AUTHOR, with the check that failed";
+            size = 8.6, fill = CK.ROSE, anchor = "middle"
+        )
+    )
+
+    # the planned attachments, each under the phase it serves
+    ya = yl + 26
+    push!(parts, CK.txt(PAD, ya - 5, "PLANNED, ATTACHED TO THE PHASE THEY SERVE"; size = 8.0, family = CK.MONO, fill = CK.GREY_LT))
+    ah = 80.0
+    # AUTHOR carries two attachments, so they span its column and the one to its left
+    slots = [(PAD, 2colw + gap), (PAD + 2 * (colw + gap), colw), (PAD + 3 * (colw + gap), colw)]
+    for (k, (phase, name, what, wid)) in enumerate(ATTACH)
+        x, w = slots[k]
+        push!(parts, "<rect x=\"$x\" y=\"$ya\" width=\"$w\" height=\"$ah\" fill=\"$(CK.PAPER)\" stroke=\"$(CK.GREY_LT)\" stroke-width=\"1\" stroke-dasharray=\"4 3\"/>")
+        push!(parts, CK.txt(x + 11, ya + 17, name; size = 9.6, family = CK.MONO, weight = 600))
+        push!(parts, CK.txt(x + 11, ya + 30, "SERVES " * phase; size = 7.4, family = CK.MONO, fill = CK.GREY_LT))
+        push!(parts, chip(x + w - 11 - CK.tw(wid, 8.4; mono = true) - 12, ya + 6, wid))
+        for (j, l) in enumerate(CK.wrap_lines(what, w - 22, 8.5; maxlines = 3))
+            push!(parts, CK.txt(x + 11, ya + 45 + 10.5 * (j - 1), l; size = 8.5, fill = CK.GREY))
+        end
+    end
+
+    # two doors onto the same verbs
+    yr = ya + ah + 24
+    push!(parts, arrow_d(W / 2, ya + ah + 3, yr))
+    rw = W - 2PAD
+    push!(parts, CK.rect(PAD, yr, rw, 62; fill = "#F7FBFB", stroke = CK.ACCENT, sw = 1.4))
+    push!(parts, CK.txt(PAD + 14, yr + 19, "rdx"; size = 11.4, family = CK.MONO, weight = 600, fill = CK.ACCENT_D))
+    push!(parts, CK.txt(PAD + 48, yr + 19, "validate · run · diagnose · ensemble · effect · draw"; size = 9.4, family = CK.MONO))
+    push!(parts, chip(W - PAD - 14 - CK.tw("SHIPPED", 8.4; mono = true) - 12, yr + 8, "SHIPPED"; shipped = true))
+    push!(
+        parts, CK.txt(
+            PAD + 14, yr + 36, "Today every skill reaches it through Bash: JSON on stdout, exit 0 ok / 1 findings / 2 error.";
+            size = 8.8, fill = CK.GREY
+        )
+    )
+    push!(
+        parts, CK.txt(
+            PAD + 14, yr + 51, "Next, the same six verbs as MCP tools (rd_validate, rd_run, …) over a warm Julia session, for hosts with no terminal.";
+            size = 8.8, fill = CK.GREY
+        )
+    )
+    push!(parts, chip(W - PAD - 14 - CK.tw("MCP · W8", 8.4; mono = true) - 12, yr + 40, "MCP · W8"))
+
+    yeng = yr + 62 + 22
+    push!(parts, arrow_d(W / 2, yr + 65, yeng))
+    push!(parts, CK.rect(PAD, yeng, W - 2PAD, 44; fill = CK.INK))
+    push!(parts, CK.txt(PAD + 16, yeng + 18, "ReactiveDynamics.jl"; size = 11.2, weight = 600, fill = "#F4F4F2"))
+    push!(
+        parts, CK.txt(
+            PAD + 16, yeng + 34, "validate is pure and returns every problem with its path · (model, seed) fixes a run, byte for byte";
+            size = 8.8, fill = "#C7C7C4"
+        )
+    )
+    push!(
+        parts, CK.txt(
+            W - PAD - 16, yeng + 18, "on AlgebraicAgents.jl";
+            size = 8.4, family = CK.MONO, fill = CK.ACCENT_LT, anchor = "end"
+        )
+    )
+
+    return CK.shell(join(parts), yeng + 44 + 8; title = title, subtitle = subtitle)
+end
+
 # ── build ─────────────────────────────────────────────────────────────────────────────────────────
 
 for (name, svg) in (
         "pipeline" => pipeline_svg(), "promise" => promise_svg(), "surface" => surface_svg(),
-        "architecture" => architecture_svg(),
+        "architecture" => architecture_svg(), "roles" => roles_svg(),
     )
     path = joinpath(FIGDIR, name * ".svg")
     write(path, svg)

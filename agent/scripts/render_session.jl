@@ -36,15 +36,19 @@
 #                  "models": [ { "file": "<a .rdj.json>",  # the formalized model, as an expander: counts in
 #                                "label": …,              #   the summary, the net drawing, then the document
 #                                "svg": "<net .svg>",     #   itself — read at render time, never pasted — or,
-#                                "base": "<a .rdj.json>" } ],  # given `base`, only its diff against that arm
+#                                "base": "<a .rdj.json>",  # given `base`, only its diff against that arm
+#                                "source": true,          #   …plus the whole document after the diff
+#                                "print": false } ],      #   screen only; paper gets one line
 #                  "open": true,                      # optional; leave the tool block expanded
 #                  "files": [ "path (written)", … ],
 #                  "figures": [ { "svg": …, "caption": … } ],
 #                  "figure": "<path to an .svg>" } ],  # one-element alias for `figures`, no caption
 #     "turns": { "file": "<another page>.json",         # …or import another document's transcript,
 #                "pick": [1, 2, 6, 7],                   #   optionally an excerpt of it (1-based)
-#                "elisions": { "6": "…", "end": "…" } },  #   what each cut run contained, keyed by the
+#                "elisions": { "6": "…", "end": "…" },   #   what each cut run contained, keyed by the
 #                                                        #   pick it precedes ("end" for the tail)
+#                "full": "<fold summary>",               #   with `pick`: every turn, in a fold after the
+#                "full_print": "<one line>" },           #   excerpt (screen only; paper gets the line)
 #     "appendix": [ { "title": …, "text": "<markdown-ish>" | "file": "<path to a .md>",
 #                     "stats": [ … ], "figures": [ … ] } ],
 #     "footer": "<markdown-ish>" }
@@ -63,7 +67,8 @@
 # The block grammar in every `text`: paragraphs, `- ` bullets, `1. ` ordered lists, `## `/`### `
 # sub-heads, `| pipe |` tables, ``` fences, `> ` blockquotes, `!figure path.svg | caption` (consecutive
 # lines share a row), and an explicit collapsible — a line `+++ summary text` opens one, a bare `+++`
-# closes it, and the body between goes back through the grammar, so collapsibles nest. Inline: `code`,
+# closes it, and the body between goes back through the grammar, so collapsibles nest (`+++~` opens one
+# that is screen-only: on paper it becomes one line saying what it held). Inline: `code`,
 # **bold**, *italic*, money literals, and [links](https://…) — absolute http(s) only, because a
 # relative link 404s the moment the page is mailed, so anything else stays plain text.
 #
@@ -133,7 +138,9 @@ function body_html(text)
 
         elseif startswith(stripped, "+++")                  # explicit collapsible
             flush_para!()
-            summary = strip(stripped[4:end])
+            # `+++~` is a screen-only fold: on paper it is dropped, and one line says what it held
+            screen = startswith(stripped, "+++~")
+            summary = strip(stripped[(screen ? 5 : 4):end])
             inner = String[]
             depth = 1
             i += 1
@@ -148,8 +155,10 @@ function body_html(text)
                 push!(inner, lines[i]); i += 1
             end
             i += 1
-            println(io, "<details class=\"fold\"><summary>", inline(isempty(summary) ? "details" : summary), "</summary>")
+            summary = isempty(summary) ? "details" : summary
+            println(io, "<details class=\"fold", screen ? " screen" : "", "\"><summary>", inline(summary), "</summary>")
             println(io, "<div class=\"fold-body\">", body_html(join(inner, "\n")), "</div></details>")
+            screen && println(io, "<p class=\"print-only\">In the screen version of this page: ", inline(summary), ".</p>")
 
         elseif startswith(stripped, "### ") || startswith(stripped, "## ")   # sub-heads
             flush_para!()
@@ -368,8 +377,9 @@ function models_html(models)
         )
         label = string(get(m, "label", basename(f)))
         base = string(get(m, "base", ""))
+        screen = get(m, "print", true) === false
         println(
-            io, "<details class=\"model\"><summary><span class=\"tk\">model</span> ", inline(label),
+            io, "<details class=\"model", screen ? " screen" : "", "\"><summary><span class=\"tk\">model</span> ", inline(label),
             " <span class=\"mc\">", esc(counts), "</span></summary><div class=\"model-body\">"
         )
         svg = string(get(m, "svg", ""))
@@ -381,16 +391,21 @@ function models_html(models)
                 (
                     startswith(l, "+") && !startswith(l, "+++") ? "<ins>$(esc(l))</ins>" :
                         startswith(l, "-") && !startswith(l, "---") ? "<del>$(esc(l))</del>" : esc(l)
-                    for l in lines
+                        for l in lines
                 ), "\n"
             )
             println(io, "<div class=\"mlabel\">the whole difference from <code>", esc(basename(base)), "</code></div>")
             println(io, "<pre class=\"block diff\">", body, "</pre>")
+            if get(m, "source", false) === true
+                println(io, "<div class=\"mlabel\"><code>", esc(f), "</code> — the complete document, as it ran</div>")
+                println(io, "<pre class=\"block json model-src\">", esc(rstrip(read(f, String))), "</pre>")
+            end
         else
             println(io, "<div class=\"mlabel\"><code>", esc(f), "</code> — the complete document, as it ran</div>")
             println(io, "<pre class=\"block json model-src\">", esc(rstrip(read(f, String))), "</pre>")
         end
         println(io, "</div></details>")
+        screen && println(io, "<p class=\"print-only\">In the screen version of this page: ", inline(label), " (<code>", esc(f), "</code>).</p>")
     end
     return String(take!(io))
 end
@@ -622,6 +637,10 @@ details.fold > summary::-webkit-details-marker { display: none; }
 details.fold > summary::before { content: "▸ "; color: var(--grey-lt); font-weight: 400; }
 details.fold[open] > summary::before { content: "▾ "; }
 .fold-body { padding: .95rem 1rem 1rem; }
+details.fold.full { margin: 1.6rem 0; border-color: var(--accent); }
+details.fold.full > summary { color: var(--accent-d); }
+details.fold.full > .fold-body { background: var(--inset); }
+.print-only { display: none; }
 
 /* ── appendix: a deliverable, so a heavier band and a full sheet under it ── */
 .phase.band { margin: 3.5rem 0 1.4rem; }
@@ -729,8 +748,59 @@ footer.foot code { font-family: var(--mono); font-size: .93em; }
   .figs { display: block; } .figs > * + * { margin-top: .8rem; }
   .phase.band { break-before: page; } .phase.band span { color: #fff; background: #000; }
   .appx { border: none; padding: 0; }
+  details.fold.full, details.screen { display: none !important; } .print-only { display: block; font-size: .85rem; color: var(--grey); }
 }
 """
+
+# One transcript turn: a gap marker, or a phase band plus the bubble with its stats, figures, models and
+# tool block.
+function turn_html(io, turn)
+    role = get(turn, "role", "assistant")
+    if role == "gap"
+        note = string(get(turn, "note", ""))
+        println(io, "<div class=\"gap\"><b>", esc(node_text(turn)), "</b>")
+        isempty(note) || println(io, "<i>", inline(note), "</i>")
+        println(io, "</div>")
+        return
+    end
+
+    ph = get(turn, "phase", "")
+    isempty(ph) || println(io, "<div class=\"phase\"><span>", esc(ph), "</span></div>")
+
+    println(io, "<div class=\"turn $role\">")
+    label = get(ROLE_LABEL, role, "")
+    isempty(label) || println(io, "<div class=\"who\">", esc(label), "</div>")
+    println(io, "<div class=\"bubble prose\">")
+    println(io, stats_html(get(turn, "stats", [])))
+    println(io, body_html(node_text(turn)))
+    println(io, figures_html(get(turn, "figures", []), string(get(turn, "figure", ""))))
+    println(io, models_html(get(turn, "models", [])))
+    println(
+        io, tools_html(
+            get(turn, "tools", []), get(turn, "files", []), get(turn, "open", false) == true
+        )
+    )
+    println(io, "</div></div>")
+    return nothing
+end
+
+# The whole session behind an excerpt, as a fold after it. Screen-only: on paper an excerpt page stays
+# the length it was cut to, and the fold's place is taken by one line saying where the full exchange is.
+function full_transcript_html(io, t)
+    t isa AbstractDict && haskey(t, "full") || return nothing
+    haskey(t, "pick") || return nothing
+    full = Dict{String, Any}(k => v for (k, v) in t if k != "pick")
+    turns = resolve_turns(full)
+    n = count(x -> get(x, "role", "") in ("user", "assistant"), turns)
+    label = string(t["full"])
+    println(io, "<details class=\"fold full\"><summary>", inline(isempty(label) ? "The full session, $n turns" : label), "</summary>")
+    println(io, "<div class=\"fold-body\">")
+    foreach(x -> turn_html(io, x), turns)
+    println(io, "</div></details>")
+    note = string(get(t, "full_print", ""))
+    isempty(note) || println(io, "<p class=\"print-only\">", inline(note), "</p>")
+    return nothing
+end
 
 function render(doc, jsonpath)
     io = IOBuffer()
@@ -775,34 +845,9 @@ function render(doc, jsonpath)
     println(io, hero_html(get(doc, "hero", Dict())))
     secs = sheets_html(get(doc, "sections", []), "Overview")
     isempty(secs) || println(io, secs)
-    for turn in resolve_turns(get(doc, "turns", []))
-        role = get(turn, "role", "assistant")
-        if role == "gap"
-            note = string(get(turn, "note", ""))
-            println(io, "<div class=\"gap\"><b>", esc(node_text(turn)), "</b>")
-            isempty(note) || println(io, "<i>", inline(note), "</i>")
-            println(io, "</div>")
-            continue
-        end
-
-        ph = get(turn, "phase", "")
-        isempty(ph) || println(io, "<div class=\"phase\"><span>", esc(ph), "</span></div>")
-
-        println(io, "<div class=\"turn $role\">")
-        label = get(ROLE_LABEL, role, "")
-        isempty(label) || println(io, "<div class=\"who\">", esc(label), "</div>")
-        println(io, "<div class=\"bubble prose\">")
-        println(io, stats_html(get(turn, "stats", [])))
-        println(io, body_html(node_text(turn)))
-        println(io, figures_html(get(turn, "figures", []), string(get(turn, "figure", ""))))
-        println(io, models_html(get(turn, "models", [])))
-        println(
-            io, tools_html(
-                get(turn, "tools", []), get(turn, "files", []), get(turn, "open", false) == true
-            )
-        )
-        println(io, "</div></div>")
-    end
+    turns_spec = get(doc, "turns", [])
+    foreach(t -> turn_html(io, t), resolve_turns(turns_spec))
+    full_transcript_html(io, turns_spec)
     println(io, sheets_html(get(doc, "appendix", [])))
 
     foot = get(doc, "footer", "")

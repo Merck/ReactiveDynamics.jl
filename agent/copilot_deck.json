@@ -50,6 +50,12 @@
       "notes": "Solid: shipped. Outlined: the direction (critic W9, hook W10, MCP W8, plugin W12) — trust first, then reach. Nothing on the MCP side exists yet; it is drawn so the design is visible."
     },
     {
+      "kicker": "Inside the copilot",
+      "title": "Who does what, and what passes between them",
+      "figure": "agent/figures/roles.svg",
+      "notes": "One orchestrator, four phase skills, one CLI. Work passes between phases only as files on disk. The planned pieces each attach to one phase: rd-modeler and the validate hook to AUTHOR, rd-critic to REPORT, and MCP is a second door onto the same six verbs. The full component table is in section 5 of agent/copilot.html."
+    },
+    {
       "layout": "section",
       "kicker": "A captured session",
       "title": "Launch supply: do we pay for capacity before the readouts?",
@@ -78,6 +84,13 @@
         "- A generator script writes one network; the options differ only in parameters.\n- `rdx validate`: 0 errors on every document.\n- Consistency check: Kestrel first-year revenue **$250.0M** against the operator's ~$250M, and **54** batches a year at peak. Both follow from the inputs by construction; they show the inputs went in right.\n- `rdx diagnose`: the own line binds. Every option failed one check (steps that never fire on a single run); `DOCTOR.md` explains each before any number is reported.",
         "- Options compared on **paired paths**: the same seed gives every option the same readout dates and lead times.\n- Readout outcomes are forced per path and weighted by the stated odds (0.27 / 0.33 / 0.18 / 0.22).\n- No option-level ensembles were run: a 96-seed ensemble took 53 minutes (W24). One wait ensemble served as a cross-check, and replays of three of its members matched exactly."
       ]
+    },
+    {
+      "kicker": "The case · Conversation → model",
+      "title": "Every sentence the operator said is an element of the model",
+      "figure": "agent/studies/launch_supply/figures/model_map.svg",
+      "text": "- *“the fill site has to be in the BLA with three PPQ batches before we file”* → rule `t_file`: Tern files only once a site has 30 tenths of PPQ.\n- *“I'd move Tern's PPQ in-house … and give the CMO notice”* → rule `cmo_exit_k` and one switch, `exit_at_k = 1`: the only line that differs from the rigid reservation.\n- The map is generated from the document: all 48 places, 31 transitions and 27 rules, each in one box.",
+      "notes": "agent/studies/launch_supply/MIRROR.md has ten quotes, each checked verbatim against the transcript by render_mirror.jl and printed from the model document."
     },
     {
       "kicker": "The case · Report",

@@ -1,0 +1,273 @@
+{
+  "model": "arm_cmo_exit.rdj.json",
+  "base": "model.rdj.json",
+  "session": "agent/sessions/launch_supply.json",
+  "intro": "The option the operator took to ExCo, *reserve now and review at Kestrel's readout*, is one JSON document: `arm_cmo_exit.rdj.json`. Because it is data, not code, every sentence the operator said can be traced to the element it became. The map below shows the whole model at the level of its parts. The rows after it follow one quote at a time: what the operator said, the element as the document holds it, and what that element does. The document stores each expression as a tree of typed nodes; the rows print those trees as formulas so they can be read. In this study the documents were emitted by a generator script (`gen_models.py`) and each was then validated as data, so what is shown here is the validated document, not the script.",
+  "caption": "The model behind the recommendation, one box per part.",
+  "groups": [
+    {
+      "id": "pools",
+      "label": "Capacity pools",
+      "kind": "places",
+      "match": [
+        "line",
+        "line2",
+        "cmo",
+        "cmo2"
+      ]
+    },
+    {
+      "id": "make",
+      "label": "Fill batches",
+      "kind": "transitions",
+      "match": [
+        "k_base_*",
+        "k_buf_*",
+        "t_make_*",
+        "t_ppq_own",
+        "mkt"
+      ]
+    },
+    {
+      "id": "stock",
+      "label": "Stock and line usage",
+      "kind": "places",
+      "match": [
+        "k_stock",
+        "t_stock",
+        "*_used",
+        "*_free",
+        "t_ppq_done",
+        "mkt_done"
+      ]
+    },
+    {
+      "id": "orders",
+      "label": "Orders",
+      "kind": "places",
+      "match": [
+        "k_orders",
+        "t_orders"
+      ]
+    },
+    {
+      "id": "ship",
+      "label": "Demand: ship or lose",
+      "kind": "transitions",
+      "match": [
+        "k_demand",
+        "t_demand",
+        "k_ship",
+        "t_ship",
+        "k_lose",
+        "t_lose"
+      ]
+    },
+    {
+      "id": "value",
+      "label": "Sold and lost",
+      "kind": "places",
+      "match": [
+        "k_sold",
+        "t_sold",
+        "k_lost",
+        "t_lost"
+      ]
+    },
+    {
+      "id": "cash",
+      "label": "Cash",
+      "kind": "places",
+      "match": [
+        "cash"
+      ]
+    },
+    {
+      "id": "fees",
+      "label": "Fees and capex",
+      "kind": "transitions",
+      "match": [
+        "cmo_fee*",
+        "cmo2_fee",
+        "l2_*"
+      ]
+    },
+    {
+      "id": "clocks",
+      "label": "Clocks",
+      "kind": "transitions",
+      "match": [
+        "k_clock",
+        "t_clock",
+        "t_delay_clock"
+      ]
+    },
+    {
+      "id": "ages",
+      "label": "Ages and delays",
+      "kind": "places",
+      "match": [
+        "k_age",
+        "t_age",
+        "t_file_delay"
+      ]
+    },
+    {
+      "id": "state",
+      "label": "Regulatory, contract state",
+      "kind": "places",
+      "match": [
+        "*_ok",
+        "*_active",
+        "*_ready",
+        "k_pre",
+        "t_pre",
+        "*_launched",
+        "t_filed",
+        "cmo_ppq",
+        "*short*",
+        "*_success"
+      ]
+    },
+    {
+      "id": "r_draws",
+      "label": "Readout draws",
+      "kind": "rules",
+      "match": [
+        "draws"
+      ]
+    },
+    {
+      "id": "r_reg",
+      "label": "Regulatory calendar",
+      "kind": "rules",
+      "match": [
+        "t_file",
+        "*_pas",
+        "k_launch",
+        "t_launch",
+        "*_stock_build"
+      ]
+    },
+    {
+      "id": "r_contract",
+      "label": "Contract decisions",
+      "kind": "rules",
+      "match": [
+        "cmo_*",
+        "cmo2_*",
+        "l2_*"
+      ]
+    },
+    {
+      "id": "r_short",
+      "label": "Shortfall flags",
+      "kind": "rules",
+      "match": [
+        "*_short_*"
+      ]
+    },
+    {
+      "id": "r_plan",
+      "label": "Monthly planner",
+      "kind": "rules",
+      "match": [
+        "planner"
+      ]
+    }
+  ],
+  "open": 3,
+  "rows": [
+    {
+      "turn": 3,
+      "quote": "Effective is about 13 after changeovers and two 2-week shutdowns a year; the last 12 months averaged 12.8.",
+      "elements": [
+        "place:line",
+        "transition:k_base_own"
+      ],
+      "gloss": "The line is a pool of 128 tenths of a batch per month: the measured 12.8, not the nominal 16. Every batch filled on it, here Kestrel's launch stock, takes one tenth for the month it runs and gives it back after (`conserved`). That is why Kestrel, Tern and the marketed products can collide on it. The `cash×15` is the $150k variable cost per batch, charged in $1k units."
+    },
+    {
+      "turn": 3,
+      "quote": "the fill site has to be in the BLA with three PPQ batches before we file",
+      "elements": [
+        "rule:t_file",
+        "rule:t_cmo_pas"
+      ],
+      "gloss": "The constraint the operator said people forget became a guard. Tern files only when its readout succeeded, three months have passed, and a fill site has its three PPQ batches, either at the CMO or on the own line (`t_ppq_done >= 30` tenths). If the CMO qualifies after the filing, `t_cmo_pas` adds it six months later, the Prior Approval Supplement from the same answer."
+    },
+    {
+      "turn": 14,
+      "quote": "I'd move Tern's PPQ in-house, file Tern on our own line, and give the CMO notice.",
+      "elements": [
+        "rule:cmo_exit_k",
+        "param:exit_at_k",
+        "transition:cmo_fee_y2"
+      ],
+      "gloss": "The operator's rule, added in turn 15, is one rule and one switch. At Kestrel's readout (month 5 plus the drawn slip), if Kestrel failed, the reservation is dropped and Tern's PPQ falls back to the own line through the `t_file` guard above. The forfeited year's fee is still charged. `exit_at_k` is the only line that differs from the rigid reservation, `arm_cmo.rdj.json`. That is what the inertness check tested: on the same seeds, the two options came out identical in every world where Tern does not succeed alone."
+    },
+    {
+      "turn": 3,
+      "quote": "Kestrel is 60% and Tern is 45%",
+      "elements": [
+        "param:p_k",
+        "param:p_t",
+        "rule:draws"
+      ],
+      "gloss": "The odds are parameters. The readout outcomes and every lead time the operator gave as a range are drawn once, at the start, from the seeded stream. That is what lets the same seed give every option the same readout dates and lead times, the paired comparison the findings rest on."
+    },
+    {
+      "turn": 3,
+      "quote": "about 3% of batches get rejected",
+      "elements": [
+        "transition:t_make_own"
+      ],
+      "gloss": "The reject rate is the `succeeds 0.97` on every fill transition: a rejected batch still used its line time and its cost, but gives no stock."
+    },
+    {
+      "turn": 5,
+      "quote": "Model it as competing for the same batches, not as free.",
+      "elements": [
+        "transition:t_ppq_own"
+      ],
+      "gloss": "Tern's in-house PPQ is a fill transition like any other. It draws on the same `line` pool as Kestrel's launch stock, so the collision the operator predicted is something the engine produces, not an assumption written in."
+    },
+    {
+      "turn": 9,
+      "quote": "I would never starve a launch to top up a buffer.",
+      "elements": [
+        "transition:k_base_own",
+        "transition:k_buf_own",
+        "param:k_floor"
+      ],
+      "gloss": "Kestrel's stock is split into two transitions over the same pool. The part up to the floor (`k_floor`, 2 months of forward stock) runs at priority 100, and the buffer above it at priority 0.5, below Tern's batches at 1. When the line is short, the buffer waits and the launch does not."
+    },
+    {
+      "turn": 3,
+      "quote": "$5M a year for up to 4 batches a month",
+      "elements": [
+        "transition:cmo_fee",
+        "rule:cmo_ready"
+      ],
+      "gloss": "The fee is a transition that takes 5000 ($5M in $1k units) from cash once a year while the contract is active. When the tech transfer finishes, `cmo_ready` fills the CMO pool with 40 tenths, the 4 batches a month."
+    },
+    {
+      "turn": 7,
+      "quote": "Lost. In immunology an unsupplied patient goes to a competitor or stays on their current therapy.",
+      "elements": [
+        "transition:k_ship",
+        "transition:k_lose"
+      ],
+      "gloss": "An order that finds stock ships at priority 10 and earns the batch's value. One that does not is moved to `k_lost` the same month, never queued. That is the operator's answer, and also the engine's semantics: unmet demand is dropped, so it has to be counted explicitly."
+    },
+    {
+      "turn": 1,
+      "quote": "Pay a CMO a reservation fee now to hold a fill-finish slot.",
+      "elements": [
+        "param:cmo_now",
+        "rule:cmo_sign_now"
+      ],
+      "gloss": "The option itself is a switch. `cmo_now = 1` against the base model's 0 is the whole difference between reserving and waiting, apart from `exit_at_k` above. Every other element is shared, so a difference in the result can only come from the decision."
+    }
+  ]
+}
