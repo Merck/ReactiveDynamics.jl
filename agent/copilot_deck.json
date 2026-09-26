@@ -7,7 +7,7 @@
       "layout": "title",
       "kicker": "ReactiveDynamics.jl — the agentic layer",
       "title": "ReactiveDynamics.jl Modeling Copilot",
-      "subtitle": "Describe the operation in conversation. The copilot builds a high-fidelity model beneath it, one that carries the shared capacity, lead times, feedback and mid-course decisions a spreadsheet flattens, tries to break it, and uses it to compare the options and explain what drives the answer. The conversation stays in the terms of the business, never the model's mechanics; the model follows from what is said.",
+      "subtitle": "Describe the decision and how the business runs. The copilot builds a high-fidelity model beneath the conversation, one that carries the shared capacity, delays and feedback a spreadsheet flattens, tries to break it, and shows what drives the answer. The conversation stays in business terms.",
       "notes": "Open with the vision: a reusable capability, not a one-off model. The case at the end is a captured session with AI on both sides."
     },
     {
