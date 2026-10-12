@@ -62,7 +62,9 @@ julia --project=. agent/scripts/rdx.jl <command> [args] [--flag=value ...]
 | `effect BASE VARIANT --metric=M --seeds=N` | two-arm treatment effect Δ ± se, with a significance verdict |
 | `draw MODEL --out=PATH` | the net; `--exec-map --seed=N` decorates it with run statistics |
 
-**Exit codes carry the meaning**: `0` ok · `1` findings (invalid model, failing checks, an effect inside the noise) · `2` error. An agent branches on the code and repairs against `findings[]`; it never has to parse prose.
+**Exit codes carry the meaning**: `0` ok · `1` findings (invalid model, failing checks, an effect inside the noise) · `2` error. An agent branches on the code and repairs against `findings[]`; it never has to parse prose. A finding's `path` is Julia-style and 1-based: `transitions[2]` is the second transition, `[1]` in Python or jq.
+
+**Every call pays Julia's startup**, roughly 10–30 s. To amortize it, `include("agent/scripts/rdx.jl")` once in a `julia --project=.` session and call `main(["validate", "path/to/model.rdj.json"])` — the same envelope on stdout, the exit code as the return value. Run the CLI one process at a time: concurrent Julia processes on one package depot block rather than compute.
 
 **Metrics are named, not code** — `final:<place>`, `min:<place>`, `max:<place>`, `sum:<place>`, `spawns[:<transition>]`, `completions[:<t>]`, `successes[:<t>]`, `reward`, `cost`, `net`, `enpv`. This is deliberate: letting the caller pass a Julia reduction would reopen the code path the JSON artifact exists to close. `enpv` takes `--annual`, `--periods-per-year` and `--scale`.
 
@@ -116,3 +118,7 @@ Two kinds of transcript live here and each page states which it is. A **blind ca
 ## Portability
 
 The CLI is plain Julia over Bash, and the skills are Markdown. Nothing here depends on Claude Code: any agent that can run a shell command and read a file can drive this workflow. Claude Code's skill/plugin packaging is the *distribution* mechanism, not the substrate.
+
+- **Other agents** (Codex, Jules, Cursor, Gemini CLI, …) start at the repo-root [`AGENTS.md`](../AGENTS.md); `GEMINI.md` points to it. The documented opening, "Read `agent/skills/rd-study/SKILL.md` and run a study with me", works in any of them.
+- **Claude Code** discovers skills under `.claude/skills/`, which is gitignored here. Until the plugin ships (W12), link them once from the repo root: `mkdir -p .claude && ln -s ../agent/skills .claude/skills`.
+- **Setup** is Julia ≥ 1.12 and one `Pkg.instantiate()`. No `Manifest.toml` is committed, so versions resolve fresh (CI tests the latest and the lower bounds). Graphviz is optional (`draw` falls back to a `.dot` file), and Python ≥ 3.8 with the standard library only is needed just for the `launch_supply` helper scripts. The examples are bash; on Windows use WSL.

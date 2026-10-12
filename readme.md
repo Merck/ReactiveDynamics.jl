@@ -95,6 +95,10 @@ Each [`demo/`](demo) is a self-contained, runnable literate tour with its own RE
 - [`wires_viz_tour`](demo/wires_viz_tour) — drawing networks, AA wiring diagrams, and exec maps.
 - [`bd_acquisition`](demo/bd_acquisition) — an end-to-end business-development acquisition-impact case study (rNPV counterfactual on a living pipeline).
 
+## Agent workflow
+
+[`agent/`](agent) is a skill layer for coding agents that takes a business question to a defensible number: frame the decision, author the model as a validated JSON document, prove it plausible, report the effect with its error bar. It is plain Markdown playbooks over one Julia CLI, so any agent that can run a shell command can drive it. Agents start at [`AGENTS.md`](AGENTS.md) (or [`CLAUDE.md`](CLAUDE.md) for Claude Code); people start at [`agent/README.md`](agent/README.md).
+
 ## Context: Dynamics of Value Evolution (DyVE)
 
 RD is part of the **Dynamics of Value Evolution (DyVE)** computational framework for learning, designing, integrating, simulating, and optimizing R&D process models, to better inform strategic decisions in science and business. As the framework matures, functionalities graduate into standalone packages — chief among them [AlgebraicAgents.jl](https://github.com/Merck/AlgebraicAgents.jl), the lightweight substrate for hierarchical, heterogeneous dynamical-systems co-integration on which RD is built.

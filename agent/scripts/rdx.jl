@@ -10,6 +10,7 @@
 # reimplements it (charter §5.4 architectural rule 1).
 #
 #   julia --project=. agent/scripts/rdx.jl <command> [args...] [--flag=value ...]
+#   julia> include("agent/scripts/rdx.jl"); main(["validate", "model.rdj.json"])   # same, in-session
 #
 # Commands
 #   validate MODEL                          static, eval-free schema check → diagnostics
@@ -607,4 +608,9 @@ function main(argv)
     end
 end
 
-exit(main(ARGS))
+# Executed as a script, `main`'s return value is the process exit code. `include`d into a live
+# session it only defines `main`, so a caller can run `main(["validate", path])` repeatedly without
+# paying Julia's startup and package load on every command.
+if abspath(PROGRAM_FILE) == @__FILE__
+    exit(main(ARGS))
+end

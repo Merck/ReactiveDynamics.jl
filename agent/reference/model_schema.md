@@ -56,8 +56,8 @@ Column names per object, as the store declares them (`RD.SCHEMA`):
 | `transitions[].capacity` | `transCapacity` | max simultaneous in-flight instances |
 | `transitions[].multiplier` | `transMultiplier` | scales every arc's multiplicity |
 | `transitions[].max_lifetime` | `transMaxLifeTime` | abandon an instance after this long |
-| `transitions[].pre_action` | `transPreAction` | action fired when an instance spawns |
-| `transitions[].post_action` | `transPostAction` | action fired when an instance completes |
+| `transitions[].pre_action` | `transPreAction` | action fired when an instance spawns — **NOT read on import today**: export writes it, the loader drops it without a diagnostic (charter W30); use `rules[]` |
+| `transitions[].post_action` | `transPostAction` | action fired when an instance completes — **NOT read on import today**, as `pre_action` (charter W30) |
 | `arcs[].transition` | `ArcSpec.trans` | REQUIRED — the owning transition's `id` |
 | `arcs[].side` | `ArcSpec.side` | REQUIRED — `"lhs"` (input) or `"rhs"` (output) |
 | `arcs[].place` | `ArcSpec.place` | the place, for a static arc |
@@ -131,6 +131,21 @@ A clause is a 3-element array `[field, op, node]`. A predicate is `{"kind":"K","
 The endogenous decision channel (ADR 0010): a `rules[]` entry is `{id, guard, action, fire_mode}`. Action verbs (`RD.ACTION_VERBS`):
 
 `set_marking` · `set_params` · `set_field` · `set_tokens` · `add_token` · `activate` · `deactivate` · `invoke` · `log` · `seq`
+
+`guard` is a node evaluated once per tick: a boolean fires the action once when true, a number `v` fires it `Poisson(v)` times. `fire_mode` is `"every_tick"` (default) or `"once"`, which disables the rule after it first fires. A `value` is a node or a bare literal. Each example below parses as is (the generator checks it).
+
+| Verb | JSON | Does |
+|---|---|---|
+| `set_marking` | `{"verb": "set_marking", "name": "A", "value": {"node": "const", "value": 0}, "mode": "set"}` | write place `name`'s marking; `"mode": "inc"` adds `value` instead (default `set`) |
+| `set_params` | `{"verb": "set_params", "assigns": [{"name": "beta", "value": {"node": "const", "value": 0.5}}]}` | write one or more params |
+| `set_field` | `{"verb": "set_field", "field": "phase", "value": {"node": "const", "value": 2}}` | write a field of the BOUND token — illegal in a rule, which has none; a document writes token fields with `set_tokens` or an `arcs[].advance` |
+| `set_tokens` | `{"verb": "set_tokens", "predicate": {"kind": "Project", "clauses": [["phase", "==", {"node": "const", "value": 1}]]}, "assigns": [{"name": "phase", "value": {"node": "const", "value": 2}}]}` | write fields on every token the predicate selects |
+| `add_token` | `{"verb": "add_token", "kind": "Project", "fields": [{"name": "phase", "value": {"node": "const", "value": 1}}]}` | create a token; `kind` resolves through the registry |
+| `activate` | `{"verb": "activate", "transition": "t1"}` | re-open a transition's spawn gate |
+| `deactivate` | `{"verb": "deactivate", "transition": "t1"}` | close it; instances already in flight run to completion |
+| `invoke` | `{"verb": "invoke", "fn": "notify", "args": [{"node": "const", "value": 1}]}` | call a registry host function by name |
+| `log` | `{"verb": "log", "msg": "budget exhausted"}` | append a message (a string or a node) to the run log |
+| `seq` | `{"verb": "seq", "stmts": [{"verb": "deactivate", "transition": "t1"}, {"verb": "log", "msg": "t1 closed"}]}` | run statements in order |
 
 `invoke` and a `add_token` kind are resolved through the per-network registry BY NAME — the host-code seam, never inline source.
 

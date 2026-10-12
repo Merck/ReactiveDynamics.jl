@@ -17,6 +17,7 @@
 
 using ReactiveDynamics
 const RD = ReactiveDynamics
+using JSON
 
 const OUT = joinpath(@__DIR__, "..", "reference", "model_schema.md")
 
@@ -60,8 +61,8 @@ const JSON_KEYS = [
     ("transitions[].capacity", "transCapacity", "max simultaneous in-flight instances"),
     ("transitions[].multiplier", "transMultiplier", "scales every arc's multiplicity"),
     ("transitions[].max_lifetime", "transMaxLifeTime", "abandon an instance after this long"),
-    ("transitions[].pre_action", "transPreAction", "action fired when an instance spawns"),
-    ("transitions[].post_action", "transPostAction", "action fired when an instance completes"),
+    ("transitions[].pre_action", "transPreAction", "action fired when an instance spawns — **NOT read on import today**: export writes it, the loader drops it without a diagnostic (charter W30); use `rules[]`"),
+    ("transitions[].post_action", "transPostAction", "action fired when an instance completes — **NOT read on import today**, as `pre_action` (charter W30)"),
     ("arcs[].transition", "ArcSpec.trans", "REQUIRED — the owning transition's `id`"),
     ("arcs[].side", "ArcSpec.side", "REQUIRED — `\"lhs\"` (input) or `\"rhs\"` (output)"),
     ("arcs[].place", "ArcSpec.place", "the place, for a static arc"),
@@ -89,6 +90,24 @@ const MODALITIES = [
     ("allocation", "`upfront` (default) · `perstep`", "`perstep` is the `@rate` marker — metered each tick over the cycle"),
     ("return", "`consumed` (DEFAULT) · `conserved`", "`conserved` is the `@conserved` marker — held for the cycle, returned intact"),
     ("blocking", "`block` (default) · `nonblock`", "`nonblock` is the `@nonblock` marker — a read/test arc that neither holds nor spends"),
+]
+
+# The JSON shape of each action verb — the `action` of a `rules[]` entry — as `stmt_from_dict` reads
+# it. Hand-maintained like JSON_KEYS (the shapes live in `src/serialize.jl`'s `stmt_from_dict`
+# branches), and guarded the same way: `check_facts` asserts the verbs here are exactly
+# `RD.ACTION_VERBS`, and that every example parses with `stmt_from_dict` and serializes back through
+# `stmt_to_dict` to the same keys. So an example can be pasted into a document as is.
+const ACTION_SHAPES = [
+    ("set_marking", """{"verb": "set_marking", "name": "A", "value": {"node": "const", "value": 0}, "mode": "set"}""", "write place `name`'s marking; `\"mode\": \"inc\"` adds `value` instead (default `set`)"),
+    ("set_params", """{"verb": "set_params", "assigns": [{"name": "beta", "value": {"node": "const", "value": 0.5}}]}""", "write one or more params"),
+    ("set_field", """{"verb": "set_field", "field": "phase", "value": {"node": "const", "value": 2}}""", "write a field of the BOUND token — illegal in a rule, which has none; a document writes token fields with `set_tokens` or an `arcs[].advance`"),
+    ("set_tokens", """{"verb": "set_tokens", "predicate": {"kind": "Project", "clauses": [["phase", "==", {"node": "const", "value": 1}]]}, "assigns": [{"name": "phase", "value": {"node": "const", "value": 2}}]}""", "write fields on every token the predicate selects"),
+    ("add_token", """{"verb": "add_token", "kind": "Project", "fields": [{"name": "phase", "value": {"node": "const", "value": 1}}]}""", "create a token; `kind` resolves through the registry"),
+    ("activate", """{"verb": "activate", "transition": "t1"}""", "re-open a transition's spawn gate"),
+    ("deactivate", """{"verb": "deactivate", "transition": "t1"}""", "close it; instances already in flight run to completion"),
+    ("invoke", """{"verb": "invoke", "fn": "notify", "args": [{"node": "const", "value": 1}]}""", "call a registry host function by name"),
+    ("log", """{"verb": "log", "msg": "budget exhausted"}""", "append a message (a string or a node) to the run log"),
+    ("seq", """{"verb": "seq", "stmts": [{"verb": "deactivate", "transition": "t1"}, {"verb": "log", "msg": "t1 closed"}]}""", "run statements in order"),
 ]
 
 # Guard the hand-maintained table against drift on either side (see JSON_KEYS). Throws rather than
@@ -127,6 +146,21 @@ function check_facts()
     end
     for (sym, _, _) in OBJECTS
         haskey(RD.SCHEMA, sym) || push!(problems, "OBJECTS: SCHEMA has no object `:$sym`")
+    end
+    verbs = [Symbol(v) for (v, _, _) in ACTION_SHAPES]
+    Set(verbs) == Set(RD.ACTION_VERBS) && length(verbs) == length(RD.ACTION_VERBS) || push!(
+        problems,
+        "ACTION_SHAPES: verbs $(sort(verbs)) are not exactly RD.ACTION_VERBS $(sort(collect(RD.ACTION_VERBS)))",
+    )
+    for (verb, example, _) in ACTION_SHAPES
+        d = JSON.parse(example)
+        try
+            back = RD.stmt_to_dict(RD.stmt_from_dict(d))
+            Set(keys(back)) == Set(keys(d)) ||
+                push!(problems, "ACTION_SHAPES: `$verb` keys $(sort(collect(keys(d)))) ≠ serialized $(sort(collect(keys(back))))")
+        catch e
+            push!(problems, "ACTION_SHAPES: the `$verb` example does not parse: $(sprint(showerror, e))")
+        end
     end
 
     isempty(problems) && return nothing
@@ -244,6 +278,14 @@ function render()
     println(io, "The endogenous decision channel (ADR 0010): a `rules[]` entry is `{id, guard, action, fire_mode}`. Action verbs (`RD.ACTION_VERBS`):")
     println(io)
     println(io, join(("`$v`" for v in RD.ACTION_VERBS), " · "))
+    println(io)
+    println(io, "`guard` is a node evaluated once per tick: a boolean fires the action once when true, a number `v` fires it `Poisson(v)` times. `fire_mode` is `\"every_tick\"` (default) or `\"once\"`, which disables the rule after it first fires. A `value` is a node or a bare literal. Each example below parses as is (the generator checks it).")
+    println(io)
+    println(io, "| Verb | JSON | Does |")
+    println(io, "|---|---|---|")
+    for (verb, example, meaning) in ACTION_SHAPES
+        println(io, "| `$verb` | `$example` | $meaning |")
+    end
     println(io)
     println(io, "`invoke` and a `add_token` kind are resolved through the per-network registry BY NAME — the host-code seam, never inline source.")
     println(io)
