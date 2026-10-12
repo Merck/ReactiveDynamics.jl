@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 340" role="img" aria-label="A firing branches on a success draw: with probability 0.4 the program advances to Phase 3; with probability 0.6 it is shelved and marked removed.">
+  <!-- A single firing — where the randomness lives. Lifted from
+       demo/bd_acquisition/presentation.html (Exhibit 5). -->
+  <style>
+    [font-family^="JetBrains"]{font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',monospace}
+    [font-family="Inter"]{font-family:'Inter',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif}
+  </style>
+  <!-- input place -->
+  <circle cx="120" cy="170" r="44" fill="#fff" stroke="#0A0A0A" stroke-width="2"/>
+  <circle cx="120" cy="170" r="7" fill="#0A0A0A"/>
+  <text x="120" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#0A0A0A">Phase 2</text>
+  <!-- transition bar -->
+  <line x1="164" y1="170" x2="316" y2="170" stroke="#0A0A0A" stroke-width="1.6"/>
+  <rect x="320" y="138" width="10" height="64" fill="#0A8A84" rx="0"/>
+  <text x="325" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="12.5" fill="#0A8A84" font-weight="700">advance</text>
+  <text x="325" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#6E6E6E">holds ~2 yrs of capacity</text>
+  <!-- success gate (diamond) -->
+  <line x1="330" y1="170" x2="430" y2="170" stroke="#0A0A0A" stroke-width="1.6"/>
+  <polygon points="490,170 538,138 586,170 538,202" fill="#fff" stroke="#0A8A84" stroke-width="2"/>
+  <text x="538" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#0A8A84" font-weight="700">success?</text>
+  <text x="538" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0A8A84">p = 0.40</text>
+  <text x="538" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="#6E6E6E" font-style="italic">a Bernoulli draw on the seeded stream</text>
+  <!-- success branch up -->
+  <path d="M580 150 C 660 110, 720 96, 786 96" fill="none" stroke="#0A8A84" stroke-width="2"/>
+  <polygon points="788,96 779,92 779,100" fill="#0A8A84"/>
+  <text x="660" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#0A8A84">0.40 → advance</text>
+  <circle cx="838" cy="96" r="40" fill="#fff" stroke="#0A0A0A" stroke-width="2"/>
+  <circle cx="838" cy="96" r="7" fill="#0A0A0A"/>
+  <text x="838" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#0A0A0A">Phase 3</text>
+  <path d="M824 84 l8 8 l16 -18" fill="none" stroke="#0A8A84" stroke-width="2.4"/>
+  <!-- failure branch down -->
+  <path d="M580 190 C 660 230, 720 250, 786 250" fill="none" stroke="#6E6E6E" stroke-width="2" stroke-dasharray="5 4"/>
+  <polygon points="788,250 779,246 779,254" fill="#6E6E6E"/>
+  <text x="660" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#6E6E6E">0.60 → shelved</text>
+  <circle cx="838" cy="250" r="40" fill="#EEF2F8" stroke="#9A9A9A" stroke-width="2" stroke-dasharray="4 3"/>
+  <circle cx="838" cy="250" r="7" fill="#9A9A9A"/>
+  <line x1="824" y1="236" x2="852" y2="264" stroke="#E5243B" stroke-width="2"/><line x1="852" y1="236" x2="824" y2="264" stroke="#E5243B" stroke-width="2"/>
+  <text x="838" y="304" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#6E6E6E">retired · :removed</text>
+</svg>
