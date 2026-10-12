@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 #
-# figures.jl — the structural diagrams on the overview, pitch and copilot pages.
+# figures.jl — the structural diagrams on the overview and copilot pages.
 #
 #   julia --project=. agent/figures.jl
 #
@@ -114,7 +114,7 @@ function pipeline_svg()
     return CK.shell(join(parts), ybr + 44 + 8; title = title, subtitle = subtitle)
 end
 
-# ── figure 2: the same sequence, for the pitch page ───────────────────────────────────────────────
+# ── figure 2: the same sequence, for the copilot page ─────────────────────────────────────────────
 
 # `pipeline.svg` names the skill and the file each phase leaves behind, which is what a reader
 # evaluating the layer needs and exactly what a reader evaluating the OFFER does not. Same four steps,
