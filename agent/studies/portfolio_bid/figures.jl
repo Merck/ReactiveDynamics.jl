@@ -145,10 +145,14 @@ let
         ChartKit.waterfall(
             Dict("label" => "Standalone value\nof the three assets", "value" => stand, "se" => sstand),
             [
-                Dict("label" => "Stranded by the\n40-FTE ceiling", "value" => stranded,
-                     "se" => rss((sstand, sreal))),
-                Dict("label" => "Recovered by funding\n12 more FTE", "value" => integ,
-                     "se" => sinteg),
+                Dict(
+                    "label" => "Stranded by the\n40-FTE ceiling", "value" => stranded,
+                    "se" => rss((sstand, sreal))
+                ),
+                Dict(
+                    "label" => "Recovered by funding\n12 more FTE", "value" => integ,
+                    "se" => sinteg
+                ),
             ],
             Dict("label" => "Value to you,\ncapacity funded", "value" => prog, "se" => sprog);
             unit = "\$M", digits = 0, y_label = "Δ eNPV over ten years, \$M",

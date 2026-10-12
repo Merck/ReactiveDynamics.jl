@@ -642,9 +642,9 @@ function obs_to_dict(name, o::FoldedObservable)
         "on" => [node_to_dict(from_expr(e)) for e in o.on],
         "range" => [
             Dict(
-                    "weight" => (r isa Tuple ? r[1] : 1.0),
-                    "value" => node_to_dict(from_expr(r isa Tuple ? r[2] : r))
-                ) for r in o.range
+                "weight" => (r isa Tuple ? r[1] : 1.0),
+                "value" => node_to_dict(from_expr(r isa Tuple ? r[2] : r))
+            ) for r in o.range
         ],
     )
 end
@@ -1056,9 +1056,9 @@ function _emit_macro_arc!(d, mc::Expr; places, params)
             "kind" => string(mc.args[3].value),
             "fields" => [
                 Dict{String, Any}(
-                        "name" => string(kw.args[1]),
-                        "value" => node_to_dict(from_expr(kw.args[2]; places, params)),
-                    ) for kw in @view mc.args[4:end]
+                    "name" => string(kw.args[1]),
+                    "value" => node_to_dict(from_expr(kw.args[2]; places, params)),
+                ) for kw in @view mc.args[4:end]
             ],
         )
     else

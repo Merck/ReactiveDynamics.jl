@@ -30,12 +30,12 @@ function recursively_choose(r_line, state)
             sample_range(
                 [
                     (
-                            if isexpr(r, :tuple)
-                                (r.args[1], recursively_choose(r.args[2], state))
+                        if isexpr(r, :tuple)
+                            (r.args[1], recursively_choose(r.args[2], state))
                         else
-                                recursively_choose(r, state)
+                            recursively_choose(r, state)
                         end
-                        ) for r in ex.args[3:end]
+                    ) for r in ex.args[3:end]
                 ],
                 state,
             )

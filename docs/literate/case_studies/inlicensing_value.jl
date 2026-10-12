@@ -170,9 +170,9 @@ const ORGANIC_PORTFOLIO = [
 ]
 initial_population() = [
     RD.ProjectToken(;
-            phase = ph, npv_peak = npv, pos_remaining = pos_from_phase(ph),
-            therapeutic_area = area, acquired = false,
-        ) for (ph, npv, area) in ORGANIC_PORTFOLIO
+        phase = ph, npv_peak = npv, pos_remaining = pos_from_phase(ph),
+        therapeutic_area = area, acquired = false,
+    ) for (ph, npv, area) in ORGANIC_PORTFOLIO
 ]
 
 # **The acquisition is a rule, in the model.** It fires *once*, at the first tick past `T_acq`, and its

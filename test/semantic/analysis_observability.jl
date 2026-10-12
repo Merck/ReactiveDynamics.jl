@@ -269,10 +269,10 @@ content(df) = select(df, Not(:program))
         rnpv(m) = last(m.sol.budget)
         te = Dict(
             mode => treatment_effect(
-                    ensemble(base_build(1.0); nseed = 6, root_seed = 9, mode = mode),
-                    ensemble(base_build(0.0); nseed = 6, root_seed = 9, mode = mode),
-                    rnpv,
-                ) for mode in (:rebuild, :reinit)
+                ensemble(base_build(1.0); nseed = 6, root_seed = 9, mode = mode),
+                ensemble(base_build(0.0); nseed = 6, root_seed = 9, mode = mode),
+                rnpv,
+            ) for mode in (:rebuild, :reinit)
         )
         @test te[:rebuild].delta == te[:reinit].delta
         @test te[:rebuild].se == te[:reinit].se

@@ -181,12 +181,12 @@ const ORGANIC_PORTFOLIO = [
 function initial_population()
     return [
         ReactiveDynamics.ProjectToken(;
-                phase = ph,
-                npv_peak = npv,
-                pos_remaining = pos_from_phase(ph),   # remaining PoS from THIS phase forward (per-phase)
-                therapeutic_area = area,
-                acquired = false,
-            ) for (ph, npv, area) in ORGANIC_PORTFOLIO
+            phase = ph,
+            npv_peak = npv,
+            pos_remaining = pos_from_phase(ph),   # remaining PoS from THIS phase forward (per-phase)
+            therapeutic_area = area,
+            acquired = false,
+        ) for (ph, npv, area) in ORGANIC_PORTFOLIO
     ]
 end
 

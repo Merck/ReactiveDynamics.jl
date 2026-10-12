@@ -500,9 +500,9 @@ rewards = [r[3] for r in toy_prob.log if r[1] == :valuation_reward]
 # A simple discounted rNPV reduction over the ledger (post-processing only).
 rnpv = sum(
     (
-            row[1] == :valuation_reward ? row[3] :
+        row[1] == :valuation_reward ? row[3] :
             row[1] == :valuation_cost ? -row[3] : 0.0
-        ) / (1 + 0.1)^row[2]
+    ) / (1 + 0.1)^row[2]
         for row in toy_prob.log
 )
 println("Toy-pharma pipeline with @register'd rates α, β")

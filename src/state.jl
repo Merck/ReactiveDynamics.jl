@@ -276,12 +276,12 @@ function prune_r_line(r_line)
         sample_range(
             [
                 (
-                        if isexpr(r, :tuple)
-                            (r.args[1], prune_r_line(r.args[2]))
+                    if isexpr(r, :tuple)
+                        (r.args[1], prune_r_line(r.args[2]))
                     else
-                            prune_r_line(r)
+                        prune_r_line(r)
                     end
-                    ) for r in r_line.args[3:end]
+                ) for r in r_line.args[3:end]
             ],
             state,
         )

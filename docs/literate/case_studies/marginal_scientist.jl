@@ -108,9 +108,9 @@ end
 # Expected NPV is a pure post-processing reduction over the run's financial ledger: discounted rewards minus discounted costs, in \$M (the engine does no discounting itself). Monthly ticks are discounted at 8% annual.
 enpv(p; annual = 0.08) = sum(
     (
-            row[1] == :valuation_reward ? row[3] :
+        row[1] == :valuation_reward ? row[3] :
             row[1] == :valuation_cost ? -row[3] : 0.0
-        ) / (1 + annual)^(row[2] / 12) / 1000
+    ) / (1 + annual)^(row[2] / 12) / 1000
         for row in p.log; init = 0.0
 )
 

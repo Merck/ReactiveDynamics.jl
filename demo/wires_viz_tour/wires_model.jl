@@ -118,9 +118,9 @@ function all_wires(root)
     ws = AlgebraicAgents.getopera(root).wires
     return [
         (
-                from = AlgebraicAgents.getname(w.from), from_var = String(w.from_var_name),
-                to = AlgebraicAgents.getname(w.to), to_var = String(w.to_var_name),
-            ) for w in ws
+            from = AlgebraicAgents.getname(w.from), from_var = String(w.from_var_name),
+            to = AlgebraicAgents.getname(w.to), to_var = String(w.to_var_name),
+        ) for w in ws
     ]
 end
 
