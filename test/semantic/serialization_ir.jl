@@ -304,6 +304,15 @@ end
         bad_mod = deepcopy(valid)
         bad_mod["places"][1]["modality"] = Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "nonblock")
         @test any(d -> occursin("§1.4", d.msg), RDX.validate(bad_mod))
+        # rule 4 on an ARC: the loader reads an arc's modality through the same `to_set`, so an
+        # illegal one must come back as a diagnostic at the arc's path — before this check it passed
+        # validate clean and threw out of from_json_model with no path (charter W29).
+        bad_arc_mod = deepcopy(valid)
+        bad_arc_mod["arcs"][1]["modality"] = Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "nonblock")
+        @test any(d -> d.path == "arcs[1].modality" && occursin("§1.4", d.msg), RDX.validate(bad_arc_mod))
+        ok_arc_mod = deepcopy(valid)
+        ok_arc_mod["arcs"][1]["modality"] = Dict("allocation" => "upfront", "return" => "conserved", "blocking" => "block")
+        @test isempty(RDX.validate(ok_arc_mod))
         # rule 1 in a predicate: Sample is not 𝓕ₜ-measurable
         bad_pred = deepcopy(valid)
         bad_pred["arcs"][1] = Dict(

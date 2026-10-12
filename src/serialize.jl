@@ -716,6 +716,19 @@ function _validate_node!(
     return diags
 end
 
+# rule 4: a JSON modality must be one of the five legal 3-axis rows (CONTRACT §1.4). Shared by
+# `places[]` and `arcs[]`, because the loader reads both through `modality_from_dict` → `to_set`,
+# which throws on the illegal `nonblock` + `conserved` row.
+function _validate_modality!(diags, m, path)
+    try
+        m isa AbstractDict || error("modality must be an object `{allocation, return, blocking}`")
+        modality_from_dict(m)
+    catch e
+        push!(diags, Diagnostic(:error, path, sprint(showerror, e)))
+    end
+    return diags
+end
+
 # Is a JSON attribute value a literal (a number/bool/string or a Const node)? Used for rule 5
 # (a TVE=no attribute must be a literal, not a non-trivial tree).
 _is_literal(x) = !(x isa AbstractDict) || get(x, "node", "") == "const"
@@ -747,17 +760,7 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
                 push!(diags, Diagnostic(:error, "$place_path[$i].$k", "must be a literal (TVE=no, §5 A3)"))
         end
         # rule 4: modality must be a legal 5-row combo (§1.4)
-        if haskey(s, "modality")
-            m = s["modality"]
-            try
-                to_set(
-                    Symbol(get(m, "allocation", "upfront")), Symbol(get(m, "return", "consumed")),
-                    Symbol(get(m, "blocking", "block"))
-                )
-            catch e
-                push!(diags, Diagnostic(:error, "$place_path[$i].modality", sprint(showerror, e)))
-            end
-        end
+        haskey(s, "modality") && _validate_modality!(diags, s["modality"], "$place_path[$i].modality")
     end
 
     # rule 1 + rule 3: transition attr nodes + ranges/integrality
@@ -790,6 +793,9 @@ function validate(d::AbstractDict; registry = Dict{Symbol, Any}())
             Symbol(r[pl_key]) in places ||
                 push!(diags, Diagnostic(:error, "$arc_path[$i].$pl_key", "undeclared place `$(r[pl_key])`"))
         end
+        # rule 4 on an arc's own modality: the loader reads it through the same `to_set` as a
+        # place's, so an illegal combo here must be a diagnostic, not a throw out of construction.
+        haskey(r, "modality") && _validate_modality!(diags, r["modality"], "$arc_path[$i].modality")
         if haskey(r, "predicate")   # rule 7: predicate over a structured kind; clause values 𝓕ₜ-measurable
             pd = r["predicate"]
             Symbol(get(pd, "kind", "")) in structured ||
