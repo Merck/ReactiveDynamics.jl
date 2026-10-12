@@ -14,7 +14,7 @@ ReactiveDynamics.jl is a Julia engine for timed, stochastic, resource-constraine
 
 ## Setup
 
-- Julia ≥ 1.12 ([`juliaup`](https://github.com/JuliaLang/juliaup) is the easiest install), then once: `julia --project=. -e 'using Pkg; Pkg.instantiate()'`. Expect several minutes on a fresh machine, mostly precompilation. No `Manifest.toml` is committed, so dependency versions resolve fresh; CI tests both the latest compatible versions and the declared lower bounds.
+- Julia ≥ 1.12 ([`juliaup`](https://github.com/JuliaLang/juliaup) is the easiest install), then once: `julia --project=. -e 'using Pkg; Pkg.instantiate()'`. **Use Julia 1.12 to reproduce published numbers:** ensemble member seeds derive from Julia's `hash`, which changes between versions, so on 1.13 every ensemble and `effect` result shifts (the known answer moves from 18.99 ± 2.53 to 24.06 ± 2.50 — compatible, not identical) and `acceptance.jl` fails. From the repo root, `juliaup add 1.12 && juliaup override set 1.12` makes `julia` resolve to 1.12 in this directory only (charter W31). Expect several minutes on a fresh machine, mostly precompilation. No `Manifest.toml` is committed, so dependency versions resolve fresh; CI tests both the latest compatible versions and the declared lower bounds.
 - Optional: Graphviz (`dot`) for `rdx draw`, which writes a `.dot` file without it; Python ≥ 3.8, standard library only, for the `launch_supply` helper scripts.
 - The commands below are bash. On Windows use WSL, or run the same `julia` invocations from PowerShell; Julia itself is cross-platform.
 

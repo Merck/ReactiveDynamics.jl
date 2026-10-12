@@ -223,7 +223,7 @@ function provenance(study, docs, argv)
         push!(rows, "| `$(relpath(f))` | sha256 `$(sha12(f))…` |")
     end
     cmd = "julia --project=. agent/scripts/render_report.jl " * join(argv, " ")
-    return join(rows, "\n") * "\n\n**The replay rule.** A run is determined by its document and its seed: the same pair gives the same output, bit for bit, on any machine. To check a number, run the document named above with the seed in the table below and compare against the stored run.\n\n" *
+    return join(rows, "\n") * "\n\n**The replay rule.** A run is determined by its document and its seed: the same pair gives the same output, bit for bit, on the same Julia minor version (ensemble member seeds derive from Julia's `hash`, which changes between versions). To check a number, run the document named above with the seed in the table below and compare against the stored run.\n\n" *
         runs_table(study) * "\n\n**Regenerate this report** from the study as it stands:\n\n```bash\n$cmd\n```"
 end
 

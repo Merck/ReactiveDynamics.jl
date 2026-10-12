@@ -5,3 +5,6 @@
 
 # style: reformat all Julia sources with Runic (2026-07-16)
 4262b3342af377f3e879dda238d8cfa51f7660ab
+
+# style: reformat with Runic 1.13 (2026-10-12)
+ece9d034e57a7aa9028f8ccc0b26da88369f6ec2

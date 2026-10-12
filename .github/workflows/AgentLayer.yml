@@ -36,9 +36,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
+      # Pinned, not '1': ensemble member seeds are `hash((root_seed, k))` (CONTRACT §4 D8) and Julia's
+      # `hash` changes between minor versions, so the recorded known answer (18.991 ± 2.528, produced
+      # on 1.12) moves to 24.06 ± 2.50 on 1.13 — statistically compatible, but outside the published
+      # band the gate asserts. Unpin when the seeding is version-independent (charter W31).
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1'
+          version: '1.12'
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
 

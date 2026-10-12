@@ -82,7 +82,7 @@ julia --project=. agent/scripts/rdx.jl effect $S/model.rdj.json $S/arm_hire_fift
   --host=$S/host.jl --metric=enpv --scale=0.001 --seeds=48 --root-seed=2026
 ```
 
-The second command prints `delta: 18.991, se: 2.528`. If it ever prints something else, the workflow has regressed against the engine — that is what makes it a test rather than a demo.
+The second command prints `delta: 18.991, se: 2.528` on Julia 1.12. If it ever prints something else there, the workflow has regressed against the engine — that is what makes it a test rather than a demo.
 
 Both checks are wrapped as runnable gates, and both run in the `Agent layer` CI workflow on any change under `agent/` or `src/`:
 
@@ -91,7 +91,7 @@ julia --project=. agent/scripts/acceptance.jl              # the known-answer st
 julia --project=. agent/scripts/gen_reference.jl --check    # the generated reference is not stale
 ```
 
-`acceptance.jl` asserts at two strengths: the *scientific* claim is hard (the delta lands inside the published \$19.0M ± \$2.5M band and clears 2·se), while bit-reproducibility against the recorded run is a soft note — Julia's `hash` is not stable across versions and the member seeds derive from it, so the stream can move without any semantics changing.
+`acceptance.jl` asserts at two strengths: the *scientific* claim is hard (the delta lands inside the published \$19.0M ± \$2.5M band and clears 2·se), while bit-reproducibility against the recorded run is a soft note — Julia's `hash` is not stable across versions and the member seeds derive from it, so the stream can move without any semantics changing. It does on Julia 1.13: the effect lands at 24.06 ± 2.50, 1.4σ from the recorded value and so compatible with it, but outside the published band, which is why the CI job pins 1.12 until the seeding is version-independent (charter W31).
 
 ## Worked example — a study at engagement scale
 
@@ -121,4 +121,4 @@ The CLI is plain Julia over Bash, and the skills are Markdown. Nothing here depe
 
 - **Other agents** (Codex, Jules, Cursor, Gemini CLI, …) start at the repo-root [`AGENTS.md`](../AGENTS.md); `GEMINI.md` points to it. The documented opening, "Read `agent/skills/rd-study/SKILL.md` and run a study with me", works in any of them.
 - **Claude Code** discovers skills under `.claude/skills/`, which is gitignored here. Until the plugin ships (W12), link them once from the repo root: `mkdir -p .claude && ln -s ../agent/skills .claude/skills`.
-- **Setup** is Julia ≥ 1.12 and one `Pkg.instantiate()`. No `Manifest.toml` is committed, so versions resolve fresh (CI tests the latest and the lower bounds). Graphviz is optional (`draw` falls back to a `.dot` file), and Python ≥ 3.8 with the standard library only is needed just for the `launch_supply` helper scripts. The examples are bash; on Windows use WSL.
+- **Setup** is Julia ≥ 1.12 and one `Pkg.instantiate()`; use 1.12 itself to reproduce published ensemble numbers (`juliaup add 1.12 && juliaup override set 1.12` in the repo root). No `Manifest.toml` is committed, so versions resolve fresh (CI tests the latest and the lower bounds). Graphviz is optional (`draw` falls back to a `.dot` file), and Python ≥ 3.8 with the standard library only is needed just for the `launch_supply` helper scripts. The examples are bash; on Windows use WSL.
