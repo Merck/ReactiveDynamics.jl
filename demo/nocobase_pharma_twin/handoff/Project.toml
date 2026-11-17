@@ -1,0 +1,19 @@
+# Standalone environment for the pharma R&D twin: registered ReactiveDynamics 0.3 and AlgebraicAgents 0.4.
+# First time:  julia --project=. -e 'using Pkg; Pkg.instantiate()'
+# Run:         julia --project=. run_twin.jl
+
+[deps]
+AlgebraicAgents = "f6eb0ae3-10fa-40e6-88dd-9006ba45093a"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ReactiveDynamics = "c7456e7d-545a-4b79-91ea-6e93d96dd4d4"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[compat]
+AlgebraicAgents = "0.4"
+ReactiveDynamics = "0.3"
+julia = "~1.12"

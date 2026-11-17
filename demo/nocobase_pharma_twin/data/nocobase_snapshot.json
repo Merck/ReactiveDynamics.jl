@@ -1,0 +1,71 @@
+{
+  "_comment": "Synthetic data only: a fictional portfolio, with no real company, compound, patient or market data. NocoBase export at tick T-042, transcribed from the 'Pharma R&D Digital Twin Prototype' deck (not public). Drug targets are shown as generic labels (Target A to F). Collection and field names follow the deck's schema. Every value the deck does not state is listed in _assumed and in README.md.",
+  "source": "Pharma R&D Digital Twin Prototype deck (synthetic data, fictional company), tick #042",
+  "tick_index": 42,
+  "anchor_date": "2026-01-01",
+  "therapeutics_programs": [
+    {"program_code": "PRG-104", "target": "Target A", "modality": "Small Molecule", "therapeutic_area": "Oncology",   "current_stage": "Phase 2",      "next_stage": "Phase 3",      "pos_estimate": 0.380, "enpv_usd_m": 1120, "risk_adj_enpv": 425.6, "stage_pos": 0.55},
+    {"program_code": "PRG-209", "target": "Target B", "modality": "ADC",            "therapeutic_area": "Oncology",   "current_stage": "Phase 3",      "next_stage": "NDA/BLA",      "pos_estimate": 0.640, "enpv_usd_m": 1450, "risk_adj_enpv": 928.0, "stage_pos": 0.75},
+    {"program_code": "PRG-311", "target": "Target C", "modality": "Biologic",       "therapeutic_area": "Immunology", "current_stage": "IND-Enabling", "next_stage": "Phase 1",      "pos_estimate": 0.185, "enpv_usd_m": 840,  "risk_adj_enpv": 155.4, "stage_pos": 0.80},
+    {"program_code": "PRG-402", "target": "Target D", "modality": "Small Molecule", "therapeutic_area": "Neurology",  "current_stage": "Phase 1",      "next_stage": "Phase 2",      "pos_estimate": 0.060, "enpv_usd_m": 980,  "risk_adj_enpv": 58.8,  "stage_pos": 0.25},
+    {"program_code": "PRG-518", "target": "Target E", "modality": "Cell/Gene",      "therapeutic_area": "Hematology", "current_stage": "Phase 2",      "next_stage": "Phase 3",      "pos_estimate": 0.420, "enpv_usd_m": 760,  "risk_adj_enpv": 319.2, "stage_pos": 0.55},
+    {"program_code": "PRG-605", "target": "Target F", "modality": "Small Molecule", "therapeutic_area": "Immunology", "current_stage": "Lead Opt",     "next_stage": "IND-Enabling", "pos_estimate": 0.110, "enpv_usd_m": 620,  "risk_adj_enpv": 68.2,  "stage_pos": 0.60}
+  ],
+  "compounds_candidates": [
+    {"candidate_id": "CMP-104-A", "program_code": "PRG-104", "ic50_nm": 4.1,  "herg_ic50_um": 18.0, "tox_status": "Clear",   "is_lead": true, "kits_on_hand": 60,  "reorder_point_kits": 22, "batch_kits": 80},
+    {"candidate_id": "CMP-209-A", "program_code": "PRG-209", "ic50_nm": 0.9,  "herg_ic50_um": 30.0, "tox_status": "Clear",   "is_lead": true, "kits_on_hand": 520, "reorder_point_kits": 20, "batch_kits": 120},
+    {"candidate_id": "CMP-311-A", "program_code": "PRG-311", "ic50_nm": 0.3,  "herg_ic50_um": 50.0, "tox_status": "Clear",   "is_lead": true, "kits_on_hand": null, "reorder_point_kits": null, "batch_kits": null},
+    {"candidate_id": "CMP-402-A", "program_code": "PRG-402", "ic50_nm": 7.5,  "herg_ic50_um": 0.8,  "tox_status": "Flagged", "is_lead": true, "kits_on_hand": 40,  "reorder_point_kits": 5,  "batch_kits": 30},
+    {"candidate_id": "CMP-518-A", "program_code": "PRG-518", "ic50_nm": null, "herg_ic50_um": null, "tox_status": "Clear",   "is_lead": true, "kits_on_hand": 8,   "reorder_point_kits": 12, "batch_kits": 15},
+    {"candidate_id": "CMP-605-A", "program_code": "PRG-605", "ic50_nm": 12.0, "herg_ic50_um": 9.0,  "tox_status": "Clear",   "is_lead": true, "kits_on_hand": null, "reorder_point_kits": null, "batch_kits": null}
+  ],
+  "clinical_trials": [
+    {"trial_id": "TRL-104-201", "program_code": "PRG-104", "phase": "Phase 2", "target_enrollment": 240, "current_enrollment": 130, "status": "Recruiting", "site_count": 4, "accrual_per_site_month": 1.8},
+    {"trial_id": "TRL-209-301", "program_code": "PRG-209", "phase": "Phase 3", "target_enrollment": 660, "current_enrollment": 560, "status": "Recruiting", "site_count": 8, "accrual_per_site_month": 1.8},
+    {"trial_id": "TRL-402-101", "program_code": "PRG-402", "phase": "Phase 1", "target_enrollment": 48,  "current_enrollment": 22,  "status": "Active",     "site_count": 2, "accrual_per_site_month": 1.8},
+    {"trial_id": "TRL-518-201", "program_code": "PRG-518", "phase": "Phase 2", "target_enrollment": 90,  "current_enrollment": 30,  "status": "Recruiting", "site_count": 4, "accrual_per_site_month": 1.8}
+  ],
+  "studies": [
+    {"study_code": "STD-104-P2",  "program_code": "PRG-104", "stage": "Phase 2",      "months_remaining_full_speed": 10},
+    {"study_code": "STD-209-P3",  "program_code": "PRG-209", "stage": "Phase 3",      "months_remaining_full_speed": 8},
+    {"study_code": "STD-311-IND", "program_code": "PRG-311", "stage": "IND-Enabling", "months_remaining_full_speed": 6},
+    {"study_code": "STD-402-P1",  "program_code": "PRG-402", "stage": "Phase 1",      "months_remaining_full_speed": 9},
+    {"study_code": "STD-518-P2",  "program_code": "PRG-518", "stage": "Phase 2",      "months_remaining_full_speed": 12},
+    {"study_code": "STD-605-LO",  "program_code": "PRG-605", "stage": "Lead Opt",     "months_remaining_full_speed": 7}
+  ],
+  "resources_capacity": [
+    {"resource_id": "wet_fte", "resource_name": "Wet-lab research FTE",   "department": "Discovery",    "total_capacity_units": 52,  "allocated_units": 50,  "unit": "FTE",               "cost_usd_m_per_unit_month": 0.025, "kind": "assigned"},
+    {"resource_id": "ms",      "resource_name": "ADME / PK Mass Spec",    "department": "DMPK",         "total_capacity_units": 50,  "allocated_units": 48,  "unit": "runs/month",        "cost_usd_m_per_unit_month": 0.010, "kind": "shared", "backlog": "14 runs"},
+    {"resource_id": "gmp",     "resource_name": "GMP Bioreactor Suite B", "department": "CMC",          "total_capacity_units": 20,  "allocated_units": 19,  "unit": "lot-slots/month",   "cost_usd_m_per_unit_month": 0.050, "kind": "shared", "backlog": "6 lots"},
+    {"resource_id": "viv",     "resource_name": "Vivarium GLP Tox Slots", "department": "Toxicology",   "total_capacity_units": 40,  "allocated_units": 35,  "unit": "study-slots/month", "cost_usd_m_per_unit_month": 0.020, "kind": "shared", "backlog": "4 studies"},
+    {"resource_id": "gpu",     "resource_name": "Comp-Chem GPU Cluster",  "department": "Comp Chem",    "total_capacity_units": 100, "allocated_units": 62,  "unit": "k GPU-hours/month", "cost_usd_m_per_unit_month": 0.002, "kind": "shared", "backlog": "0 jobs"},
+    {"resource_id": "clin",    "resource_name": "Clinical Ops FTE",       "department": "Clinical Ops", "total_capacity_units": 133, "allocated_units": 104, "unit": "FTE",               "cost_usd_m_per_unit_month": 0.025, "kind": "shared"}
+  ],
+  "resource_allocations": [
+    {"program_code": "PRG-605", "wet_fte": 14, "wet_fte_full_speed": 16, "ms": 16, "viv": 4,  "gpu": 40, "gmp": 0, "clin": 0,  "cro_usd_m_month": 0.5},
+    {"program_code": "PRG-311", "wet_fte": 10, "wet_fte_full_speed": 12, "ms": 12, "viv": 18, "gpu": 8,  "gmp": 4, "clin": 0,  "cro_usd_m_month": 1.5},
+    {"program_code": "PRG-402", "wet_fte": 12, "wet_fte_full_speed": 12, "ms": 12, "viv": 13, "gpu": 6,  "gmp": 2, "clin": 14, "cro_usd_m_month": 3.0},
+    {"program_code": "PRG-104", "wet_fte": 4,  "wet_fte_full_speed": 4,  "ms": 8,  "viv": 0,  "gpu": 8,  "gmp": 2, "clin": 30, "cro_usd_m_month": 8.0},
+    {"program_code": "PRG-209", "wet_fte": 2,  "wet_fte_full_speed": 2,  "ms": 0,  "viv": 0,  "gpu": 0,  "gmp": 5, "clin": 40, "cro_usd_m_month": 19.4},
+    {"program_code": "PRG-518", "wet_fte": 8,  "wet_fte_full_speed": 16, "ms": 0,  "viv": 0,  "gpu": 0,  "gmp": 6, "clin": 20, "cro_usd_m_month": 9.0}
+  ],
+  "gmp_batch": {"slots_per_month": 3, "lead_time_months": 3},
+  "budget": {"quarterly_budget_usd_m": 150, "qtd_burn_usd_m": 142},
+  "valuation": {"erosion_per_month": 0.015},
+  "kill_switch": {"herg_ic50_um_threshold": 1.0},
+  "simulation_events": [
+    {"tick": 42, "asset": "PRG-402", "event_type": "hERG Tox Signal",     "severity": "CRITICAL"},
+    {"tick": 41, "asset": "PRG-104", "event_type": "Accrual Lag (<0.72)", "severity": "WARNING"},
+    {"tick": 40, "asset": "PRG-209", "event_type": "P3 Interim Passed",   "severity": "INFO"},
+    {"tick": 39, "asset": "PRG-518", "event_type": "GMP Slot Contention", "severity": "WARNING"}
+  ],
+  "_assumed": [
+    "valuation.erosion_per_month: eNPV lost per month of slip, mostly patent life (NocoBase WF4). Not in the deck. Applied when results are valued, so changing it needs no new simulation; run_twin.jl also prints 0% to 5%.",
+    "therapeutics_programs.stage_pos: probability of passing the NEXT readout; the deck gives only cumulative pos_estimate. On a pass the cumulative PoS is re-marked to pos_estimate / stage_pos.",
+    "studies.months_remaining_full_speed: the deck gives the stage, not progress inside it.",
+    "resource_allocations: the deck gives pool totals (48/50, 19/20, 35/40, 62/100) and ClinOps load 78%, not the per-program split; this split reproduces those totals exactly. wet_fte_full_speed is the demand at full speed; PRG-518's gap of 8 FTE is what the deck's 'reallocate 12 wet-lab FTEs to PRG-518' presupposes.",
+    "cro_usd_m_month and the per-unit costs: chosen so the monthly burn reproduces the deck's QTD burn (~$142M against $150M).",
+    "clinical_trials: enrollment and site counts are not in the prototype deck. PRG-104's 4 sites x 1.8 patients/site/month give 0.65 of its plan, matching event T-041 'Accrual Lag (<0.72)'.",
+    "compounds_candidates: kit stocks are not in the deck. PRG-518 starts below its reorder point so a GMP batch competes for Suite B immediately (event T-039). PRG-402's hERG IC50 of 0.8 uM is below the deck's 1.0 kill threshold (event T-042)."
+  ]
+}

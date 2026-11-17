@@ -1,0 +1,1031 @@
+<meta charset="utf-8">
+<title>Pharma R&amp;D Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column (~68ch) with wider figure bands; hairline-ruled sections, mono labels for the engine's own vocabulary. */
+:root {
+  --bg: #FFFFFF; --panel: #F5F5F3; --ink: #0A0A0A; --ink-2: #3A3A38; --muted: #6A6A68;
+  --hair: #DCDCD8; --hair-2: #ECECE9;
+  --accent: #0A8A84; --accent-ink: #076A65;
+  --s-loop: #008B82; --s-static: #B5740A;
+  --seq-lo: #E4F1F0; --seq-hi: #00615B; --seq-hi-ink: #FFFFFF;
+  --crit: #C81E33; --warn: #9A6208; --info: #6A6A68;
+  --crit-bg: #FBE9EB; --warn-bg: #F8EEDC; --info-bg: #EFEFEC;
+  --plate: #FFFFFF;
+  --f-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --t-xs: 0.75rem; --t-sm: 0.875rem; --t-md: 1rem; --t-lg: 1.25rem; --t-xl: 1.75rem; --t-hero: clamp(3.25rem, 9vw, 5.5rem);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111312; --panel: #1A1D1C; --ink: #F2F2EF; --ink-2: #CFCFCB; --muted: #9A9A97;
+  --hair: #343836; --hair-2: #232625;
+  --accent: #3FB5AF; --accent-ink: #6CCBC6;
+  --s-loop: #26A098; --s-static: #C4861A;
+  --seq-lo: #1A2827; --seq-hi: #3FB5AF; --seq-hi-ink: #0A0A0A;
+  --crit: #F0596B; --warn: #E0A33C; --info: #A2A29F;
+  --crit-bg: #3A1A1F; --warn-bg: #33270F; --info-bg: #232625;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #111312; --panel: #1A1D1C; --ink: #F2F2EF; --ink-2: #CFCFCB; --muted: #9A9A97;
+  --hair: #343836; --hair-2: #232625;
+  --accent: #3FB5AF; --accent-ink: #6CCBC6;
+  --s-loop: #26A098; --s-static: #C4861A;
+  --seq-lo: #1A2827; --seq-hi: #3FB5AF; --seq-hi-ink: #0A0A0A;
+  --crit: #F0596B; --warn: #E0A33C; --info: #A2A29F;
+  --crit-bg: #3A1A1F; --warn-bg: #33270F; --info-bg: #232625;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-sans); font-size: var(--t-md); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+h1 { font-size: var(--t-xl); font-weight: 700; }
+h2 { font-size: var(--t-xl); font-weight: 700; line-height: 1.2; }
+h3 { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.01em; }
+p { margin: 0; }
+.prose { max-width: 68ch; display: flex; flex-direction: column; gap: 12px; color: var(--ink-2); }
+.prose strong { color: var(--ink); }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+code { background: var(--panel); padding: 1px 5px; border-radius: 3px; }
+.label { font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+header { display: flex; flex-direction: column; gap: 14px; }
+.brandline { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
+.brandline .label b { color: var(--accent); font-weight: 500; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 18px; padding-top: 10px; border-top: 1px solid var(--hair); font-size: var(--t-sm); }
+nav a { color: var(--ink-2); text-decoration: none; }
+nav a:hover { color: var(--accent-ink); text-decoration: underline; }
+
+/* headline */
+.headline { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: end; padding-block: 8px 28px; border-bottom: 1px solid var(--ink); }
+.hero-num { font-size: var(--t-hero); font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hero-num small { font-size: 0.32em; font-weight: 500; letter-spacing: -0.01em; color: var(--muted); margin-left: 0.3em; }
+.hero-cap { margin-top: 12px; max-width: 46ch; color: var(--ink-2); }
+.vs { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; padding: 16px 18px; background: var(--panel); border-radius: 6px; }
+.vs .big { font-size: var(--t-xl); font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.vs .big.deck { color: var(--muted); }
+.vs .sep { grid-column: 1 / -1; border-top: 1px solid var(--hair); margin-block: 4px; }
+.split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.split > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.split .v { font-size: var(--t-lg); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* sections */
+section { display: flex; flex-direction: column; gap: 22px; scroll-margin-top: 16px; }
+.sec-head { display: flex; flex-direction: column; gap: 8px; }
+
+/* pipeline */
+.flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.zone { display: flex; justify-content: space-between; grid-column: span var(--span); font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; padding-bottom: 6px; border-bottom: 2px solid var(--zc); color: var(--zc); }
+.z-noco { --zc: var(--s-static); }
+.z-dyve { --zc: var(--s-loop); }
+.step { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 16px; border: 1px solid var(--hair); border-radius: 6px; min-width: 0; position: relative; background: var(--bg); }
+.step .n { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--muted); }
+.step h3 { font-size: var(--t-sm); }
+.step p { font-size: var(--t-sm); color: var(--ink-2); line-height: 1.45; }
+.step code { font-size: 0.78em; word-break: break-word; }
+
+.rosetta { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.rosetta th, .rosetta td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--hair-2); vertical-align: top; }
+.rosetta th { font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; border-bottom-color: var(--hair); }
+.rosetta td:first-child { width: 34%; }
+.rosetta td:nth-child(2) { width: 22%; font-weight: 600; color: var(--accent-ink); }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* figures */
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+figcaption { font-size: var(--t-sm); color: var(--muted); max-width: 72ch; }
+.diagram { border: 1px solid var(--hair); border-radius: 6px; padding: 12px; background: var(--bg); }
+.diagram svg { display: block; width: 100%; min-width: 720px; height: auto; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: var(--t-xs); color: var(--muted); }
+.keys span { display: inline-flex; align-items: center; gap: 6px; }
+.keys svg { flex: none; }
+.tree { font-family: var(--f-mono); font-size: 0.8rem; line-height: 1.75; background: var(--panel); border-radius: 6px; padding: 16px 18px; white-space: pre; color: var(--ink-2); }
+.tree b { color: var(--ink); font-weight: 600; }
+.tree i { color: var(--accent-ink); font-style: normal; }
+.tree .c { color: var(--muted); }
+.plate { background: var(--plate); border-radius: 6px; padding: 12px; }
+.plate img { display: block; margin: 0 auto; max-height: 720px; width: auto; }
+
+/* svg diagram & chart classes */
+.d-place { fill: var(--bg); stroke: var(--ink); stroke-width: 1.5; }
+.d-gate { fill: var(--bg); stroke: var(--crit); stroke-width: 1.5; }
+.d-trans { fill: var(--panel); stroke: var(--ink); stroke-width: 1.5; }
+.d-trans-em { fill: var(--seq-lo); stroke: var(--s-loop); stroke-width: 2; }
+.d-rule { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.d-agent { fill: none; stroke: var(--s-static); stroke-width: 1.5; stroke-dasharray: 5 3; }
+.d-arc { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.d-arc-out { fill: none; stroke: var(--s-loop); stroke-width: 1.6; }
+.d-wire { fill: none; stroke: var(--s-static); stroke-width: 1.6; stroke-dasharray: 5 3; }
+.d-ctl { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.d-ah { fill: var(--ink-2); }
+.d-ah-out { fill: var(--s-loop); }
+.d-ah-wire { fill: var(--s-static); }
+.d-ah-ctl { fill: var(--muted); }
+.d-t { fill: var(--ink); font-family: var(--f-sans); font-size: 13px; }
+.d-tb { fill: var(--ink); font-family: var(--f-sans); font-size: 13px; font-weight: 600; }
+.d-ts { fill: var(--muted); font-family: var(--f-sans); font-size: 11.5px; }
+.d-tm { fill: var(--ink-2); font-family: var(--f-mono); font-size: 11.5px; }
+.d-tm-bg { fill: var(--bg); }
+
+.chart { width: 100%; min-height: 120px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grid { stroke: var(--hair-2); stroke-width: 1; }
+.base { stroke: var(--muted); stroke-width: 1; }
+.tick { fill: var(--muted); font-family: var(--f-sans); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.lab { fill: var(--ink); font-family: var(--f-sans); font-size: 13px; font-weight: 500; }
+.lab-s { fill: var(--muted); font-family: var(--f-sans); font-size: 12px; }
+.val { fill: var(--ink); font-family: var(--f-sans); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar { fill: var(--s-loop); opacity: 0.55; }
+.bar.em { opacity: 1; }
+.bar-muted { fill: var(--muted); opacity: 0.45; }
+.whisk { stroke: var(--ink); stroke-width: 1.5; }
+.ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ln.loop { stroke: var(--s-loop); }
+.ln.static { stroke: var(--s-static); }
+.dot { fill: var(--s-loop); stroke: var(--bg); stroke-width: 2; }
+.ref { stroke: var(--crit); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ref-t { fill: var(--crit); font-family: var(--f-sans); font-size: 12px; font-weight: 600; }
+.mark { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.guide { stroke: var(--ink-2); stroke-width: 1; }
+.hit { fill: transparent; }
+
+.dash { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 40px; }
+.card-h { display: flex; flex-direction: column; gap: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--t-xs); color: var(--ink-2); }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+
+/* constraint matrix */
+.cm { display: grid; grid-template-columns: 150px repeat(4, minmax(104px, 1fr)) minmax(240px, 2.2fr); gap: 4px; min-width: 900px; font-size: 0.85rem; }
+.cm .hd { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 4px 8px 8px; align-self: end; }
+.cm .pr { display: flex; flex-direction: column; justify-content: center; padding: 8px 0; border-top: 1px solid var(--hair-2); }
+.cm .pr b { font-family: var(--f-mono); font-weight: 500; font-size: 0.85rem; }
+.cm .pr span { color: var(--muted); font-size: 0.78rem; }
+.cm .c { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 10px; border-radius: 4px; min-height: 58px; line-height: 1.3; }
+.cm .c b { font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+.cm .c span { font-size: 0.78rem; }
+.cm .ok { background: var(--seq-lo); color: var(--accent-ink); }
+.cm .ok span { color: var(--ink-2); }
+.cm .bind { background: var(--crit-bg); color: var(--crit); box-shadow: inset 0 0 0 1.5px var(--crit); }
+.cm .bind span { color: var(--ink); }
+.cm .fixed { background: var(--warn-bg); color: var(--warn); }
+.cm .fixed span { color: var(--ink-2); }
+.cm .na { border: 1px dashed var(--hair); color: var(--muted); align-items: center; }
+.cm .out { padding: 8px 4px 8px 12px; color: var(--ink-2); display: flex; align-items: center; border-top: 1px solid var(--hair-2); }
+.cm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.78rem; color: var(--muted); }
+.cm-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+
+/* decisions */
+.decide { list-style: none; margin: 0; padding: 0; counter-reset: d; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 28px; }
+.decide li { counter-increment: d; display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--accent); font-size: var(--t-sm); color: var(--ink-2); min-width: 0; }
+.decide li::before { content: counter(d); font-family: var(--f-mono); font-size: var(--t-xs); color: var(--accent-ink); font-weight: 600; }
+.decide li b { color: var(--ink); font-size: var(--t-md); line-height: 1.3; }
+.decide.lim li { border-top-color: var(--s-static); }
+.decide.lim li::before { color: var(--warn); }
+.note { font-size: var(--t-sm); max-width: 80ch; }
+.vs-note { grid-column: 1 / -1; font-size: var(--t-sm); color: var(--ink-2); }
+.rosetta.plain td:nth-child(2) { font-weight: 400; color: var(--ink-2); }
+#answer > .sec-head { margin-top: 6px; }
+
+/* chips & feed */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.crit { color: var(--crit); background: var(--crit-bg); }
+.chip.warn { color: var(--warn); background: var(--warn-bg); }
+.chip.info { color: var(--info); background: var(--info-bg); }
+.chip.ok { color: var(--accent-ink); background: var(--seq-lo); }
+.chip.approx { color: var(--warn); background: var(--warn-bg); }
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
+.feed li { display: grid; grid-template-columns: 64px 74px 78px 100px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair-2); font-size: var(--t-sm); }
+.feed li.rec { color: var(--muted); }
+.feed .t { font-family: var(--f-mono); font-size: 0.78rem; }
+.feed .d { color: var(--muted); font-size: 0.8rem; }
+.feed .a { font-family: var(--f-mono); font-size: 0.8rem; font-weight: 500; }
+.feed-break { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--accent-ink); padding: 8px 0; border-bottom: 1px solid var(--hair-2); letter-spacing: 0.04em; }
+
+
+.gaps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 28px; }
+.gaps > div { display: grid; grid-row: span 2; grid-template-rows: subgrid; min-width: 0; }
+.gaps .gh { padding-bottom: 8px; border-bottom: 2px solid var(--gc); display: flex; flex-direction: column; gap: 2px; }
+.gaps ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.gaps li { font-size: var(--t-sm); color: var(--ink-2); display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px; }
+.gaps li .k { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); }
+.gaps li b { color: var(--ink); font-weight: 600; }
+.g1 { --gc: var(--muted); } .g2 { --gc: var(--s-loop); } .g3 { --gc: var(--s-static); }
+
+.next { list-style: none; margin: 0; padding: 0; counter-reset: n; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 36px; }
+.next li { counter-increment: n; display: grid; align-content: start; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 8px; font-size: var(--t-sm); color: var(--ink-2); }
+.next li::before { content: counter(n); font-family: var(--f-mono); font-size: var(--t-sm); color: var(--accent-ink); font-weight: 600; grid-row: span 2; }
+.next li b { color: var(--ink); font-size: var(--t-md); }
+
+details { border-top: 1px solid var(--hair); padding-top: 12px; }
+details > summary { cursor: pointer; font-weight: 600; font-size: var(--t-sm); list-style-position: outside; }
+details[open] > summary { margin-bottom: 14px; }
+.dl { display: flex; flex-direction: column; gap: 10px; max-width: 80ch; font-size: var(--t-sm); color: var(--ink-2); margin: 0; padding-left: 18px; }
+.nums { width: 100%; border-collapse: collapse; font-size: var(--t-sm); font-variant-numeric: tabular-nums; min-width: 560px; }
+.nums th, .nums td { padding: 7px 14px 7px 0; border-bottom: 1px solid var(--hair-2); text-align: right; }
+.nums th:first-child, .nums td:first-child { text-align: left; }
+.nums th { font-family: var(--f-mono); font-size: var(--t-xs); color: var(--muted); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+
+footer { border-top: 1px solid var(--ink); padding-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: var(--t-xs); color: var(--muted); }
+footer code { font-size: 0.95em; }
+
+#tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--bg); font-size: var(--t-xs); line-height: 1.45; padding: 7px 10px; border-radius: 4px; white-space: pre-line; max-width: 260px; font-variant-numeric: tabular-nums; }
+
+/* schema-map diagrams */
+.k-noco { fill: color-mix(in oklab, var(--s-static) 9%, var(--bg)); stroke: var(--s-static); stroke-width: 1.5; }
+.k-dyve { fill: color-mix(in oklab, var(--s-loop) 9%, var(--bg)); stroke: var(--s-loop); stroke-width: 1.5; }
+.k-none { fill: var(--bg); stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.f-line { fill: none; stroke: var(--s-loop); stroke-width: 2; }
+.g-line { fill: none; stroke: var(--s-static); stroke-width: 2; }
+.fk { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.rel { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.d-hd { fill: var(--muted); font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.08em; }
+.d-hd.n, .d-tg { fill: var(--warn); }
+.d-hd.d, .d-tf { fill: var(--accent-ink); }
+.d-tf, .d-tg { font-family: var(--f-mono); font-size: 11px; }
+.d-div { stroke: var(--hair); stroke-width: 1; stroke-dasharray: 2 4; }
+.d-eq { fill: var(--ink); font-family: var(--f-mono); font-size: 12.5px; font-weight: 500; }
+.d-fl { fill: var(--accent-ink); font-family: var(--f-mono); font-size: 13px; font-weight: 700; }
+
+@media (max-width: 880px) {
+  .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zone { display: none; }
+  .gaps { grid-template-columns: minmax(0, 1fr); row-gap: 28px; }
+  .gaps > div { display: flex; flex-direction: column; gap: 10px; grid-row: auto; }
+}
+@media (max-width: 760px) {
+  .headline { grid-template-columns: minmax(0, 1fr); }
+  .dash { grid-template-columns: minmax(0, 1fr); }
+  .next { grid-template-columns: minmax(0, 1fr); }
+  .decide { grid-template-columns: minmax(0, 1fr); }
+  .split { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .feed li { grid-template-columns: 56px 88px minmax(0, 1fr); row-gap: 2px; }
+  .feed li .d { display: none; }
+  .feed li > span:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="brandline">
+    <span class="label"><b>DyVE</b> &#xB7; ReactiveDynamics.jl + AlgebraicAgents.jl</span>
+    <span class="label">synthetic portfolio &#xB7; NocoBase snapshot at T-042, January 2026</span>
+  </div>
+  <h1>Pharma R&amp;D Digital Twin</h1>
+  <div class="prose">
+    <p>This page turns a NocoBase prototype of a pharma R&amp;D digital twin, built for a fictional company, into a runnable simulation, built with the DyVE modeling stack (ReactiveDynamics.jl on AlgebraicAgents.jl). It answers the prototype deck's question: <strong>is a closed-loop portfolio policy worth it against a static annual plan, over 24 months?</strong> The closed loop has two parts: a kill switch that stops a study as soon as a toxicity signal appears, and a monthly reallocation of wet-lab staff. NocoBase stays the system of record. The simulation reads a snapshot of it and writes its results back into NocoBase tables.</p>
+    <p><strong>All data are synthetic.</strong> The portfolio, its programs, compounds, values and events are generated data for a fictional company, and no number on this page is a forecast for a real portfolio. Drug targets are shown as generic labels (Target A to F).</p>
+  </div>
+  <nav aria-label="Sections">
+    <a href="#answer">The answer</a><a href="#constraints">What it showed</a><a href="#model">The model</a><a href="#levers">The levers</a><a href="#records">From records to model</a><a href="#limits">What it leaves out</a><a href="#next">Next steps</a>
+  </nav>
+</header>
+
+<section id="answer" aria-label="The answer">
+  <div class="headline">
+    <div>
+      <div class="label">Closed loop vs. static annual plan &#xB7; net value over 24 months</div>
+      <div class="hero-num">+$53M<small>&#xB1; $1.7M</small></div>
+      <p class="hero-cap">Average over 40 simulated futures. Each future is run under both policies with the same chance outcomes, so the comparison is like for like; &#xB1; is one standard error. Net value is risk-adjusted eNPV (expected net present value) minus spend.</p>
+    </div>
+    <div class="vs">
+      <span class="big num">+3.9%</span><span>gain on the static plan's net value, in the model</span>
+      <span class="big deck num">+14.8%</span><span>the prototype's first estimate</span>
+      <span class="sep"></span>
+      <span class="vs-note">At 5% of eNPV lost per month of slip, the most severe value tested, the gain is +7%, still under half the first estimate.</span>
+    </div>
+  </div>
+  <div class="split">
+    <div><span class="label">Spend avoided</span><span class="v">+$35.6M</span><span class="muted" style="font-size:var(--t-sm)">PRG-402's Phase 1 stops at month 1, when its hERG (cardiac-safety) flag is raised, instead of at the month-12 review. This part does not depend on the erosion assumption.</span></div>
+    <div><span class="label">Value protected</span><span class="v">+$17.7M</span><span class="muted" style="font-size:var(--t-sm)">The freed staff go to studies still running, which finish closer to plan and lose less patent life. This part scales with the erosion assumption.</span></div>
+    <div><span class="label">Run-to-run spread</span><span class="v">&#xB1;$595M</span><span class="muted" style="font-size:var(--t-sm)">From one simulated future to the next, end-of-run eNPV varies by 11&#xD7; the effect, so no single run can show it.</span></div>
+  </div>
+  <div class="sec-head">
+    <h3>Three decisions this informs</h3>
+  </div>
+  <ol class="decide">
+    <li><b>Act on tox flags when they are raised</b><span>Worth +$38.3M on its own here. While PRG-402 waits for the annual review, it holds 12 wet-lab FTE and $3.0M a month of CRO spend.</span></li>
+    <li><b>Re-plan wet-lab staff monthly</b><span>Worth +$14.1M on its own. The two levers barely interact, so each can be decided separately.</span></li>
+    <li><b>Check PRG-518's kit supply before adding staff</b><span>With the assumed batch size and lead time, manufacturing limits this program, not people. The next section shows why.</span></li>
+  </ol>
+  <p class="muted note">The static plan acts on the tox flag at the month-12 review, as in the prototype. A portfolio that already acts within a quarter would gain less from the kill switch, because its value is the cost of the months the flagged study keeps running.</p>
+</section>
+
+<section id="constraints">
+  <div class="sec-head">
+    <span class="label">What the simulation showed</span>
+    <h2>Every program is held back by something different, and fixing one constraint exposes the next</h2>
+  </div>
+  <div class="prose">
+    <p>A spreadsheet can total demand against capacity. It cannot show which constraint stops a study in which month, or what happens once that constraint is relieved. The matrix below reads that off one simulated future under the closed loop.</p>
+  </div>
+  <figure>
+    <div class="card-h"><h3>What limits each program</h3><span class="muted" style="font-size:var(--t-sm)">Closed loop, one simulated future (seed 1).</span></div>
+    <div class="scroll">
+      <div class="cm" role="table" aria-label="What limits each program under the closed loop, one simulated future">
+        <div class="hd" role="columnheader">Program</div><div class="hd" role="columnheader">Tox decision</div><div class="hd" role="columnheader">Wet-lab staff</div><div class="hd" role="columnheader">Patients</div><div class="hd" role="columnheader">Material (kits)</div><div class="hd" role="columnheader">What happened</div>
+
+        <div class="pr" role="rowheader"><b>PRG-402</b><span>Target D &#xB7; Phase 1</span></div>
+        <div class="c bind" role="cell"><b>limiting</b><span>hERG 0.8 &#xB5;M, below the 1.0 limit</span></div>
+        <div class="c na" role="cell">&#xB7;</div><div class="c na" role="cell">&#xB7;</div><div class="c na" role="cell">&#xB7;</div>
+        <div class="out" role="cell">Stopped at month 1. Frees 12 wet-lab FTE and $3.0M a month of CRO spend for the other studies.</div>
+
+        <div class="pr" role="rowheader"><b>PRG-104</b><span>Target A &#xB7; Phase 2</span></div>
+        <div class="c ok" role="cell"><b>clear</b></div>
+        <div class="c ok" role="cell"><b>enough</b><span>4 of 4 FTE</span></div>
+        <div class="c bind" role="cell"><b>limiting</b><span>enrollment at 82% of plan by month 3 (65% expected)</span></div>
+        <div class="c ok" role="cell"><b>enough</b></div>
+        <div class="out" role="cell">Ran at 45% to 100% of full speed. Its readout passed at month 16, after 3.3 months of slip.</div>
+
+        <div class="pr" role="rowheader"><b>PRG-518</b><span>Target E &#xB7; Phase 2</span></div>
+        <div class="c ok" role="cell"><b>clear</b></div>
+        <div class="c fixed" role="cell"><b>fixed by re-plan</b><span>8 &#x2192; 16 FTE</span></div>
+        <div class="c ok" role="cell"><b>enough</b><span>7.2 patients a month against 5 needed</span></div>
+        <div class="c bind" role="cell"><b>limiting</b><span>supply exactly matches demand, with no buffer</span></div>
+        <div class="out" role="cell">Fully staffed, yet stalled at months 6 and 15 when kits ran out. One batch line makes 15 kits every 3 months, exactly the 5 a month the study uses. Its readout passed at month 16, after 5.4 months of slip.</div>
+
+        <div class="pr" role="rowheader"><b>PRG-209 &#xB7; 311 &#xB7; 605</b><span>Phase 3 &#xB7; IND &#xB7; Lead-opt</span></div>
+        <div class="c ok" role="cell"><b>clear</b></div><div class="c fixed" role="cell"><b>fixed by re-plan</b><span>PRG-311 and PRG-605 topped up to full staffing</span></div><div class="c ok" role="cell"><b>enough</b><span>PRG-209 only</span></div><div class="c ok" role="cell"><b>enough</b><span>PRG-209: 520 on hand</span></div>
+        <div class="out" role="cell">Ran at or near full speed to their readouts in months 4 to 7. PRG-209 passed; PRG-311 and PRG-605 failed and released their staff.</div>
+      </div>
+    </div>
+    <div class="cm-legend"><span><i style="background:var(--crit-bg); box-shadow: inset 0 0 0 1.5px var(--crit)"></i>limiting: this holds the program back</span><span><i style="background:var(--warn-bg)"></i>was limiting, fixed by the re-plan</span><span><i style="background:var(--seq-lo)"></i>enough</span><span><i style="border:1px dashed var(--hair)"></i>does not apply</span></div>
+    <figcaption>The prototype's fix for PRG-518 was more wet-lab staff. The re-plan gives it 16 FTE from month 0. The study then runs short of kits and stalls at months 6 and 15, even though staff and patients are available. With the assumed 15-kit batch and 3-month lead time, one Suite B line supplies exactly the 5 kits a month the study uses. Whether that would hold for a real program of this kind depends on the batch size and lead time, which the deck does not give. PRG-104's enrollment is drawn at random each month: 65% of plan is the average, and this future ran luckier, at 82%.</figcaption>
+  </figure>
+  <details>
+    <summary>Show the month-by-month event log for this future</summary>
+    <p class="muted" style="font-size:var(--t-sm); margin-bottom:10px">Events recorded in the deck, followed by what the simulation produces under the closed loop. These are the rows written back to <code>simulation_events</code> (scenario SCN-04).</p>
+    <ul class="feed" id="feed"></ul>
+  </details>
+</section>
+
+<section id="model">
+  <div class="sec-head">
+    <span class="label">The model</span>
+    <h2>Each program is one study competing for people, capacity, money, patients and kits</h2>
+  </div>
+  <div class="prose">
+    <p>All six programs share the same structure. Each study draws wet-lab staff, shared capacity, CRO budget, patients and kits every month. A gate lets the kill switch stop it, and at the end a readout either advances the program or ends it. The diagram shows PRG-518, the cell-therapy program from the matrix above. The number on each arrow (an arc) is the units drawn per month at full speed.</p>
+  </div>
+  <figure>
+    <div class="diagram scroll">
+      <svg viewBox="0 0 980 470" role="img" aria-label="One program's slice of the Petri net: PRG-518's Phase 2 study draws wet-lab staff, shared pools, CRO budget, patients and kits; the kill-switch rule controls a go gate; the program token is attached to the study; the readout either moves the program to Phase 3 or ends it.">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="ah-out" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-out" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="ah-wire" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-wire" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="ah-ctl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-ctl" d="M0,0L10,5L0,10z"/></marker>
+        </defs>
+
+        <!-- left column: rule, agent, GMP batch -->
+        <rect class="d-rule" x="20" y="34" width="206" height="56" rx="6"/>
+        <text class="d-tb" x="34" y="57">Re-plan rule</text>
+        <text class="d-ts" x="34" y="76">monthly FTE quota + priority</text>
+        <path class="d-ctl" d="M226,62 H322" marker-end="url(#ah-ctl)"/>
+
+        <rect class="d-agent" x="20" y="270" width="200" height="56" rx="6"/>
+        <text class="d-tb" x="34" y="293">Clinical-ops model</text>
+        <text class="d-ts" x="34" y="312">random, 4 sites &#xD7; 1.8 a month</text>
+        <path class="d-wire" d="M220,298 H322" marker-end="url(#ah-wire)"/>
+        <text class="d-ts" x="228" y="290">data link</text>
+
+        <rect class="d-trans" x="20" y="374" width="200" height="56" rx="2"/>
+        <text class="d-tb" x="34" y="397">GMP batch</text>
+        <text class="d-ts" x="34" y="416">when kits &lt; 12 &#xB7; 3-month lead</text>
+        <path class="d-arc-out" d="M220,402 H322" marker-end="url(#ah-out)"/>
+        <rect class="d-tm-bg" x="250" y="386" width="40" height="15"/>
+        <text class="d-tm" x="270" y="397" text-anchor="middle">+15</text>
+
+        <!-- places -->
+        <circle class="d-place" cx="354" cy="62" r="30"/><text class="d-t" x="354" y="67" text-anchor="middle">FTE</text>
+        <circle class="d-place" cx="354" cy="150" r="30"/><text class="d-t" x="354" y="155" text-anchor="middle">Pools</text>
+        <circle class="d-place" cx="354" cy="226" r="30"/><text class="d-t" x="354" y="231" text-anchor="middle">CRO $</text>
+        <circle class="d-place" cx="354" cy="298" r="30"/><text class="d-t" x="354" y="303" text-anchor="middle">Patients</text>
+        <circle class="d-place" cx="354" cy="402" r="30"/><text class="d-t" x="354" y="407" text-anchor="middle">Kits</text>
+        <text class="d-ts" x="354" y="20" text-anchor="middle">wet-lab</text>
+        <text class="d-ts" x="354" y="194" text-anchor="middle">GMP Suite B &#xB7; clinical ops</text>
+
+        <!-- arcs into study -->
+        <path class="d-arc" d="M384,70 L558,206" marker-end="url(#ah)"/>
+        <path class="d-arc" d="M384,155 L558,222" marker-end="url(#ah)"/>
+        <path class="d-arc" d="M384,228 L558,238" marker-end="url(#ah)"/>
+        <path class="d-arc" d="M384,294 L558,254" marker-end="url(#ah)"/>
+        <path class="d-arc" d="M382,392 L558,268" marker-end="url(#ah)"/>
+        <rect class="d-tm-bg" x="440" y="117" width="30" height="15"/><text class="d-tm" x="455" y="129" text-anchor="middle">16</text>
+        <rect class="d-tm-bg" x="425" y="174" width="60" height="15"/><text class="d-tm" x="455" y="186" text-anchor="middle">6 + 20</text>
+        <rect class="d-tm-bg" x="432" y="223" width="46" height="15"/><text class="d-tm" x="455" y="234" text-anchor="middle">$9.0M</text>
+        <rect class="d-tm-bg" x="444" y="268" width="22" height="15"/><text class="d-tm" x="455" y="279" text-anchor="middle">5</text>
+        <rect class="d-tm-bg" x="444" y="333" width="22" height="15"/><text class="d-tm" x="455" y="345" text-anchor="middle">5</text>
+
+        <!-- study transition -->
+        <rect class="d-trans-em" x="560" y="196" width="160" height="80" rx="2"/>
+        <text class="d-tb" x="640" y="222" text-anchor="middle">Study STD-518-P2</text>
+        <text class="d-ts" x="640" y="242" text-anchor="middle">Phase 2 &#xB7; 12 months</text>
+        <text class="d-ts" x="640" y="259" text-anchor="middle">at full speed</text>
+
+        <!-- go gate + kill rule -->
+        <circle class="d-gate" cx="640" cy="92" r="26"/><text class="d-t" x="640" y="97" text-anchor="middle">go</text>
+        <path class="d-arc" d="M640,118 V194" marker-end="url(#ah)"/>
+        <rect class="d-tm-bg" x="646" y="146" width="16" height="15"/><text class="d-tm" x="654" y="157" text-anchor="middle">1</text>
+        <rect class="d-rule" x="730" y="64" width="210" height="56" rx="6"/>
+        <text class="d-tb" x="744" y="87">Kill-switch rule</text>
+        <text class="d-ts" x="744" y="106">hERG IC50 &lt; 1.0 &#xB5;M &#x2192; gate closes</text>
+        <path class="d-ctl" d="M730,92 H668" marker-end="url(#ah-ctl)"/>
+
+        <!-- program token -->
+        <circle class="d-place" cx="640" cy="392" r="38"/><circle class="d-place" cx="640" cy="392" r="33"/>
+        <text class="d-t" x="640" y="397" text-anchor="middle">Program</text>
+        <text class="d-ts" x="640" y="448" text-anchor="middle">token PRG-518 &#xB7; PoS 0.42 &#xB7; eNPV $760M</text>
+        <path class="d-arc" d="M632,355 V278" marker-end="url(#ah)"/>
+        <path class="d-arc" d="M648,278 V352" marker-end="url(#ah)"/>
+        <text class="d-ts" x="660" y="322">matched by code PRG-518</text>
+
+        <!-- outcomes -->
+        <path class="d-arc-out" d="M720,214 C760,214 770,190 806,190" marker-end="url(#ah-out)"/>
+        <path class="d-arc" d="M720,258 C760,258 770,282 806,282" marker-end="url(#ah)"/>
+        <text class="d-tb" x="814" y="186">Readout passes</text>
+        <text class="d-ts" x="814" y="204">p = 0.55 &#x2192; Phase 3</text>
+        <text class="d-tb" x="814" y="278">Readout fails</text>
+        <text class="d-ts" x="814" y="296">program ends &#x2192; Terminated</text>
+      </svg>
+    </div>
+    <div class="keys">
+      <span><svg width="16" height="16" aria-hidden="true"><circle class="d-place" cx="8" cy="8" r="6"/></svg>place: a stock of people, capacity, money or material</span>
+      <span><svg width="18" height="14" aria-hidden="true"><rect class="d-trans" x="1" y="2" width="16" height="10"/></svg>transition: an activity that takes time</span>
+      <span><svg width="16" height="16" aria-hidden="true"><circle class="d-place" cx="8" cy="8" r="7"/><circle class="d-place" cx="8" cy="8" r="4"/></svg>place holding program tokens, each with its own attributes</span>
+      <span><svg width="22" height="10" aria-hidden="true"><path class="d-ctl" d="M1,5H21"/></svg>rule that changes the model during the run</span>
+      <span><svg width="22" height="10" aria-hidden="true"><path class="d-wire" d="M1,5H21"/></svg>link from another model (an AlgebraicAgents wire)</span>
+    </div>
+    <figcaption>PRG-518 has no hERG flag, so its gate stays open; in PRG-402's identical structure, the kill switch closes it. The GMP batch competes with studies for Suite B, which is where the deck's "GMP slot contention" warning comes from. When kits run out, the study waits for the next batch: that is the stall in the matrix above.</figcaption>
+  </figure>
+  <details>
+    <summary>How the parts run together, and the engine's own drawing</summary>
+    <div class="dash">
+      <figure>
+        <h3>The twin runs as one hierarchy of linked models</h3>
+<div class="tree scroll"><b>rd_twin</b>                <span class="c">AA root &#xB7; keeps both in step</span>
+&#x251C;&#x2500; <b>clinical_ops</b>        <span class="c">AA agent &#xB7; own random numbers</span>
+&#x2502;    <i>&#x2550;&#x2550; 4 wires &#x2550;&#x2550;&#x25B6;</i>      <span class="c">enrollment for 104 &#xB7; 209 &#xB7; 402 &#xB7; 518</span>
+&#x2514;&#x2500; <b>portfolio model</b>     <span class="c">ReactiveDynamics &#xB7; 44 places</span>
+     &#x2514;&#x2500; <b>6 program tokens</b> <span class="c">each with its own history</span></div>
+        <figcaption>The prototype's coordination mockup (the "Corvane Twin", for a fictional company) argues for "coordination, not universal simulation". This hierarchy does that directly, with separate models for separate subsystems joined by data links (AlgebraicAgents wires). Supply, finance and workforce could be split out the same way.</figcaption>
+      </figure>
+      <figure>
+        <h3>The engine draws it too</h3>
+        <p class="muted" style="font-size:var(--t-sm)">The engine draws the picture below from the same model file and redraws it on every run, so it always matches the model. The diagram above is drawn by hand for readability.</p>
+                <div class="plate"><img alt="Graphviz drawing of PRG-518's places and transitions, generated by ReactiveDynamics" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPgo8IS0tIEdlbmVyYXRlZCBieSBncmFwaHZpeiB2ZXJzaW9uIDEyLjIuMSAoMjAyNDEyMDYuMjM1MykKIC0tPgo8IS0tIFRpdGxlOiByZWFjdGl2ZV9uZXR3b3JrIFBhZ2VzOiAxIC0tPgo8c3ZnIHdpZHRoPSI1NzFwdCIgaGVpZ2h0PSI4MDhwdCIKIHZpZXdCb3g9IjAuMDAgMC4wMCA1NzAuNzAgODA4LjM2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPGcgaWQ9ImdyYXBoMCIgY2xhc3M9ImdyYXBoIiB0cmFuc2Zvcm09InNjYWxlKDEgMSkgcm90YXRlKDApIHRyYW5zbGF0ZSg0IDgwNC4zNikiPgo8dGl0bGU+cmVhY3RpdmVfbmV0d29yazwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IndoaXRlIiBzdHJva2U9Im5vbmUiIHBvaW50cz0iLTQsNCAtNCwtODA0LjM2IDU2Ni43LC04MDQuMzYgNTY2LjcsNCAtNCw0Ii8+CjwhLS0gUHJvZ3JhbSAtLT4KPGcgaWQ9Im5vZGUxIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5Qcm9ncmFtPC90aXRsZT4KPGVsbGlwc2UgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgY3g9IjI4OS42MSIgY3k9Ii02MjMuNTYiIHJ4PSIyNy4yNSIgcnk9IjI3LjI1Ii8+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIyODkuNjEiIGN5PSItNjIzLjU2IiByeD0iMzEuMjUiIHJ5PSIzMS4yNSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODkuNjEiIHk9Ii02MjAuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj5Qcm9ncmFtPC90ZXh0Pgo8L2c+CjwhLS0gc3R1ZHlfcDUxOCAtLT4KPGcgaWQ9Im5vZGUxNiIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+c3R1ZHlfcDUxODwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNDM4Ljg2LC0zNjUuNTYgMzgwLjg2LC0zNjUuNTYgMzgwLjg2LC0zMjkuNTYgNDM4Ljg2LC0zMjkuNTYgNDM4Ljg2LC0zNjUuNTYiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNDA5Ljg2IiB5PSItMzQ0LjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+c3R1ZHlfcDUxODwvdGV4dD4KPC9nPgo8IS0tIFByb2dyYW0mIzQ1OyZndDtzdHVkeV9wNTE4IC0tPgo8ZyBpZD0iZWRnZTIiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPlByb2dyYW0mIzQ1OyZndDtzdHVkeV9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgZD0iTTMxNi4xNywtNjA2LjIyQzMzMi4wNCwtNTk3LjU4IDM1MS41MSwtNTg1Ljk3IDM2Mi44NiwtNTY5LjU2IDM4NC40OSwtNTM4LjI4IDM5OC45NywtNDMwLjUgNDA1LjI3LC0zNzcuMzYiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNDA4Ljc0LC0zNzcuODMgNDA2LjQyLC0zNjcuNSA0MDEuNzksLTM3Ny4wMyA0MDguNzQsLTM3Ny44MyIvPgo8L2c+CjwhLS0gbXMgLS0+CjxnIGlkPSJub2RlMiIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bXM8L3RpdGxlPgo8ZWxsaXBzZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBjeD0iMzMuODEiIGN5PSItNTg4LjU2IiByeD0iMTgiIHJ5PSIxOCIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIzMy44MSIgeT0iLTU4NS4yNiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjkuMDAiPm1zPC90ZXh0Pgo8L2c+CjwhLS0gZ21wIC0tPgo8ZyBpZD0ibm9kZTMiIGNsYXNzPSJub2RlIj4KPHRpdGxlPmdtcDwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIzMy44MSIgY3k9Ii01MzMuNTYiIHJ4PSIxOC41MSIgcnk9IjE4LjUxIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjMzLjgxIiB5PSItNTMwLjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+Z21wPC90ZXh0Pgo8L2c+CjwhLS0gZ21wJiM0NTsmZ3Q7c3R1ZHlfcDUxOCAtLT4KPGcgaWQ9ImVkZ2U1IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5nbXAmIzQ1OyZndDtzdHVkeV9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNNTEuMzgsLTU0MC4zNUM5OC4yMSwtNTU4LjM1IDIzMy43NSwtNjAyLjE3IDMyMC44NiwtNTQ1LjU2IDM3OC43NywtNTA3LjkzIDM5OC44NywtNDIyLjQ0IDQwNS42MiwtMzc3LjA5Ii8+Cjxwb2x5Z29uIGZpbGw9IiM2NjY2NjYiIHN0cm9rZT0iIzY2NjY2NiIgcG9pbnRzPSI0MDkuMDUsLTM3Ny44MyA0MDYuOTIsLTM2Ny40NSA0MDIuMTEsLTM3Ni44OSA0MDkuMDUsLTM3Ny44MyIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyMjguMzYiIHk9Ii01NzYuNyIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjE0LjAwIj42LjA8L3RleHQ+CjwvZz4KPCEtLSBnbXBfYmF0Y2hfcDUxOCAtLT4KPGcgaWQ9Im5vZGUxNyIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+Z21wX2JhdGNoX3A1MTg8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjE5OC4zNiwtNTI0LjU2IDEyMC44NiwtNTI0LjU2IDEyMC44NiwtNDg4LjU2IDE5OC4zNiwtNDg4LjU2IDE5OC4zNiwtNTI0LjU2Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjE1OS42MSIgeT0iLTUwMy4yNiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjkuMDAiPmdtcF9iYXRjaF9wNTE4PC90ZXh0Pgo8L2c+CjwhLS0gZ21wJiM0NTsmZ3Q7Z21wX2JhdGNoX3A1MTggLS0+CjxnIGlkPSJlZGdlMTMiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPmdtcCYjNDU7Jmd0O2dtcF9iYXRjaF9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNNTIuMjgsLTUyOS43NUM2Ny4xOCwtNTI2LjUgODkuMzUsLTUyMS42NiAxMDkuNTksLTUxNy4yNSIvPgo8cG9seWdvbiBmaWxsPSIjNjY2NjY2IiBzdHJva2U9IiM2NjY2NjYiIHBvaW50cz0iMTEwLjA4LC01MjAuNzMgMTE5LjEsLTUxNS4xOCAxMDguNTksLTUxMy44OSAxMTAuMDgsLTUyMC43MyIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI5NC4yNCIgeT0iLTUyNS42OCIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjE0LjAwIj4zLjA8L3RleHQ+CjwvZz4KPCEtLSB2aXYgLS0+CjxnIGlkPSJub2RlNCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+dml2PC90aXRsZT4KPGVsbGlwc2UgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgY3g9IjMzLjgxIiBjeT0iLTY0Mi41NiIgcng9IjE4IiByeT0iMTgiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMzMuODEiIHk9Ii02MzkuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj52aXY8L3RleHQ+CjwvZz4KPCEtLSBncHUgLS0+CjxnIGlkPSJub2RlNSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+Z3B1PC90aXRsZT4KPGVsbGlwc2UgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgY3g9IjMzLjgxIiBjeT0iLTY5Ni41NiIgcng9IjE4IiByeT0iMTgiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMzMuODEiIHk9Ii02OTMuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj5ncHU8L3RleHQ+CjwvZz4KPCEtLSBjbGluIC0tPgo8ZyBpZD0ibm9kZTYiIGNsYXNzPSJub2RlIj4KPHRpdGxlPmNsaW48L3RpdGxlPgo8ZWxsaXBzZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBjeD0iMjg5LjYxIiBjeT0iLTMyNC41NiIgcng9IjE4IiByeT0iMTgiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjg5LjYxIiB5PSItMzIxLjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+Y2xpbjwvdGV4dD4KPC9nPgo8IS0tIGNsaW4mIzQ1OyZndDtzdHVkeV9wNTE4IC0tPgo8ZyBpZD0iZWRnZTYiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPmNsaW4mIzQ1OyZndDtzdHVkeV9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNMzA3LjgsLTMyNy45QzMyMy45MSwtMzMxLjA0IDM0OC41NywtMzM1LjgzIDM2OS40OSwtMzM5LjkiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjM2OC42OSwtMzQzLjMxIDM3OS4xNywtMzQxLjc5IDM3MC4wMiwtMzM2LjQ0IDM2OC42OSwtMzQzLjMxIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjM1MC44NiIgeT0iLTM0MS4zMiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjE0LjAwIj4yMC4wPC90ZXh0Pgo8L2c+CjwhLS0gY3JvIC0tPgo8ZyBpZD0ibm9kZTciIGNsYXNzPSJub2RlIj4KPHRpdGxlPmNybzwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIzMy44MSIgY3k9Ii00MzguNTYiIHJ4PSIxOCIgcnk9IjE4Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjMzLjgxIiB5PSItNDM1LjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+Y3JvPC90ZXh0Pgo8L2c+CjwhLS0gY3JvJiM0NTsmZ3Q7c3R1ZHlfcDUxOCAtLT4KPGcgaWQ9ImVkZ2U3IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5jcm8mIzQ1OyZndDtzdHVkeV9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNNTEuMzYsLTQzNC41M0MxMDcuMDIsLTQyMC45OSAyODguNDEsLTM3Ni44NiAzNjkuMywtMzU3LjE4Ii8+Cjxwb2x5Z29uIGZpbGw9IiM2NjY2NjYiIHN0cm9rZT0iIzY2NjY2NiIgcG9pbnRzPSIzNzAuMTIsLTM2MC41OSAzNzkuMDEsLTM1NC44MiAzNjguNDYsLTM1My43OCAzNzAuMTIsLTM2MC41OSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyMjguMzYiIHk9Ii0zOTcuMzEiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSIxNC4wMCI+OS4wPC90ZXh0Pgo8L2c+CjwhLS0gY3JvJiM0NTsmZ3Q7Z21wX2JhdGNoX3A1MTggLS0+CjxnIGlkPSJlZGdlMTQiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPmNybyYjNDU7Jmd0O2dtcF9iYXRjaF9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNNTAuMjMsLTQ0Ny4wM0M2Ni4zNywtNDU1LjkgOTIuNDIsLTQ3MC4yMSAxMTQuOTUsLTQ4Mi41OCIvPgo8cG9seWdvbiBmaWxsPSIjNjY2NjY2IiBzdHJva2U9IiM2NjY2NjYiIHBvaW50cz0iMTEzLjIyLC00ODUuNjIgMTIzLjY3LC00ODcuMzcgMTE2LjU5LC00NzkuNDkgMTEzLjIyLC00ODUuNjIiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iOTQuMjQiIHk9Ii00NzcuOCIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjE0LjAwIj4wLjM8L3RleHQ+CjwvZz4KPCEtLSByZWFkb3V0c19wYXNzZWQgLS0+CjxnIGlkPSJub2RlOCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+cmVhZG91dHNfcGFzc2VkPC90aXRsZT4KPGVsbGlwc2UgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgY3g9IjUxOS4yOCIgY3k9Ii0zNDcuNTYiIHJ4PSI0My40MiIgcnk9IjQzLjQyIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjUxOS4yOCIgeT0iLTM0NC4yNiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjkuMDAiPnJlYWRvdXRzX3Bhc3NlZDwvdGV4dD4KPC9nPgo8IS0tIHN0YXJ0X3A1MTggLS0+CjxnIGlkPSJub2RlOSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+c3RhcnRfcDUxODwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIyODkuNjEiIGN5PSItMjU3LjU2IiByeD0iMzEuMTgiIHJ5PSIzMS4xOCIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODkuNjEiIHk9Ii0yNTQuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj5zdGFydF9wNTE4PC90ZXh0Pgo8L2c+CjwhLS0gc3RhcnRfcDUxOCYjNDU7Jmd0O3N0dWR5X3A1MTggLS0+CjxnIGlkPSJlZGdlMSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c3RhcnRfcDUxOCYjNDU7Jmd0O3N0dWR5X3A1MTg8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMzE1LjExLC0yNzYuMjFDMzMyLjY3LC0yODkuNTcgMzU2LjUxLC0zMDcuNzIgMzc1Ljc2LC0zMjIuMzciLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMzczLjUxLC0zMjUuMDYgMzgzLjU5LC0zMjguMzMgMzc3Ljc1LC0zMTkuNDkgMzczLjUxLC0zMjUuMDYiLz4KPC9nPgo8IS0tIGdvX3A1MTggLS0+CjxnIGlkPSJub2RlMTAiIGNsYXNzPSJub2RlIj4KPHRpdGxlPmdvX3A1MTg8L3RpdGxlPgo8ZWxsaXBzZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBjeD0iMjg5LjYxIiBjeT0iLTE4MC41NiIgcng9IjI3LjY5IiByeT0iMjcuNjkiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjg5LjYxIiB5PSItMTc3LjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+Z29fcDUxODwvdGV4dD4KPC9nPgo8IS0tIGdvX3A1MTgmIzQ1OyZndDtzdHVkeV9wNTE4IC0tPgo8ZyBpZD0iZWRnZTMiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPmdvX3A1MTgmIzQ1OyZndDtzdHVkeV9wNTE4PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBkPSJNMzA4LjIyLC0yMDEuNDNDMzEyLjQ1LC0yMDYuNjMgMzE2Ljg5LC0yMTIuMjQgMzIwLjg2LC0yMTcuNTYgMzQ2LjQxLC0yNTEuODYgMzczLjcxLC0yOTIuOTcgMzkxLC0zMTkuNjQiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjM4Ny45MywtMzIxLjM0IDM5Ni4zLC0zMjcuODQgMzkzLjgyLC0zMTcuNTQgMzg3LjkzLC0zMjEuMzQiLz4KPC9nPgo8IS0tIHdldF9wNTE4IC0tPgo8ZyBpZD0ibm9kZTExIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT53ZXRfcDUxODwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIyODkuNjEiIGN5PSItMTA0LjU2IiByeD0iMjkuODciIHJ5PSIyOS44NyIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODkuNjEiIHk9Ii0xMDEuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj53ZXRfcDUxODwvdGV4dD4KPC9nPgo8IS0tIHdldF9wNTE4JiM0NTsmZ3Q7c3R1ZHlfcDUxOCAtLT4KPGcgaWQ9ImVkZ2U0IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT53ZXRfcDUxOCYjNDU7Jmd0O3N0dWR5X3A1MTg8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiM2NjY2NjYiIGQ9Ik0zMDkuMjUsLTEyNy4xNUMzMTMuMjcsLTEzMi40IDMxNy4zNSwtMTM4LjA3IDMyMC44NiwtMTQzLjU2IDM1Ny43NSwtMjAxLjQgMzg1Ljg2LC0yNzcuMzQgMzk5LjU4LC0zMTguMzEiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjM5Ni4yMSwtMzE5LjI5IDQwMi42NiwtMzI3LjcgNDAyLjg2LC0zMTcuMSAzOTYuMjEsLTMxOS4yOSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIzNTAuODYiIHk9Ii0yMjIuMDQiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSIxNC4wMCI+MTYuMDwvdGV4dD4KPC9nPgo8IS0tIGtpbGxlZF9wNTE4IC0tPgo8ZyBpZD0ibm9kZTEyIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5raWxsZWRfcDUxODwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIzMy44MSIgY3k9Ii03NjYuNTYiIHJ4PSIzMy44MSIgcnk9IjMzLjgxIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjMzLjgxIiB5PSItNzYzLjI2IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iOS4wMCI+a2lsbGVkX3A1MTg8L3RleHQ+CjwvZz4KPCEtLSBwdHNfcDUxOCAtLT4KPGcgaWQ9Im5vZGUxMyIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+cHRzX3A1MTg8L3RpdGxlPgo8ZWxsaXBzZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBjeD0iMjg5LjYxIiBjeT0iLTI4LjU2IiByeD0iMjguNTYiIHJ5PSIyOC41NiIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODkuNjEiIHk9Ii0yNS4yNiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjkuMDAiPnB0c19wNTE4PC90ZXh0Pgo8L2c+CjwhLS0gcHRzX3A1MTgmIzQ1OyZndDtzdHVkeV9wNTE4IC0tPgo8ZyBpZD0iZWRnZTgiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPnB0c19wNTE4JiM0NTsmZ3Q7c3R1ZHlfcDUxODwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY2NjY2NiIgZD0iTTMwOS4xMiwtNDkuNDJDMzEzLjI0LC01NC41MiAzMTcuNCwtNjAuMDkgMzIwLjg2LC02NS41NiAzNzMuMjUsLTE0OC4zNiAzOTYuNDYsLTI2NC42MyA0MDQuODYsLTMxOC4zIi8+Cjxwb2x5Z29uIGZpbGw9IiM2NjY2NjYiIHN0cm9rZT0iIzY2NjY2NiIgcG9pbnRzPSI0MDEuMzUsLTMxOC41IDQwNi4yOSwtMzI3Ljg3IDQwOC4yNywtMzE3LjQ2IDQwMS4zNSwtMzE4LjUiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMzUwLjg2IiB5PSItMTU1LjgzIiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iMTQuMDAiPjUuMDwvdGV4dD4KPC9nPgo8IS0tIGtpdHNfcDUxOCAtLT4KPGcgaWQ9Im5vZGUxNCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+a2l0c19wNTE4PC90aXRsZT4KPGVsbGlwc2UgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgY3g9IjI4OS42MSIgY3k9Ii00MjguNTYiIHJ4PSIyOS44NyIgcnk9IjI5Ljg3Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4OS42MSIgeT0iLTQyNS4yNiIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjkuMDAiPmtpdHNfcDUxODwvdGV4dD4KPC9nPgo8IS0tIGtpdHNfcDUxOCYjNDU7Jmd0O3N0dWR5X3A1MTggLS0+CjxnIGlkPSJlZGdlOSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+a2l0c19wNTE4JiM0NTsmZ3Q7c3R1ZHlfcDUxODwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY2NjY2NiIgZD0iTTMxNi4yLC00MTQuMDdDMzMwLjI2LC00MDUuODUgMzQ3LjgzLC0zOTUuMTEgMzYyLjg2LC0zODQuNTYgMzY3Ljk5LC0zODAuOTUgMzczLjMxLC0zNzYuOTUgMzc4LjQyLC0zNzIuOTYiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjM4MC41LC0zNzUuNzcgMzg2LjEzLC0zNjYuNzkgMzc2LjEzLC0zNzAuMyAzODAuNSwtMzc1Ljc3Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjM1MC44NiIgeT0iLTQwMy4xMyIgZm9udC1mYW1pbHk9IlRpbWVzLHNlcmlmIiBmb250LXNpemU9IjE0LjAwIj41LjA8L3RleHQ+CjwvZz4KPCEtLSBzbG90X3A1MTggLS0+CjxnIGlkPSJub2RlMTUiIGNsYXNzPSJub2RlIj4KPHRpdGxlPnNsb3RfcDUxODwvdGl0bGU+CjxlbGxpcHNlIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGN4PSIyODkuNjEiIGN5PSItNTA2LjU2IiByeD0iMjkuODciIHJ5PSIyOS44NyIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODkuNjEiIHk9Ii01MDMuMjYiIGZvbnQtZmFtaWx5PSJUaW1lcyxzZXJpZiIgZm9udC1zaXplPSI5LjAwIj5zbG90X3A1MTg8L3RleHQ+CjwvZz4KPCEtLSBzbG90X3A1MTgmIzQ1OyZndDtnbXBfYmF0Y2hfcDUxOCAtLT4KPGcgaWQ9ImVkZ2UxMiIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c2xvdF9wNTE4JiM0NTsmZ3Q7Z21wX2JhdGNoX3A1MTg8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMjU5Ljg1LC01MTIuM0MyNDUuMTcsLTUxMy4yNCAyMjYuODksLTUxMy41MiAyMTAuMDQsLTUxMy4xNSIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMTAuMjksLTUwOS42NiAyMDAuMTgsLTUxMi44NCAyMTAuMDYsLTUxNi42NSAyMTAuMjksLTUwOS42NiIvPgo8L2c+CjwhLS0gc3R1ZHlfcDUxOCYjNDU7Jmd0O1Byb2dyYW0gLS0+CjxnIGlkPSJlZGdlMTAiIGNsYXNzPSJlZGdlIj4KPHRpdGxlPnN0dWR5X3A1MTgmIzQ1OyZndDtQcm9ncmFtPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgZD0iTTQwNy40NiwtMzY2LjA2QzQwMi45NSwtNDE2LjI1IDM4Ny41NywtNTUxLjgzIDM2Mi44NiwtNTg3LjU2IDM1NC45MiwtNTk5LjAzIDM0My4wMiwtNjA4LjE1IDMzMS4xNiwtNjE0LjY2Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjMyOS42NSwtNjExLjUgMzIyLjIsLTYxOS4wMyAzMzIuNzIsLTYxNy43OSAzMjkuNjUsLTYxMS41Ii8+CjwvZz4KPCEtLSBzdHVkeV9wNTE4JiM0NTsmZ3Q7cmVhZG91dHNfcGFzc2VkIC0tPgo8ZyBpZD0iZWRnZTExIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5zdHVkeV9wNTE4JiM0NTsmZ3Q7cmVhZG91dHNfcGFzc2VkPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgZD0iTTQzOS4wOCwtMzQ3LjU2QzQ0Ni44NiwtMzQ3LjU2IDQ1NS41NywtMzQ3LjU2IDQ2NC4yOSwtMzQ3LjU2Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjQ2NC4xNiwtMzUxLjA2IDQ3NC4xNiwtMzQ3LjU2IDQ2NC4xNiwtMzQ0LjA2IDQ2NC4xNiwtMzUxLjA2Ii8+CjwvZz4KPCEtLSBnbXBfYmF0Y2hfcDUxOCYjNDU7Jmd0O2tpdHNfcDUxOCAtLT4KPGcgaWQ9ImVkZ2UxNiIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+Z21wX2JhdGNoX3A1MTgmIzQ1OyZndDtraXRzX3A1MTg8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMTkwLjk0LC00ODguMDdDMjA5LjgzLC00NzYuNTcgMjM0LjE4LC00NjEuNzIgMjUzLjg1LC00NDkuNzQiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjU1LjY0LC00NTIuNzUgMjYyLjM2LC00NDQuNTYgMjUyLC00NDYuNzcgMjU1LjY0LC00NTIuNzUiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjI4LjM2IiB5PSItNDc1LjQzIiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iMTQuMDAiPjE1LjA8L3RleHQ+CjwvZz4KPCEtLSBnbXBfYmF0Y2hfcDUxOCYjNDU7Jmd0O3Nsb3RfcDUxOCAtLT4KPGcgaWQ9ImVkZ2UxNSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+Z21wX2JhdGNoX3A1MTgmIzQ1OyZndDtzbG90X3A1MTg8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMTk4LjY3LC01MDAuMzNDMjE0LjQ0LC00OTkuNjYgMjMyLjc1LC00OTkuNjQgMjQ4LjcxLC01MDAuMjUiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjQ4LjE3LC01MDMuNzMgMjU4LjM0LC01MDAuNzQgMjQ4LjUyLC00OTYuNzQgMjQ4LjE3LC01MDMuNzMiLz4KPC9nPgo8L2c+Cjwvc3ZnPgo="></div>
+      </figure>
+    </div>
+  </details>
+</section>
+
+<section id="levers">
+  <div class="sec-head">
+    <span class="label">The levers</span>
+    <h2>What each lever is worth, and how sure we are</h2>
+  </div>
+  <div class="dash">
+    <figure>
+      <div class="card-h"><h3>Effect of each lever</h3><span class="muted" style="font-size:var(--t-sm)">Change in net value vs. the static annual plan, $M, 24 months. Error bars: &#xB1;2 standard errors over 40 paired futures.</span></div>
+      <div class="chart" data-chart="levers" aria-label="Bar chart: kill switch only +38.3, monthly re-plan only +14.1, closed loop +53.3 million dollars"></div>
+      <figcaption>The two levers barely interact. Their separate effects add to 38.3 + 14.1 = 52.4, close to the 53.3 for both together, so each can be justified on its own. By lever, the kill switch accounts for 72% of the gain. By source, two-thirds is spend avoided. These are two ways of splitting the same $53.3M.</figcaption>
+    </figure>
+    <figure>
+      <div class="card-h"><h3>The assumption the result depends on most</h3><span class="muted" style="font-size:var(--t-sm)">Change in net value from the closed loop, $M, by eNPV lost per month of slip.</span></div>
+      <div class="chart" data-chart="sens" aria-label="Line chart: effect rises from +36 at 0% erosion to +95 at 5%, below the first estimate of +201"></div>
+      <figcaption>At 0%, the gain is the spend avoided alone. Reaching the first estimate of +14.8% would take far heavier erosion, or sources of value the twin does not include, such as later stages.</figcaption>
+    </figure>
+    <figure>
+      <div class="card-h"><h3>Spend over 24 months, one simulated future</h3>
+        <div class="legend"><span><i style="background:var(--s-static)"></i>Static annual plan</span><span><i style="background:var(--s-loop)"></i>Closed loop</span></div>
+      </div>
+      <div class="chart" data-chart="spend" aria-label="Line chart of cumulative spend: static plan reaches 414 million dollars, closed loop 379 million"></div>
+      <figcaption>Cumulative spend in the engine's ledger for one simulated future (seed 1). The gap opens at month 1, when PRG-402 stops, and stays.</figcaption>
+    </figure>
+    <figure>
+      <div class="card-h"><h3>Why one simulated future is not enough</h3><span class="muted" style="font-size:var(--t-sm)">Policy effect vs. the run-to-run spread in end-of-run eNPV, same $M scale.</span></div>
+      <div class="chart" data-chart="noise" aria-label="Bar comparison: policy effect 53 million dollars, single-run spread 595 million"></div>
+      <figcaption>In any single run, the result is dominated by which readouts happen to pass. Running the same futures under both policies cancels that luck, so the paired effect has a standard error of only $1.7M.</figcaption>
+    </figure>
+  </div>
+  <details>
+    <summary>Show the numbers behind the charts</summary>
+    <div class="scroll">
+      <table class="nums">
+        <thead><tr><th>Scenario</th><th>Risk-adj. eNPV</th><th>Spend</th><th>Net</th><th>Change in net vs. static</th></tr></thead>
+        <tbody>
+          <tr><td>Static annual plan (SCN-01)</td><td>1,824.1</td><td>466.7</td><td>1,357.4</td><td>&#x2014;</td></tr>
+          <tr><td>Tox kill switch only (SCN-02)</td><td>1,826.0</td><td>430.2</td><td>1,395.7</td><td>+38.3 &#xB1; 1.7</td></tr>
+          <tr><td>Monthly re-plan only (SCN-03)</td><td>1,837.1</td><td>465.7</td><td>1,371.5</td><td>+14.1 &#xB1; 1.5</td></tr>
+          <tr><td>Closed loop (SCN-04)</td><td>1,841.8</td><td>431.1</td><td>1,410.7</td><td>+53.3 &#xB1; 1.7</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="scroll">
+      <table class="nums">
+        <thead><tr><th>eNPV lost per month of slip</th><th>0%</th><th>0.75%</th><th>1.5% (default)</th><th>3%</th><th>5%</th></tr></thead>
+        <tbody><tr><td>Change in net, closed loop vs. static ($M)</td><td>+35.6 &#xB1; 1.6</td><td>+44.5 &#xB1; 1.6</td><td>+53.3 &#xB1; 1.7</td><td>+71.0 &#xB1; 2.0</td><td>+94.6 &#xB1; 2.5</td></tr></tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:var(--t-sm); margin-top:10px">$M over 24 months, average of 40 simulated futures per scenario; &#xB1; is one standard error of the difference between paired runs. Without pairing, the headline's standard error would be 11.6, which is why every comparison reuses the same futures.</p>
+  </details>
+</section>
+
+<section id="records">
+  <div class="sec-head">
+    <span class="label">From records to model</span>
+    <h2>NocoBase keeps the record; the simulation runs the what-if and writes the results back</h2>
+  </div>
+  <div class="prose">
+    <p>We changed no engine code. One Julia file of about 500 lines does the conversion: it reads the NocoBase tables, writes the model out as one JSON file per scenario, and adds two small custom functions that the model calls. A full run of 160 simulated futures takes about two minutes, and the same seed always gives the same numbers on Julia 1.12.</p>
+    <p>Before any what-if, the model reproduces the deck's starting point. Its risk-adjusted eNPV of $1,955.2M is the sum of the deck's own rows, recomputed from the tables. The loads on the six resource pools (wet-lab staff plus five shared pools) and the $142.5M quarterly burn, against the deck's $142M, match because the per-program split and the unit costs were chosen to fit them.</p>
+  </div>
+  <div class="scroll">
+    <div class="flow" role="list">
+      <div class="zone z-noco" style="--span:1"><span>NocoBase</span></div>
+      <div class="zone z-dyve" style="--span:4"><span>DyVE</span><span>ReactiveDynamics + AlgebraicAgents</span></div>
+      <div class="zone z-noco" style="--span:1"><span>NocoBase</span></div>
+      <div class="step" role="listitem"><span class="n">1 &#xB7; record</span><h3>Tables at T-042</h3><p>Programs, compounds, trials, studies, capacity, allocations and budget, used as they are.</p></div>
+      <div class="step" role="listitem"><span class="n">2 &#xB7; snapshot</span><h3>Export as JSON</h3><p>Same table and field names. Every value the deck does not state is listed under <code>_assumed</code>.</p></div>
+      <div class="step" role="listitem"><span class="n">3 &#xB7; compile</span><h3>One model file per scenario</h3><p>Plain data, with no executable code inside.</p></div>
+      <div class="step" role="listitem"><span class="n">4 &#xB7; check</span><h3>Checked before it runs</h3><p>An automatic check must pass before any simulation starts. The file can be versioned and reviewed like any document.</p></div>
+      <div class="step" role="listitem"><span class="n">5 &#xB7; simulate</span><h3>40 futures per scenario</h3><p>The portfolio model and a separate clinical-operations model run together. Every scenario sees the same futures.</p></div>
+      <div class="step" role="listitem"><span class="n">6 &#xB7; write back</span><h3>Results as NocoBase rows</h3><p><code>scenarios</code>, <code>simulation_ticks</code>, <code>simulation_events</code>, <code>resource_allocations</code>, each tagged with its <code>scenario_id</code>.</p></div>
+    </div>
+  </div>
+  <div class="scroll">
+    <table class="rosetta">
+      <thead><tr><th>In NocoBase</th><th>Becomes in the model</th><th>Which means</th></tr></thead>
+      <tbody>
+        <tr><td>A <code>therapeutics_programs</code> row</td><td>Token</td><td>A record that moves through the model with its own attributes (code, stage, PoS, eNPV) and history. Each study is attached to its program's token.</td></tr>
+        <tr><td>A <code>Studies</code> row</td><td>Transition</td><td>An activity that takes time, draws resources while it runs, and ends in a pass or fail readout.</td></tr>
+        <tr><td>A <code>resources_capacity</code> row</td><td>Place</td><td>A pool with a monthly capacity and a unit cost. When studies ask for more than it holds, higher-priority studies are served first.</td></tr>
+        <tr><td>The <code>resource_allocations</code> table</td><td>Arcs</td><td>The units a study draws each month at full speed. If supply falls short, the study slows down.</td></tr>
+        <tr><td>Workflows WF1 to WF5</td><td>Rules or engine behavior</td><td>The kill switch and the re-plan become rules. The engine itself enforces capacity limits and books spend.</td></tr>
+        <tr><td>A <code>scenarios</code> row</td><td>Scenario (arm)</td><td>The same model with different policy settings. The four scenarios differ in two values.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sec-head">
+    <h3>The same mapping, drawn as a map between schemas</h3>
+  </div>
+  <div class="prose">
+    <p>NocoBase's tables and the links between them form a schema <strong>C</strong>. The model file has its own schema <strong>D</strong>, made of places, transitions and arcs. The compile step <strong>F</strong> maps C onto D and carries each core row across one for one. A second map, <strong>G</strong>, writes the results back into NocoBase's output tables.</p>
+  </div>
+  <figure>
+    <div class="diagram scroll">
+      <svg viewBox="0 0 980 620" role="img" aria-label="Schema C (NocoBase tables) mapped by F onto schema D (model file): Programs to tokens, Studies to transitions, StudyAllocations to arcs, Resources to places; G writes the run log back to simulation ticks and events.">
+        <defs>
+          <marker id="mk-fk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="mk-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-out" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="mk-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-wire" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="mk-rel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-ah-ctl" d="M0,0L10,5L0,10z"/></marker>
+        </defs>
+
+        <text class="d-hd n" x="20" y="30">NOCOBASE TABLES &#xB7; SCHEMA C</text>
+        <text class="d-hd d" x="615" y="30">MODEL FILE &#xB7; SCHEMA D</text>
+        <text class="d-tf" x="488" y="30" text-anchor="middle">F &#xB7; compile</text>
+
+        <!-- schema C: auxiliary column -->
+        <rect class="k-noco" x="20" y="72" width="150" height="36" rx="4"/><text class="d-tb" x="95" y="94.5" text-anchor="middle">Trials</text>
+        <text class="d-ts" x="95" y="126" text-anchor="middle">&#x21A6; patients place +</text><text class="d-ts" x="95" y="140" text-anchor="middle">AA input port</text>
+        <rect class="k-noco" x="20" y="162" width="150" height="36" rx="4"/><text class="d-tb" x="95" y="184.5" text-anchor="middle">Compounds</text>
+        <text class="d-ts" x="95" y="216" text-anchor="middle">&#x21A6; kits place, hERG</text><text class="d-ts" x="95" y="230" text-anchor="middle">param, GMP batch</text>
+        <rect class="k-none" x="20" y="252" width="150" height="36" rx="4"/><text class="d-tb" x="95" y="274.5" text-anchor="middle">AssayReadouts</text>
+        <text class="d-ts" x="95" y="306" text-anchor="middle">no counterpart: becomes</text><text class="d-ts" x="95" y="320" text-anchor="middle">the pass/fail draw</text>
+        <rect class="k-none" x="20" y="432" width="150" height="36" rx="4"/><text class="d-tb" x="95" y="454.5" text-anchor="middle">Departments</text>
+        <text class="d-ts" x="95" y="486" text-anchor="middle">no counterpart</text>
+
+        <!-- schema C: core spine -->
+        <rect class="k-noco" x="215" y="72" width="150" height="36" rx="4"/><text class="d-tb" x="290" y="94.5" text-anchor="middle">Programs</text>
+        <rect class="k-noco" x="215" y="252" width="150" height="36" rx="4"/><text class="d-tb" x="290" y="274.5" text-anchor="middle">Studies</text>
+        <rect class="k-noco" x="215" y="342" width="150" height="36" rx="4"/><text class="d-tb" x="290" y="364.5" text-anchor="middle">StudyAllocations</text>
+        <rect class="k-noco" x="215" y="432" width="150" height="36" rx="4"/><text class="d-tb" x="290" y="454.5" text-anchor="middle">Resources</text>
+        <text class="d-ts" x="290" y="486" text-anchor="middle">FTE pools, compute, lab capacity</text>
+
+        <!-- schema C: foreign keys -->
+        <path class="fk" d="M170,90 H211" marker-end="url(#mk-fk)"/>
+        <path class="fk" d="M170,170 L234,111" marker-end="url(#mk-fk)"/>
+        <path class="fk" d="M230,252 L170,201" marker-end="url(#mk-fk)"/>
+        <path class="fk" d="M290,252 V112" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="298" y="186">program</text>
+        <path class="fk" d="M170,270 H211" marker-end="url(#mk-fk)"/>
+        <path class="fk" d="M290,342 V292" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="298" y="321">study</text>
+        <path class="fk" d="M290,378 V428" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="298" y="407">resource</text>
+        <path class="fk" d="M215,450 H174" marker-end="url(#mk-fk)"/>
+
+        <!-- schema D: core spine -->
+        <rect class="k-dyve" x="615" y="72" width="150" height="36" rx="4"/><text class="d-tb" x="690" y="94.5" text-anchor="middle">Token</text>
+        <rect class="k-dyve" x="615" y="252" width="150" height="36" rx="4"/><text class="d-tb" x="690" y="274.5" text-anchor="middle">Transition</text>
+        <rect class="k-dyve" x="615" y="342" width="150" height="36" rx="4"/><text class="d-tb" x="690" y="364.5" text-anchor="middle">Arc</text>
+        <rect class="k-dyve" x="615" y="432" width="150" height="36" rx="4"/><text class="d-tb" x="690" y="454.5" text-anchor="middle">Place</text>
+        <text class="d-ts" x="690" y="486" text-anchor="middle">pools &#xB7; quotas &#xB7; stocks</text>
+
+        <!-- schema D: auxiliary column -->
+        <text class="d-ts" x="880" y="140" text-anchor="middle">kill_at, quotas, PoS</text>
+        <rect class="k-dyve" x="810" y="162" width="140" height="36" rx="4"/><text class="d-tb" x="880" y="184.5" text-anchor="middle">Param</text>
+        <rect class="k-dyve" x="810" y="252" width="140" height="36" rx="4"/><text class="d-tb" x="880" y="274.5" text-anchor="middle">Rule</text>
+        <text class="d-ts" x="852" y="306">kill, re-plan,</text><text class="d-ts" x="852" y="320">refresh, accrue</text>
+        <rect class="k-dyve" x="810" y="432" width="140" height="36" rx="4"/><text class="d-tb" x="880" y="454.5" text-anchor="middle">Input port</text>
+        <text class="d-ts" x="880" y="486" text-anchor="middle">fed by an AA wire</text>
+
+        <!-- schema D: references -->
+        <path class="fk" d="M690,342 V292" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="698" y="321">trans</text>
+        <path class="fk" d="M690,378 V428" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="698" y="407">place</text>
+        <path class="rel" d="M690,252 V112" marker-end="url(#mk-rel)"/>
+        <text class="d-ts" x="698" y="186">matched by code</text>
+        <path class="rel" d="M880,252 V202" marker-end="url(#mk-rel)"/>
+        <text class="d-ts" x="872" y="232" text-anchor="end">set_params</text>
+        <path class="rel" d="M840,288 L768,436" marker-end="url(#mk-rel)"/>
+        <text class="d-ts" x="808" y="384">set_marking</text>
+        <path class="rel" d="M810,450 H769" marker-end="url(#mk-rel)"/>
+
+        <!-- F: the core map -->
+        <path class="f-line" d="M365,90 H611" marker-end="url(#mk-f)"/>
+        <text class="d-tf" x="488" y="82" text-anchor="middle">6 rows &#x21A6; 6 tokens</text>
+        <path class="f-line" d="M365,270 H611" marker-end="url(#mk-f)"/>
+        <text class="d-tf" x="488" y="262" text-anchor="middle">6 rows &#x21A6; 6 transitions</text>
+        <path class="f-line" d="M365,360 H611" marker-end="url(#mk-f)"/>
+        <text class="d-tf" x="488" y="352" text-anchor="middle">32 entries &#x21A6; 32 arcs</text>
+        <path class="f-line" d="M365,450 H611" marker-end="url(#mk-f)"/>
+        <text class="d-tf" x="488" y="428" text-anchor="middle">shared pool &#x21A6; one place</text>
+        <text class="d-tf" x="488" y="442" text-anchor="middle">wet-lab &#x21A6; one per program</text>
+
+        <!-- G: the write-back -->
+        <line class="d-div" x1="20" x2="960" y1="512" y2="512"/>
+        <text class="d-tg" x="488" y="534" text-anchor="middle">G &#xB7; write-back</text>
+        <rect class="k-noco" x="20" y="547" width="150" height="36" rx="4"/><text class="d-tb" x="95" y="569.5" text-anchor="middle">Scenarios</text>
+        <path class="fk" d="M62,547 C62,522 128,522 128,543" marker-end="url(#mk-fk)"/>
+        <text class="d-tm" x="138" y="530">parent</text>
+        <text class="d-ts" x="95" y="603" text-anchor="middle">each row &#x21A6; one scenario</text>
+        <rect class="k-noco" x="215" y="541" width="150" height="48" rx="4"/>
+        <text class="d-tb" x="290" y="561" text-anchor="middle">SimulationTicks</text><text class="d-tb" x="290" y="579" text-anchor="middle">SimulationEvents</text>
+        <path class="fk" d="M215,565 H174" marker-end="url(#mk-fk)"/>
+        <rect class="k-dyve" x="615" y="541" width="150" height="48" rx="4"/>
+        <text class="d-tb" x="690" y="561" text-anchor="middle">Run log</text><text class="d-ts" x="690" y="579" text-anchor="middle">trajectory &#xB7; ledger</text>
+        <path class="g-line" d="M613,565 H369" marker-end="url(#mk-g)"/>
+        <text class="d-ts" x="490" y="557" text-anchor="middle">rows tagged with scenario_id</text>
+      </svg>
+    </div>
+    <div class="keys">
+      <span><svg width="18" height="12" aria-hidden="true"><rect class="k-noco" x="1" y="1" width="16" height="10" rx="2"/></svg>NocoBase table</span>
+      <span><svg width="18" height="12" aria-hidden="true"><rect class="k-dyve" x="1" y="1" width="16" height="10" rx="2"/></svg>model-file table</span>
+      <span><svg width="18" height="12" aria-hidden="true"><rect class="k-none" x="1" y="1" width="16" height="10" rx="2"/></svg>no counterpart in the model</span>
+      <span><svg width="24" height="10" aria-hidden="true"><path class="fk" d="M1,5H23"/></svg>link between tables (foreign key)</span>
+      <span><svg width="24" height="10" aria-hidden="true"><path class="rel" d="M1,5H23"/></svg>reference inside a formula</span>
+      <span><svg width="24" height="10" aria-hidden="true"><path class="f-line" d="M1,5H23"/></svg>F: compile</span>
+      <span><svg width="24" height="10" aria-hidden="true"><path class="g-line" d="M1,5H23"/></svg>G: write-back</span>
+    </div>
+    <figcaption>Programs, Studies, StudyAllocations and Resources map row for row onto tokens, transitions, arcs and places. Dashed tables have no counterpart in the model.</figcaption>
+  </figure>
+  <details>
+    <summary>Why the mapping keeps the links: the allocation table becomes the list of arcs</summary>
+    <figure>
+      <div class="diagram scroll">
+    <div class="diagram scroll">
+      <svg viewBox="0 0 980 310" role="img" aria-label="Two commuting squares showing that the mapping keeps the links: StudyAllocations with legs to Studies and Resources maps under F onto Arc with legs to Transition and Place.">
+        <text class="d-tm" x="170" y="38" text-anchor="middle">months_remaining</text>
+        <text class="d-tm" x="490" y="38" text-anchor="middle">fte_assigned &#xB7; fte_full_speed</text>
+        <text class="d-tm" x="810" y="38" text-anchor="middle">capacity &#xB7; unit cost</text>
+        <rect class="k-noco" x="95" y="52" width="150" height="36" rx="4"/><text class="d-tb" x="170" y="74.5" text-anchor="middle">Studies</text>
+        <rect class="k-noco" x="400" y="52" width="180" height="36" rx="4"/><text class="d-tb" x="490" y="74.5" text-anchor="middle">StudyAllocations</text>
+        <rect class="k-noco" x="735" y="52" width="150" height="36" rx="4"/><text class="d-tb" x="810" y="74.5" text-anchor="middle">Resources</text>
+        <path class="fk" d="M400,70 H249" marker-end="url(#mk-fk)"/><text class="d-tm" x="324" y="62" text-anchor="middle">study</text>
+        <path class="fk" d="M580,70 H731" marker-end="url(#mk-fk)"/><text class="d-tm" x="656" y="62" text-anchor="middle">resource</text>
+
+        <path class="f-line" d="M170,88 V228" marker-end="url(#mk-f)"/><text class="d-fl" x="180" y="163">F</text>
+        <path class="f-line" d="M490,88 V228" marker-end="url(#mk-f)"/><text class="d-fl" x="500" y="163">F</text>
+        <path class="f-line" d="M810,88 V228" marker-end="url(#mk-f)"/><text class="d-fl" x="820" y="163">F</text>
+
+        <text class="d-eq" x="330" y="148" text-anchor="middle">trans &#x2218; F = F &#x2218; study</text>
+        <text class="d-ts" x="330" y="168" text-anchor="middle">holds for all 32 entries</text>
+        <text class="d-eq" x="650" y="142" text-anchor="middle">place &#x2218; F = F &#x2218; resource</text>
+        <text class="d-ts" x="650" y="162" text-anchor="middle">holds for the shared pools and the CRO budget;</text>
+        <text class="d-ts" x="650" y="178" text-anchor="middle">wet-lab staff map to the program's own quota place</text>
+
+        <rect class="k-dyve" x="95" y="232" width="150" height="36" rx="4"/><text class="d-tb" x="170" y="254.5" text-anchor="middle">Transition</text>
+        <rect class="k-dyve" x="400" y="232" width="180" height="36" rx="4"/><text class="d-tb" x="490" y="254.5" text-anchor="middle">Arc</text>
+        <rect class="k-dyve" x="735" y="232" width="150" height="36" rx="4"/><text class="d-tb" x="810" y="254.5" text-anchor="middle">Place</text>
+        <path class="fk" d="M400,250 H249" marker-end="url(#mk-fk)"/><text class="d-tm" x="324" y="242" text-anchor="middle">trans</text>
+        <path class="fk" d="M580,250 H731" marker-end="url(#mk-fk)"/><text class="d-tm" x="656" y="242" text-anchor="middle">place</text>
+        <text class="d-tm" x="170" y="292" text-anchor="middle">cycle time = months &#xD7; noise</text>
+        <text class="d-tm" x="490" y="292" text-anchor="middle">multiplicity = full-speed demand</text>
+        <text class="d-tm" x="810" y="292" text-anchor="middle">marking = capacity or FTE assigned</text>
+      </svg>
+    </div>
+      </div>
+      <figcaption>An allocation row points at a study and a resource; an arc points at a transition and a place. F sends each pointer to its counterpart, so the squares commute: going across then down gives the same result as going down then across. In the compiled model, each of the 32 allocation entries becomes exactly one arc. Multiplicity is the units an arc draws per month; marking is the stock a place holds.</figcaption>
+    </figure>
+  </details>
+</section>
+
+<section id="limits">
+  <div class="sec-head">
+    <span class="label">What it leaves out</span>
+    <h2>What the model leaves out, and whether it changes the answer</h2>
+  </div>
+  <div class="prose">
+    <p>Three gaps bear on the number. The other seven sit with NocoBase, or can be added later without changing the engine.</p>
+  </div>
+  <ol class="decide lim">
+    <li><b>Only the current stage is simulated</b><span>Each program runs to the readout of the stage it is in. Value after the readout is carried by the program's eNPV, not simulated. Simulating later stages, and studies created mid-run, needs an engine feature not yet built (<a href="https://github.com/Merck/ReactiveDynamics.jl/issues/27">issue #27</a>).</span></li>
+    <li><b>Human decisions run as policies</b><span>The engine cannot pause for an approval, so each human choice runs as its own scenario. The static plan stands for "wait for the annual review".</span></li>
+    <li><b>Queue delays near full use</b><span>When demand exceeds supply, work slows in proportion to the shortfall. The extra waiting that builds up as a lab nears full use is not included, and its effect on the answer has not been tested.</span></li>
+  </ol>
+  <details>
+    <summary>The other seven gaps, and who would fill them</summary>
+    <div class="gaps">
+      <div class="g1">
+        <div class="gh"><h3>Stays with NocoBase</h3><span class="muted" style="font-size:var(--t-sm)">Out of scope for a simulator.</span></div>
+        <ol>
+          <li><span class="k">4</span><span><b>System of record, user interface, roles, natural-language queries, AI memos.</b> The twin reads a snapshot and writes rows back. "Ask the twin" and the AI trade-off memo are built on those rows.</span></li>
+          <li><span class="k">5</span><span><b>Calendar time.</b> The model counts whole months. The run script converts them to dates, fiscal quarters and month-end close.</span></li>
+        </ol>
+      </div>
+      <div class="g2">
+        <div class="gh"><h3>Can be added without engine changes</h3><span class="muted" style="font-size:var(--t-sm)">As a linked model or a custom function.</span></div>
+        <ol>
+          <li><span class="k">6</span><span><b>Bayesian update of PoS from assay results.</b> Today a readout is a random pass or fail. An updater would be a separate model that writes program parameters.</span></li>
+          <li><span class="k">7</span><span><b>Machine-learned corrections, kept within constraints</b> (the mockup's f_known + B&#xB7;r_&#x3C6;). Hard capacity limits are already built in; a learned correction would be a separate SciML model, linked in.</span></li>
+          <li><span class="k">8</span><span><b>A forward-looking optimizer (MPC).</b> The re-plan is a custom function that a rule calls, so an optimization model written in JuMP could take its place.</span></li>
+          <li><span class="k">9</span><span><b>Checks on the links between models</b> (units, update frequency, data age). Links pass bare numbers today; the one range check is code inside the sending model.</span></li>
+        </ol>
+      </div>
+      <div class="g3">
+        <div class="gh"><h3>Engine limit today</h3><span class="muted" style="font-size:var(--t-sm)">Worked around here; a roadmap candidate.</span></div>
+        <ol>
+          <li><span class="k">10</span><span><b>Same-month hand-offs between models.</b> Linked models exchange data with a one-month lag, so patients enrolled in month t reach the portfolio model in month t+1.</span></li>
+        </ol>
+      </div>
+    </div>
+  </details>
+</section>
+
+<section id="next">
+  <div class="sec-head">
+    <span class="label">Next steps</span>
+    <h2>Where this goes next</h2>
+  </div>
+  <div class="sec-head">
+    <h3>Replace three assumptions with real data</h3>
+    <span class="muted" style="font-size:var(--t-sm)">Each is a field in the snapshot. Together they decide whether the number would hold for a real portfolio.</span>
+  </div>
+  <div class="scroll">
+    <table class="rosetta plain">
+      <thead><tr><th>Assumed input</th><th>Who would know, in a real company</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td>eNPV lost per month of slip (1.5% assumed)</td><td>Portfolio strategy, finance</td><td>Moves the answer most: +$36M at 0%, +$95M at 5%.</td></tr>
+        <tr><td>Probability of passing each readout</td><td>Portfolio, biostatistics</td><td>The deck gives only cumulative PoS, so per-readout values are typical industry rates.</td></tr>
+        <tr><td>Kit batch size and lead time</td><td>CMC, clinical supply</td><td>Decides whether PRG-518 is limited by manufacturing.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sec-head"><h3>For a portfolio team adopting this</h3></div>
+  <ol class="next">
+    <li><b>Measure how long a tox flag waits</b><span>The kill switch is worth the months between the flag and the decision. Today's typical wait sets its real value.</span></li>
+    <li><b>Turn the approval choices into a policy table</b><span>Each option at the WF2 tox gate (terminate, pivot, wait for review) becomes a scenario, and the twin prices each with its uncertainty.</span></li>
+  </ol>
+  <div class="sec-head"><h3>For the team running the platform</h3></div>
+  <ol class="next" style="counter-reset: n 2">
+    <li><b>Run the twin as a NocoBase job</b><span>Export, compile, check, simulate and write back as one scheduled job. Dashboards read the scenario rows like any other table, and NocoBase itself does not change.</span></li>
+    <li><b>Add models where the deck needs learning from data</b><span>A Bayesian readout updater, an optimizer for the re-plan, and separate supply and finance models, with checked links between them.</span></li>
+    <li><b>Let the model grow during a run</b><span>Engine work (<a href="https://github.com/Merck/ReactiveDynamics.jl/issues/27">issue #27</a>) so that WF3 can create studies mid-run and programs can move past one stage.</span></li>
+    <li><b>Let analysts ask new questions with the agent layer</b><span>The model files are already in the format the agent skills read, so an analyst can pose a question, add a scenario and get a checked answer from the same files.</span></li>
+  </ol>
+
+  <details>
+    <summary>All eight assumptions behind the numbers (recorded in the snapshot under <code>_assumed</code>)</summary>
+    <ul class="dl">
+      <li><b>Per-readout success.</b> Taken from typical industry phase-transition rates, because the deck gives only cumulative PoS.</li>
+      <li><b>Months remaining per study.</b> Not in the deck.</li>
+      <li><b>Per-program resource split.</b> Chosen to reproduce the deck's pool totals.</li>
+      <li><b>CRO cost and unit costs.</b> Chosen so the burn at T-042 is $142.5M per quarter.</li>
+      <li><b>Enrollment and site counts.</b> Chosen so PRG-104 enrolls below 0.72 of plan on average (0.65), as in event T-041.</li>
+      <li><b>Kit stocks, batch sizes and lead time.</b> PRG-518 starts below its reorder point, as in event T-039.</li>
+      <li><b>PRG-402's hERG IC50.</b> 0.8 &#xB5;M, below the deck's 1.0 &#xB5;M kill threshold (event T-042).</li>
+      <li><b>eNPV lost per month of slip.</b> 1.5%, mostly patent life; the sensitivity chart above shows other values.</li>
+    </ul>
+  </details>
+</section>
+
+<footer>
+  <span>All data are synthetic: a fictional portfolio from the prototype's AI-generated data, with no real company, compound, patient or market data, and no result is a forecast. Program codes, targets and values come from the prototype deck, as of T-042. Every value the deck does not state is an assumption, listed above. Drug targets are shown as generic labels (Target A to F).</span>
+  <span>Reproduce: <code>julia --project=. run_twin.jl</code> in the twin's folder &#xB7; 40 seeds per scenario, root seed 2026, about 2 minutes. The same seed always gives the same numbers on Julia 1.12.</span>
+  <span>Built on ReactiveDynamics.jl 0.3 and AlgebraicAgents.jl 0.4, with no engine code changed.</span>
+</footer>
+
+</div>
+<div id="tip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var tip = document.getElementById("tip");
+  var tipFns = {};
+  function showTip(text, x, y) {
+    tip.textContent = text; tip.hidden = false;
+    var r = tip.getBoundingClientRect();
+    var left = Math.min(x + 14, window.innerWidth - r.width - 8);
+    var top = y + 16 + r.height > window.innerHeight ? y - r.height - 12 : y + 16;
+    tip.style.left = Math.max(8, left) + "px"; tip.style.top = Math.max(8, top) + "px";
+  }
+  document.addEventListener("pointermove", function (e) {
+    var t = e.target.closest ? e.target.closest("[data-tip],[data-tipfn]") : null;
+    if (!t) { tip.hidden = true; return; }
+    if (t.dataset.tipfn) { var txt = tipFns[t.dataset.tipfn](e, t); if (txt) showTip(txt, e.clientX, e.clientY); else tip.hidden = true; }
+    else showTip(t.dataset.tip, e.clientX, e.clientY);
+  });
+  document.addEventListener("pointerleave", function () { tip.hidden = true; });
+  window.addEventListener("scroll", function () { tip.hidden = true; }, { passive: true });
+
+  function f1(v) { return (v >= 0 ? "+" : "") + v.toFixed(1); }
+  function roundedBar(x0, y, x1, h, r) {
+    if (x1 - x0 <= 0) return "";
+    r = Math.min(r, (x1 - x0) / 2, h / 2);
+    return "M" + x0 + "," + y + "H" + (x1 - r) + "Q" + x1 + "," + y + " " + x1 + "," + (y + r) + "V" + (y + h - r) + "Q" + x1 + "," + (y + h) + " " + (x1 - r) + "," + (y + h) + "H" + x0 + "Z";
+  }
+  function gridBands(ticks, x, n, T, rh, off, bandH, h, fmt) {
+    var s = "";
+    ticks.forEach(function (t) {
+      for (var i = 0; i < n; i++) s += '<line class="' + (t === 0 ? "base" : "grid") + '" x1="' + x(t) + '" x2="' + x(t) + '" y1="' + (T + i * rh + off) + '" y2="' + (T + i * rh + off + bandH) + '"/>';
+      s += '<text class="tick" x="' + x(t) + '" y="' + (h - 6) + '" text-anchor="' + (t === 0 ? "start" : "middle") + '">' + fmt(t) + "</text>";
+    });
+    return s;
+  }
+  function svg(w, h, inner) { return '<svg viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h + '" aria-hidden="true">' + inner + "</svg>"; }
+
+  var charts = {};
+
+  charts.levers = function (w) {
+    var rows = [
+      { l: "Tox kill switch only", v: 38.3, se: 1.7, t: "Kill switch only: PRG-402 stopped at month 1 instead of month 12" },
+      { l: "Monthly re-plan only", v: 14.1, se: 1.5, t: "Re-plan only: wet-lab staff reallocated every month" },
+      { l: "Closed loop (both levers)", v: 53.3, se: 1.7, em: true, t: "Closed loop: both levers" }
+    ];
+    var L = 2, R = 62, T = 6, rh = 60, h = T + rows.length * rh + 24;
+    var x = function (v) { return L + v / 60 * (w - L - R); };
+    var s = "";
+    s += gridBands([0, 20, 40, 60], x, rows.length, T, rh, 20, 26, h, function (t) { return t === 0 ? "0" : "+" + t; });
+    rows.forEach(function (r, i) {
+      var y = T + i * rh;
+      s += '<text class="lab" x="' + L + '" y="' + (y + 15) + '">' + r.l + "</text>";
+      s += '<path class="bar' + (r.em ? " em" : "") + '" d="' + roundedBar(x(0), y + 24, x(r.v), 18, 4) + '"/>';
+      var lo = x(r.v - 2 * r.se), hi = x(r.v + 2 * r.se), cy = y + 33;
+      s += '<line class="whisk" x1="' + lo + '" x2="' + hi + '" y1="' + cy + '" y2="' + cy + '"/>';
+      s += '<line class="whisk" x1="' + lo + '" x2="' + lo + '" y1="' + (cy - 5) + '" y2="' + (cy + 5) + '"/><line class="whisk" x1="' + hi + '" x2="' + hi + '" y1="' + (cy - 5) + '" y2="' + (cy + 5) + '"/>';
+      s += '<text class="val" x="' + (hi + 8) + '" y="' + (cy + 4.5) + '">' + f1(r.v) + "</text>";
+      s += '<rect class="hit" x="0" y="' + y + '" width="' + w + '" height="' + rh + '" data-tip="' + r.t + "\nChange in net value " + f1(r.v) + " $M \u00b1 " + r.se.toFixed(1) + '\n40 paired futures, \u00b1 one standard error"/>';
+    });
+    return svg(w, h, s);
+  };
+
+  charts.sens = function (w) {
+    var pts = [[0, 35.6, 1.6], [0.75, 44.5, 1.6], [1.5, 53.3, 1.7], [3, 71.0, 2.0], [5, 94.6, 2.5]];
+    var h = 270, L = 40, R = 14, T = 14, B = 46, claim = 200.9;
+    var x = function (e) { return L + e / 5 * (w - L - R); };
+    var y = function (v) { return T + (1 - v / 220) * (h - T - B); };
+    var s = "";
+    [0, 50, 100, 150, 200].forEach(function (t) {
+      s += '<line class="' + (t === 0 ? "base" : "grid") + '" x1="' + L + '" x2="' + (w - R) + '" y1="' + y(t) + '" y2="' + y(t) + '"/>';
+      s += '<text class="tick" x="' + (L - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + (t === 0 ? "0" : "+" + t) + "</text>";
+    });
+    [0, 1, 2, 3, 4, 5].forEach(function (e) { s += '<text class="tick" x="' + x(e) + '" y="' + (h - B + 18) + '" text-anchor="middle">' + e + "%</text>"; });
+    s += '<text class="lab-s" x="' + ((L + w - R) / 2) + '" y="' + (h - 6) + '" text-anchor="middle">eNPV lost per month of slip</text>';
+    s += '<line class="ref" x1="' + L + '" x2="' + (w - R) + '" y1="' + y(claim) + '" y2="' + y(claim) + '"/>';
+    s += '<text class="ref-t" x="' + (w - R) + '" y="' + (y(claim) - 7) + '" text-anchor="end">First estimate +14.8% \u2248 +$201M</text>';
+    s += '<rect class="hit" x="' + L + '" y="' + (y(claim) - 22) + '" width="' + (w - L - R) + '" height="28" data-tip="The prototype&#39;s first estimate: +14.8% on the static plan&#39;s net value of $1,357M, about +$201M."/>';
+    s += '<polyline class="ln loop" points="' + pts.map(function (p) { return x(p[0]) + "," + y(p[1]); }).join(" ") + '"/>';
+    pts.forEach(function (p) {
+      s += '<line class="whisk" x1="' + x(p[0]) + '" x2="' + x(p[0]) + '" y1="' + y(p[1] - 2 * p[2]) + '" y2="' + y(p[1] + 2 * p[2]) + '"/>';
+      s += '<circle class="dot" cx="' + x(p[0]) + '" cy="' + y(p[1]) + '" r="' + (p[0] === 1.5 ? 6 : 4.5) + '"/>';
+      s += '<circle class="hit" cx="' + x(p[0]) + '" cy="' + y(p[1]) + '" r="16" data-tip="Erosion ' + p[0] + "% per month" + (p[0] === 1.5 ? " (default)" : "") + "\nChange in net value " + f1(p[1]) + " $M \u00b1 " + p[2].toFixed(1) + '"/>';
+    });
+    s += '<text class="val" x="' + (x(0) + 10) + '" y="' + (y(35.6) + 20) + '">+36 <tspan class="lab-s">spend avoided alone</tspan></text>';
+    s += '<text class="val" x="' + x(1.5) + '" y="' + (y(53.3) - 14) + '" text-anchor="middle">+53 <tspan class="lab-s">default</tspan></text>';
+    s += '<text class="val" x="' + (x(5) - 4) + '" y="' + (y(94.6) - 14) + '" text-anchor="end">+95</text>';
+    return svg(w, h, s);
+  };
+
+  var SP_S = [42.6, 85.2, 126.9, 167.4, 205.9, 225.8, 241.1, 260.9, 277.8, 289.5, 303.6, 318.2, 332.0, 349.7, 366.1, 382.1, 401.8, 403.3, 413.5, 413.5, 413.5, 413.5, 413.5, 413.5, 413.5];
+  var SP_C = [42.6, 86.7, 120.8, 162.8, 202.0, 220.9, 227.1, 237.8, 254.6, 271.8, 291.5, 301.0, 319.5, 337.1, 354.0, 359.8, 379.1, 379.1, 379.1, 379.1, 379.1, 379.1, 379.1, 379.1, 379.1];
+  var spendGeom = null;
+  charts.spend = function (w) {
+    var h = 250, L = 40, R = 118, T = 22, B = 34;
+    var x = function (m) { return L + m / 24 * (w - L - R); };
+    var y = function (v) { return T + (1 - v / 450) * (h - T - B); };
+    spendGeom = { x: x, L: L, R: R, w: w, T: T, B: B, h: h };
+    var s = "";
+    [0, 100, 200, 300, 400].forEach(function (t) {
+      s += '<line class="' + (t === 0 ? "base" : "grid") + '" x1="' + L + '" x2="' + (w - R) + '" y1="' + y(t) + '" y2="' + y(t) + '"/>';
+      s += '<text class="tick" x="' + (L - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + "</text>";
+    });
+    [0, 6, 12, 18, 24].forEach(function (m) { s += '<text class="tick" x="' + x(m) + '" y="' + (h - B + 18) + '" text-anchor="middle">' + (m === 0 ? "m0" : "m" + m) + "</text>"; });
+    s += '<line class="mark" x1="' + x(1) + '" x2="' + x(1) + '" y1="' + (T - 4) + '" y2="' + y(0) + '"/>';
+    s += '<text class="lab-s" x="' + (x(1) + 4) + '" y="' + (T + 2) + '">m1 kill switch</text>';
+    s += '<line class="mark" x1="' + x(12) + '" x2="' + x(12) + '" y1="' + (T - 4) + '" y2="' + y(0) + '"/>';
+    s += '<text class="lab-s" x="' + (x(12) + 4) + '" y="' + (T + 2) + '">m12 annual review</text>';
+    var path = function (a) { return a.map(function (v, i) { return (i ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(""); };
+    s += '<path class="ln static" d="' + path(SP_S) + '"/><path class="ln loop" d="' + path(SP_C) + '"/>';
+    s += '<circle class="dot" style="fill:var(--s-static)" cx="' + x(24) + '" cy="' + y(413.5) + '" r="4"/><circle class="dot" cx="' + x(24) + '" cy="' + y(379.1) + '" r="4"/>';
+    s += '<text class="val" x="' + (x(24) + 9) + '" y="' + (y(413.5) - 1) + '">$414M <tspan class="lab-s">static</tspan></text>';
+    s += '<text class="val" x="' + (x(24) + 9) + '" y="' + (y(379.1) + 13) + '">$379M <tspan class="lab-s">closed loop</tspan></text>';
+    s += '<line class="guide" id="sp-guide" x1="0" x2="0" y1="' + T + '" y2="' + y(0) + '" visibility="hidden"/>';
+    s += '<rect class="hit" x="' + L + '" y="' + T + '" width="' + (w - L - R) + '" height="' + (h - T - B) + '" data-tipfn="spend"/>';
+    return svg(w, h, s);
+  };
+  tipFns.spend = function (e, el) {
+    var g = spendGeom, box = el.ownerSVGElement.getBoundingClientRect();
+    var px = (e.clientX - box.left) * (g.w / box.width);
+    var m = Math.max(0, Math.min(24, Math.round((px - g.L) / (g.w - g.L - g.R) * 24)));
+    var guide = el.ownerSVGElement.querySelector("#sp-guide");
+    guide.setAttribute("x1", g.x(m)); guide.setAttribute("x2", g.x(m)); guide.setAttribute("visibility", "visible");
+    return "Month " + m + "\nStatic plan  $" + SP_S[m].toFixed(1) + "M\nClosed loop  $" + SP_C[m].toFixed(1) + "M\nDifference   $" + (SP_S[m] - SP_C[m]).toFixed(1) + "M";
+  };
+  document.addEventListener("pointermove", function (e) {
+    if (!e.target.closest || !e.target.closest('[data-tipfn="spend"]')) { var g = document.getElementById("sp-guide"); if (g) g.setAttribute("visibility", "hidden"); }
+  });
+
+  charts.noise = function (w) {
+    var rows = [
+      { l: "Policy effect (average over paired runs)", v: 53.3, cls: "bar em", t: "Average over 40 paired futures\n+$53.3M \u00b1 $1.7M (one standard error)" },
+      { l: "Run-to-run spread in eNPV (1 standard deviation)", v: 595, cls: "bar-muted", t: "Standard deviation of end-of-run eNPV across 40 futures\n$595M, 11\u00d7 the effect" }
+    ];
+    var L = 2, R = 62, T = 6, rh = 64, h = T + rows.length * rh + 24;
+    var x = function (v) { return L + v / 600 * (w - L - R); };
+    var s = "";
+    s += gridBands([0, 200, 400, 600], x, rows.length, T, rh, 20, 30, h, function (t) { return String(t); });
+    rows.forEach(function (r, i) {
+      var y = T + i * rh;
+      s += '<text class="lab" x="' + L + '" y="' + (y + 15) + '">' + r.l + "</text>";
+      s += '<path class="' + r.cls + '" d="' + roundedBar(x(0), y + 24, x(r.v), 22, 4) + '"/>';
+      s += '<text class="val" x="' + (x(r.v) + 8) + '" y="' + (y + 40) + '">$' + Math.round(r.v) + "M</text>";
+      s += '<rect class="hit" x="0" y="' + y + '" width="' + w + '" height="' + rh + '" data-tip="' + r.t + '"/>';
+    });
+    return svg(w, h, s);
+  };
+
+  function render(el) {
+    var fn = charts[el.dataset.chart];
+    var w = Math.max(280, Math.floor(el.clientWidth));
+    if (el._w === w) return;
+    el._w = w; el.innerHTML = fn(w);
+  }
+  var els = Array.prototype.slice.call(document.querySelectorAll("[data-chart]"));
+  els.forEach(render);
+  if ("ResizeObserver" in window) { var ro = new ResizeObserver(function (entries) { entries.forEach(function (en) { render(en.target); }); }); els.forEach(function (el) { ro.observe(el); }); }
+  else window.addEventListener("resize", function () { els.forEach(render); });
+
+  /* event feed */
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function date(t) { var k = t - 42; var yy = 2026 + Math.floor(k / 12); var mm = ((k % 12) + 12) % 12; return MON[mm] + " " + yy; }
+  var REC = [
+    [39, "PRG-518", "warn", "GMP slot contention"],
+    [40, "PRG-209", "info", "Phase 3 interim passed"],
+    [41, "PRG-104", "warn", "Accrual lag: below 0.72 of plan"],
+    [42, "PRG-402", "crit", "hERG tox signal"]
+  ];
+  var SIM = [
+    [42, "PRG-518", "info", "GMP synthesis batch started (Suite B, 3-month lead time)"],
+    [43, "PRG-402", "crit", "Kill switch: hERG IC50 0.8 \u00b5M, below the 1.0 \u00b5M limit; study stopped, capacity released"],
+    [45, "PRG-104", "warn", "Accrual lag: 82% of plan"],
+    [46, "PRG-104", "info", "GMP synthesis batch started"],
+    [46, "PRG-209", "info", "Phase 3 readout passed \u2192 filing (NDA/BLA)"],
+    [46, "PRG-311", "warn", "IND-enabling readout failed \u2192 Terminated"],
+    [46, "PRG-518", "info", "GMP synthesis batch started"],
+    [49, "PRG-605", "warn", "Lead-opt readout failed \u2192 Terminated"],
+    [51, "PRG-518", "info", "GMP synthesis batch started"],
+    [55, "PRG-104", "info", "GMP synthesis batch started"],
+    [55, "PRG-518", "info", "GMP synthesis batch started"],
+    [58, "PRG-104", "info", "Phase 2 readout passed \u2192 Phase 3"],
+    [58, "PRG-518", "info", "Phase 2 readout passed \u2192 Phase 3"],
+    [66, "PRG-104", "warn", "Slip 3.3 months vs. full-speed plan (4.9% of eNPV lost)"],
+    [66, "PRG-518", "warn", "Slip 5.4 months vs. full-speed plan (8.1% of eNPV lost)"]
+  ];
+  var SEV = { crit: "critical", warn: "warning", info: "info" };
+  function row(e, rec) {
+    return '<li class="' + (rec ? "rec" : "") + '"><span class="t">T-0' + e[0] + '</span><span class="d">' + (rec ? "recorded" : date(e[0])) + '</span><span><span class="chip ' + e[2] + '">' + SEV[e[2]] + '</span></span><span class="a">' + e[1] + "</span><span>" + e[3] + "</span></li>";
+  }
+  var fs = REC.map(function (e) { return row(e, true); }).join("");
+  fs += '<li class="feed-break" style="display:block">Simulated from T-042 (Jan 2026) under the closed loop</li>';
+  fs += SIM.map(function (e) { return row(e, false); }).join("");
+  document.getElementById("feed").innerHTML = fs;
+
+})();
+</script>
